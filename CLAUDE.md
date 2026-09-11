@@ -39,8 +39,30 @@ C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro\
 ```
 
 - 제외는 `.gitignore` 와 맞춰 뒀다(`shots_*/`·`*.png`·`*.zip`, `Checklist\*.xlsx`).
+  **2026-09-11 추가**: `Maestro\suite_logs\`(실행 로그)와 `Maestro\env\secrets.env` 도 제외한다.
+  제외는 `.gitignore` 와 `sync_from_source.ps1` **양쪽**에 넣어야 한다 — 한쪽만 하면 미러가 계속
+  다시 채우거나 매번 "차이 있음"으로 뜬다.
+
 - **삭제로 뜨는 항목은 대개 이름이 바뀌었거나 옮겨진 파일**이다 — 같은 목록의 추가에 반대편이 있는지 보고 적용할 것.
 - 스크립트는 **저장소 루트**에 둔다. `Maestro\` 안에 두면 정본에 없는 파일이라 스스로를 지운다.
+
+
+### 저장소에 올리면 안 되는 값 — `env\secrets.env`
+
+⚠️ **이 저장소는 2026-09-11부터 GitHub(`basshul/YAML`, 비공개)에 푸시된다.**
+개인정보·자격정보는 `Maestro\env\secrets.env` 에 두고, 플로우에서는 `${VAR}` 로 참조한다.
+이 파일은 **정본에만 존재**하며 `run_test.ps1` 이 `env\<lang>.env` 다음에 읽어 `--env` 로 넘긴다
+(없으면 경고를 찍고, 그 값을 쓰는 플로우는 미치환으로 실패한다 — 조용히 넘어가지 않는다).
+
+- 실행 로그(`suite_logs\`)에는 **계정 ID·잔액·거래 내역·실 이메일**이 그대로 남는다 → 추적하지 않는다.
+  증적은 정본(OneDrive)에 그대로 있다.
+- 앱이 화면에 보여주는 값이면 **주입보다 런타임 판독이 낫다**: `21_Card [12]` 의 카드 CVC 는
+  `[11]` 이 `copyTextFrom: cvcnumbertext` + `evalScript` 로 읽어 `output.cvc1~3` 으로 넘긴다.
+  로그에는 치환 전 원문만 찍혀 값이 남지 않는다.
+- ⛔ **아직 남은 것**: 로그인 비밀번호(10개 파일)·PIN(65곳)이 평문이다.
+  비공개 저장소라는 전제로 올렸다 — **공개로 바꾸기 전에 반드시 `secrets.env` 로 옮길 것.**
+- ⛔ 이전 히스토리(로그·실 이메일 포함)는 로컬 `backup-pre-squash-20260911` 브랜치에만 있다 →
+  **`git push --all` / `--mirror` 금지.** `main` 만 명시해 푸시한다.
 
 ## 실행 명령
 
