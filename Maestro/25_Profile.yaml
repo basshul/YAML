@@ -1,0 +1,381 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Profile (프로필 탭 최상위 화면)
+# ================================================================
+# 작성 기준(2026-07-16, 실기기 탐색): 하단 네비 "프로필" 탭 화면의 최상위
+# 요소들 진입/노출 확인 케이스. Profile 화면은 Compose UI라 개별 요소에
+# resource-id가 없어(홈/마이월렛과 동일) text 기반 tapOn으로 작성함.
+#
+# 중요 1(스크롤 상태 유지): 이 화면은 하위 화면에 다녀오거나 탭을 다시 눌러도
+# 이전 스크롤 위치가 그대로 유지됨(fresh 재진입 아님). 따라서 각 케이스는
+# scrollUntilVisible(UP)로 최상단 리셋 → scrollUntilVisible(DOWN)로 대상
+# 메뉴 노출 순으로 위치를 확정한 뒤 탭함. visibilityPercentage 기본값(100%)은
+# 상단 카드에서 실패하므로 20%로 낮춤(실기기 확인).
+#
+# 중요 2(프로필 탭 백스택 함정): 하단 네비 "프로필" 탭을 재선택하면 직전에
+# 열었던 서브화면(예: "은행 계좌 연결 관리")이 프로필 탭 백스택에서 복원되어
+# 프로필 홈 대신 그 화면이 다시 뜸(2026-07-16 실기기에서 [11] 실패로 발현).
+# 그래서 프로필 탭은 [01] 최초 1회만 누르고, 이후 케이스는 각 서브화면에서
+# pressKey: back으로 프로필 홈에 복귀한 상태를 그대로 이어받아 진행함
+# (탭 재선택을 하지 않아 백스택 복원이 트리거되지 않음).
+#
+# 진입 화면 식별은 프로필 화면 텍스트와 겹치지 않는 고유 텍스트를 사용
+# (부분매칭 오탐 방지). 각 진입 화면은 앱바 뒤로가기가 있어 pressKey: back으로
+# 정상 복귀함(입력 필드 없음).
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 프로필 탭 최초 1회 진입 (이후 케이스는 back 복귀 상태를 이어받음)
+- tapOn:
+    text: "프로필"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] [Medium] Profile - 정보 수정 진입 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "정보 수정"
+- waitForAnimationToEnd
+- assertVisible: "사용자 ID"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [Low] Profile - 쿠폰함 진입 확인 (사용가능/사용완료/기간만료 탭)
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "쿠폰"
+- waitForAnimationToEnd
+- assertVisible: "쿠폰함"
+- assertVisible: "사용 가능"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] [Low] Profile - 리워드 포인트 진입 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "포인트"
+- waitForAnimationToEnd
+- assertVisible: "리워드 포인트"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] [Low] Profile - 친구 초대하고 보상 받기 진입 확인
+# ----------------------------------------------------------------
+# 진입 화면 헤더 "친구 초대"는 프로필의 "친구 초대하고 보상 받기"와 부분매칭
+# 되므로, 진입 화면 고유 안내문으로 식별.
+- scrollUntilVisible:
+    element:
+      text: "친구 초대하고 보상 받기"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "친구 초대하고 보상 받기"
+- waitForAnimationToEnd
+- assertVisible: "초대된 지인이 회원가입을 완료하면 특별한 선물을 드립니다."
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] [Medium] Profile - 은행 계좌 연결 진입 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "은행 계좌 연결"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "은행 계좌 연결"
+- waitForAnimationToEnd
+- assertVisible: "은행 계좌 연결 관리"
+- assertVisible: "은행 계좌 등록"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [06] [Medium] Profile - 송금 받을 계좌 진입 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "송금 받을 계좌"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "송금 받을 계좌"
+- waitForAnimationToEnd
+- assertVisible: "송금 받을 계좌 관리"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [07] [Medium] Profile - GME Wallet 거래내역 진입 확인 (Wallet 거래내역/은행 명세서 탭)
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "GME Wallet 거래내역"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "GME Wallet 거래내역"
+- waitForAnimationToEnd
+- assertVisible: "은행 명세서"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [08] [Low] Profile - 지점 진입 확인
+# ----------------------------------------------------------------
+# 진입 화면 고유 텍스트 "한국어 주소"(지점 카드 내 주소 언어변환 버튼)로 식별
+# ("지점"은 프로필 메뉴와 부분매칭되므로 사용하지 않음).
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "지점"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "지점"
+- waitForAnimationToEnd
+- assertVisible: "한국어 주소"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [09] [Low] Profile - GME 소개 진입 및 앱 버전/업데이트 확인 노출
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "GME 소개"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "GME 소개"
+- waitForAnimationToEnd
+- assertVisible: "업데이트 확인"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [10] [Low] Profile - 개인정보 처리방침 진입 확인
+# ----------------------------------------------------------------
+# 프로필 메뉴는 "개인정보 처리 방침"(공백), 진입 화면 제목은 "개인정보
+# 처리방침"(공백 없음) - 정확 매칭으로 구분됨.
+- scrollUntilVisible:
+    element:
+      text: "이용약관"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "개인정보 처리 방침"
+- waitForAnimationToEnd
+- assertVisible: "개인정보 처리방침"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [11] [Low] Profile - 이용약관 진입 확인
+# ----------------------------------------------------------------
+# 진입 화면 고유 항목 "전자금융거래 이용약관"으로 식별("이용약관" 단독은
+# 프로필 메뉴와 부분매칭).
+- scrollUntilVisible:
+    element:
+      text: "이용약관"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "이용약관"
+- waitForAnimationToEnd
+- assertVisible: "전자금융거래 이용약관"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [12] [Medium] Profile - 설정(우상단 톱니) 진입 확인
+# ----------------------------------------------------------------
+# 설정 아이콘은 프로필 헤더 우상단에 위치(스크롤 무관, id/text 없어 좌표 탭).
+# 최상단 리셋 후 헤더가 보이는 상태에서 탭함.
+# 참고: 설정 화면 내부 메뉴(로그인/간편 비밀번호 변경, 마케팅 수신 동의,
+# 언어/Language, 추천인 번호, GME 회원 탈퇴)의 동작 검증은 별도 yaml로
+# 분리 예정 - 이 케이스는 설정 화면 진입 확인까지만 수행함.
+# (설정 화면 항목 텍스트는 [[feedback_maestro_text_vs_id]] 함정으로
+# assertVisible 매칭이 불안정하므로 여기서 개별 항목을 assert하지 않음)
+- scrollUntilVisible:
+    element:
+      text: "정보 수정"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn:
+    point: "92%, 7%"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [13] [Medium] Profile - 로그아웃 동작 확인
+#              - 로그아웃 시 아이디/비밀번호 로그인 폼으로 이동
+# ----------------------------------------------------------------
+# 실기기 확인(14_Deposit 로그아웃 절차와 동일): 로그아웃 → "예" 확인
+# 다이얼로그 → 곧바로 아이디/비밀번호 로그인 폼(usernameId). 04_Menu 주석의
+# "간편비밀번호 페이지 이동"과 달리 실제로는 아이디/비번 폼이 노출됨.
+# 검증 후 test123으로 재로그인하여 파일을 self-contained하게 유지.
+- scrollUntilVisible:
+    element:
+      text: "로그아웃"
+    direction: DOWN
+    visibilityPercentage: 20
+    timeout: 15000
+- tapOn: "로그아웃"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "예"
+    commands:
+      - tapOn: "예"
+      - waitForAnimationToEnd
+# 로그아웃 성공 = 아이디/비밀번호 로그인 폼 노출 확인
+- assertVisible:
+    id: "usernameId"
+
+# 재로그인: test123 (외국인, 비밀번호 Gme12!)
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "test123"
+- tapOn:
+    id: "securityKeyboardEditText"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "간편비밀번호"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000

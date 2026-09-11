@@ -1,0 +1,123 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: GME Wallet Statement
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 진입 경로(2026-07-15, 사용자 지시): Home > 계좌 카드 영역에서 "GME Wallet" 잔액
+# 행(체브론 포함 전체 폭 클릭영역)을 탭 → "My Wallet" 화면 → GME Wallet 섹션의
+# "내역" 버튼 탭 → "계좌" 화면(Wallet 거래내역 탭이 기본 선택됨).
+# 주의(실기기 확인): Home/My Wallet 화면은 Compose UI라 resource-id가 없음(참고:
+# [[project_22_event]]와 동일한 패턴). "GME Wallet" 텍스트 자체는 클릭 영역이
+# 아니고(탭해도 무반응), 잔액 금액+체브론(">")이 포함된 행 전체가 클릭 영역이므로
+# 좌표(point) 기반으로 탭해야 함. My Wallet 화면에는 "내역" 버튼이 GME Wallet/
+# GMEPay 두 곳에 동일 텍스트로 존재하므로 index: 0(첫번째, GME Wallet 쪽)으로
+# 특정해야 함.
+# element id(계좌/필터 화면은 기존 네이티브 화면이라 정상적으로 id 존재): 계좌번호
+# `txvWalletNumber`, 잔액 라벨 `txvBalance`("잔액" 고정텍스트), 잔액 금액
+# `txvTranAmount`, 날짜범위 텍스트 `txvDateText`, 필터 아이콘 `imgvFilter`.
+# 필터 바텀시트("설정") element id: 기간 버튼 `one_month`/`three_month`/`one_year`,
+# 날짜 필드 `date1`/`date2`, 상태 라디오 `rb_all`/`rb_deposit`/`rb_withdrawal`,
+# 검색 버튼 `search`, 닫기(X) `dialog_close`.
+
+# Home > GME Wallet 잔액 행 탭 → My Wallet 화면 진입
+- tapOn:
+    point: "89%,43%"
+- waitForAnimationToEnd
+- assertVisible: "My Wallet"
+
+# ----------------------------------------------------------------
+# [01] [High] Statement - 잔액 정상 노출 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "내역"
+    index: 0
+- waitForAnimationToEnd
+- assertVisible: "Wallet 거래내역"
+# 잔액/거래내역이 비동기로 로딩되어 화면 진입 직후에는 비어있음(실기기 확인,
+# 10_DomesticTopup.yaml의 실패응답 지연과 유사한 패턴 - 로딩 시간이 매우
+# 불규칙함, 15초로는 부족했음) - extendedWaitUntil로 넉넉하게 대기함.
+- extendedWaitUntil:
+    visible:
+      id: "com.gmeremit.online.gmeremittance_native.livetest:id/txvBalance"
+    timeout: 90000
+- assertVisible:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/txvTranAmount"
+
+# ----------------------------------------------------------------
+# [02] [High] Statement - 필터동작 확인 - 상태, 날짜
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+
+# 상태 필터 - "입금" 선택 후 검색
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/rb_deposit"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "Wallet 거래내역"
+
+# 날짜 필터 - 기간 버튼 "1개월" 선택 후 검색
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "Wallet 거래내역"
+
+# ================================================================
+# 홈 복귀
+# ================================================================
+- pressKey: back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd

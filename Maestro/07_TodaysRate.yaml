@@ -1,0 +1,161 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Today's Rate (오늘의 환율)
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 07_TodaysRate.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 07_TodaysRate.yaml
+#
+# 테스트 항목:
+#   [01] [High]   오늘의 환율 화면 진입 및 기본 요소 확인
+#   [02] [High]   방글라데시(BDT) 선택 → 최적의 환율 / 특급 환율 / bKash 노출 확인
+#   [03] [Medium] 특급 환율 탭 선택 → 지급 설명 텍스트 변경 확인
+#   [04] [Medium] 지금 송금하기 → 해외송금 수취인 선택 화면 이동
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입
+# 주의(2026-08-03): 기존 `notVisible: "${NAV_HOME}"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "${PIN_ENTER_4DIGIT}"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "${SESSION_EXPIRED}|${NAV_HOME}"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "${SESSION_EXPIRED}"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "${NAV_HOME}"
+          timeout: 20000
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] 오늘의 환율 화면 진입 및 기본 요소 확인
+# ----------------------------------------------------------------
+# 홈 화면 오늘의 환율 섹션 탭
+# 주의(2026-08-03): 기존 `text: ".*KRW", index: 2`는 홈에 연결 계좌가 늘면서 순서가 밀려
+#   케이뱅크 계좌 행을 탭 → "계좌/은행 명세서" 화면으로 잘못 진입했음(인덱스 셀렉터 함정).
+#   계좌 수에 영향받지 않도록 섹션 라벨("오늘의 환율") 기반 탭으로 변경.
+- scrollUntilVisible:
+    element:
+      text: "${RATE_SCR_TITLE}"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "${RATE_SCR_TITLE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${RATE_SCR_TITLE}"
+- assertVisible:
+    text: "${RATE_PAYMENT_METHOD}"
+- assertVisible:
+    text: "${INIT_TAB_BANK}"
+- assertVisible:
+    text: "${INIT_TAB_CASH}"
+- assertVisible:
+    text: "${RATE_SEND_AMOUNT}"
+- assertVisible:
+    text: "${RATE_RECEIVE_AMOUNT}"
+- assertVisible:
+    text: "${RATE_CURRENT}"
+- assertVisible:
+    text: "${RATE_SEND_BTN}"
+
+# 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [02] [High] 방글라데시(BDT) 선택 → 최적의 환율 / 특급 환율 / bKash 노출 확인
+# ----------------------------------------------------------------
+# (2026-08-03) [01]과 동일한 인덱스 셀렉터 함정 → 섹션 라벨 기반으로 변경
+- scrollUntilVisible:
+    element:
+      text: "${RATE_SCR_TITLE}"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "${RATE_SCR_TITLE}"
+- waitForAnimationToEnd
+
+# 통화 선택 바텀시트 열기
+- tapOn: "USD"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${RATE_CURRENCY_SELECT}"
+
+# 방글라데시 검색 및 선택
+- tapOn: "${INIT_CURRENCY_SEARCH}"
+- inputText: "bangladesh"
+- waitForAnimationToEnd
+- tapOn: "Bangladesh (BDT)"
+- waitForAnimationToEnd
+
+# 최적의 환율 / 특급 환율 / bKash 노출 확인
+- assertVisible:
+    text: "${RATE_BEST}"
+- assertVisible:
+    text: "${RATE_EXPRESS}"
+- assertVisible:
+    text: "bKash"
+
+# ----------------------------------------------------------------
+# [03] [Medium] 특급 환율 탭 선택 → 지급 설명 텍스트 변경 확인
+# ----------------------------------------------------------------
+- tapOn: "${RATE_EXPRESS}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${RATE_EXPRESS_DESC}"
+
+# ----------------------------------------------------------------
+# [04] [Medium] 지금 송금하기 → 해외송금 수취인 선택 화면 이동
+# ----------------------------------------------------------------
+- tapOn: "${RATE_SEND_BTN}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_SELECT_RECIPIENT}"
+
+# 오늘의 환율 화면 → 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${RATE_SCR_TITLE}"
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"

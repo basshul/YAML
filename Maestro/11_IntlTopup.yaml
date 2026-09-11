@@ -1,0 +1,208 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: International Topup (국제 선불폰 충전)
+# ================================================================
+# 진입: 홈 → (스크롤) "모바일 충전" → "해외 충전 서비스"
+# 결제정보(지정): Sri Lanka / +94 0776348242 / Dialog / 50 LKR (= 761 KRW)
+#
+# ★ 제약(사용자 지정):
+#   - 실제 결제 발생 기능 → [09]는 "간편 비밀번호 입력 화면"까지만 진행(PIN 미입력).
+#   - KFTC 결제(은행계좌: 카카오/신한/케이뱅크) + 생체인증 경로는 BLOCKED.
+#     → 본 파일은 GME Wallet(간편비밀번호) 경로만 다룸.
+#
+# 화면/id:
+#   진입화면: select_county_btn(국가) / phone_number_input_field(번호) /
+#            account_root·"GME Wallet"(출금계좌, 잔액 비동기 로딩) / btn_next "계속"
+#   국가리스트: searchEditText(검색) → "Sri Lanka"
+#   page_two: select_carrier_btn(통신사) / select_product_btn(상품) / "총 지급액"(원화)
+#   결제확인 바텀시트("충전 결제"): continueBtn "GME Wallet로 결제"
+#   간편비번: ActivityLockScreen "간편 비밀번호를 입력하세요" (input_dot_1~4)
+# ★ 잔액 로딩 전엔 "계속" 비활성 → extendedWaitUntil enabled:true 로 대기.
+# ================================================================
+
+# ---- 진입: launch → PIN 1212 → 홈 ----
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요|홈"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+# ---- 해외 충전 진입 ----
+- scrollUntilVisible:
+    element:
+      text: "모바일 충전"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "모바일 충전"
+- extendedWaitUntil:
+    visible:
+      text: "해외 충전 서비스"
+    timeout: 20000
+- tapOn: "해외 충전 서비스"
+- extendedWaitUntil:
+    visible:
+      id: "select_county_btn"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [01] Select Country - 나라 리스트 노출 및 선택 (Sri Lanka)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "select_county_btn"
+- extendedWaitUntil:
+    visible:
+      id: "searchEditText"
+    timeout: 15000
+- tapOn:
+    id: "searchEditText"
+- inputText: "Sri"
+- extendedWaitUntil:
+    visible:
+      text: "Sri Lanka"
+    timeout: 10000
+- tapOn: "Sri Lanka"
+- extendedWaitUntil:
+    visible:
+      text: "SRI LANKA"
+    timeout: 15000
+
+# ----------------------------------------------------------------
+# [04] 잘못된 번호 입력 → 인라인 에러 + 계속 비활성
+#      ("000" → "6자 이상으로 입력해 주세요", btn_next disabled)
+# [02] 올바른 번호 입력 동작 확인 (0776348242 반영)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "phone_number_input_field"
+- inputText: "000"
+- hideKeyboard
+- assertVisible:
+    text: "6자 이상으로 입력해 주세요"
+- assertVisible:
+    text: "계속"
+    enabled: false
+- tapOn:
+    id: "phone_number_input_field"
+- eraseText
+- inputText: "0776348242"
+- hideKeyboard
+- assertVisible:
+    text: "0776348242"
+
+# ----------------------------------------------------------------
+# [03] Charging Account - 출금계좌 선택 (GME Wallet = 간편비밀번호 경로)
+#   * 카카오/신한/케이뱅크 = KFTC 결제(생체인증) → BLOCKED, 선택하지 않음
+# ----------------------------------------------------------------
+- tapOn: "GME Wallet"
+
+# ----------------------------------------------------------------
+# [05] 올바른 번호 + [Continue] → 상품 선택 페이지 노출
+#   (잔액 비동기 로딩 완료 후 "계속" 활성화)
+# ----------------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      text: "계속"
+      enabled: true
+    timeout: 90000
+- tapOn:
+    text: "계속"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "select_carrier_btn"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [06] Carrier - 통신사 리스트 노출 및 선택 (Dialog Sri Lanka)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "select_carrier_btn"
+- extendedWaitUntil:
+    visible:
+      text: "Dialog Sri Lanka"
+    timeout: 15000
+- tapOn: "Dialog Sri Lanka"
+
+# ----------------------------------------------------------------
+# [07] Product - 상품 요금제 리스트 노출 및 선택 (50 LKR)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "select_product_btn"
+- extendedWaitUntil:
+    visible:
+      text: "상품 선택"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "50 LKR"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 40
+- tapOn: "50 LKR"
+
+# ----------------------------------------------------------------
+# [08] Amount - 상품 금액에 따라 원화(총 지급액) 자동 계산 노출
+#   * 원화 총액은 환율따라 변동(761~762 등). 콤마 없는 정수+KRW로 매칭
+#     (잔액 "16,500 KRW"는 콤마 있어 제외됨)
+# ----------------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      text: "[0-9]+ KRW"
+    timeout: 15000
+
+# ----------------------------------------------------------------
+# [09] Wallet Charging - 결제확인 → 간편비밀번호 화면까지만 (PIN 미입력)
+#   ★ 실제 결제 방지: "간편 비밀번호를 입력하세요" 화면 확인 후 back으로 취소.
+#   (간편비번 불일치/일치 충전 동작은 실제 결제 발생 → 미진행)
+# ----------------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      text: "계속"
+      enabled: true
+    timeout: 90000
+- tapOn:
+    text: "계속"
+    enabled: true
+# 결제확인 바텀시트 → GME Wallet로 결제
+- extendedWaitUntil:
+    visible:
+      text: "GME Wallet로 결제"
+    timeout: 20000
+- tapOn: "GME Wallet로 결제"
+# 간편비밀번호 화면 도달 확인 (여기서 정지, PIN 입력 안 함)
+- extendedWaitUntil:
+    visible:
+      text: "간편 비밀번호를 입력하세요"
+    timeout: 20000
+- assertVisible:
+    id: "input_dot_1"
+# 결제 취소(back) → 실제 결제 없음
+- pressKey: back
+- waitForAnimationToEnd
+
+# ================================================================
+# [BLOCKED] KFTC 결제 + 생체인증 (은행계좌 출금: 카카오/신한/케이뱅크)
+#   - 출금계좌를 은행계좌로 선택 시 KFTC 결제 + 생체(지문/Face) 인증 필요
+#   - 생체인증은 실기기 자동화 불가 + 실제 결제 발생 → 자동화 대상 제외(BLOCKED)
+# ================================================================

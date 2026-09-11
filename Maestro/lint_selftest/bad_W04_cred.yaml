@@ -1,0 +1,4 @@
+appId: ${APP_ID}
+---
+# W04: 비밀번호로 보이는 리터럴
+- inputText: "Abcde1!"

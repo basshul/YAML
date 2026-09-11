@@ -1,0 +1,228 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 05 초기 화면 테스트 (로그인 전)
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 05_InitialScreen.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 05_InitialScreen.yaml
+#
+# 테스트 항목:
+#   [01] 초기 화면 요소 노출 확인
+#   [02] 언어 변경 (전환 → 복귀)
+#   [03] 환율 탭 전환 (계좌 입금 / 현금 지급 / 모바일 월렛)
+#   [04] 환율 조회 - 금액 입력 / 통화 변경
+#   [05] 신규 회원 버튼 → 1 depth 이동 확인
+#   [06] 로그인 버튼 → 1 depth 이동 확인
+#   [07] 지점 찾기 버튼 → 1 depth 이동 확인
+#   [08] 고객센터(채팅) 버튼 → 팝업 노출 확인
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Server Override 다이얼로그(livetest 빌드 실행 시 서버선택 스플래시) 노출 시 CONTINUE
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|${INIT_SELECT_LANGUAGE}|${REG_NEW_MEMBER}"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+
+# 서비스 이용 안내 화면 (앱 최초 실행 / clearState 후 조건부 노출)
+- runFlow:
+    when:
+      visible: "${INIT_SERVICE_GUIDE}"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "${SYS_PERMISSION_ALLOW}"
+          commands:
+            - tapOn: "${SYS_PERMISSION_ALLOW}"
+            - waitForAnimationToEnd
+
+# clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env에만 적용)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] 초기 화면 요소 노출 확인
+# ----------------------------------------------------------------
+- takeScreenshot: "[01-1]_초기화면_전체"
+- assertVisible:
+    id: "selectLangBg"
+- assertVisible:
+    text: "${INIT_TAB_BANK}"
+- assertVisible:
+    text: "${INIT_TAB_CASH}"
+- assertVisible:
+    text: "${INIT_TAB_MOBILE}"
+- assertVisible:
+    id: "btn_rgstr"
+- assertVisible:
+    id: "btn_lgn"
+- assertVisible:
+    id: "fab_branch"
+- assertVisible:
+    id: "fab_chat"
+- takeScreenshot: "[01-2]_초기화면_요소_노출확인_완료"
+
+# ----------------------------------------------------------------
+# [02] 언어 변경 확인 (전환 후 원래 언어로 복귀)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "selectLangBg"
+- waitForAnimationToEnd
+- takeScreenshot: "[02-1]_언어선택_목록"
+- tapOn: "${INIT_LANG_SWITCH_TO}"
+- waitForAnimationToEnd
+# 언어 변경 → 앱 재시작 → Server Override 재노출 처리 → 초기화면 재진입 대기
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[02-2]_언어변경_완료"
+- tapOn:
+    id: "selectLangBg"
+- waitForAnimationToEnd
+- takeScreenshot: "[02-3]_언어선택_목록_변경후"
+- tapOn: "${INIT_LANG_SWITCH_BACK}"
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[02-4]_언어복귀_완료"
+
+# ----------------------------------------------------------------
+# [03] 환율 탭 전환 확인
+# ----------------------------------------------------------------
+- takeScreenshot: "[03-1]_계좌입금_탭_기본선택"
+- tapOn: "${INIT_TAB_CASH}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-2]_현금지급_탭_선택"
+- tapOn: "${INIT_TAB_MOBILE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-3]_모바일월렛_탭_선택"
+- tapOn: "${INIT_TAB_BANK}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-4]_계좌입금_탭_복귀"
+
+# ----------------------------------------------------------------
+# [04] 환율 조회 - 금액 입력 / 통화 변경
+# ----------------------------------------------------------------
+- tapOn:
+    id: "sendAmountEdTxt"
+- eraseText: 10
+- inputText: "200000"
+- pressKey: Enter
+- waitForAnimationToEnd
+- takeScreenshot: "[04-1]_송금금액_변경"
+- tapOn:
+    id: "countrySelectionSpinner"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-2]_통화선택_목록"
+- tapOn: "${INIT_CURRENCY_SEARCH}"
+- inputText: "cambodia"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-3]_통화검색_결과"
+- tapOn: "Cambodia (USD)"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-4]_통화변경_완료"
+
+# ----------------------------------------------------------------
+# [05] 신규 회원 → 약관 화면 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_rgstr"
+- waitForAnimationToEnd
+- takeScreenshot: "[05]_신규회원_약관화면"
+- pressKey: Back
+- waitForAnimationToEnd
+- pressKey: Back
+- waitForAnimationToEnd
+# back으로 앱 종료→재실행 시 Server Override 처리 후 초기화면 재진입 대기
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [06] 로그인 → 로그인 화면 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+- takeScreenshot: "[06]_로그인_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [07] 지점 찾기 → 지점 목록 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "fab_branch"
+- waitForAnimationToEnd
+- takeScreenshot: "[07-1]_지점찾기_화면"
+- assertVisible:
+    text: "${INIT_BRANCH_TITLE}"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[07-2]_초기화면_복귀"
+
+# ----------------------------------------------------------------
+# [08] 고객센터(채팅) → 팝업 노출 확인 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "fab_chat"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-1]_고객센터_팝업"
+- assertVisible:
+    text: "${INIT_CHAT_POPUP}"
+- tapOn: "${INIT_CHAT_NO}"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-2]_팝업_아니요_선택"
+- tapOn:
+    id: "fab_chat"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-3]_고객센터_팝업_재노출"
+- tapOn: "${INIT_CHAT_YES}"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-4]_고객센터_연결"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[08-5]_초기화면_복귀"

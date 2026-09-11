@@ -1,0 +1,4 @@
+appId: ${APP_ID}
+---
+# E04: 어디에도 정의되지 않은 변수
+- assertVisible: "${NOT_A_REAL_VAR_XYZ}"

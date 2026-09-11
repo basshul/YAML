@@ -1,0 +1,448 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 13_ReceiveOverseas 분할 1/7 — Exchange Rate + 인도네시아 송금인 등록
+# ================================================================
+# 2026-09-07 분할. 원본 `13_ReceiveOverseas_old.yaml`(20케이스 / 통짜 약 42분)은 실행이
+# **10분 포그라운드 한도**를 넘어 백그라운드로 전환되고, 그 뒤 외부에서 종료되는 일이
+# 반복됐다(9/7 실측: 백그라운드 전환 7건 중 6건 종료 / 10분 미만 실행은 전부 완주).
+# → 각 조각이 10분 안에 끝나도록 잘랐다. 합계는 약 48분으로 통짜보다 6분 늘지만
+#   (공통 진입이 1회→7회), 끊김이 사라지고 실패해도 손실이 조각 하나로 제한된다.
+#
+# ⚠️ **순서 의존 — 반드시 13_01 → 13_02 → … → 13_07 순으로 돈다.**
+#   데이터 사슬: 01~03이 송금인 3국을 등록 → 04가 **인도네시아**로 송금요청 신청 →
+#   05가 **베트남** 송금인 정보 수정 → 06이 등록된 송금인을 **전부 삭제** →
+#   07은 04가 만든 **요청**의 상태 화면을 본다(송금인과 무관해 06 뒤라도 성립).
+#
+# 이 파일: [01]~[07] — 환율/국가리스트 5케이스 + 인도네시아 송금인 등록
+#   예상 약 6분 / 전제: 없음(이 파일이 사슬의 시작). 계정 수취인 목록은 비어 있어도 된다
+# ================================================================
+
+# ================================================================
+# 시나리오: Receive Overseas Funds (Inbound)
+# ================================================================
+# 2026-07-08 구조 변경: 케이스마다 Home으로 완전히 나갔다가 재진입하던 방식을 없애고,
+# 가능한 한 이전 케이스가 끝난 화면에서 바로 다음 케이스를 이어서 진행하도록 수정함.
+# 다만 [15]~[20](Inbound Request Status)은 "해외송금 받기"를 Home에서 새로 탭해야만
+# "받는 계좌" 카드 목록이 노출되는 구조라, [13]->[15] 전환과 [18]->[19]->[20] 사이는
+# 여전히 Home 경유가 필요함(안전을 위해 유지 - [20]은 실제 결제 페이지로 연결되므로
+# 내비게이션 스택을 확신할 수 없는 구간은 보수적으로 Home으로 리셋함).
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# Receive Overseas Funds 진입: Home > 해외송금 받기 (전체 [01]~[14] suite 진입 시 1회만)
+# 계정에 완료된 인바운드 Request가 있으면 [01]~[14]가 기대하는 수취인 목록 화면이 아니라
+# **요청 쪽 화면이 먼저 뜬다.** 2026-09-04 실측으로 경로가 둘인 것이 확인됐다:
+#   ① "받는 계좌" 카드 목록(rvAccountList) — 카드를 탭해야 상세로 들어간다
+#   ② 곧바로 **요청 상세**(ReceiveMoneyInboundDetailActivity, `tv_req_complete`) — 요청이
+#      1건일 때 카드 목록을 건너뛰고 직행했다. 종전 코드는 ①만 알아서 여기서 조용히 멈췄고,
+#      뒤따르는 [10]이 "송금인 등록하기"를 못 찾아 죽었다.
+# 두 경로 모두 상세의 **"다른 요청 진행"** 에서 만나므로 순서대로 처리한다.
+- runFlow: "_enter_receive_overseas_old.yaml"
+- runFlow: "_inbound_goto_sender_list_old.yaml"
+
+# ----------------------------------------------------------------
+# [01] [High] Exchange Rate - 인바운드 환율 선택 시 국가리스트 바텀시트 발생 확인 - 국가 선택 동작 확인
+# ----------------------------------------------------------------
+# 상단 환율 계산 위젯의 통화 선택(chevron)을 탭하면 국가리스트 바텀시트 노출
+
+- tapOn:
+    id: "tv_countryCode"
+- assertVisible:
+    text: "국가를 선택해 주세요"
+- tapOn: "Indonesia"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [Medium] Exchange Rate - 국가리스트 검색동작 확인
+# ----------------------------------------------------------------
+# [01]이 끝난 화면(메인 위젯, Indonesia 선택된 미계산 상태)에서 바로 이어서 진행
+
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn:
+    id: "searchLayout"
+- inputText: "Indonesia"
+- assertVisible:
+    text: "Indonesia"
+- assertNotVisible:
+    text: "Mongolia"
+- tapOn: "취소"
+
+# ----------------------------------------------------------------
+# [03] [Low] Exchange Rate - 임의 국가 선택 시 국가 환율 계산페이지 노출 확인
+# ----------------------------------------------------------------
+# [02]가 끝난 화면(메인 위젯, 검색 취소로 복귀)에서 바로 이어서 진행
+
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn: "Vietnam"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "보내는 금액"
+- assertVisible:
+    text: "받는 금액"
+- assertVisible:
+    text: "계산하기"
+
+# ----------------------------------------------------------------
+# [04] [High] Exchange Rate - 국가 별 환율계산 확인 - 인도네시아, 몽골, 베트남
+# ----------------------------------------------------------------
+# 금액 입력 후 커스텀 키패드의 "완료"를 탭하면 자동으로 환율계산 결과가 노출됨
+# (별도로 "계산하기" 버튼을 탭할 필요 없음)
+# 2026-07-08 회귀 수정: 금액 입력 필드 id가 tv_amount → sendAmountEdTxt로 변경됨(앱 업데이트로 추정).
+# [04][05][11][12] 전부 동일하게 수정함. 또한 국가 선택 chevron의 id는 화면 진입 후 처음
+# 로드된 그 상태(placeholder, 아직 국가를 한 번도 고른 적 없음)에서만 tv_countryCode이고,
+# 국가를 단 한 번이라도 선택하고 나면(계산 여부 무관) 이후로는 계속 countrySelectionSpinner로
+# 남음. [01]에서 이미 한 번 선택했으므로 이 시점부터는 계속 countrySelectionSpinner 사용
+# [03]이 끝난 화면(메인 위젯, Vietnam 선택된 미계산 상태)에서 바로 이어서 진행
+
+# Indonesia
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn: "Indonesia"
+- tapOn:
+    id: "sendAmountEdTxt"
+- inputText: "1000000"
+- tapOn: "완료"
+- assertVisible:
+    text: ".*수수료 포함된 금액.*"
+# Mongolia
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn: "Mongolia"
+- tapOn:
+    id: "sendAmountEdTxt"
+- inputText: "1000000"
+- tapOn: "완료"
+- assertVisible:
+    text: ".*수수료 포함된 금액.*"
+# Vietnam
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn: "Vietnam"
+- tapOn:
+    id: "sendAmountEdTxt"
+- inputText: "1000000"
+- tapOn: "완료"
+- assertVisible:
+    text: ".*수수료 포함된 금액.*"
+
+# ----------------------------------------------------------------
+# [05] [Medium] Exchange Rate - 환율계산 완료 > Request 동작 시 인바운드 메인화면 이동확인
+# ----------------------------------------------------------------
+# "계속"(Request) 탭 시 계좌 선택 바텀시트 노출, 닫기(X) 시 인바운드 메인(환율계산) 화면으로 복귀
+# [04]가 끝난 화면(메인 위젯, Vietnam 계산 완료 상태)에서 바로 이어서 진행하므로
+# 국가 선택 chevron은 이미 계산된 상태 = countrySelectionSpinner
+
+- tapOn:
+    id: "countrySelectionSpinner"
+- tapOn: "Indonesia"
+- tapOn:
+    id: "sendAmountEdTxt"
+- inputText: "1000000"
+- tapOn: "완료"
+- assertVisible:
+    text: ".*수수료 포함된 금액.*"
+- tapOn:
+    id: "btn_continue"
+# 알려진 간헐적 버그(btn_continue가 "계좌 선택" 대신 위젯을 리셋시킴, 앱 자체 문제로 추정,
+# 2026-07-08/09 실기기에서 재현) - 정상 동작(바텀시트 노출)했을 때만 닫고, 버그로 리셋된
+# 경우엔 이미 메인 위젯 화면이라 [06]이 기대하는 시작 상태와 동일하므로 검증을 스킵하고
+# 그대로 다음 케이스로 진행함(전체 suite가 여기서 멈추지 않도록)
+- runFlow:
+    when:
+      visible:
+        text: "계좌 선택"
+    commands:
+      - tapOn:
+          id: "close"
+- assertVisible:
+    text: "받는 금액"
+
+# ----------------------------------------------------------------
+# [06] [High] Add Inbound Sender - 국가리스트 발생 확인
+#            - [NEXT] 버튼 선택 시 다음 페이지 이동 확인
+#            - 국가 검색 기능 자체가 동작하지 않는 버그 발견(아래 주석 참고)로 검색 검증은 제외
+# ----------------------------------------------------------------
+# Add Inbound Sender 진입: "송금인 등록하기" 버튼 (국가 Indonesia 기본 선택된 상태)
+# [05]가 끝난 화면(메인 위젯, 계좌선택 바텀시트 닫힘)에서 바로 이어서 진행.
+# "송금인 등록하기" 버튼은 환율계산 상태와 무관하게 항상 노출되어 있음
+# 2026-07-08 회귀 수정: 등록 폼의 국가 선택기는 메인 위젯의 tv_countryCode와는 별개의
+# 컴포넌트로, id가 tf_countryList로 확인됨 (기존 tv_countryCode는 이 화면에 존재하지 않음)
+# 2026-07-08 발견 - 앱 버그로 추정: 이 국가 선택 바텀시트의 검색창(searchLayout)에
+# "Mongolia"를 입력해도 필터링된 결과가 전혀 노출되지 않음(빈 목록). Maestro의 inputText뿐
+# 아니라 adb의 순수 텍스트 입력으로도 동일하게 재현되어 테스트 코드 문제가 아니라 검색
+# 기능 자체의 결함으로 보임. 검색 없이 전체 목록(rvCountryList)에서 직접 탭하는 방식으로 우회
+
+- tapOn: "송금인 등록하기"
+- waitForAnimationToEnd
+- tapOn:
+    id: "tf_countryList"
+- assertVisible:
+    text: "국가를 선택해 주세요"
+- assertVisible:
+    id: "rvCountryList"
+- tapOn: "Mongolia"
+- tapOn: "다음"
+- assertVisible:
+    text: "송금인 세부 정보 입력"
+
+# [07]에서 등록 폼을 처음부터 새로 시작해야 하므로(기본값 Indonesia로 리셋 필요)
+# 메인화면까지만 복귀 (Home까지 나가지 않음). 등록/취소 완료 후 앱이 자동으로 몇 단계를
+# 이미 되돌려놓는 경우가 간헐적으로 있어(원인 불명, 2026-07-08 확인) 몇 번의 back이
+# 정확히 필요한지 매번 다름 - back을 최대한 시도한 뒤, 그래도 목표 화면이 아니면
+# (Home을 지나쳐 종료 확인 다이얼로그까지 가버렸거나 등) "해외송금 받기"로 자동 복구함
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+# 자동 복구: 오버슈팅으로 앱 종료 확인 다이얼로그까지 갔으면 닫기
+- runFlow:
+    when:
+      visible:
+        text: "앱을 종료하시겠습니까?"
+    commands:
+      - tapOn: "아니요"
+      - waitForAnimationToEnd
+# 자동 복구: 그래도 메인화면이 아니면(Home이든 어디든) "해외송금 받기"로 재진입
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
+      #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다
+      #   ② 진입 직후 **"수취 방법 선택" 시트**(`individualRemittanceRow`)가 한 단계 더 뜬다
+      #   그래서 통짜 실행이 이 시트에 갇힌 채 "송금인 등록하기"를 못 찾고 죽었다.
+      #   두 가지 모두 `_enter_receive_overseas_old.yaml` 이 이미 처리한다 → 헬퍼를 쓴다.
+      - runFlow: "_enter_receive_overseas_old.yaml"
+      # 활성 요청이 있으면 수취인 목록 대신 카드 목록 또는 요청 상세가 뜬다(진입부 주석의 표 참고).
+      #   두 경로 모두 "다른 요청 진행"에서 만나므로 순서대로 처리한다.
+      - runFlow: "_inbound_goto_sender_list_old.yaml"
+
+# ----------------------------------------------------------------
+# [07] [High] Add Inbound Sender - 인도네시아, 몽골, 베트남 국가 송금인 등록 확인
+#   ※ 2026-09-07: 세 국가 모두 **등록만 하고 남긴다**. 인도네시아는 [10]~[12](송금요청),
+#     베트남은 [14](정보 수정)가 쓰고, **[14] 뒤에서 전부 일괄 삭제**한다.
+#            - 베트남 송금인 등록 시 사진 파일 정상 업로드 확인
+# ----------------------------------------------------------------
+# 인도네시아 송금인 등록 end-to-end (실기기 검증됨). 이름/전화번호/이메일/주소/도시 입력
+# 필드는 모두 동일한 id("input_edittext")를 공유하므로 index로 순서 구분
+#
+# 2026-08-07: 몽골([07-1])·베트남([07-2]) 등록 추가 완료 — 실기기 192스텝 PASS(EXIT=0).
+#   **국가마다 등록 폼이 완전히 다름**:
+#     인도네시아 = 텍스트 5개 / 사진 없음
+#     몽골      = 14개(드롭다운 5 + 날짜피커 3) / 신분증 사진 3종
+#     베트남    = 8개(드롭다운 4) / 신분증 사진 3종
+#   → 새 국가를 추가할 땐 폼을 처음부터 실기기로 다시 탐색해야 함(인도네시아 패턴 재사용 불가).
+#   사진 업로드는 공통 헬퍼 `_inbound_upload_docs.yaml`로 분리(문서 종류는 국가마다 다르나
+#   captureImage index 0/1/2 순서 처리라 재사용 가능).
+# 2026-07-08 회귀 수정: Address 입력 후 키보드가 City 필드를 가리는 경우가 있어 hideKeyboard 추가.
+# 확인 바텀시트 헤더 텍스트에 실제 줄바꿈이 포함되어 있어 text 셀렉터 매칭이 실패함 - id로 매칭
+# [06]이 끝난 화면(메인화면)에서 바로 이어서 진행. "송금인 등록하기" 재진입 시
+# 국가는 항상 기본값 Indonesia로 리셋되므로 별도 국가 선택 불필요
+
+- tapOn: "송금인 등록하기"
+- waitForAnimationToEnd
+- tapOn: "다음"
+- assertVisible:
+    text: "송금인 세부 정보 입력"
+- tapOn:
+    id: "input_edittext"
+    index: 0
+- inputText: "Budi Santoso"
+- tapOn:
+    id: "input_edittext"
+    index: 1
+# ⚠️ 번호를 **고유값**으로 둔다 — 계정에 이미 있는 "BUDI SANTOSO"가 081234567890을 쓰고 있어
+#   그 번호로는 삭제 여부를 판정할 수 없다(2026-08-20 실측).
+- inputText: "081200099001"
+- tapOn:
+    id: "input_edittext"
+    index: 2
+- inputText: "budi@example.com"
+# ⚠️ **이메일 입력 뒤 키보드를 반드시 닫는다.** 키보드가 Address·City 를 덮으면 두 필드가
+#   **접근성 트리에서 사라져** `input_edittext index: 3` 이 `Element not found` 로 죽는다.
+#   (2026-09-08 SM-S911N / 1080x2340 실측 — 구 기기 1080x2220 에서는 안 겪던 문제다.
+#    폼 자체는 **두 기기 모두 5필드**다: Full Name·Mobile Number·Email·Address·City — 계층 덤프로 확인.)
+#   ⛔ `hideKeyboard` 는 **키보드가 없을 때 뒤로가기로 동작한다**(같은 날 실측) → 입력 직후에만 쓸 것.
+- hideKeyboard
+- tapOn:
+    id: "input_edittext"
+    index: 3
+- inputText: "Jakarta Street 123"
+- hideKeyboard
+- tapOn:
+    id: "input_edittext"
+    index: 4
+- inputText: "Jakarta"
+- hideKeyboard
+- tapOn: "다음"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "header"
+- tapOn: "확인"
+- assertVisible:
+    text: "저장 성공"
+# "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 곧바로 목록으로 돌아가는 경우가
+# 간헐적으로 갈림([13] 참고) - 프롬프트가 떠서 아직 목록이 안 보일 때만 취소로 닫음
+- runFlow:
+    when:
+      notVisible:
+        text: "Budi Santoso"
+    commands:
+      - tapOn: "취소"
+# ── 2026-09-07 사양 변경(사용자 지시): **여기서 지우지 않고 남긴다** ──
+#   "송금인은 인도네시아·몽골·베트남 모두 등록하고, 베트남 송금인으로 정보 수정 케이스를,
+#    인도네시아 송금인으로 송금요청 신청 케이스를 확인. 모든 케이스 확인 후 등록된 모든 송금인 삭제."
+#   → 종전의 "등록 직후 즉시 삭제"를 걷어내고, **[14] 뒤에서 3건을 일괄 삭제**한다.
+#   ⚠️ 등록 직후 삭제하면 [10]~[12](인도네시아 요청)·[14](베트남 수정)가 쓸 데이터가 사라진다.
+
+# 메인화면까지만 복귀. 등록 완료 후 앱이 자동으로 몇 단계를 이미 되돌려놓는 경우가
+# 간헐적으로 있어(원인 불명, 2026-07-08 확인) 정확한 back 횟수가 매번 달라짐 - back을
+# 최대한 시도한 뒤, 그래도 목표 화면이 아니면 "해외송금 받기"로 자동 복구함
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "앱을 종료하시겠습니까?"
+    commands:
+      - tapOn: "아니요"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "수취 방법"
+    commands:
+      # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
+      #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다
+      #   ② 진입 직후 **"수취 방법 선택" 시트**(`individualRemittanceRow`)가 한 단계 더 뜬다
+      #   그래서 통짜 실행이 이 시트에 갇힌 채 "송금인 등록하기"를 못 찾고 죽었다.
+      #   두 가지 모두 `_enter_receive_overseas_old.yaml` 이 이미 처리한다 → 헬퍼를 쓴다.
+      - runFlow: "_enter_receive_overseas_old.yaml"
+      # 활성 요청이 있으면 수취인 목록 대신 카드 목록 또는 요청 상세가 뜬다(진입부 주석의 표 참고).
+      #   두 경로 모두 "다른 요청 진행"에서 만나므로 순서대로 처리한다.
+      - runFlow: "_inbound_goto_sender_list_old.yaml"

@@ -1,0 +1,7 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# 크롭/확인 화면에서 [완료] 탭 → OCR(신분증 정보 입력) 화면 진입
+- tapOn: "완료"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd

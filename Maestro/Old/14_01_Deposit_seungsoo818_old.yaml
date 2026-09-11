@@ -1,0 +1,920 @@
+appId: ${APP_ID}
+---
+
+# ================================================================
+# 시나리오: Deposit — **계정별 분리본 1/3 (seungsoo818 / 한국인·은행계좌 연결)**
+# ================================================================
+# 원본 `14_Deposit_old.yaml`(1845줄)은 3계정을 오가느라 1회 실행이 너무 길어
+# 2026-08-26 사용자 지시로 **계정별 3개 파일로 분리**했다. 각 파일은
+#   공통 진입(앱 실행 → PIN <정상 PIN> → 홈) + 해당 계정 로그인 + 그 계정 케이스
+# 만 담고 있어 독립 실행 가능하다.
+#   - 14_01_Deposit_seungsoo818_old.yaml : [01]~[05] [08] [25]~[28] [30]~[35]
+#   - 14_02_Deposit_test123_old.yaml     : [06] [07] [09] [14]~[24] [29]
+#   - 14_03_Deposit_test251024_old.yaml  : [10]~[13] + seungsoo818 원복
+# ⚠️ 케이스는 **번호순이 아니다**(계정 묶음 순). 원본은 참고용으로 남겨둔다.
+# 이 파일은 seungsoo818로 끝난다 → 다른 플로우와 계정이 맞으므로 원복 불필요.
+# ================================================================
+# ================================================================
+# 시나리오: Deposit
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록) ----------------
+# ⚠️ 개편UI판의 `notVisible: text "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇히는 사고 이력이 있다 → 잠금화면을 명시적으로 대기한다.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로|.*간편 비밀번호를 생성.*"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            # ⚠️ 대안 목록에 PIN 생성 화면을 **반드시 같이** 넣어야 한다 — 빠뜨리면
+            #   대상도 배너도 안 보여 그냥 타임아웃된다(2026-08-25 실제 실패).
+            text: "4자리 숫자를 입력하세요|홈으로|.*간편 비밀번호를 생성.*"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+# ⚠️ 이전 실행이 `loginpwidhidpass` 경로(= 기존 PIN 해지)로 끝났으면 계정에 PIN이 없어
+#   잠금화면 대신 "앱에서 사용할 간편 비밀번호를 생성해 주세요"가 뜬다 → <정상 PIN>로 재등록한다.
+#   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# ================================================================
+# [시작 계정 고정] → seungsoo818 (한국인, 은행계좌 연결)
+# ================================================================
+# 계정 전환 추가(2026-07-16): [01]~[05](GME Wallet Deposit)는 "은행 입금"/
+# "즉시 입금" 옵션이 있는 은행계좌 연결 계정을 전제로 작성되어 있으나 명시적
+# 로그인이 없어 "시작 시점에 이미 로그인된 계정"에 의존했음. 직전 실행이
+# test123(은행 미연결)으로 끝나면 재실행 시 [05]의 "은행 입금" 옵션이 없어
+# 실패함(2026-07-16 실기기 재현). 실행 시점 계정과 무관하게 항상 통과하도록
+# 파일 첫머리에서 seungsoo818로 명시적 로그아웃→재로그인함.
+
+# ================================================================
+# [GME Wallet Deposit]
+# ================================================================
+# 진입 경로: Home > "입금"(content-desc 기반 아이콘, Home 화면 "송금" 섹션 내)
+# → "입금 방법을 선택하세요" 바텀시트(GME Wallet / GMEPay 탭, GME Wallet이 기본 선택)
+# → 즉시 입금 / 은행 입금 / 편의점 입금 / ATM 입금 중 선택
+#
+# 실기기 확인 결과(2026-07-10), 원래 TODO가 전제한 "KJ/WSB 가상계좌발급 상태
+# 안내페이지 → [Confirm] → Deposit 페이지 이동" 흐름은 현재 앱 버전에 존재하지
+# 않음: "은행 입금" 탭 시 별도 안내/Confirm 단계 없이 곧바로 최종 계좌정보
+# 화면("GME Wallet 입금")으로 직행하며, 여기 표시되는 입금 계좌가 바로
+# "Welcome Savings Bank"(웰컴저축은행) = WSB로 확인됨. 수신 계좌(KJ vs WSB)는
+# 계정 속성(국적 등)에 따라 서버에서 고정 배정되는 것으로 보이며, 화면 내에서
+# 직접 선택하는 UI는 없음. 현재 테스트 계정은 WSB로 배정되어 있어 KJ 관련
+# 케이스([02]~[04])는 이 계정으로 검증 불가.
+
+# ----------------------------------------------------------------
+# ================================================================
+# ⚠️ 케이스 실행 순서 = **계정별 묶음**이다 (2026-08-25 재배치, 사용자 지시).
+#   구 UI는 재로그인 1회 비용이 크다 — 로그아웃 후 PIN 잠금화면을 거쳐
+#   `loginpwidhidpass`로 들어가야 하고 그때 **기존 PIN이 해지돼 재등록**까지 해야 한다.
+#   개편UI판은 계정을 9번 갈아 이 비용을 9번 냈고, 중간에 끊기면 PIN 없는 상태로 남아
+#   다음 실행 진입 자체가 막혔다(실제 2회 발생).
+#   → 같은 계정이 필요한 케이스를 모아 **로그인 4회**로 줄였다:
+#     seungsoo818: [01]~[05] [08] [25]~[35]  /  test123: [06] [07] [09] [14]~[24]
+#     test251024: [10]~[13]  /  마지막에 seungsoo818로 원복
+#   ⚠️ 그래서 **케이스가 번호순으로 실행되지 않는다.** 케이스를 추가할 때는 번호 위치가
+#     아니라 **필요 계정 묶음** 안에 넣을 것.
+# ================================================================
+
+# 구 UI는 로그아웃이 **프로필 탭에 없고 드로어에만** 있다 → `iv_nav`로 드로어를 연다.
+#   드로어 항목에는 resource-id가 없어 텍스트로만 탭할 수 있다.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "로그아웃"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "로그아웃"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "예"
+    commands:
+      - tapOn: "예"
+      - waitForAnimationToEnd
+# ⚠️ **구 UI는 로그아웃 후 ID/비밀번호 폼이 아니라 PIN 잠금화면(`ActivityLockScreen`)으로 떨어진다**
+#   (2026-08-25 실측. 개편UI판은 곧바로 `usernameId` 폼을 전제해 여기서 FAILED로 죽었다).
+#   `loginpwidhidpass`("아이디/비밀번호로 로그인")를 타야 `LoginV2Activity`로 간다.
+#   그때 "ID와 비밀번호로 로그인하면 기존 간편 비밀번호는 해지됩니다" 확인 다이얼로그가 뜬다
+#   → `btn_diaog_ok`("예"). ⚠️ id에 앱 오타가 있다(`diaog`) — `dialog`가 아니다.
+#   ※ 이 경로로 들어가면 **기존 PIN이 해지**되므로 아래 간편비밀번호 재설정 블록이 실제로 동작한다.
+- runFlow:
+    when:
+      visible:
+        id: "loginpwidhidpass"
+    commands:
+      - tapOn:
+          id: "loginpwidhidpass"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "seungsoo818"
+- tapOn:
+    id: "securityKeyboardEditText"
+# 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_Login_Success_old` EXIT=0으로 재확인).
+#   ⚠️ 한때 메모리에 `<구 비밀번호(폐기)>`가 맞다고 적혀 있었으나 **틀렸다** — 순서를 바꿨다가
+#   무효한 값을 먼저 시도하게 되어 되돌렸다. 시도 5회 제한이 있으니 순서를 임의로 바꾸지 말 것.
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+# ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
+#   성공 가능성이 0인 재시도로 로그인 5회 제한을 깎는 건 순손실이다 —
+#   재시도 값은 이미 폐기된 비밀번호이고, 실패하면 카운터만 하나 더 줄어든다.
+#   1차가 실패하면 그대로 **시끄럽게 실패**시키는 편이 진단에도 유리하다.
+#   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      # ⚠️ Maestro 텍스트는 **전체매칭**이라 `"간편비밀번호"`는 실제 문구
+      #   "앱에서 사용할 간편 비밀번호를 생성해 주세요"에 **매칭되지 않는다**
+      #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
+      #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
+      #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    # ⚠️ 원래는 범용 `visible: "닫기"` → `tapOn: "닫기"`였다. 이 화면 저 화면의 아무 "닫기"에
+    #   매칭돼 엉뚱한 X를 누르는 패턴으로, 2026-08-25 실행에서 **앱이 런처로 빠져나가는**
+    #   사고를 냈다(로그인 직후 PIN 생성 화면에서 발동). 인앱 배너는 **id로 정확히** 닫는다.
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# [01] [Low] Home - 입금 방법 선택 바텀시트 닫기 동작 확인
+# ----------------------------------------------------------------
+# ⚠️ **구 UI에는 "입금 방법을 선택하세요" 바텀시트가 없다**(2026-08-25 실측).
+#   홈 `txvDepositOrViewStatement`("입금")를 누르면 바텀시트 대신
+#   **`deposit.depositMenu.view.ActivityDepositMenu`("입금 서비스") 전용 화면**으로 직행하고,
+#   개편UI 바텀시트의 옵션들이 여기서 **타일 5개**로 펼쳐져 있다:
+#     GME Wallet 입금 / GMEPay 입금 / ATM 입금 / 자동이체 입금 / 현장 입금
+#   ⚠️ 이 화면의 타일에는 **resource-id가 전혀 없어 텍스트로만 탭할 수 있다.**
+#   → 케이스 의도("입금 진입 → 닫기 → 홈 복귀")는 유지하고 판정 대상만 바꿨다:
+#     바텀시트 노출 확인 → **입금 서비스 화면 + 타일 5개 노출 확인**,
+#     [닫기] → **back**(이 화면엔 닫기 버튼이 없다).
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- assertVisible: "GME Wallet 입금"
+# 라벨이 개행을 포함한다("GMEPay" + 개행 + "입금") → 개행 매칭은 [\s\S]를 쓴다
+#   ⚠️ YAML 이중인용(")에서는 \s가 escape 오류다 → **단일인용(')**을 써서 정규식을 그대로 넘긴다
+- assertVisible: 'GMEPay[\s\S]*입금'
+- assertVisible: "ATM 입금"
+- assertVisible: "자동이체 입금"
+- assertVisible: "현장 입금"
+- takeScreenshot: "shots_14_deposit_old/01_입금서비스_진입"
+- pressKey: back
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [02] [High] GME Wallet Deposit - KJ - KJ 가상계좌발급 상태 안내페이지 노출 확인
+#            - [Confirm] 버튼 선택 시 Deposit 페이지 이동 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): 현재 테스트 계정은 수신 계좌가 WSB(Welcome Savings
+# Bank)로 고정 배정되어 있어 KJ 가상계좌 화면 자체에 진입할 수 없음. 화면 내
+# 선택 UI가 없고 계정 속성에 따라 서버에서 결정되는 구조라, KJ 배정 계정을
+# 별도로 확보하기 전까지는 코드 작성 범위에서 제외(사용자 사전 승인).
+
+# - tapOn: "TODO: Deposit 메뉴 진입 → GME Wallet Deposit → KJ"
+# - assertVisible:
+#     text: "TODO: KJ 가상계좌발급 안내 페이지 식별 텍스트"
+# - tapOn: "Confirm"
+# - assertVisible:
+#     text: "TODO: Deposit 페이지 식별 텍스트"
+
+# ----------------------------------------------------------------
+# [03] [Low] GME Wallet Deposit - KJ - [?] 선택시 GME Wallet Deposit Guide 화면 이동 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): [02]와 동일한 사유(KJ 미배정 계정) - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: Deposit → GME Wallet Deposit → KJ"
+# - tapOn: "TODO: ? 버튼"
+# - assertVisible:
+#     text: "TODO: GME Wallet Deposit Guide 화면 텍스트"
+
+# ----------------------------------------------------------------
+# [04] [Medium] GME Wallet Deposit - KJ - 금액 개별/단위 입력 동작 확인
+#              - 입력후 [x]선택시 금액 입력 취소됨
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): [02]와 동일한 사유(KJ 미배정 계정) - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: Deposit → GME Wallet Deposit → KJ"
+# - tapOn: "TODO: 금액 입력 필드"
+# - inputText: "50000"
+# - assertVisible:
+#     text: "50,000"
+# - tapOn: "TODO: x 버튼"
+# - assertNotVisible:
+#     text: "50,000"
+
+# ----------------------------------------------------------------
+# [05] [Medium] GME Wallet Deposit - WSB - WSB 가상계좌 정보 노출 확인
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 원래 TODO가 전제한 "안내페이지 → [Confirm] → Deposit
+# 페이지 이동" 단계는 없고, "은행 입금" 탭 시 곧바로 최종 계좌정보 화면으로
+# 이동함 - 케이스 내용을 실제 동작에 맞게 정정하여 작성.
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- tapOn: "GME Wallet 입금"
+- waitForAnimationToEnd
+- assertVisible: "GME Wallet 입금"
+- assertVisible:
+    id: "txvReceivingBankName"
+- assertVisible: "계좌번호 복사"
+
+# 홈 복귀 (이 화면도 앱바 back button만 있고 pressKey: back은 무반응 - id 기반 탭)
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ================================================================
+# [GMEPay Deposit]
+# ================================================================
+# 진입 경로: Home > "GMEPay 가상 계좌"(계좌 목록 카드 내 링크) → "가상 계좌 입금"
+# 화면(카드 UI, 전북은행 등 VA 은행 카드 슬라이드, 복사 아이콘(id: tvCopyBadge)/
+# 공유 버튼(id: btnShare)/우상단 정보 아이콘(id: btnInfo) 노출) 직행.
+#
+# 실기기 확인 결과(2026-07-10), 원래 TODO가 전제한 "Easy Wallet Deposit" 메뉴
+# 항목은 "입금 방법을 선택하세요" 바텀시트(GMEPay 탭: 즉시 입금/가상계좌 입금/
+# GME Wallet에서 입금 3개뿐)에 존재하지 않음 - 화면상 진입 경로 자체가 없어
+# [08] [High] GMEPay Deposit - "GMEPay 가상 계좌 입금" 영역 미노출 확인 (국적: 한국인)
+# ----------------------------------------------------------------
+# 계정 전환: 로그아웃 → seungsoo818(한국인) 재로그인
+
+# Home 화면 계좌 목록에서 "GMEPay 가상 계좌" 배너가 노출되지 않아야 함(한국인 계정 확인).
+# ⚠️ 개편UI판은 `assertNotVisible: "GMEPay 가상 계좌"`였으나 구 UI 실제 텍스트는
+#   "GME Pay 가상 계좌"(공백)라, 배너가 떠 있어도 텍스트가 안 맞아 **무조건 통과하는
+#   거짓 통과**가 된다 → id 기준으로 바꿔 실제 미노출을 검증한다.
+# ⚠️ 홈은 **스크롤 위치를 유지**하므로 상단 카드 영역으로 올려야 판정이 유효하다.
+#   ⚠️ 단 여기서는 **배너가 없는 것이 정상**이라 배너를 앵커로 스크롤하면 안 된다
+#     (없는 요소를 기다려 타임아웃으로 죽는다) → 항상 존재하는 `btnTransfer`를 앵커로 쓴다.
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertNotVisible:
+    id: "tv_easywallet_account_title"
+
+# ----------------------------------------------------------------
+# [25] [High] Auto Debit Deposit - 등록된 KFTC 계좌리스트 노출 확인 및 변경동작 확인
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- tapOn: "자동이체 입금"
+- waitForAnimationToEnd
+- tapOn:
+    id: "edtBankAccListView"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "rvKftcList"
+# ⚠️ **은행명을 하드코딩하지 않는다**(2026-09-01). 연동 계좌 목록은 계정 상태에 따라 바뀌고,
+#   실제로 `케이뱅크`가 목록에서 사라져 `08_MyQR [02]`가 멈춘 이력이 있다(2026-08-28).
+#   이 케이스의 정의는 "목록 노출 + 변경 동작"이라 **어느 은행인지는 본질이 아니다** →
+#   목록에서 첫 은행을 골라 그 값으로 검증한다.
+#   ※ `.*(은행|뱅크)`가 안전한 이유: Maestro 텍스트는 **전체매칭**이라 은행/뱅크로 **끝나는**
+#     문자열만 잡는다 → `GME Wallet`(원복 대상)과 `은행 계좌 선택` 같은 헤더는 매칭되지 않는다.
+#   ⛔ 실송금·실결제 케이스에는 이 방식을 쓰지 말 것 — 어느 계좌로 돈이 갔는지가 재현 가능해야 한다.
+# ① 선택 가능한 은행이 최소 1개 있는지 먼저 단언한다(빈 목록에서 조용히 통과하는 것을 막는다)
+- assertVisible:
+    text: ".*(은행|뱅크)"
+    index: 0
+# ② 고른 값을 기억한다
+- copyTextFrom:
+    text: ".*(은행|뱅크)"
+    index: 0
+- evalScript: ${output.kftcBank = maestro.copiedText}
+- tapOn:
+    text: ".*(은행|뱅크)"
+    index: 0
+- waitForAnimationToEnd
+# ③ 고른 값으로 검증한다. 선택 후 필드는 "<은행명>(계좌번호 마스킹)" 형태라 앞뒤를 감싼다
+- assertVisible: ".*${output.kftcBank}.*"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [26] [Medium] Auto Debit Deposit - View Balance 통해 잔액조회 확인
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- tapOn: "자동이체 입금"
+- waitForAnimationToEnd
+- tapOn: "계좌 잔액 보기"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "tv_balance"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [27] [Medium] Auto Debit Deposit - 충전 금액 입력 동작 확인
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- tapOn: "자동이체 입금"
+- waitForAnimationToEnd
+- tapOn:
+    id: "edtRechargeAmount"
+- inputText: "50000"
+- assertVisible: "50,000.*"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ================================================================
+# [Store Deposit]
+# ================================================================
+# 진입 경로: Home > "입금" > 바텀시트에서 "편의점 입금"(또는 "ATM 입금", [ATM
+# Deposit] 헤더 참고 - 동일 화면) 선택 → "현장 입금" 화면(신청/거래 내역 탭,
+# resource-id: smartDepositTabLayout / smart_deposit_root) 직행.
+#
+# 신청 탭: 이용 가능 편의점(CU/GS25/7-ELEVEN/emart24) 로고, 입금 한도 안내,
+# 금액 입력 필드(기본값 10,000 KRW 미리 채워짐, 10,000/50,000/100,000 KRW
+# 단위 버튼), 확인 버튼, 좌하단 "?" 도움말 버튼(id: how_to_deposit)으로 구성.
+# 뒤로가기는 이 화면 포함 모든 하위 화면에서 앱바 "<" 아이콘(id: iv_back,
+# GME Wallet/GMEPay 섹션의 btnBackImage와는 다른 id)만 사용 가능 - 금액 입력
+# 필드가 있는 화면에서는 pressKey: back이 동작하지 않음(기존 확인된 패턴과
+# 동일).
+#
+# "확인" 탭 시 "입금을 신청하시겠습니까?" 바텀시트(신청 버튼 id: apply_btn)
+# → 간편 비밀번호(PIN, 4자리, 키패드 배열 매번 랜덤) 입력 → 즉시 바코드 발급
+# 화면으로 이동함(별도 서버 승인 대기 없음). 실기기 확인 결과 바코드는 유효
+# 시간(10분) 종료 시 자동으로 "취소 완료" 상태가 되며(바코드 만료 안내 팝업
+# 노출), 편의점에서 실제 스캔되기 전까지는 실계좌에서 자금이 이동하지 않음 -
+# 기존에 확인된 안전한 테스트 패턴과 동일(취소 액션을 별도로 누를 필요 없이
+# 자연 만료됨, 거래 내역에 "취소 완료"로 자동 반영).
+#
+# 중요(실행 간격 제약): 대기 중인 요청이 있는 동안에는 "편의점 입금"/"ATM
+# 입금" 재진입 시 항상 이 바코드 화면이 먼저 노출되고 "이용 가능 편의점"
+# 입력 화면은 나오지 않음(서버 측 상태이므로 앱 재시작으로도 회피 불가) -
+# 실기기 확인됨([29] 실행 직후 같은 프로세스 안에서 재검증). 따라서 이 파일
+# 전체(또는 [Store Deposit] 섹션만)를 [29] 실행 후 10분 이내에 재실행하면
+# [28]부터 바로 실패함 - 재실행은 이전 요청이 만료된 뒤(약 10분 후)에 할 것.
+
+# ----------------------------------------------------------------
+# [28] [High] Store Deposit - Request - Deposit 금액 입력 및 Confirm 동작 확인
+#            - Amount 금액 미입력 시 Confirm 버튼 비활성화 확인
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 버튼에는 별도 resource-id가 없어(단순 텍스트 "확인")
+# 비활성화 상태를 id로 직접 검증할 수 없음 - 대신 금액 미입력 시 노출되는
+# 빨간 안내 문구("수취 금액을 입력하세요")의 노출 여부로 검증.
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 30000
+- tapOn: "현장 입금"
+- waitForAnimationToEnd
+- assertVisible: "이용 가능 편의점"
+- tapOn:
+    id: "amountFormInputField"
+- eraseText: 10
+- assertVisible: "수취 금액을 입력하세요"
+# ⚠️ **숫자 키패드가 금액 퀵칩("10,000 KRW")을 덮는다** — 2026-09-09 SM-S911N(2340px) 실측:
+#   칩이 계층에 안 잡혀 `Element not found` 로 죽었다(구 기기에서는 키패드 위로 보였다).
+#   → 입력 직후라 키패드가 확실히 올라와 있으므로 여기서 닫는 건 안전하다
+#     (`hideKeyboard` 는 키패드가 없을 때 뒤로가기로 동작한다 — 그래서 위치가 중요하다).
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "10,000 KRW"
+- assertNotVisible: "수취 금액을 입력하세요"
+# 정정(2026-07-16): 금액 입력 필드를 탭하면 뜬 숫자 키패드가 [30]의
+# how_to_deposit("?" 도움말, 좌하단 [39,1564] 위치) 버튼을 가려 [30]에서
+# "Element not found: how_to_deposit" 실패가 발생함(실기기 재현). "10,000
+# KRW" 버튼을 눌러도 키패드는 그대로 떠 있으므로 back으로 닫음 - 이 시점엔
+# 항상 키패드가 떠있어 back은 화면 네비게이션이 아닌 키패드 닫기로만 동작함.
+#   ⚠️ 2026-09-09 보강: 위에서 이미 키패드를 내렸을 수 있다. 키패드가 없을 때 back 을 누르면
+#     **화면을 벗어난다** → 도움말 버튼(`how_to_deposit`)이 안 보일 때(=키패드가 덮고 있을 때)만 누른다.
+- runFlow:
+    when:
+      notVisible:
+        id: "how_to_deposit"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [29] [High] Store Deposit - Request - Request 완료시 Barcode, Number, Deposit Amount, Time Limit이 표시됨
+# ----------------------------------------------------------------
+# 실행 순서 참고: 실제 편의점 입금 요청 생성 후에는 만료(10분) 전까지 "편의점
+# 입금" 재진입 시 새 입력 화면 대신 기존 바코드 화면이 그대로 노출됨(실기기
+# 확인됨) - 이후 [30]~[35]가 신선한 입력 화면 상태를 전제로 하므로 충돌 방지를
+# 위해 이 케이스의 실제 코드는 [Store Deposit] 섹션 맨 마지막([35] 다음)에
+# 배치함. 번호/설명은 원래 TODO 순서를 유지하기 위해 여기 남겨둠.
+
+# ----------------------------------------------------------------
+# [30] [High] Store Deposit - Request - [?] 선택시 How to deposit 화면 이동 확인
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 이동한 화면의 타이틀은 앱 자체 오타로 "현장 입급
+# 방법"으로 표시됨("입금"이 아닌 "입급") - 실제 렌더링 텍스트 그대로 검증.
+# [28]에서 이미 "이용 가능 편의점"(레벨1 신청 화면)에 있으므로 그대로 이어서
+# 검증(불필요한 홈 복귀 생략).
+- tapOn:
+    id: "how_to_deposit"
+- waitForAnimationToEnd
+- assertVisible: "현장 입급 방법"
+# ⚠️ 하단 버튼("매장에서 입금하기")은 안내 6단계 아래라 **첫 화면에 안 들어온다**
+#   (2026-09-09 SM-S911N/2340px 실측: 하드 단언이 실패했다) → 스크롤해서 렌더까지 확인한다.
+- scrollUntilVisible:
+    element:
+      text: "매장에서 입금하기"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- assertVisible: "매장에서 입금하기"
+
+# ----------------------------------------------------------------
+# [31] [Low] Store Deposit - Request - Quick Guide 진입후 각 편의점 가이드 표시 확인
+#            - GS25, CU, Seven Eleven, emart 24
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 "현장 입급 방법" 화면 상단의 "빠른 안내" 버튼이
+# Quick Guide에 해당함. 진입시 편의점별 목록이 실제 한글 표기("세븐일레븐",
+# "이마트24")로 노출되며(영문 "Seven Eleven"/"emart 24" 아님), 각 항목
+# 선택시 해당 편의점에 설치된 ATM 기준 단계별 입금 가이드(예: CU 선택시
+# "NICE ATM" 가이드, 수수료 1,500원 표시)로 이동함 - 원래 TODO가 기대한
+# "각 편의점 가이드 표시"를 실제 동작에 맞게 검증.
+# [30]에서 이미 "현장 입급 방법" 화면에 있으므로 그대로 이어서 검증.
+# ⚠️ [30]이 하단 버튼을 보려고 **아래로 스크롤한 상태**다 → "빠른 안내"(상단)를 그대로 누르면
+#   `Element not found` 다(2026-09-09 실측). 위로 되돌린 뒤 누른다.
+- scrollUntilVisible:
+    element:
+      text: "빠른 안내"
+    direction: UP
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn: "빠른 안내"
+- waitForAnimationToEnd
+- assertVisible: "ATM 카드 입금 가이드"
+- assertVisible: "CU"
+- assertVisible: "GS25"
+- assertVisible: "세븐일레븐"
+- assertVisible: "이마트24"
+- tapOn: "CU"
+- waitForAnimationToEnd
+- assertVisible: "NICE ATM"
+
+# ----------------------------------------------------------------
+# [32] [Low] Store Deposit - Request - Start Store Deposit 선택시 Store Deposit 화면 이동 확인
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 버튼 텍스트는 "Start Store Deposit"이 아닌 "매장에서
+# 입금하기"(id: btn_ok)이며, 선택 시 원래 있던 "현장 입금" 신청 화면으로
+# 복귀함(별도의 새 화면으로 이동하지 않음) - 실제 동작에 맞게 검증.
+# [31]은 CU 가이드(레벨4)에서 끝나고 이 케이스는 "현장 입급 방법"(레벨2)
+# 화면이 필요하므로, Home까지 가는 대신 그 화면이 보일 때까지만 뒤로가기
+# (홈 복귀는 다음 [33]에서도 불필요해 여기서는 생략).
+- repeat:
+    while:
+      notVisible:
+        text: "현장 입급 방법"
+    commands:
+      - tapOn:
+          id: "iv_back"
+      - waitForAnimationToEnd
+# ⚠️ `btn_ok`("매장에서 입금하기")도 안내 화면 **맨 아래**라 첫 화면엔 없다 → 스크롤 후 누른다
+#   (2026-09-09 SM-S911N/2340px 실측).
+- scrollUntilVisible:
+    element:
+      id: "btn_ok"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn_ok"
+- waitForAnimationToEnd
+- assertVisible: "이용 가능 편의점"
+
+# ----------------------------------------------------------------
+# [33] [Medium] Store Deposit - History - History 탭 Deposit 이력 확인
+# ----------------------------------------------------------------
+# [32]에서 이미 "이용 가능 편의점"(레벨1 신청 화면)에 있으므로 그대로 이어서
+# 검증(불필요한 홈 복귀 생략).
+- tapOn: "거래 내역"
+- waitForAnimationToEnd
+- assertVisible: "거래번호로 찾기"
+- assertVisible:
+    id: "iv_calendar"
+
+# ----------------------------------------------------------------
+# [34] [High] Store Deposit - History - Control Number 검색 동작 확인
+# ----------------------------------------------------------------
+# 참고: 검증 편의상 이번 세션에서 미리 확인된 기존 거래번호(2026-06-24 생성,
+# 취소 완료 상태)로 검색 - 해당 번호로 필터링되어 정확히 1건만 노출됨을 확인.
+# [33]에서 이미 "거래 내역" 탭에 있으므로 그대로 이어서 검증.
+- tapOn:
+    id: "searchEditText"
+- inputText: "908890131600"
+- assertVisible: "908890131600"
+# ⚠️ 종전엔 `assertNotVisible: "909228615390"` 이었다. 그런데 그 번호는 **이 저장소 어디에서도
+#   긍정 검증된 적이 없다** — 실재하지 않거나 오타여도 assertNotVisible은 그냥 통과하므로
+#   "필터가 동작한다"를 **아무것도 검증하지 못하고 있었다.**
+#   → 실재를 확인할 수 없는 상수에 기대지 않고, **바로 위에서 실재가 증명된 번호**가
+#     필터로 사라지는지를 본다. 이 판정은 오타로 무력화될 수 없다.
+# ⚠️ **지우기만 하면 다음 입력이 반영되지 않는 경우가 있다**(9/3~9/4 G2에서 이 지점이 FAIL 이었다).
+#   → 지운 뒤 **필드를 다시 탭해 포커스를 잡고**, 입력이 화면에 반영된 것을 먼저 확인한 다음
+#     필터 결과를 판정한다. 이렇게 해야 "입력이 안 들어갔는데 필터 탓으로 오진"하는 걸 막는다.
+- eraseText: 12
+- tapOn:
+    id: "searchEditText"
+- inputText: "000000000000"
+- assertVisible: ".*000000000000.*"
+- assertNotVisible: "908890131600"
+# 다음 스텝을 위해 화면 상태를 원래대로(= 검색어가 걸린 상태) 되돌린다
+- eraseText: 12
+- tapOn:
+    id: "searchEditText"
+- inputText: "908890131600"
+- assertVisible: "908890131600"
+
+# 검색 키보드만 닫기(홈 복귀는 생략 - "거래 내역" 탭으로 복귀)
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [35] [High] Store Deposit - History - Date Filter 동작 확인 - [x]선택시 필터 해제됨
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 "[x] 선택시 필터 해제"가 아니라 "기간 선택"
+# 바텀시트(시작/종료 날짜 휠, 취소/검색 버튼)가 노출되는 구조 - 실제 동작에
+# 맞게 검증(취소 선택 시 목록 화면으로 복귀).
+# [34]에서 이미 "거래 내역" 탭에 있으므로 그대로 이어서 검증.
+- tapOn:
+    id: "iv_calendar"
+- waitForAnimationToEnd
+- assertVisible: "기간 선택"
+- assertVisible: "시작 :"
+- assertVisible: "종료 :"
+- tapOn: "취소"
+- waitForAnimationToEnd
+- assertVisible: "거래번호로 찾기"
+
+# 홈 복귀
+# ⚠️ 개편UI판은 `iv_back` 2탭으로 홈까지 나왔지만 구 UI에서는 실패한다 —
+#   현장 입금 하위 화면 중 `iv_back`이 **없는 화면**이 있고(2026-08-25 [34] 이후 실측:
+#   "Element not found: iv_back"), 구 UI는 "입금 서비스" 화면을 한 단 더 거치기 때문에
+#   나와야 할 횟수도 다르다.
+#   → 특정 back id에 의존하지 않고 **기기 back 키를 홈 하단 내비가 보일 때까지 반복**한다.
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+

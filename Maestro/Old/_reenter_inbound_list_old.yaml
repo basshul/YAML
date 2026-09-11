@@ -1,0 +1,61 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 인바운드 "송금 받기" 화면을 **다시 진입**해 수취인 목록을 새로 불러온다
+# ================================================================
+# 왜 필요한가 (2026-08-20 실측):
+#   송금인 등록 제출(`btnSubmit`) 직후의 화면은 상태가 불안정하다.
+#     · 환율 위젯이 **"0 null"** 로 남고(로드 실패)
+#     · `uiautomator dump`가 "failed to stat remote object"로 실패한다
+#       = 접근성 트리를 읽을 수 없는 상태 → maestro의 `scrollUntilVisible`/assert도 못 찾는다
+#   실제로 등록은 **성공**했는데(스크린샷으로 "승인 대기 중" 확인) 목록에서 못 찾아
+#   `scrollUntilVisible TESTSENDERVN`이 40초 대기 끝에 실패했다.
+#   → 제출 직후 그 화면에서 판정하지 말고, **홈까지 나갔다 다시 들어와** 새로 로드된
+#     목록에서 확인한다.
+#
+# 사용: - runFlow: "_reenter_inbound_list_old.yaml"
+# ================================================================
+
+# 홈까지 정규화(최대 4회 back — 등록 후 앱이 몇 단계 되돌려 놓는 경우가 있어 횟수가 매번 다르다)
+- repeat:
+    times: 4
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - pressKey: back
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "앱을 종료하시겠습니까?"
+    commands:
+      - tapOn: "아니요|취소"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+# 다시 진입
+- runFlow: "_enter_receive_overseas_old.yaml"
+# ⚠️ 2026-09-04 추가 — 이 헬퍼의 목적은 **수취인 목록**을 새로 불러오는 것인데,
+#   계정에 활성 인바운드 요청이 있으면 그 대신 **카드 목록**("받는 계좌") 또는
+#   **요청 상세**("요청 완료")가 뜬다. 두 경로 모두 "다른 요청 진행"에서 수취인 목록으로 빠져나온다.
+#   (요청은 72시간 유지되므로 `13`이 한 번 돌면 그 뒤 실행은 거의 항상 이 분기를 탄다)
+- runFlow: "_inbound_goto_sender_list_old.yaml"
+- extendedWaitUntil:
+    visible: "수취 방법"
+    timeout: 40000
+# ★ 2026-09-04 — 여기서 끝내면 안 된다. `"수취 방법"`(`tv_htr`)은 화면 상단의 **정적 헤더**라
+#   **수취인 목록보다 먼저 뜬다.** 목록이 아직 비어 있는데 통과해 버리고, 호출부의
+#   `scrollUntilVisible <이름>` 이 **빈 목록을 40초간 헛돌다 실패**한다.
+#   ([07-1] 몽골 등록이 실제로 이렇게 죽었다 — 등록은 성공했고 목록 첫 행에 멀쩡히 있었는데,
+#    그때는 아직 렌더 전이었다. 헛도는 동안 계속 아래로 스와이프해 카드 목록까지 흘러갔다.)
+#   → 이 헬퍼의 목적이 "새로 로드된 목록에서 확인"이므로, **행이 하나라도 렌더될 때까지** 기다린다.
+#   ⚠️ 송금인이 0건인 계정에서는 이 대기가 실패한다. 이 헬퍼는 **등록 직후**에만 쓰이므로
+#     (= 방금 만든 행이 반드시 있다) 그 전제가 성립한다.
+- extendedWaitUntil:
+    visible:
+      id: "tv_detail1"
+    timeout: 40000

@@ -1,0 +1,41 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# 임시 스모크: 27_EasyCare_i18n_stag_old.yaml 의 헬퍼 2종을 2개 언어로만 검증
+# ================================================================
+# 24개 전체를 돌리기 전에 아래를 확인하기 위한 일회성 파일이다. 검증 후 삭제한다.
+#   1) _change_language_stag_old.yaml (stag 사본 + 배너 처리)가 동작하는가
+#   2) _easycare_coverage_stag_old.yaml 의 5단계 내비게이션이 동작하는가
+#   3) 스크린샷이 shots_easycare_i18n/ 에 떨어지는가
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\_smoke_easycare_i18n_old.yaml"
+  # ※ 시리얼을 적지 말 것 — 기기는 교체된다. 1대면 생략(자동 감지), 2대 이상이면 adb devices 로 확인해 넘긴다
+# ================================================================
+
+- launchApp
+- waitForAnimationToEnd
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "English"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "smoke_01_English"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Монгол хэл"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "smoke_02_Mongolian"
+
+# 스모크 종료 후 한국어로 복귀
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "한국어"

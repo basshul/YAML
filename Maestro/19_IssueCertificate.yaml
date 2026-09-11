@@ -1,0 +1,294 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Issue Certificate (증명서 발급)
+# 범위(사용자 지시): 각 증명서를 "인증 수단(본인인증) 선택" 화면까지만 진행.
+#   → 인증수단은 실제로 선택하지 않음(그 이후 본인인증/발급은 미진행).
+# 진입: 홈 하단 서비스 목록의 "증명서 발급"(ActivityGovHome). 증명서 선택 → 약관 동의
+#   → (증명서별 선행 단계) → WeCheck "시작하기" → "인증 수단 선택"(GovServiceWebActivity, WebView).
+# 증명서별 선행 단계:
+#   [01] 외국인등록사실증명: 없음(약관 후 바로 WeCheck)
+#   [02] 소득금액증명(홈택스): 조회기간(시작/종료 연도) 선택 → 계속
+#   [03] 주민등록초본 / [04] 주민등록등본(정부24): 주소(시/도 + 시군구) 직접 선택 → 계속
+# 주의: WeCheck 세션은 지연 시 만료(WC0006)되므로 흐름을 지체 없이 진행. 홈 서비스목록은
+#   비동기 로딩이라 scrollUntilVisible(가시성 20%, centerElement)로 견고화.
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회): 잠금화면 PIN 1212 → 세션만료/팝업 처리 → 홈
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기 필수 —
+#   없으면 maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력됨(누적되면 계정 잠금 위험).
+#   2026-08-06 다른 파일들에서 "비밀번호가 맞지 않습니다" 실제 재현되어 전 파일에 적용함.
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|홈"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "홈"
+          timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] [High] Certificate - 외국인등록사실증명(Certificate of Alien Registration)
+#            인증 수단 선택 단계까지 정상 진행 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "외국인등록사실증명"
+    timeout: 20000
+- tapOn: "외국인등록사실증명"
+- waitForAnimationToEnd
+# 약관 동의 (해당 증명서 최초 진행 시에만 노출)
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/btnConfirm"
+      - waitForAnimationToEnd
+# WeCheck 인트로 → 시작하기 → 인증 수단 선택(여기까지만)
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+# 인증수단 미선택 → back으로 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "홈"
+
+# ----------------------------------------------------------------
+# [02] [High] Certificate - 소득금액증명(Certificate of Alien Income, 홈택스)
+#            조회기간(연도) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "소득금액증명"
+    timeout: 20000
+- tapOn: "소득금액증명"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/btnConfirm"
+      - waitForAnimationToEnd
+# 홈택스 소득증명 전용: 조회기간(시작/종료 연도) 선택 → 계속 (기본값 수락)
+- extendedWaitUntil:
+    visible:
+      text: "원하는 기간을 선택해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/fromyear"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/confirmBtn"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/toyear"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/confirmBtn"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "홈"
+
+# ----------------------------------------------------------------
+# [03] [High] Certificate - 주민등록초본(Resident Registration, For Koreans)
+#            주소(시/도+시군구) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "주민등록초본"
+    timeout: 20000
+- tapOn: "주민등록초본"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/btnConfirm"
+      - waitForAnimationToEnd
+# 주민등록 증명서 전용: 주소(시/도 + 시군구) 직접 선택 → 계속
+- extendedWaitUntil:
+    visible:
+      text: "주민등록상 주소를 확인해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/dp_city"
+- tapOn: "서울특별시"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/dp_address"
+- tapOn: "강남구"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "홈"
+
+# ----------------------------------------------------------------
+# [04] [High] Certificate - 주민등록등본(Household Register, For Koreans)
+#            주소(시/도+시군구) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "주민등록등본"
+    timeout: 20000
+- tapOn: "주민등록등본"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/agreeallcheckboxtitle"
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/btnConfirm"
+      - waitForAnimationToEnd
+# 주민등록 증명서 전용: 주소(시/도 + 시군구) 직접 선택 → 계속
+- extendedWaitUntil:
+    visible:
+      text: "주민등록상 주소를 확인해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/dp_city"
+- tapOn: "서울특별시"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/dp_address"
+- tapOn: "강남구"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "홈"

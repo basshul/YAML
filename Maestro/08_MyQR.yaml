@@ -1,0 +1,394 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: MY QR
+#
+# 실행 방법 (run_test.ps1 사용):
+#   한국어: .\run_test.ps1 -lang ko -flow 08_MyQR.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 08_MyQR.yaml
+# ================================================================
+
+# ================================================================
+# 공통 진입 플로우:
+#   stopApp → launchApp → PIN(1212) → 팝업 처리 → Home 확인 → My QR 진입
+# 좌표 참조 (2026-08-04 Note 9 SM-N960N 1080x2220 기준으로 재보정):
+#   ⚠️ 이 파일은 좌표 의존도가 높음. 원래 좌표는 S23(1080x2340) 기준이라 세로 %가 어긋났음
+#      (2340 → 2220으로 짧아지면서 아래쪽 요소일수록 오차가 커짐). 기기 교체 시 재보정 필수.
+#   - My QR 버튼 (홈 상단 우측):      76%, 7%
+#   - 스캔 버튼 (My QR 우측 상단):    90%, 6%
+#   - 계좌 드롭다운:                  50%, 45%  (구 50%,49% — 재보정)
+#   - 케이뱅크 항목 (두 번째):        50%, 86%
+#   - QR 저장 icon:                   34%, 53%  (구 34%,57% — 재보정. 라벨이 아니라 원형 아이콘이 클릭영역)
+#   - QR 공유하기 icon:               65%, 53%  (구 67%,57% — 재보정)
+#   - 갤러리 icon (QR 스캔 화면):     id `galleryImagePick` 사용 (구 50%,85%는 어긋남 — 좌표 폐기)
+#   - 갤러리 첫 번째 이미지:          content-desc "gmeqr.*" 로 탭 (피커는 com.android.documentsui,
+#                                     최신 항목 위치는 20%,41% — 좌표 대신 파일명 사용)
+# ================================================================
+
+# ================================================================
+# 케이스 종속 관계:
+#   [03] <- [구01] QR저장, [구03] 계좌변경, [구04] 금액입력,
+#           [구06] 금액입력QR, [구07] 계좌+금액, [구09] 갤러리스캔
+#   [04] <- [구01] QR저장, [구09] 갤러리스캔
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회)
+# 주의(2026-08-03): 기존 `notVisible: "${NAV_HOME}"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|${NAV_HOME}"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "${NAV_HOME}"
+          timeout: 20000
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [Low] Receive - QR코드 공유동작 확인
+# ※ 공유 바텀시트 > 앱 목록 Teams 선택 > basshu 검색 > 전송
+# ※ Teams는 좌표가 아니라 앱 이름 텍스트("Teams")로 탭할 것 — 설치 앱 구성에 따라 아이콘 위치가 바뀜
+# ※ Teams 앱 내 텍스트는 앱 언어 설정과 무관하게 기기 언어에 따름
+# ----------------------------------------------------------------
+- tapOn:
+    point: "76%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+# QR 공유하기 아이콘 (2026-08-04 Note 9에서 재측정: 기존 67%,57%는 아이콘 아래 라벨보다도
+#   더 아래를 눌러 시트가 안 열렸음. 라벨 "QR 공유하기"는 클릭영역이 아니고 위쪽 원형 아이콘이
+#   클릭영역임 → 아이콘 중심 65%,53%)
+- tapOn:
+    point: "65%, 53%"
+- waitForAnimationToEnd
+# 공유 시트 노출 확인
+- assertVisible:
+    text: "링크 공유"
+# Teams 선택 (2026-08-05 Teams 재설치 후 복원).
+#   기존 좌표 `point: "30%, 78%"`(공유시트 두번째 행 두번째 아이콘)는 설치된 앱 구성에 따라
+#   위치가 바뀌므로 폐기하고 앱 이름 텍스트로 탭.
+- tapOn: "Teams"
+- waitForAnimationToEnd
+# Teams 앱 콜드스타트가 느려 waitForAnimationToEnd만으로는 부족 → 공유 화면 로딩 명시적 대기
+- extendedWaitUntil:
+    visible:
+      text: "채팅 및 채널 검색"
+    timeout: 40000
+- tapOn: "채팅 및 채널 검색"
+- inputText: "basshu"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Basshu(이승수)"
+- tapOn: "Basshu(이승수)"
+- waitForAnimationToEnd
+- tapOn: "메시지 보내기"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+# 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [Low] Receive - 글로벌 QR / 국내 송금 버튼 선택 후 Back 복귀 확인
+# ※ 내 QR 하단 글로벌 QR 탭 → Back → 내 QR 복귀
+# ※ 내 QR 하단 국내 송금 탭 → Back → 내 QR 복귀
+# ----------------------------------------------------------------
+- tapOn:
+    point: "76%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+# 글로벌 QR 버튼 탭 → 이전 화면(내 QR) 복귀 확인
+- tapOn: "${MYQR_GLOBAL_QR}"
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+- takeScreenshot: "[04]_글로벌QR_Back_내QR복귀"
+# 국내 송금 버튼 탭 → 이전 화면(내 QR) 복귀 확인
+- tapOn: "${SCR_DOMESTIC_REMIT}"
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+- takeScreenshot: "[04]_국내송금_Back_내QR복귀"
+# 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+# ----------------------------------------------------------------
+# [03] [High] Sending - 케이뱅크 계좌 QR 스캔 후 국내 송금 완료 확인
+# ※ 종속 케이스: [구01] QR저장, [구03] 계좌변경, [구04] 금액입력,
+#               [구06] 금액입력QR, [구07] 계좌+금액조합, [구09] 갤러리스캔
+# ※ 케이뱅크 계좌로 변경 → 금액 1원 입력 → QR 저장 → 갤러리 QR 선택 → 송금 완료(PIN 1212) → 홈
+#
+# 2026-08-05 Note 9(SM-N960N 1080x2220)에서 [01]~[04] 전체 PASS(129스텝, EXIT=0)로 복구 완료.
+#   고친 것: 진입 PIN 레이스, QR 공유/저장 아이콘 좌표 재보정, 저장 후 조건부 back,
+#   갤러리 아이콘 → id `galleryImagePick`, 피커 이미지 선택 → content-desc "gmeqr.*",
+#   피커 "완료" 버튼 조건부 처리, 받는계좌 드롭다운 좌표 → 은행명 텍스트 탭.
+#   ※ [03]은 **실제 1원 국내송금이 발생**하는 케이스이므로 반복 실행 시 주의.
+# ----------------------------------------------------------------
+- tapOn:
+    point: "76%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+
+# ── [구03] 체크포인트: Receiving account 계좌 변경 동작 확인 ──
+- tapOn:
+    point: "50%, 45%"
+- waitForAnimationToEnd
+# 받는계좌 드롭다운 항목: 좌표 "50%,86%"는 이 기기에서 케이뱅크가 아니라 **신한은행**을
+#   선택했음(계좌 순서/개수에 따라 밀림) → 은행명 텍스트로 탭 (2026-08-05)
+- tapOn: "케이뱅크"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+- takeScreenshot: "[01]_[구03]_계좌변경_케이뱅크"
+
+# ── [구06] 체크포인트: Amount 입력 상태 QR 확인 ──
+- tapOn: "${MYQR_ENTER_AMOUNT}"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "${MYQR_DONE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+- takeScreenshot: "[01]_[구06]_금액입력_1원"
+
+# ── [구07] 체크포인트: 받는계좌 변경 + 금액 입력 조합 QR 확인 ──
+# (케이뱅크 변경 완료 + 1원 입력 완료 상태 = [구07] 조건 충족)
+- takeScreenshot: "[01]_[구07]_계좌변경+금액입력_조합"
+
+# ── [구01] 체크포인트: QR 저장 동작 확인 ──
+- tapOn:
+    point: "34%, 53%"
+- waitForAnimationToEnd
+# 저장 후 복귀 (2026-08-04): 구 기기(S23)에서는 갤러리 앱이 열려 back×2가 필요했지만
+#   Note 9에서는 갤러리가 열리지 않고 토스트만 떠서 무조건 back×2를 하면 홈까지 나가버림
+#   → 내 QR이 보일 때까지만 조건부로 back.
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_MY_QR}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_MY_QR}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+- takeScreenshot: "[01]_[구01]_QR저장_내QR복귀"
+
+# ── [구09] 체크포인트: 갤러리 QR 스캔 → 송금 완료 ──
+- tapOn:
+    point: "90%, 6%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${MYQR_CONTINUE}"
+- tapOn: "${MYQR_CONTINUE}"
+- waitForAnimationToEnd
+# 갤러리 아이콘: 좌표(구 50%,85%)는 기기별로 어긋나므로 resource-id 사용 (2026-08-04)
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/galleryImagePick"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+# 갤러리 피커(com.android.documentsui)에서 방금 저장한 QR 선택.
+#   구 좌표 "17%,50%"는 이 기기의 그리드(최신 항목 = 20%,41%)와 맞지 않음.
+#   → 파일명 content-desc("gmeqr*.jpg")로 탭해 좌표 의존 제거 (2026-08-04)
+- tapOn:
+    text: "gmeqr.*"
+- waitForAnimationToEnd
+# 피커별로 "완료" 확정 버튼 유무가 다름(구 삼성 갤러리=있음 / com.android.documentsui=탭 즉시 반환)
+#   → 조건부 처리 (2026-08-05)
+- runFlow:
+    when:
+      visible:
+        text: "${MYQR_DONE}"
+    commands:
+      - tapOn: "${MYQR_DONE}"
+      - waitForAnimationToEnd
+# QR 인식 성공 → 출금계좌 선택 화면 → GME Wallet 계속
+- tapOn: "${MYQR_CONTINUE}"
+- waitForAnimationToEnd
+# 수취인 세부 정보 확인 팝업 → 확인
+- tapOn: "${MYQR_CONFIRM}"
+- waitForAnimationToEnd
+# 간편 비밀번호 1212
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+# 송금 완료 확인
+- extendedWaitUntil:
+    visible:
+      text: "${MYQR_VIEW_RECEIPT}"
+    timeout: 15000
+- takeScreenshot: "[01]_송금완료"
+# 영수증 보기 탭 → 영수증 화면
+- tapOn: "${MYQR_VIEW_RECEIPT}"
+- waitForAnimationToEnd
+# back으로 홈 이동
+- pressKey: back
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 15000
+- takeScreenshot: "[01]_홈복귀"
+
+# ----------------------------------------------------------------
+# [04] [High] Sending - QR 스캔 후 금액 미자동입력 확인
+# ※ 종속 케이스: [구01] QR저장, [구09] 갤러리스캔
+# ※ 내 QR 진입 → QR 저장 → 스캔 → 출금계좌 계속 → 갤러리 QR → 금액 미입력 확인 → 홈
+# ----------------------------------------------------------------
+- tapOn:
+    point: "76%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+
+# ── [구01] 체크포인트: QR 저장 동작 확인 ──
+- tapOn:
+    point: "34%, 53%"
+- waitForAnimationToEnd
+# 저장 후 복귀 (2026-08-04): 위 [구01]과 동일 — 기기별로 갤러리 오픈 여부가 달라 조건부 back
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_MY_QR}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_MY_QR}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+
+# ── [구09] 체크포인트: 갤러리 QR 스캔 → 수취인 화면 진입 ──
+- tapOn:
+    point: "90%, 6%"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_WITHDRAW}"
+    timeout: 10000
+- tapOn: "${MYQR_CONTINUE}"
+- waitForAnimationToEnd
+# 갤러리 아이콘: 좌표(구 50%,85%)는 기기별로 어긋나므로 resource-id 사용 (2026-08-04)
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/galleryImagePick"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+# 갤러리 피커(com.android.documentsui)에서 방금 저장한 QR 선택.
+#   구 좌표 "17%,50%"는 이 기기의 그리드(최신 항목 = 20%,41%)와 맞지 않음.
+#   → 파일명 content-desc("gmeqr*.jpg")로 탭해 좌표 의존 제거 (2026-08-04)
+- tapOn:
+    text: "gmeqr.*"
+- waitForAnimationToEnd
+# 피커별로 "완료" 확정 버튼 유무가 다름(구 삼성 갤러리=있음 / com.android.documentsui=탭 즉시 반환)
+#   → 조건부 처리 (2026-08-05)
+- runFlow:
+    when:
+      visible:
+        text: "${MYQR_DONE}"
+    commands:
+      - tapOn: "${MYQR_DONE}"
+      - waitForAnimationToEnd
+# 수취인 정보 화면: 금액 미입력 확인
+- assertVisible:
+    text: "${MYQR_RECIPIENT_INFO}"
+- assertNotVisible:
+    text: "${MYQR_CURRENCY_UNIT}"
+- takeScreenshot: "[02]_송금금액_미자동입력_확인"
+# 홈 복귀 (수취인 정보 → QR스캔 → 내QR → 홈)
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 10000
+
+

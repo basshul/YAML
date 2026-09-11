@@ -1,0 +1,7 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- tapOn: "아니요"
+- waitForAnimationToEnd
+- tapOn: "프로필"
+- waitForAnimationToEnd
+- takeScreenshot: cancel_10_profile_tab

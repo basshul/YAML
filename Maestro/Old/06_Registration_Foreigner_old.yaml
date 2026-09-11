@@ -1,0 +1,568 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오 2: 외국인 회원가입
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 06_Registration_Foreigner.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 06_Registration_Foreigner.yaml
+#
+# 입력값: ID: test006 / PW: <정상 비밀번호> / 전화번호: 010-90380808
+# clearState → 신규 회원 → 약관 → Sign Up (외국인) → ID 인증 (Passport → ARC)
+#           → 개인정보 (주소/직업/성별/이메일) → 계좌인증 건너뛰기 → 간편비밀번호 설정
+#           → 로그아웃 → seungsoo818 로그인 → 홈 화면 확인
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+# ⚠️ **Server Override 스플래시 처리가 통째로 빠져 있었다**(2026-08-27 `All`과 대조로 발견).
+#   livetest 빌드는 실행마다 이 스플래시가 뜨는데, 처리하지 않으면 화면을 덮은 채로 남아
+#   뒤의 `"신규 회원"` 탭이 실패한다 — 즉 이 파일은 **첫 화면에서 죽는 상태**였다.
+#   `06_Registration_All_old.yaml`과 동일하게 맞춘다.
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|언어 선택|신규 회원"
+    timeout: 20000
+- runFlow: "_server_override_old.yaml"
+# clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn: "언어 선택"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+- tapOn: "${REG_NEW_MEMBER}"
+- waitForAnimationToEnd
+# 약관 동의 (간략화: 모두 동의 → 확인)
+- tapOn: "${REG_AGREE_ALL}"
+- waitForAnimationToEnd
+- scroll
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+# Sign Up: ID / 비밀번호 / 전화번호 / 국적: 외국인
+- tapOn: "${REG_USER_ID}"
+- waitForAnimationToEnd
+- inputText: "test006"
+- tapOn: "${REG_PASSWORD}"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- tapOn: "${REG_PASSWORD_CONFIRM}"
+- waitForAnimationToEnd
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- tapOn: "${REG_PHONE}"
+- waitForAnimationToEnd
+- inputText: "90380808"
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "${REG_NATIONALITY}"
+- waitForAnimationToEnd
+- tapOn: "${REG_FOREIGNER}"
+- waitForAnimationToEnd
+- tapOn: "${REG_SAVE_AND_NEXT}"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [14] [High] ID Information Verification - Passport(신분증) 항목 노출 확인 (Foreigner)
+# ----------------------------------------------------------------
+- takeScreenshot: "[14]_신분증타입선택_화면확인"
+- assertVisible:
+    text: "${REG_PASSPORT}"
+- takeScreenshot: "[14]_Passport_신분증_항목_노출"
+
+# ----------------------------------------------------------------
+# [15] [High] ID Information Verification - Passport 촬영동작 확인 (Foreigner)
+# ※ 갤러리에서 여권 이미지 선택 (세 번째 이미지, 83%, 52%)
+# ----------------------------------------------------------------
+- tapOn: "${REG_PASSPORT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-1]_신분증_선택"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+# ⚠️ `OCRImageCaptureActivity`(카메라 프리뷰)는 **캡처 불가** → takeScreenshot을 쓰면 플로우가 죽는다.
+#   ※ 원인을 윈도우 플래그로 단정하지 말 것 — `dumpsys window windows | grep -m1 "fl="`는
+#     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
+#     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
+#   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "captureBtnImageView"
+    timeout: 30000
+# 갤러리 버튼: 좌표(75%/83% 두 값이 섞여 있었다) → id로 고정
+- tapOn:
+    id: "galleryBtnImageView"
+- waitForAnimationToEnd
+# 갤러리 썸네일: 여권 = index 3 (`push_test_images.ps1` 기준)
+- tapOn:
+    id: "icon_thumbnail"
+    index: 3
+- waitForAnimationToEnd
+# ⚠️ `NativeCropActivity`도 **캡처 불가**이고 버튼에 resource-id가 없다("완료" 텍스트 노드만 있다)
+#   → 스크린샷 대신 "완료" 노출로 도달을 확인한다.
+#   ⚠️ 갤러리/크롭에서 앱으로 돌아오는 건 **비동기**라 `assertVisible`은 너무 빨라 실패한다
+#     (2026-08-26 실제 FAILED) → `extendedWaitUntil`로 대기를 겸한다.
+- extendedWaitUntil:
+    visible: "${REG_DONE}"
+    timeout: 20000
+- tapOn: "${REG_DONE_GALLERY}"
+- waitForAnimationToEnd
+# ⚠️ **갤러리 경로는 "완료" 탭이 한 번뿐이다** (2026-08-26 실측).
+#   갤러리에서 "완료"를 누르면 크롭 단계 없이 곧바로 신분증 정보 화면
+#   (`NationalIdVerificationActivity` = "신분증 정보 확인")으로 넘어간다.
+#   종전 코드는 카메라 경로(셔터 → 크롭 → 완료)를 그대로 복사해 "완료"를 **두 번** 탭하려 했다.
+#   두 번째 화면에 "완료"는 없다 — 있는 것은 `btnRetry`("재시도") / `btnSubmit`("확인")이다.
+#   → 두 번째 탭을 제거하고 신분증 정보 화면 도달만 확인한다(이 화면도 캡처 불가).
+- extendedWaitUntil:
+    visible:
+      id: "btnSubmit"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [16] [High] ID Information Verification - 촬영한 여권 정보 자동채움 확인 - 수동입력 동작 확인 (Foreigner)
+# ----------------------------------------------------------------
+
+# 신분증 번호 수동 입력 (보안 키패드)
+- tapOn: "********"
+- waitForAnimationToEnd
+# ⚠️ **신분증 번호는 서버에서 전역 중복 검사를 한다** — 이미 쓰인 번호를 넣으면
+#   "Duplicate id number. Please check." 오류로 막힌다(2026-08-26 실제 발생).
+#   종전 코드는 **여권과 ARC가 똑같이 `1234567890`** 이라 서로도 충돌했다.
+#   → 여권 `9876543210` / ARC `9876543211` 로 분리했다.
+#   ⚠️ 재실행으로 가입이 성공하면 이 번호도 소모된다 → 다음 실행 전에 계정을 지우거나
+#     번호를 한 칸 올릴 것. OCR 값을 덮어쓰는 **수동 입력**이라 이미지와 일치할 필요는 없다.
+- tapOn: "9"
+- tapOn: "8"
+- tapOn: "7"
+- tapOn: "6"
+- tapOn: "5"
+- tapOn: "4"
+- tapOn: "3"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "0"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# 발급 일자 선택 (기본값 그대로 확인)
+- tapOn: "${REG_ISSUE_DATE}"
+- waitForAnimationToEnd
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# 만료 날짜 선택 (기본값 그대로 확인)
+- tapOn: "${REG_EXPIRY_DATE}"
+- waitForAnimationToEnd
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# 확인 버튼 활성화 → 확인
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [16a] [High] ID Information Verification - ARC 촬영동작 확인 (Foreigner)
+# ※ 여권 OCR 확인 후 → 신분증 정보 확인 3/5 (주민등록증 타입 선택) → 다음
+# ※ 갤러리에서 ARC 이미지 선택 (첫 번째 이미지, 17%, 52%)
+# ----------------------------------------------------------------
+- waitForAnimationToEnd
+# ⚠️ 여권 정보 확인 → ARC 타입선택 화면 전이는 **비동기**다. 곧바로 스크린샷을 찍으면
+#   아직 (캡처 불가인) 신분증 정보 화면에 있어 `Screenshot returned null`로 죽는다
+#   (2026-08-26 실제 실패). → 다음 화면 도달을 먼저 기다린다.
+- extendedWaitUntil:
+    visible: "${REG_NEXT}"
+    timeout: 30000
+- takeScreenshot: "[16a-0]_ARC타입선택_화면"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+# ⚠️ `OCRImageCaptureActivity`(카메라 프리뷰)는 **캡처 불가** → takeScreenshot을 쓰면 플로우가 죽는다.
+#   ※ 원인을 윈도우 플래그로 단정하지 말 것 — `dumpsys window windows | grep -m1 "fl="`는
+#     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
+#     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
+#   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "captureBtnImageView"
+    timeout: 30000
+# 갤러리 버튼: 좌표(75%/83% 두 값이 섞여 있었다) → id로 고정
+- tapOn:
+    id: "galleryBtnImageView"
+- waitForAnimationToEnd
+# 갤러리 썸네일: ARC = index 1 (`push_test_images.ps1` 기준)
+- tapOn:
+    id: "icon_thumbnail"
+    index: 1
+- waitForAnimationToEnd
+# ⚠️ `NativeCropActivity`도 **캡처 불가**이고 버튼에 resource-id가 없다("완료" 텍스트 노드만 있다)
+#   → 스크린샷 대신 "완료" 노출로 도달을 확인한다.
+#   ⚠️ 갤러리/크롭에서 앱으로 돌아오는 건 **비동기**라 `assertVisible`은 너무 빨라 실패한다
+#     (2026-08-26 실제 FAILED) → `extendedWaitUntil`로 대기를 겸한다.
+- extendedWaitUntil:
+    visible: "${REG_DONE}"
+    timeout: 20000
+- tapOn: "${REG_DONE_GALLERY}"
+- waitForAnimationToEnd
+# ⚠️ **갤러리 경로는 "완료" 탭이 한 번뿐이다** (2026-08-26 실측).
+#   갤러리에서 "완료"를 누르면 크롭 단계 없이 곧바로 신분증 정보 화면
+#   (`NationalIdVerificationActivity` = "신분증 정보 확인")으로 넘어간다.
+#   종전 코드는 카메라 경로(셔터 → 크롭 → 완료)를 그대로 복사해 "완료"를 **두 번** 탭하려 했다.
+#   두 번째 화면에 "완료"는 없다 — 있는 것은 `btnRetry`("재시도") / `btnSubmit`("확인")이다.
+#   → 두 번째 탭을 제거하고 신분증 정보 화면 도달만 확인한다(이 화면도 캡처 불가).
+- extendedWaitUntil:
+    visible:
+      id: "btnSubmit"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [16b] [High] ID Information Verification - 촬영한 ARC 정보 자동채움 확인 - 수동입력 동작 확인 (Foreigner)
+# ----------------------------------------------------------------
+
+# ARC 신분증번호 수동 입력 (보안 키패드)
+- tapOn: "********"
+- waitForAnimationToEnd
+- tapOn: "9"
+- tapOn: "8"
+- tapOn: "7"
+- tapOn: "6"
+- tapOn: "5"
+- tapOn: "4"
+- tapOn: "3"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "1"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# 발급 일자 선택 (기본값 그대로 확인)
+- tapOn: "${REG_ISSUE_DATE}"
+- waitForAnimationToEnd
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# 만료 날짜 선택 (기본값 그대로 확인)
+- tapOn: "${REG_EXPIRY_DATE}"
+- waitForAnimationToEnd
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# 확인 버튼 활성화 → 확인
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+
+# ================================================================
+# [개인 정보 4/5] - 주소/직업/성별
+# ================================================================
+
+# ----------------------------------------------------------------
+# [19] 도시 선택필드 선택 및 검색 동작 확인 (Address)
+# ----------------------------------------------------------------
+- takeScreenshot: "[S2-19-0]_개인정보4-5_화면"
+- tapOn: "${REG_ADDRESS_CITY}"
+- waitForAnimationToEnd
+- tapOn: "${REG_SELECT_CITY}"
+- inputText: "SUWON"
+- tapOn:
+    id: "itemName"
+
+# ----------------------------------------------------------------
+# [20] 상세주소 GPS 동작 확인 (Address)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "prefixImage"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOCATION_ALLOW}"
+    commands:
+      - tapOn: "${REG_LOCATION_ALLOW}"
+      - waitForAnimationToEnd
+- takeScreenshot: "[S2-20-1]_GPS1차탭_상태확인"
+- tapOn:
+    id: "prefixImage"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-20-2]_GPS2차탭_상태확인"
+
+# ----------------------------------------------------------------
+# [21] Occupation 선택 동작 확인
+# ----------------------------------------------------------------
+- tapOn: "${REG_SELECT_OCCUPATION}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-21-1]_직업_선택화면"
+- tapOn: "Salaried"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-21-2]_직장인_선택"
+
+# ----------------------------------------------------------------
+# [22] Gender 선택 동작 확인 → [다음] 선택
+# ----------------------------------------------------------------
+- tapOn: "${REG_FEMALE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-1]_여성_선택"
+- tapOn: "${REG_MALE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-2]_남성_선택"
+- takeScreenshot: "[S2-22-3]_다음버튼_활성화"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-4]_다음선택_화면이동"
+
+# ================================================================
+# [개인 정보 5/5] - 이메일 / 추천인 코드
+# ================================================================
+
+# ----------------------------------------------------------------
+# [23] Email 입력동작 확인
+# ----------------------------------------------------------------
+# 이메일 필드는 placeholder 텍스트 대신 **id**로 잡는다 — 재진입 시(오류 후 복귀 등)
+#   필드에 이전 값이 남아 placeholder가 사라져 `tapOn`이 실패한다(2026-08-26 실측).
+- tapOn:
+    id: "emailInputField"
+- waitForAnimationToEnd
+- eraseText: 40
+# ⚠️ **이메일도 서버에서 중복 검사한다** — "Customer with email ... already exist."로 막힌다
+#   (2026-08-26 실제 발생). 종전 코드는 **S1과 S2가 똑같이 `test@test.com`** 이라
+#   S1이 성공하면 S2가 반드시 실패하는 구조였다 → 계정 ID에 맞춰 분리했다.
+#
+#   ⚠️⚠️ **이 파일은 멱등하지 않다.** 성공 1회당 아래 값이 서버에서 소모된다:
+#     사용자 ID(test007/test006) · 이메일 · 신분증 번호(여권/ARC) · 휴대폰 번호
+#   → **재실행 전에 생성된 계정을 admin에서 지우거나, 위 값들을 모두 새 값으로 바꿔야 한다.**
+#     지우지 않고 돌리면 ID 중복 → 이메일 중복 → 신분증번호 중복 순으로 계속 막힌다.
+- inputText: "test006@test.com"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-23]_Email_입력"
+
+# ----------------------------------------------------------------
+# [24] Referral Code 입력동작 확인 → [다음] 선택
+# ----------------------------------------------------------------
+- tapOn: "${REG_REFERRAL_PLACEHOLDER}"
+- waitForAnimationToEnd
+- inputText: "test"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-1]_ReferralCode_입력"
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-2]_다음버튼_활성화"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-3]_다음선택_화면이동"
+
+# ================================================================
+# [계좌 인증] - 건너뛰기
+# ================================================================
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_전_화면"
+- tapOn: "${REG_SKIP}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_경고팝업"
+- tapOn: "${REG_YES}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_완료"
+
+# ================================================================
+# [간편비밀번호 설정]
+# ================================================================
+
+# [27-1] 지문인증 사용 여부 → [나중에] 선택
+# ⚠️ **이 화면은 안 뜰 수 있다** — 테스트 기기는 생체인증이 OFF라 지문 등록 유도 화면이
+#   나타나지 않고 가입 직후 곧바로 간편비밀번호(PIN) 화면으로 간다(2026-08-26 실측:
+#   `ActivityLockScreen` "4자리 숫자를 입력하세요"). 무조건 탭하면
+#   `Element not found: 나중에`로 실패한다 → **조건부로 감싼다.**
+- runFlow:
+    when:
+      visible: "${REG_LATER}"
+    commands:
+      - takeScreenshot: "[S2-27-1]_지문인증_화면"
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+# PIN 화면 도달을 명시적으로 기다린다(지문인증 화면을 건너뛴 경우 포함)
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+
+# [27-2] 간편 비밀번호 설정: <정상 PIN> 입력
+- takeScreenshot: "[S2-27-2]_간편비밀번호_설정화면"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# [27-3] 간편 비밀번호 재입력: <정상 PIN>
+- takeScreenshot: "[S2-27-3]_간편비밀번호_재입력화면"
+# PIN 재입력 화면 도달 확정 — 이전 화면에도 input_dot_1이 있어 id로는 전환을 판정할 수 없다
+- extendedWaitUntil:
+    visible:
+      text: ".*간편 비밀번호를 다시 입력.*"
+    timeout: 20000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# [27-4] 성공 바텀시트 → [OK]
+- takeScreenshot: "[S2-27-4]_성공바텀시트_등록완료"
+- tapOn: "OK"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# [27-5] 보이스 피싱 주의 바텀시트 → 체크박스 선택 → [확인]
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - takeScreenshot: "[S2-27-5]_보이스피싱주의_바텀시트"
+      - tapOn: "${REG_VOICE_PHISHING_CONFIRM}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-6]_체크박스_선택_확인버튼_활성화"
+      - tapOn: "${REG_VOICE_PHISHING_OK}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-7]_확인_바텀시트닫힘"
+
+# [27-6] 은행 연결 바텀시트 → [아니요]
+- runFlow:
+    when:
+      visible: "${REG_NO}"
+    commands:
+      - takeScreenshot: "[S2-27-8]_은행연결_바텀시트"
+      - tapOn: "${REG_NO}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-9]_아니요_선택_완료"
+
+# ================================================================
+# S2 완료: test006 로그아웃 → seungsoo818 계정 로그인 → 홈 화면 확인
+# ================================================================
+# ⚠️ **구 UI는 로그아웃이 프로필 탭에 없다** — 드로어 `iv_nav`에만 있다.
+#   종전 코드는 개편UI 경로(`${NAV_PROFILE}` → `scrollUntilVisible "로그아웃"`)라 구 UI에서 반드시 실패한다.
+#   게다가 구 UI 로그아웃은 ID/비밀번호 폼이 아니라 **PIN 잠금화면**으로 떨어져
+#   `loginpwidhidpass` → `btn_diaog_ok`를 거쳐야 폼에 도달하므로, 뒤따르는 `btn_lgn` 전제도 깨진다.
+#   이 구간은 번호 붙은 케이스가 아니라 **후처리(계정 원복)**이다 → 세션을 통째로 비우는
+#   `clearState`로 대체한다. 초기화면으로 떨어지므로 아래 `btn_lgn`이 그대로 유효하다.
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|언어 선택|신규 회원"
+    timeout: 20000
+- runFlow: "_server_override_old.yaml"
+
+# seungsoo818 로그인
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "usernameId"
+- inputText: "seungsoo818"
+- tapOn:
+    id: "securityKeyboardEditText"
+- waitForAnimationToEnd
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+# ⚠️ **보안 키패드의 "입력완료"가 로그인을 자동 제출한다** → `btn_submit`을 따로 탭하면
+#   이미 로그인이 끝나 화면이 넘어간 뒤라 `Element not found: btn_submit`으로 실패한다
+#   (2026-08-26 실측. 정상 동작하는 `01_01_Login_Success_old.yaml`도 이 탭이 없다).
+#   `[LOGIN-2]` 스크린샷도 제거했다 — 로그인 화면(`LoginV2Activity`)은 FLAG_SECURE라 캡처 불가다.
+
+# ⚠️ 로그인 직후 **보이스 피싱 주의 바텀시트가 뜬다**(2026-08-26 실측). 처리 블록이 없어
+#   뒤의 홈 판정이 시트에 가려 실패할 수 있었다 → 조건부로 닫는다.
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "${REG_VOICE_PHISHING_OK}"
+      - waitForAnimationToEnd
+
+# 지문인증 사용 여부 → 나중에
+# ⚠️ "항상 노출"이라고 적혀 있었지만 **틀렸다** — 생체인증이 OFF인 기기에서는 뜨지 않는다
+#   (2026-08-26 실측: 로그인 직후 곧바로 홈). 무조건 탭하면 실패한다 → 조건부로 감싼다.
+- runFlow:
+    when:
+      visible: "${REG_LATER}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[LOGIN-3]_지문인증_나중에"
+
+# 간편비밀번호 설정 (조건부: 미설정 시에만 노출)
+# ⚠️ 조건을 `visible: "간편비밀번호"`로 두면 **절대 매칭되지 않는다** — Maestro 텍스트 assert는
+#   **전체매칭**이고 실제 문구는 "앱에서 사용할 간편 비밀번호를 생성해 주세요"(공백 포함)다.
+#   그러면 이 블록이 조용히 SKIP되고 **PIN 생성 화면에 갇힌 채** 뒤 단계가 전부 실패한다
+#   (14_Deposit_old에서 실제 사고로 확인된 패턴).
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - takeScreenshot: "[LOGIN-4]_간편비밀번호_설정화면"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[LOGIN-5]_간편비밀번호_재입력화면"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "OK"
+      - waitForAnimationToEnd
+
+# 홈 화면 확인
+# ⚠️ 구 UI 홈에는 "안녕하세요 ...님" 인사말이 **없다**(2026-08-25 실측: 홈 텍스트 노드 27개 중 0건).
+#   개편UI 기준의 `assertVisible "${TXT_GREETING}"`는 구 UI에서 반드시 실패한다.
+#   → 구 UI 홈 판정은 하단 내비 `bottom_item_home` + 상단 카드 `btnTransfer`로 한다.
+#   (`btnTransfer`는 홈이 스크롤돼 있으면 화면 밖일 수 있어 UP 스크롤로 끌어올린다)
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertVisible:
+    id: "btnTransfer"
+- takeScreenshot: "[LOGIN-6]_홈화면_확인"

@@ -1,0 +1,189 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: 설정 → 언어/Language 변경 (24개 언어 순회) — 구 UI
+# ================================================================
+#  진행: **EXIT=0 / 24개 언어 순회** (2026-08-14 구 UI 기준 재작성 + 실기기 seungsoo818).
+#    마지막에 한국어로 복귀하고 홈의 한국어 문구로 검증까지 통과.
+#    별도 검증 실행에서 English 전환 시 홈이 "GME Wallet Number"로, 한국어 복귀 시 "GME Wallet 번호"로
+#    바뀌는 것을 확인해 **실제 언어 적용 + 헬퍼 변수 치환**이 동작함을 확정했다.
+#    (이전 버전은 개편 UI 기준: `Profile`/`Settings`/`Home` 텍스트 탭이라 구 UI에서 동작 안 함)
+#
+#  ※ 각 언어의 성공 근거: 전환 후 재진입 시 **드로어 "설정" 라벨을 그 언어로 매칭**해야 다음 단계로
+#    넘어간다. 즉 24회 전부 통과했다는 것 자체가 언어가 실제로 바뀌었다는 신호다.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# 핵심 실측 (2026-08-14):
+#   ⚠️ **언어를 선택하면 앱이 통째로 재시작된다** — SplashScreen + "Server Override" 다이얼로그가 다시 뜨고
+#     잠금화면(PIN)부터 다시 시작한다. 그래서 언어 1개당 "재시작 복구 + 설정 재진입"이 필요하다.
+#     이 반복 구간을 헬퍼 `_change_language_old.yaml`로 분리했다.
+#   ⚠️ 화면 문구가 매 회 바뀌므로 **언어 무관 셀렉터만 쓴다**:
+#     잠금화면 `input_dot_1` / 홈 `btnTransfer` / 설정 항목 `view_language`.
+#     드로어 "설정"만은 id가 없어 텍스트로 탭해야 해서, APK에서 뽑은 25개 로케일 값을 정규식으로 넣었다.
+#
+# ⚠️ **중단되면 앱이 외국어 상태로 남는다.** 다른 yaml은 전부 한국어 문자열을 쓰므로 곧바로 깨진다.
+#   실패 시 수동으로 설정 → 언어 → 한국어로 되돌리고 재실행할 것.
+#   (이 파일은 마지막에 한국어로 복귀하고, 복귀를 한국어 문구로 검증한다)
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\04_06_Settings_Change languages_old.yaml"
+# ================================================================
+
+- launchApp
+- waitForAnimationToEnd
+
+# ---------------- 24개 언어 순회 ----------------
+# 각 호출은 "직전 전환으로 재시작된 상태 → 홈 복구 → 설정 → 언어 선택"을 수행한다.
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "English"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "ភាសាខ្មែរ"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "ไทย"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "සිංහල"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Монгол хэл"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "မြန်မာUnicode"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "नेपाली"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Bahasa Indonesia"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "বাংলাদেশ"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Русский язык"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "O'zbek tili"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Tiếng Việt"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "اردو"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "中文"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "اللغة العربية"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Français"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Español"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "日本語"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Português"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Türkçe"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Қазақ тілі"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "Кыргызча"
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "ລາວ"
+# 마지막: 한국어로 복귀
+- runFlow:
+    file: _change_language_old.yaml
+    env:
+      LANG_LABEL: "한국어"
+
+# ---------------- 한국어 복귀 검증 ----------------
+# 재시작 복구 후 홈에서 한국어 문구가 보이는지로 판정한다.
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 90000
+- assertVisible: "GME Wallet 번호"
+- assertVisible: "GME 총 잔액"
+- takeScreenshot: lang_restored_ko

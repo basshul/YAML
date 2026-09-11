@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+# 픽스처: pressKey 값이 오염돼 Maestro가 파일 전체를 Parsing Failed로 거부하는 경우 → E09.
+- launchApp
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- pressKey: backdhwjs

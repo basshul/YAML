@@ -1,0 +1,320 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# 시나리오: EasyCare "Check my coverage" 바텀시트 — 24개 언어 UI 깨짐 검증 (구 UI / stag)
+# ================================================================
+#  목적: **번역 정확성이 아니라 레이아웃 깨짐 검증.**
+#    언어에 따라 Activation date / Monthly fee payment 버튼 라벨이 길어지면서
+#    잘림(ellipsis) · 줄넘침 · 버튼 밖 오버플로우가 생기는지 본다.
+#    → 판정은 언어별 스크린샷 육안 비교로 한다(Maestro가 레이아웃 깨짐을 assert할 수는 없다).
+#
+#  경로: 홈 → Card → EasyCare Apply → EasyCare Benefits [See more]
+#        → [Check coverage start date] → "Check my coverage" 바텀시트 → Activation date 버튼
+#
+#  산출물: shots_easycare_i18n/NN_<언어>.png  (24장)
+#
+# ⚠️ **stag 전용.** EasyCare는 stag 7.20.0에만 있다.
+#   livetest 7.19.1 APK에는 easycare_* 리소스가 0건이다(2026-08-20 aapt2 확인).
+#
+# ⚠️ **화면 문구가 APK에 없다.** "Check my coverage" 등은 Lokalise OTA로 런타임에 내려온다.
+#   그래서 기대 문자열을 APK에서 뽑아 assert하는 기존 방식은 이 화면에 쓸 수 없다.
+#   판정 근거는 스크린샷이며, id 기반 셀렉터로 "도달했다"는 것만 assert한다.
+#
+# ⚠️ **언어를 바꾸면 앱이 통째로 재시작된다**(SplashScreen + Server Override).
+#   그래서 헬퍼 두 개가 각각 맨 앞에 재시작 복구 블록을 갖는다.
+#
+# ⚠️ **중단되면 앱이 외국어 상태로 남는다.** 다른 yaml은 한국어 문자열을 쓰므로 곧바로 깨진다.
+#   이 파일은 마지막에 한국어로 복귀한다. 중간 실패 시 수동으로 설정 → 언어 → 한국어로 되돌릴 것.
+#
+# ⚠️ 실행 시간이 길다(언어당 재시작 + 5단계 내비게이션 × 24회).
+#
+# 실행 (기기 2대 연결 시 -device 필수):
+#   .\run_test.ps1 -lang ko -flow "Old\27_EasyCare_i18n_stag_old.yaml"
+  # ※ 시리얼을 적지 말 것 — 기기는 교체된다. 1대면 생략(자동 감지), 2대 이상이면 adb devices 로 확인해 넘긴다
+# ================================================================
+
+- launchApp
+- waitForAnimationToEnd
+
+# ---------------- 24개 언어 순회 ----------------
+# 각 쌍 = [언어 변경 → 재시작] + [재시작 복구 → EasyCare 경로 → 스크린샷 → 홈 복귀]
+# 언어 목록은 앱 언어 선택 다이얼로그의 실제 표기(자국어 고정)를 그대로 쓴다.
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "English"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "01_English"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "ភាសាខ្មែរ"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "02_Khmer"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "한국어"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "03_Korean"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "ไทย"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "04_Thai"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "සිංහල"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "05_Sinhala"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Монгол хэл"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "06_Mongolian"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "မြန်မာUnicode"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "07_Myanmar"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "नेपाली"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "08_Nepali"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Bahasa Indonesia"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "09_Indonesian"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "বাংলাদেশ"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "10_Bengali"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Русский язык"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "11_Russian"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "O'zbek tili"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "12_Uzbek"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Tiếng Việt"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "13_Vietnamese"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "اردو"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "14_Urdu"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "中文"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "15_Chinese"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "اللغة العربية"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "16_Arabic"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Français"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "17_French"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Español"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "18_Spanish"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "日本語"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "19_Japanese"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Português"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "20_Portuguese"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Türkçe"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "21_Turkish"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Қазақ тілі"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "22_Kazakh"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "Кыргызча"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "23_Kyrgyz"
+
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "ລາວ"
+- runFlow:
+    file: _easycare_coverage_stag_old.yaml
+    env:
+      SHOT: "24_Lao"
+
+# ---------------- 정리: 한국어로 복귀 ----------------
+# 다른 yaml이 전부 한국어 문자열을 전제로 하므로 반드시 되돌려 놓는다.
+- runFlow:
+    file: _change_language_stag_old.yaml
+    env:
+      LANG_LABEL: "한국어"
+
+# 복귀도 재시작을 유발하므로 홈까지 복구해 두고 끝낸다.
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "check_customer"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      # ⚠️ stag의 보이스피싱 다이얼로그 OK 버튼에는 resource-id가 없다(2026-08-20 실측).
+      #   원본(livetest)의 btn_diaog_ok 를 먼저 시도하고, 없으면 체크박스 아래 버튼으로 폴백한다.
+      #   둘 다 optional 이라 다이얼로그가 이미 닫혔으면 그냥 통과한다.
+      - tapOn:
+          id: "btn_diaog_ok"
+          optional: true
+      - tapOn:
+          below:
+            id: "check_customer"
+          optional: true
+      - waitForAnimationToEnd
+# ⚠️ 인앱 배너가 홈보다 먼저 뜨면 배너가 별도 윈도우라 btnTransfer가 계층에서 가려진다.
+#   그냥 홈을 기다리면 타임아웃으로 죽는다(2026-08-20 실측, stag/S23).
+#   그래서 "배너 또는 홈" 중 먼저 뜨는 쪽을 기다린 뒤 배너를 닫고, 다시 홈을 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|btnTransfer"
+    timeout: 90000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 60000

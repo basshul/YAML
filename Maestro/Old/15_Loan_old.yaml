@@ -1,0 +1,208 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Loan / Personal Finance (개인 금융) — 구 UI
+# ================================================================
+#  진행: 2026-08-19 구 UI 기준 정리. **케이스는 현재 실행 불가(메뉴 미노출) — 조건부로 감싸 둠.**
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# ================================================================
+# 🚫 **현재 상태: 진입 불가 (2026-08-19 두 계정으로 확인)**
+# ================================================================
+# "개인 금융" 메뉴가 **어디에도 노출되지 않는다.**
+#   · seungsoo818 (한국인)          → 홈 서비스 그리드 **11개**, "개인 금융" 없음
+#   · test123 (외국인, South Africa) → 홈 서비스 그리드 **11개**, "개인 금융" 없음
+#     드로어(iv_nav)에도 없음 — 드로어 항목은 26_Menu_old가 열거한 8종뿐이다.
+#   실측된 그리드 11종: 해외송금 / 국내 송금 / 오늘의 환율 / 모바일 충전 및 청구서 결제 /
+#     해외송금 받기 / 입금 / ATM 출금 / GME Wallet 거래내역 / 통신 서비스 / 증명서 발급 / 예약하기
+#
+# ℹ️ **노출 조건 (2026-08-19 사용자 확인)**
+#   **외국인 전용 메뉴인 것은 맞다.** 다만 국적만으로는 부족하고 **추가 조건이 더 필요하다.**
+#   그래서 외국인 계정(test123)에서도 안 보인다.
+#   2026-07-15 최초 작성 때는 admin이 seungsoo818의 국적을 임시로 "외국인"으로 바꿔 확인했는데,
+#   그때는 나머지 조건까지 충족된 상태였던 것으로 보인다.
+#   → 노출 케이스를 커버하려면 **조건을 갖춘 계정 준비가 필요하다**(운영/기획 영역, QA가 못 푼다).
+#
+# 📌 **그래서 이 파일의 현재 범위는 "미노출 확인"이다 (2026-08-19 사용자 지시).**
+#   조건 미충족 계정에서 메뉴가 **노출되지 않는 것이 정상 동작**이므로 그것을 검증한다.
+#   노출 케이스(진입 → GME Finance 화면)는 조건을 갖춘 계정이 준비되면 추가한다.
+#
+# 종전(2026-07-15) 실측으로 남겨 둔 셀렉터 — 메뉴가 다시 노출되면 그대로 쓸 수 있다:
+#   진입: 홈 > "금융 & 결제" 섹션 > **"개인 금융"** → 별개 패키지 `...livetest.loan_module`의 액티비티
+#   화면: 타이틀 `titleText`("GME Finance") / 마스코트 `bottom_man_image` / 뒤로가기 `back`
+#   ⚠️ `assertVisible`에 **id와 text를 함께 주면 실패**한다(둘 다 실제로 있어도) → 분리해서 assert.
+#
+# ClickUp 상태: `z8nfn6ma60` (Loan - iOS: Loan / Android: Personal Finance Title & icon Check)
+#   2026-09-07 확인: 시나리오 `z8nfn6m9z2` 의 유일한 케이스이며 이름도 일치한다. 상태 `to do`.
+#   ⚠️ "ClickUp:" 으로 시작하면 리포트 스크립트가 **커버 완료 마커로 오인**한다
+#     (`# CLICKUP:` 파서가 대소문자를 가리지 않는다) → 산문 주석은 "ClickUp 상태:" 로 쓴다.
+#     `z8nfn6ma??` 에서 `z8nfn6ma` 를 케이스 ID로 뽑아 매일 유령 ID 경고가 떴다(2026-09-07 수정).
+#   → **to do 유지.** 커버 불가 사유는 앱 결함이 아니라 **계정/상품 노출 조건**이다.
+#   ※ 종전의 "2026-08-19 레이트 리밋으로 케이스 ID 확인 못 함" 은 **해소됐다**(2026-09-07 확인, 위 참조).
+#     상태가 `to do` 인 것은 갱신을 못 해서가 아니라 **커버하지 않기로 한 결과**다.
+#
+# 케이스:
+#   [01] [High] Loan - **개인 금융 메뉴 미노출 확인** (조건 미충족 계정에서의 정상 동작)
+#   ⏸ 보류: Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
+#      → 조건을 갖춘 계정이 준비되면 추가한다(셀렉터는 아래 주석에 보존).
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\15_Loan_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+# 외국인 계정(test123)은 로그인 직후 "증빙 서류 안내"(문서 만료) 바텀시트가 뜬다
+- runFlow:
+    when:
+      visible:
+        id: "remindLaterBtn"
+    commands:
+      - tapOn:
+          id: "remindLaterBtn"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] Loan - 개인 금융 메뉴 **미노출** 확인
+# ----------------------------------------------------------------
+# 조건 미충족 계정에서는 이 메뉴가 안 보이는 것이 정상이다 → 그것을 검증한다.
+# 그리드가 **비동기 로딩**이므로 먼저 그리드 컨테이너(`menuRecyclerViewDynamic`)가 실제로
+#   그려질 때까지 기다린 뒤 판정해야 한다. 안 기다리면 "아직 안 그려져서 안 보이는 것"을
+#   미노출로 잘못 통과시킬 수 있다.
+# 그리드 전체를 훑기 위해 최하단까지 스크롤한 뒤 확인한다(메뉴는 그리드 뒤쪽에 붙을 수 있다).
+# ⚠️ `menuRecyclerViewDynamic`(컨테이너)만 기다리면 안 된다 — 컨테이너 상단만 걸려도 visible이라
+#   개별 항목은 아직 화면 밖일 수 있다(2026-08-19 실측: "증명서 발급" assert 실패).
+#   → **그리드 마지막 항목("예약하기")이 보일 때까지** 스크롤해야 전체가 로드·표시된 것이다.
+- scrollUntilVisible:
+    element:
+      text: "예약하기"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+# 그리드가 끝까지 로드됐다는 근거
+- assertVisible: "예약하기"
+- takeScreenshot: "[01-1]_홈_서비스그리드_최하단"
+# 핵심 검증: 개인 금융 미노출
+# ⚠️ **이 파일의 유일한 케이스가 `assertNotVisible` 하나다** → 문구가 틀리면 아무것도 검증하지
+#   못한 채 **항상 통과**한다(가장 위험한 형태다). 두 가지로 완화한다:
+#   ① 위 165행 `assertVisible: "예약하기"` 가 **그리드 라벨을 실제로 읽고 있다는 대조군**이다.
+#      이게 없으면 "화면이 아직 안 떴을 뿐"인 상태도 미노출로 통과해 버린다 → 지우지 말 것.
+#   ② 문구를 **부분매칭 정규식**으로 넓힌다. Maestro 텍스트는 전체매칭이라 `"개인 금융"`은
+#      `개인금융`(공백 없음)·`개인 금융 서비스`(접미사) 같은 변형을 놓친다 —
+#      `"국내송금"` vs 실측 `"국내 송금"`으로 실제로 물린 것과 같은 부류다.
+- assertNotVisible: ".*개인.*금융.*"
+- takeScreenshot: "[01-2]_개인금융_미노출확인"
+
+# ----------------------------------------------------------------
+# ⏸ [보류] Loan - Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
+# ----------------------------------------------------------------
+# 조건을 갖춘 계정이 준비되면 아래를 케이스로 되살린다(2026-07-15 실측 셀렉터).
+#   - tapOn: "개인 금융"
+#   - extendedWaitUntil: visible: id "…livetest.loan_module:id/titleText"
+#   - assertVisible: "GME Finance"
+#   - assertVisible: id "…livetest.loan_module:id/bottom_man_image"
+#   - tapOn: id "…livetest.loan_module:id/back"   (홈 복귀)
+# ⚠️ `assertVisible`에 **id와 text를 함께 주면 실패**한다(둘 다 실제로 있어도) → 분리해서 assert.
+
+# ---------------- 홈 복귀 판정 ----------------
+# 그리드까지 스크롤한 상태라 상단 `btnTransfer`는 트리에 없다 → 하단 내비로 판정.
+# 홈 복귀 시 인앱 배너가 다시 뜰 수 있어 먼저 닫는다.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000

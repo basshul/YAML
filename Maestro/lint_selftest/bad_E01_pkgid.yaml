@@ -1,0 +1,5 @@
+appId: ${APP_ID}
+---
+# E01: id에 패키지명 → stag에서 매칭 실패
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/btnTransfer"

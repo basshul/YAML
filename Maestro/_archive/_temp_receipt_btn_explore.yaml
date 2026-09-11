@@ -1,0 +1,80 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- launchApp
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+- tapOn: "국내송금"
+- tapOn: "계속"
+- tapOn: "LEE SEUNGSOO"
+- assertVisible:
+    text: "동일한 계좌번호로 거래할 수 없습니다"
+- tapOn: "PARK DOYOUNG"
+- tapOn: "금액"
+- inputText: "2"
+- hideKeyboard
+- tapOn: "계속"
+- tapOn: "확인"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- runFlow:
+    when:
+      visible: "Similar transaction found. Please perform the transaction after 1 minutes."
+    commands:
+      - tapOn: "확인"
+      - tapOn: "금액"
+      - eraseText: 20
+      - inputText: "1"
+      - hideKeyboard
+      - tapOn: "계속"
+      - tapOn: "확인"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "영수증 보기"
+    timeout: 15000
+- tapOn: "영수증 보기"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn_download"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "연결 프로그램"
+- pressKey: back
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- assertVisible:
+    text: "Home"

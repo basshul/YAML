@@ -1,0 +1,119 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: BOTTOM NAVIGATION (공통 하단 내비)
+# 앱 1회 실행 후 [01] ~ [04] 순서대로 연속 실행
+# 각 탭 선택 → 1depth 화면 이동 확인 → 홈 복귀
+# ================================================================
+
+# 앱 실행 및 로그인 (PIN 1212)
+# 주의(2026-08-03): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|Home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "Home"
+          timeout: 20000
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] 내역 탭 → 내역 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "History"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "내역"
+
+# 홈 복귀
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Home"
+
+# ----------------------------------------------------------------
+# [02] [High] 카드 탭 → 카드 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "Card"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "카드"
+
+# 홈 복귀
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Home"
+
+# ----------------------------------------------------------------
+# [03] [High] 프로필 탭 → 프로필 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "Profile"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Settings"
+
+# 홈 복귀
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Home"
+
+# ----------------------------------------------------------------
+# [04] [High] 홈 탭 → 홈 화면 복귀 확인
+#             (다른 탭에서 홈 탭 탭 시 홈 화면으로 돌아오는지 확인)
+# ----------------------------------------------------------------
+- tapOn:
+    text: "History"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Home"
+- assertVisible:
+    text: "GME Wallet"

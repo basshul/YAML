@@ -1,0 +1,25 @@
+appId: ${APP_ID}
+---
+# 구 UI 표준 진입 — 지적이 하나도 나오면 안 된다
+# 기본 빌드가 `.stag`(2026-09-03 선언)이므로 launchApp 뒤 **LIVETEST 강제**가 표준 진입에 포함된다.
+- launchApp
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- assertVisible: "국내 송금"
+- tapOn: "국내 송금"

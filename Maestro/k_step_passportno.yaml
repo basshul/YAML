@@ -1,0 +1,18 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# 여권 OCR 화면: 신분증(여권번호) 보안 키패드 입력 → 입력완료
+# ARC 단계(신분증 정보 확인 3/5)로 넘어가기 위한 선행 입력.
+- tapOn:
+    id: "securityKeyboardEditText"
+- waitForAnimationToEnd
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+- tapOn: "7"
+- tapOn: "8"
+- tapOn: "9"
+- tapOn: "입력완료"
+- waitForAnimationToEnd

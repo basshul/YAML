@@ -1,0 +1,14 @@
+# 실행 산출물 — artifacts\ 아래로 격리하고 저장소에는 넣지 않는다.
+# ⚠️ suite_logs 는 2026-09-10까지 '텍스트 QA 증적'으로 추적했으나, GitHub 푸시를 앞두고 제외로 바꿨다
+#   (2026-09-11) — 실행 로그에 **계정 ID·잔액·거래 내역·실 이메일**이 그대로 남는다.
+#   증적은 정본(OneDrive)에 그대로 있다.
+artifacts/
+.maestro/
+shots_*/
+*.png
+*.zip
+
+Maestro/suite_logs/
+
+# 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
+Maestro/env/secrets.env

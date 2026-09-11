@@ -1,0 +1,140 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ⚠️ 이 파일은 _change_language_old.yaml 의 **stag 사본**이다(appId만 다름).
+# EasyCare 화면이 stag 7.20.0 전용이라 별도 사본이 필요했다. 원본 수정 시 이 파일도 같이 고칠 것.
+# ================================================================
+# 헬퍼: 앱 언어를 ${LANG_LABEL} 로 변경 — 구 UI (2026-08-14 작성)
+# ================================================================
+# 호출:
+#   - runFlow:
+#       file: _change_language_old.yaml
+#       env:
+#         LANG_LABEL: "English"
+#
+# ⚠️ **언어를 바꾸면 앱이 통째로 재시작된다**(SplashScreen + Server Override, 2026-08-14 실측).
+#   그래서 이 헬퍼는 "직전 전환으로 재시작된 상태"에서 시작해 홈까지 복구한 뒤 다음 언어로 바꾼다.
+#   첫 호출은 이미 홈이므로 복구 블록이 전부 SKIP된다.
+#   ※ 이 재시작은 **세션을 유지해 PIN을 다시 묻지 않는다**(24회 전부 `input_dot_1` SKIP, 2026-08-14).
+#     그래도 PIN 블록은 남겨 둔다 — 세션이 만료된 상태로 들어오면 그때는 잠금화면이 뜬다.
+#
+# ⚠️ **모든 판정을 언어 무관 셀렉터로 한다.** 화면 문구가 매 회 바뀌기 때문:
+#   - 잠금화면: 문구("4자리 숫자를 입력하세요") 대신 **id `input_dot_1`**
+#   - PIN 키패드: content-desc가 숫자라 언어 무관
+#   - 홈: **id `btnTransfer`**
+#   - 드로어 "설정": 드로어 항목에는 **resource-id가 없어** 텍스트로 탭할 수밖에 없다.
+#     APK에서 `setting_text`/`settings_text`의 25개 로케일 값을 뽑아 정규식으로 나열했다.
+#     (오탐 방지로 `above: bottom_item_home` 제약을 함께 건다)
+#   - 언어 목록 항목명은 **자국어 표기 고정**이라 앱 언어와 무관하다(한국어/English/中文 …).
+# ================================================================
+
+# ---------------- 재시작 복구: 스플래시 → PIN → 홈 ----------------
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+# ---------------- 지문인증 다이얼로그 (조건부) ----------------
+# 앱 설정에서 지문인증이 켜져 있으면 재시작 직후 잠금화면 위에 지문 다이얼로그가 덮인다.
+# 이때 input_dot_1 이 안 보여 PIN 블록이 통째로 SKIP되고 홈 대기에서 죽는다(2026-08-20 실측).
+# 문구는 언어별로 바뀌지만("Отменить"/"Cancel") **id button_negative 는 언어 무관**이다.
+- runFlow:
+    when:
+      visible:
+        id: "button_negative"
+    commands:
+      - tapOn:
+          id: "button_negative"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "check_customer"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      # ⚠️ stag의 보이스피싱 다이얼로그 OK 버튼에는 resource-id가 없다(2026-08-20 실측).
+      #   원본(livetest)의 btn_diaog_ok 를 먼저 시도하고, 없으면 체크박스 아래 버튼으로 폴백한다.
+      #   둘 다 optional 이라 다이얼로그가 이미 닫혔으면 그냥 통과한다.
+      - tapOn:
+          id: "btn_diaog_ok"
+          optional: true
+      - tapOn:
+          below:
+            id: "check_customer"
+          optional: true
+      - waitForAnimationToEnd
+# ⚠️ 인앱 배너가 홈보다 먼저 뜨면 배너가 별도 윈도우라 btnTransfer가 계층에서 가려진다.
+#   그냥 홈을 기다리면 타임아웃으로 죽는다(2026-08-20 실측, stag/S23).
+#   그래서 "배너 또는 홈" 중 먼저 뜨는 쪽을 기다린 뒤 배너를 닫고, 다시 홈을 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|btnTransfer"
+    timeout: 90000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 60000
+
+# ---------------- 인앱 배너 닫기 (조건부, stag 전용 추가) ----------------
+# stag 홈은 인앱 배너(GME Global Cup 등)가 복귀할 때마다 재등장해 드로어 탭을 가로막는다.
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+
+# ---------------- 드로어 → 설정 → 언어 → ${LANG_LABEL} ----------------
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 20000
+# stag 드로어에는 항목마다 resource-id가 있다(2026-08-20 실측).
+# 원본(livetest)은 id가 없어 25개 로케일 텍스트 정규식을 썼지만, 여기서는 id로 대체해 더 견고하다.
+- tapOn:
+    id: "view_setting"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "view_language"
+    timeout: 20000
+- tapOn:
+    id: "view_language"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "${LANG_LABEL}"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "${LANG_LABEL}"
+- waitForAnimationToEnd

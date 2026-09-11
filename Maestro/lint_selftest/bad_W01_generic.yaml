@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+# W01: `visible: "닫기"` → `tapOn: "닫기"` 짝 = 맹목적 팝업 닫기
+#   무엇이 떠 있는지 모른 채 아무 X나 누른다 → 런처 이탈 사고 이력
+- runFlow:
+    when:
+      visible: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd

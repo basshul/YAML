@@ -1,0 +1,251 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Telecom (GME Mobile)
+# ================================================================
+# 2026-07-09 실기기 탐색 결과: 현재 계정/환경에는 선택 가능한 요금제(상품)가
+# 전혀 없음("Line SIM 요금제"/"선불 SIM 신청" 모두 "내역 없음"). 이에 따라
+# [05]~[07]은 임의 요금제 선택 자체가 불가능하여 실제 코드 작성이 불가능함
+# (사용자 사전 승인: "선택 가능한 상품이 없어서 작성이 가능한 범위까지만 진행").
+# [01]~[04], [08]은 실기기로 진입 경로/element ID 확인 후 정상 작성 및 PASS.
+#
+# 진입 경로: Home > (스크롤) > 생활 & 여행 섹션 > "GME 모바일" (text 기반, id 없음)
+# GME 텔레콤(GME Mobile) 메인 화면 요소:
+# - id: homebutton   → 상단 좌측 홈 아이콘 (탭 시 즉시 Home으로 이동)
+# - id: contactus     → "고객센터 연결하기" 버튼 → CS 팝업("사용 중 궁금한 점이
+#                       있으신가요?" + "실시간 채팅"/취소) 노출. 취소 버튼: id: btnCancel
+# - "GME Mobile" 카드(text 기반, id 없음) → 탭 시 요금제 선택 페이지 진입
+#
+# 요금제 선택 페이지("GME Mobile", screenTitle) 요소:
+# - id: applylinesimlayout    → "Line SIM 요금제"
+# - id: applyprepaidsimlayout → "선불 SIM 신청"
+# - id: chedkmynumerlayout    → "GME Mobile 사용량 확인"
+# 위 두 "Line SIM 요금제"/"선불 SIM 신청" 모두 탭하면 동일한 "LG U+ 패키지"
+# (screenTitle) 페이지로 이동하며 "원하는 요금제를 선택해 주세요." 문구와 함께
+# 요금제 목록이 "내역 없음"으로 비어 있음(2026-07-09 기준 선택 가능 상품 없음).
+# "GME Mobile 사용량 확인"(id: chedkmynumerlayout)은 과거 신청 내역이 있어
+# "사용 가능한 번호" 페이지에 상태(등록 취소/처리중)+Applied date 목록이 정상 노출됨.
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [Low] GME Mobile - 홈화면 이동 확인
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "GME 모바일"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 모바일"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME 텔레콤"
+
+# 상단 홈 아이콘 탭 → 홈화면 이동 확인
+- tapOn:
+    id: "homebutton"
+- assertVisible:
+    text: "Home"
+
+# ----------------------------------------------------------------
+# [02] [Low] GME Mobile - CS 팝업 발생 확인 (Contact us)
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "GME 모바일"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 모바일"
+- waitForAnimationToEnd
+- tapOn:
+    id: "contactus"
+- assertVisible:
+    text: "사용 중 궁금한 점이 있으신가요?"
+- assertVisible:
+    text: "실시간 채팅"
+- tapOn:
+    id: "btnCancel"
+
+# 홈 복귀
+- repeat:
+    while:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] [Medium] GME Mobile - GME Mobile 선택 시 요금제 선택 페이지 발생 확인
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "GME 모바일"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 모바일"
+- waitForAnimationToEnd
+- tapOn: "GME Mobile"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "원하는 요금제를 선택해 주세요."
+- assertVisible:
+    id: "applylinesimlayout"
+- assertVisible:
+    id: "applyprepaidsimlayout"
+- assertVisible:
+    id: "chedkmynumerlayout"
+
+# 홈 복귀
+- repeat:
+    while:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] [Medium] GME Mobile - Apply for line sim / Pre-paid 상품 선택시 요금제 발생 확인
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "GME 모바일"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 모바일"
+- waitForAnimationToEnd
+- tapOn: "GME Mobile"
+- waitForAnimationToEnd
+
+# Line SIM 요금제 → 요금제 목록 페이지 진입 확인(현재 선택 가능 상품 없음 - "내역 없음")
+- tapOn:
+    id: "applylinesimlayout"
+- assertVisible:
+    text: "원하는 요금제를 선택해 주세요."
+- assertVisible:
+    text: "내역 없음"
+- pressKey: back
+- waitForAnimationToEnd
+
+# 선불 SIM 신청 → 동일한 요금제 목록 페이지 진입 확인
+- tapOn:
+    id: "applyprepaidsimlayout"
+- assertVisible:
+    text: "원하는 요금제를 선택해 주세요."
+- assertVisible:
+    text: "내역 없음"
+
+# 홈 복귀
+- repeat:
+    while:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] [Medium] GME Mobile - 임의의 요금제 선택 시 New Number / Same Number 선택 페이지 발생 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-09): "Line SIM 요금제"/"선불 SIM 신청" 목록이 모두
+# "내역 없음"으로 비어 있어 선택 가능한 요금제가 존재하지 않음. 임의 요금제
+# 선택 자체가 불가능하여 New Number / Same Number 선택 페이지 도달 불가 -
+# 사용자 사전 승인에 따라 코드 작성 범위에서 제외(추후 요금제 노출 시 재작업 필요).
+
+# - tapOn: "TODO: GME Mobile 메뉴 버튼"
+# - tapOn: "TODO: 임의 요금제 선택"
+# - assertVisible:
+#     text: "New Number"
+# - assertVisible:
+#     text: "Same Number"
+
+# ----------------------------------------------------------------
+# [06] [High] GME Mobile - New Number 상품 요금제 정상신청 동작 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-09): [05]와 동일한 이유로 요금제 선택이 불가능하여
+# New Number 신청 플로우 자체에 진입할 수 없음 - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: GME Mobile 메뉴 버튼"
+# - tapOn: "TODO: 요금제 선택"
+# - tapOn: "New Number"
+# - waitForAnimationToEnd
+# TODO: 신청 폼 입력 및 완료 확인
+# - assertVisible:
+#     text: "TODO: 신청 완료 화면 식별 텍스트"
+
+# ----------------------------------------------------------------
+# [07] [High] GME Mobile - Same Number 상품 요금제 정상신청 동작 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-09): [05]와 동일한 이유로 요금제 선택이 불가능하여
+# Same Number 신청 플로우 자체에 진입할 수 없음 - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: GME Mobile 메뉴 버튼"
+# - tapOn: "TODO: 요금제 선택"
+# - tapOn: "Same Number"
+# - waitForAnimationToEnd
+# TODO: 기존 번호 입력 및 신청 완료 확인
+# - assertVisible:
+#     text: "TODO: 신청 완료 화면 식별 텍스트"
+
+# ----------------------------------------------------------------
+# [08] [High] GME Mobile - Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "GME 모바일"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 모바일"
+- waitForAnimationToEnd
+- tapOn: "GME Mobile"
+- waitForAnimationToEnd
+- tapOn:
+    id: "chedkmynumerlayout"
+- assertVisible:
+    text: "사용 가능한 번호"
+- assertVisible:
+    text: ".*Applied date.*"
+
+# 홈 복귀
+- repeat:
+    while:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd

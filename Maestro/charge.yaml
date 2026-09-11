@@ -1,0 +1,27 @@
+appId: com.gmeremit.online.gmeremittance_native.sgt
+
+---
+- repeat:
+    times: 25
+    commands:
+    - tapOn:
+        id: "upArrow"
+    - tapOn:
+        id: "recharge"
+    - waitForAnimationToEnd
+    - tapOn:
+        point: 21%,87%
+    - inputText: "1000"
+    - tapOn:
+        id: "btn_submit1"
+    - tapOn:
+        id: "continueBtn"
+    - tapOn: "1"
+    - tapOn: "2"
+    - tapOn: "1"
+    - tapOn: "2"
+    - tapOn:
+        id: "btn_diaog_ok"
+
+
+

@@ -1,0 +1,107 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 01_01 최초 로그인 플로우
+# 실행:
+#   .\run_test.ps1 -lang ko -flow 01_01_Login_Success.yaml
+#
+# 설명:
+#   clearState 후 최초 로그인 시 나타나는 단계를 순서대로 처리.
+#   다른 테스트 시나리오 실행 전 로그인 상태를 만들기 위한 셋업 플로우.
+#
+# 처리 항목:
+#   [01] 로그인 시도 1 - Gmetest1! 입력 (실패 시 다음 단계로)
+#   [02] 로그인 시도 2 - Gme12! 입력 (오류 팝업 처리 후 재시도)
+#   [03] 지문인증 등록 제안 → 나중에 선택 (조건부)
+#   [04] 간편비밀번호 설정 → 1212 입력 후 확인 (조건부)
+#   [05] 보이스 피싱 주의 바텀시트 → 동의 후 확인 (조건부)
+# ================================================================
+
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "btn_lgn"
+- tapOn:
+    id: "usernameId"
+- inputText: "seungsoo818"
+
+# 로그인 시도 1: Gmetest1!
+- tapOn:
+    id: "securityKeyboardEditText"
+- tapOn:
+    id: "transKeypad_row4"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# 로그인 실패 시 → 오류 팝업 닫고 Gme1! 재시도
+- runFlow:
+    when:
+      visible: "오류"
+    commands:
+      - tapOn: "확인"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "securityKeyboardEditText"
+      - tapOn:
+          id: "transKeypad_row4"
+      - tapOn:
+          id: "securityKeyboardClearAllImageView"
+      - tapOn: "대문자 키보드 변경"
+      - tapOn: "Capital G 히읃"
+      - tapOn: "m 으"
+      - tapOn: "e 디귿"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "특수문자변경"
+      - tapOn: "느낌표"
+      - tapOn: "입력완료"
+      - waitForAnimationToEnd
+
+# 지문인증 등록 제안 (조건부)
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+
+# 간편비밀번호 설정 (조건부)
+- runFlow:
+    when:
+      visible: "간편비밀번호"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+
+# 보이스 피싱 바텀시트 (조건부)
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd

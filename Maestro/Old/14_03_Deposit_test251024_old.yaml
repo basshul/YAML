@@ -1,0 +1,548 @@
+appId: ${APP_ID}
+---
+
+# ================================================================
+# 시나리오: Deposit — **계정별 분리본 3/3 (test251024 / 외국인·GMEPay Deposit 신청완료)**
+# ================================================================
+# 원본 `14_Deposit_old.yaml`(1845줄)은 3계정을 오가느라 1회 실행이 너무 길어
+# 2026-08-26 사용자 지시로 **계정별 3개 파일로 분리**했다. 각 파일은
+#   공통 진입(앱 실행 → PIN <정상 PIN> → 홈) + 해당 계정 로그인 + 그 계정 케이스
+# 만 담고 있어 독립 실행 가능하다.
+#   - 14_01_Deposit_seungsoo818_old.yaml : [01]~[05] [08] [25]~[28] [30]~[35]
+#   - 14_02_Deposit_test123_old.yaml     : [06] [07] [09] [14]~[24] [29]
+#   - 14_03_Deposit_test251024_old.yaml  : [10]~[13] + seungsoo818 원복
+# ⚠️ 케이스는 **번호순이 아니다**(계정 묶음 순). 원본은 참고용으로 남겨둔다.
+# 이 파일은 마지막에 **seungsoo818로 원복**하고 끝난다.
+# ================================================================
+# ================================================================
+# 시나리오: Deposit
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록) ----------------
+# ⚠️ 개편UI판의 `notVisible: text "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇히는 사고 이력이 있다 → 잠금화면을 명시적으로 대기한다.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로|.*간편 비밀번호를 생성.*"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            # ⚠️ 대안 목록에 PIN 생성 화면을 **반드시 같이** 넣어야 한다 — 빠뜨리면
+            #   대상도 배너도 안 보여 그냥 타임아웃된다(2026-08-25 실제 실패).
+            text: "4자리 숫자를 입력하세요|홈으로|.*간편 비밀번호를 생성.*"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+# ⚠️ 이전 실행이 `loginpwidhidpass` 경로(= 기존 PIN 해지)로 끝났으면 계정에 PIN이 없어
+#   잠금화면 대신 "앱에서 사용할 간편 비밀번호를 생성해 주세요"가 뜬다 → <정상 PIN>로 재등록한다.
+#   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# ----------------------------------------------------------------
+# 구 UI는 로그아웃이 **프로필 탭에 없고 드로어에만** 있다 → `iv_nav`로 드로어를 연다.
+#   드로어 항목에는 resource-id가 없어 텍스트로만 탭할 수 있다.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "로그아웃"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "로그아웃"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "예"
+    commands:
+      - tapOn: "예"
+      - waitForAnimationToEnd
+# ⚠️ **구 UI는 로그아웃 후 ID/비밀번호 폼이 아니라 PIN 잠금화면(`ActivityLockScreen`)으로 떨어진다**
+#   (2026-08-25 실측. 개편UI판은 곧바로 `usernameId` 폼을 전제해 여기서 FAILED로 죽었다).
+#   `loginpwidhidpass`("아이디/비밀번호로 로그인")를 타야 `LoginV2Activity`로 간다.
+#   그때 "ID와 비밀번호로 로그인하면 기존 간편 비밀번호는 해지됩니다" 확인 다이얼로그가 뜬다
+#   → `btn_diaog_ok`("예"). ⚠️ id에 앱 오타가 있다(`diaog`) — `dialog`가 아니다.
+#   ※ 이 경로로 들어가면 **기존 PIN이 해지**되므로 아래 간편비밀번호 재설정 블록이 실제로 동작한다.
+- runFlow:
+    when:
+      visible:
+        id: "loginpwidhidpass"
+    commands:
+      - tapOn:
+          id: "loginpwidhidpass"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "test251024"
+- tapOn:
+    id: "securityKeyboardEditText"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      # ⚠️ Maestro 텍스트는 **전체매칭**이라 `"간편비밀번호"`는 실제 문구
+      #   "앱에서 사용할 간편 비밀번호를 생성해 주세요"에 **매칭되지 않는다**
+      #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
+      #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
+      #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+# ⚠️ **로그인 직후 팝업은 한 박자 늦게, 그리고 여러 개가 순서대로 뜬다.**
+#   2026-09-09 실측(test123 / SM-S911N): "나중에 하기" 조건을 평가한 뒤에야
+#   **"증빙 서류 안내"(문서가 만료되었습니다) 바텀시트**가 떠서 홈을 덮었고,
+#   `bottom_item_home` 대기가 그대로 실패했다.
+#   → 단발 조건이 아니라 **홈이 보일 때까지 반복해서 닫는다.**
+#   ⚠️ 인앱 배너는 **id로 정확히** 닫는다. 범용 `"닫기"` 탭은 엉뚱한 X를 눌러
+#     **앱이 런처로 빠져나가는** 사고를 낸 적이 있다(2026-08-25).
+- repeat:
+    times: 4
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - runFlow:
+                when:
+                  visible: "나중에 하기"
+                commands:
+                  - tapOn: "나중에 하기"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible:
+                    id: "remindLaterBtn"
+                commands:
+                  - tapOn:
+                      id: "remindLaterBtn"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible:
+                    id: "btnTwo|btnClose"
+                commands:
+                  - tapOn:
+                      id: "btnTwo|btnClose"
+                  - waitForAnimationToEnd
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# [10] [Low] GMEPay Deposit - "GMEPay 가상 계좌 입금" 선택 동작 확인
+# ----------------------------------------------------------------
+# 계정 참고: test123은 "외국인 + GMEPay Deposit 미신청" 계정이라 배너를 탭하면
+# "가상 계좌 입금"이 아니라 "은행 선택"(신규 VA 발급) 화면으로 이동함(2026-07-15
+# 실기기 확인) - [10]~[13]이 요구하는 "가상 계좌 입금" 화면은 "외국인 + 신청완료"
+# 계정에서만 노출되므로, test251024(비밀번호 동일 <구 비밀번호(폐기)>) 계정으로 전환.
+#
+# 계정 전환: 로그아웃 → test251024(외국인, GMEPay Deposit 신청완료) 재로그인
+
+# 구 UI 홈 배너 실제 텍스트는 "GME Pay 가상 계좌"(GME와 Pay 사이 공백)다 → id로 고정한다.
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 홈 배너는 상단 카드 영역이라 화면 밖일 수 있다.
+#   (2026-08-25 실제 실패: 하단 내비는 보이는데 배너 assert가 죽었다)
+- scrollUntilVisible:
+    element:
+      id: "tv_easywallet_account_title"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "tv_easywallet_account_title"
+- waitForAnimationToEnd
+- assertVisible: "가상 계좌 입금"
+
+# ----------------------------------------------------------------
+# [11] [High] GMEPay Deposit - Share Account Number 선택시, 공유 동작 확인
+# ----------------------------------------------------------------
+# [10]에서 이미 "가상 계좌 입금" 화면에 있으므로 홈 복귀 후 재진입하지 않고
+# 그대로 이어서 검증(불필요한 홈 복귀 생략).
+- tapOn:
+    id: "btnShare"
+- waitForAnimationToEnd
+- assertVisible: "Quick Share"
+
+# 안드로이드 공유 시트만 닫기(홈 복귀는 생략 - "가상 계좌 입금" 화면으로 복귀)
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [12] [High] GMEPay Deposit - Copy Account Number 선택시, 복사 동작 확인 (붙여넣기 확인)
+# ----------------------------------------------------------------
+# [11]에서 이미 "가상 계좌 입금" 화면으로 복귀한 상태를 그대로 이어서 사용.
+- tapOn:
+    id: "tvCopyBadge"
+# ⚠️ **복사 결과 확인은 BLOCKED**(2026-09-09 SM-S911N / Android 16 실측).
+#   결과가 **토스트**인데 Android 12+ 에서는 토스트가 접근성 트리에 노출되지 않아
+#   maestro 가 볼 수 없다. 단발 `assertVisible` 도, 5초 폴링(`extendedWaitUntil`)도 실패했고
+#   화면 자체는 정상이었다(스크린샷 확인). 클립보드를 읽을 수단도 플로우 안에는 없다.
+#   → **탭 동작은 수행하되 결과 단언은 하지 않는다.** 대신 화면이 유지되는지만 확인한다
+#     (조건부만 두고 넘어가면 거짓 통과가 되므로, 아래 단언은 반드시 남긴다).
+#   ※ 사람이 확인하려면: 복사 후 아무 입력창에 붙여넣기 → 계좌번호 일치.
+- assertVisible:
+    id: "tvCopyBadge"
+
+# ----------------------------------------------------------------
+# [13] [High] GMEPay Deposit - See More 선택시, 상세 설명 바텀시트 발생 확인
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 "See More" 텍스트 버튼이 아니라 우상단 정보(i) 아이콘
+# (id: btnInfo)이며, 바텀시트가 아니라 전체 화면("GME Pay 입금 가이드")으로
+# 이동함 - 케이스 내용을 실제 동작에 맞게 정정하여 작성.
+# [12]에서 이미 "가상 계좌 입금" 화면에 있으므로 그대로 이어서 검증.
+- tapOn:
+    id: "btnInfo"
+- waitForAnimationToEnd
+- assertVisible: "GME Pay 입금 가이드"
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+- assertVisible: "가상 계좌 입금"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# 계정 전환: 아래 [ATM Deposit] 섹션은 test123(외국인, 은행계좌 미연결) 기준으로
+# 작성되어 있어 다시 test123으로 전환.
+
+# ================================================================
+# [ATM Deposit]
+# ================================================================
+# 재조사(2026-07-14, test123 계정 - 은행계좌 미연결 상태): 2026-07-10 결론
+# ("ATM 입금 = 편의점 입금과 동일 화면")은 이 계정에는 적용되지 않음이 확인됨.
+# 이 계정은 "즉시 입금"/"은행 입금" 옵션이 없고 "편의점 입금"/"ATM 입금"만
+# 노출되는데, "ATM 입금"을 탭하면 원래 TODO가 전제했던 구조 그대로 진입됨:
+# 탭 2개("카드 없이 ATM 입금"/"카드를 사용하여 ATM 입금"), NICE ATM/HYOSUNG
+# ATM 선택 리스트, "ATM 입금 신청 방법" 가이드, 우상단 "거래 내역" 아이콘.
+# 계정 속성(은행계좌 연결 여부 등)에 따라 이 화면 구조 자체가 달라지는 것으로
+# 보임 - 두 계정 결과 모두 유효한 관찰로 기록해두고, [14]~[24]는 이 계정
+# 기준으로 재작성함.
+#
+# 진입 경로: Home > "입금" > "ATM 입금" (이 계정은 GME Wallet 탭이 기본
+# 선택되어 있고 옵션이 "편의점 입금"/"ATM 입금" 2개뿐이라 탭 전환 불필요).
+#
+# 각 하위 화면의 뒤로가기 버튼 resource-id는 화면마다 다름: NICE/HYOSUNG
+# 금액입력 화면("입금 금액")만 resource-id "backBtn"이 실제로 존재함(다른
+# Deposit 화면들의 btnBackImage/iv_back과도 다른 id) - 이 화면은 EditText가
+# 있어 pressKey: back이 무반응이므로 반드시 backBtn을 사용해야 함. 그 외
+# 화면들(ATM 입금 메인 리스트, 가이드 화면, 거래 내역)은 뒤로가기 아이콘에
+# resource-id가 아예 없어 pressKey: back으로 대체함(입력 필드가 없어 정상
+# 동작함).
+#
+# 계정 참고: [17]/[19]는 "국내이용자 이용불가"(외국인 전용) 케이스이나, 이
+# 섹션 직전([13] 다음)에 test123(외국인, 은행계좌 미연결)으로 재전환하는
+# 코드가 이미 있어 별도의 추가 전환 불필요.
+
+# ----------------------------------------------------------------
+
+# ================================================================
+# 계정 원복: seungsoo818 (다음 실행이 [01]~[05]의 "은행 입금" 옵션을 필요로 한다)
+# ================================================================
+# 구 UI는 로그아웃이 **프로필 탭에 없고 드로어에만** 있다 → `iv_nav`로 드로어를 연다.
+#   드로어 항목에는 resource-id가 없어 텍스트로만 탭할 수 있다.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "로그아웃"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "로그아웃"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "예"
+    commands:
+      - tapOn: "예"
+      - waitForAnimationToEnd
+# ⚠️ **구 UI는 로그아웃 후 ID/비밀번호 폼이 아니라 PIN 잠금화면(`ActivityLockScreen`)으로 떨어진다**
+#   (2026-08-25 실측. 개편UI판은 곧바로 `usernameId` 폼을 전제해 여기서 FAILED로 죽었다).
+#   `loginpwidhidpass`("아이디/비밀번호로 로그인")를 타야 `LoginV2Activity`로 간다.
+#   그때 "ID와 비밀번호로 로그인하면 기존 간편 비밀번호는 해지됩니다" 확인 다이얼로그가 뜬다
+#   → `btn_diaog_ok`("예"). ⚠️ id에 앱 오타가 있다(`diaog`) — `dialog`가 아니다.
+#   ※ 이 경로로 들어가면 **기존 PIN이 해지**되므로 아래 간편비밀번호 재설정 블록이 실제로 동작한다.
+- runFlow:
+    when:
+      visible:
+        id: "loginpwidhidpass"
+    commands:
+      - tapOn:
+          id: "loginpwidhidpass"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "seungsoo818"
+- tapOn:
+    id: "securityKeyboardEditText"
+# 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_Login_Success_old` EXIT=0으로 재확인).
+#   ⚠️ 한때 메모리에 `<구 비밀번호(폐기)>`가 맞다고 적혀 있었으나 **틀렸다** — 순서를 바꿨다가
+#   무효한 값을 먼저 시도하게 되어 되돌렸다. 시도 5회 제한이 있으니 순서를 임의로 바꾸지 말 것.
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+# ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
+#   성공 가능성이 0인 재시도로 로그인 5회 제한을 깎는 건 순손실이다 —
+#   재시도 값은 이미 폐기된 비밀번호이고, 실패하면 카운터만 하나 더 줄어든다.
+#   1차가 실패하면 그대로 **시끄럽게 실패**시키는 편이 진단에도 유리하다.
+#   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      # ⚠️ Maestro 텍스트는 **전체매칭**이라 `"간편비밀번호"`는 실제 문구
+      #   "앱에서 사용할 간편 비밀번호를 생성해 주세요"에 **매칭되지 않는다**
+      #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
+      #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
+      #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    # ⚠️ 원래는 범용 `visible: "닫기"` → `tapOn: "닫기"`였다. 이 화면 저 화면의 아무 "닫기"에
+    #   매칭돼 엉뚱한 X를 누르는 패턴으로, 2026-08-25 실행에서 **앱이 런처로 빠져나가는**
+    #   사고를 냈다(로그인 직후 PIN 생성 화면에서 발동). 인앱 배너는 **id로 정확히** 닫는다.
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"

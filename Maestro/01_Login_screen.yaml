@@ -1,0 +1,224 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 01 로그인 화면 테스트
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 01_Login_screen.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 01_Login_screen.yaml
+#
+# 테스트 항목:
+#   [01] [Low] Chat - 로그인 화면에서 채팅 화면 이동 확인
+#   [02] [Low] Register Here - 이용약관 동의 화면 노출 확인
+#   [03] [Low] 아이디 찾기 - 아이디 찾기 화면 이동 확인
+#   [04] [Low] 비밀번호 찾기 - 비밀번호 찾기 화면 이동 확인
+#   [05] [Medium] 아이디 찾기 - 휴대폰 번호 / 생년월일 입력 후 조회
+#   [06] [Medium] 비밀번호 찾기 - 사용자 ID 입력 후 초기화 요청
+#   [07] [Medium] 이메일 수신 확인 - GME ID / 새 비밀번호 (30초 타임아웃)
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Server Override 다이얼로그(livetest 빌드 서버선택 스플래시) 노출 시 CONTINUE
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|${INIT_SELECT_LANGUAGE}|${REG_NEW_MEMBER}"
+    timeout: 20000
+- runFlow: "_server_override.yaml"
+
+# 서비스 이용 안내 팝업 (조건부)
+- runFlow:
+    when:
+      visible: "${INIT_SERVICE_GUIDE}"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "${SYS_PERMISSION_ALLOW}"
+          commands:
+            - tapOn: "${SYS_PERMISSION_ALLOW}"
+            - waitForAnimationToEnd
+
+# clearState 후 언어 자동 전환 (en 실행 시: "신규 회원" 감지 → English 전환)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+- takeScreenshot: "[00]_로그인_화면"
+
+# ----------------------------------------------------------------
+# [01] [Low] Chat - 로그인 화면에서 채팅 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "ivChannelTalk"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Global Money Express"
+- takeScreenshot: "[01]_채팅_화면_이동"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [Low] Register Here - 이용약관 동의 화면 노출 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "register"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${REG_TERMS_TITLE}"
+- takeScreenshot: "[02]_이용약관_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] [Low] 아이디 찾기 - 아이디 찾기 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tvFindUserId"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_ID_TITLE}"
+- takeScreenshot: "[03]_아이디찾기_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] [Low] 비밀번호 찾기 - 비밀번호 찾기 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tv_forgotpass"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_PW_TITLE}"
+- takeScreenshot: "[04]_비밀번호찾기_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] [Medium] 아이디 찾기 - 휴대폰 번호 / 생년월일 입력 후 조회
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tvFindUserId"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_ID_TITLE}"
+- takeScreenshot: "[05-1]_아이디찾기_화면"
+
+# 휴대폰 번호 입력 후 키패드 닫기
+- tapOn:
+    id: "edtMobileNumber"
+- inputText: "01090381905"
+- pressKey: Enter
+- waitForAnimationToEnd
+- takeScreenshot: "[05-2]_휴대폰번호_입력"
+
+# 생년월일 선택 (바텀시트 스크롤 휠: 연도/월/일)
+- tapOn:
+    id: "edtDob"
+- waitForAnimationToEnd
+- takeScreenshot: "[05-3]_날짜피커_오픈"
+
+# 연도: longPress로 키패드 활성화 → 1988 입력
+- longPressOn:
+    point: "27%,68%"
+- eraseText: 4
+- inputText: "1988"
+- pressKey: Enter
+- waitForAnimationToEnd
+
+# 월: longPress로 키패드 활성화 → Aug 입력
+- longPressOn:
+    point: "52%,68%"
+- eraseText: 3
+- inputText: "Aug"
+- pressKey: Enter
+- waitForAnimationToEnd
+
+# 일: longPress로 키패드 활성화 → 18 입력
+- longPressOn:
+    point: "75%,68%"
+- eraseText: 2
+- inputText: "18"
+- pressKey: Enter
+- waitForAnimationToEnd
+
+- takeScreenshot: "[05-4]_날짜_선택완료"
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+- takeScreenshot: "[05-5]_날짜_확인"
+
+- tapOn:
+    id: "btn_submit1"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_SUCCESS}"
+- takeScreenshot: "[05-6]_조회결과"
+
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[05-7]_팝업_확인_후"
+
+# ----------------------------------------------------------------
+# [06] [Medium] 비밀번호 찾기 - 사용자 ID 입력 후 초기화 요청
+# ----------------------------------------------------------------
+- launchApp: com.gmeremit.online.gmeremittance_native.livetest
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn"
+    timeout: 20000
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "tv_forgotpass"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_PW_TITLE}"
+- takeScreenshot: "[06-1]_비밀번호찾기_화면"
+
+- tapOn:
+    id: "email_mobile"
+- inputText: "seungsoo818"
+- pressKey: Enter
+- waitForAnimationToEnd
+- takeScreenshot: "[06-2]_아이디_입력"
+
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_SUCCESS}"
+- takeScreenshot: "[06-3]_초기화_결과"
+
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[06-4]_팝업_확인_후"
+
+# ----------------------------------------------------------------
+# [07] [Medium] 이메일 수신 확인 - GME ID / 새 비밀번호
+# ----------------------------------------------------------------
+- launchApp: com.google.android.gm
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "New Password"
+    timeout: 30000
+- assertVisible: "GME UserId"
+- assertVisible: "New Password"
+- takeScreenshot: "[07]_이메일_수신_확인"

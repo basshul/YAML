@@ -1,0 +1,457 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오 2: 외국인 회원가입
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 06_Registration_Foreigner.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 06_Registration_Foreigner.yaml
+#
+# 입력값: ID: test006 / PW: Gmetest1! / 전화번호: 010-90380808
+# clearState → 신규 회원 → 약관 → Sign Up (외국인) → ID 인증 (Passport → ARC)
+#           → 개인정보 (주소/직업/성별/이메일) → 계좌인증 건너뛰기 → 간편비밀번호 설정
+#           → 로그아웃 → seungsoo818 로그인 → 홈 화면 확인
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+# clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn: "언어 선택"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+- tapOn: "${REG_NEW_MEMBER}"
+- waitForAnimationToEnd
+# 약관 동의 (간략화: 모두 동의 → 확인)
+- tapOn: "${REG_AGREE_ALL}"
+- waitForAnimationToEnd
+- scroll
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+# Sign Up: ID / 비밀번호 / 전화번호 / 국적: 외국인
+- tapOn: "${REG_USER_ID}"
+- waitForAnimationToEnd
+- inputText: "test006"
+- tapOn: "${REG_PASSWORD}"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- tapOn: "${REG_PASSWORD_CONFIRM}"
+- waitForAnimationToEnd
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- tapOn: "${REG_PHONE}"
+- waitForAnimationToEnd
+- inputText: "90380808"
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "${REG_NATIONALITY}"
+- waitForAnimationToEnd
+- tapOn: "${REG_FOREIGNER}"
+- waitForAnimationToEnd
+- tapOn: "${REG_SAVE_AND_NEXT}"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [14] [High] ID Information Verification - Passport(신분증) 항목 노출 확인 (Foreigner)
+# ----------------------------------------------------------------
+- takeScreenshot: "[14]_신분증타입선택_화면확인"
+- assertVisible:
+    text: "${REG_PASSPORT}"
+- takeScreenshot: "[14]_Passport_신분증_항목_노출"
+
+# ----------------------------------------------------------------
+# [15] [High] ID Information Verification - Passport 촬영동작 확인 (Foreigner)
+# ※ 갤러리에서 여권 이미지 선택 (세 번째 이미지, 83%, 52%)
+# ----------------------------------------------------------------
+- tapOn: "${REG_PASSPORT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-1]_신분증_선택"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-2]_다음탭_카메라진입"
+- tapOn:
+    point: "75%, 87%"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-3]_갤러리_진입"
+- tapOn:
+    point: "83%, 52%"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-4]_이미지_확인화면"
+- tapOn: "${REG_DONE_GALLERY}"
+- waitForAnimationToEnd
+- takeScreenshot: "[15-5]_촬영결과_확인화면"
+
+# ----------------------------------------------------------------
+# [16] [High] ID Information Verification - 촬영한 여권 정보 자동채움 확인 - 수동입력 동작 확인 (Foreigner)
+# ----------------------------------------------------------------
+- tapOn: "${REG_DONE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-1]_완료탭_신분증정보화면"
+- takeScreenshot: "[16-2]_OCR_자동채움_확인"
+
+# 신분증 번호 수동 입력 (보안 키패드)
+- tapOn: "********"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-3]_신분증번호_보안키패드_진입"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+- tapOn: "7"
+- tapOn: "8"
+- tapOn: "9"
+- tapOn: "0"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-4]_신분증번호_입력완료"
+
+# 발급 일자 선택 (기본값 그대로 확인)
+- tapOn: "${REG_ISSUE_DATE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-5]_발급일자_피커"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-6]_발급일자_선택완료"
+
+# 만료 날짜 선택 (기본값 그대로 확인)
+- tapOn: "${REG_EXPIRY_DATE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-7]_만료날짜_피커"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-8]_만료날짜_선택완료"
+
+# 확인 버튼 활성화 → 확인
+- takeScreenshot: "[16-9]_확인버튼_활성화"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16-10]_확인탭_완료"
+
+# ----------------------------------------------------------------
+# [16a] [High] ID Information Verification - ARC 촬영동작 확인 (Foreigner)
+# ※ 여권 OCR 확인 후 → 신분증 정보 확인 3/5 (주민등록증 타입 선택) → 다음
+# ※ 갤러리에서 ARC 이미지 선택 (첫 번째 이미지, 17%, 52%)
+# ----------------------------------------------------------------
+- waitForAnimationToEnd
+- takeScreenshot: "[16a-0]_ARC타입선택_화면"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16a-1]_ARC_카메라화면"
+- tapOn:
+    point: "83%, 87%"
+- waitForAnimationToEnd
+- takeScreenshot: "[16a-2]_갤러리_진입"
+- tapOn:
+    point: "17%, 52%"
+- waitForAnimationToEnd
+- takeScreenshot: "[16a-3]_이미지_확인화면"
+- tapOn: "${REG_DONE_GALLERY}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16a-4]_촬영결과_확인화면"
+
+# ----------------------------------------------------------------
+# [16b] [High] ID Information Verification - 촬영한 ARC 정보 자동채움 확인 - 수동입력 동작 확인 (Foreigner)
+# ----------------------------------------------------------------
+- tapOn: "${REG_DONE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-1]_완료탭_ARC정보화면"
+- takeScreenshot: "[16b-2]_OCR_자동채움_확인"
+
+# ARC 신분증번호 수동 입력 (보안 키패드)
+- tapOn: "********"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-3]_신분증번호_보안키패드_진입"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+- tapOn: "7"
+- tapOn: "8"
+- tapOn: "9"
+- tapOn: "0"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-4]_신분증번호_입력완료"
+
+# 발급 일자 선택 (기본값 그대로 확인)
+- tapOn: "${REG_ISSUE_DATE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-5]_발급일자_피커"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-6]_발급일자_선택완료"
+
+# 만료 날짜 선택 (기본값 그대로 확인)
+- tapOn: "${REG_EXPIRY_DATE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-7]_만료날짜_피커"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-8]_만료날짜_선택완료"
+
+# 확인 버튼 활성화 → 확인
+- takeScreenshot: "[16b-9]_확인버튼_활성화"
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+- takeScreenshot: "[16b-10]_확인탭_완료"
+
+# ================================================================
+# [개인 정보 4/5] - 주소/직업/성별
+# ================================================================
+
+# ----------------------------------------------------------------
+# [19] 도시 선택필드 선택 및 검색 동작 확인 (Address)
+# ----------------------------------------------------------------
+- takeScreenshot: "[S2-19-0]_개인정보4-5_화면"
+- tapOn: "${REG_ADDRESS_CITY}"
+- waitForAnimationToEnd
+- tapOn: "${REG_SELECT_CITY}"
+- inputText: "SUWON"
+- tapOn:
+    id: "itemName"
+
+# ----------------------------------------------------------------
+# [20] 상세주소 GPS 동작 확인 (Address)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "prefixImage"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOCATION_ALLOW}"
+    commands:
+      - tapOn: "${REG_LOCATION_ALLOW}"
+      - waitForAnimationToEnd
+- takeScreenshot: "[S2-20-1]_GPS1차탭_상태확인"
+- tapOn:
+    id: "prefixImage"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-20-2]_GPS2차탭_상태확인"
+
+# ----------------------------------------------------------------
+# [21] Occupation 선택 동작 확인
+# ----------------------------------------------------------------
+- tapOn: "${REG_SELECT_OCCUPATION}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-21-1]_직업_선택화면"
+- tapOn: "Salaried"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-21-2]_직장인_선택"
+
+# ----------------------------------------------------------------
+# [22] Gender 선택 동작 확인 → [다음] 선택
+# ----------------------------------------------------------------
+- tapOn: "${REG_FEMALE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-1]_여성_선택"
+- tapOn: "${REG_MALE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-2]_남성_선택"
+- takeScreenshot: "[S2-22-3]_다음버튼_활성화"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-22-4]_다음선택_화면이동"
+
+# ================================================================
+# [개인 정보 5/5] - 이메일 / 추천인 코드
+# ================================================================
+
+# ----------------------------------------------------------------
+# [23] Email 입력동작 확인
+# ----------------------------------------------------------------
+- tapOn: "${REG_EMAIL_PLACEHOLDER}"
+- waitForAnimationToEnd
+- inputText: "test@test.com"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-23]_Email_입력"
+
+# ----------------------------------------------------------------
+# [24] Referral Code 입력동작 확인 → [다음] 선택
+# ----------------------------------------------------------------
+- tapOn: "${REG_REFERRAL_PLACEHOLDER}"
+- waitForAnimationToEnd
+- inputText: "test"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-1]_ReferralCode_입력"
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-2]_다음버튼_활성화"
+- tapOn: "${REG_NEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-24-3]_다음선택_화면이동"
+
+# ================================================================
+# [계좌 인증] - 건너뛰기
+# ================================================================
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_전_화면"
+- tapOn: "${REG_SKIP}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_경고팝업"
+- tapOn: "${REG_YES}"
+- waitForAnimationToEnd
+- takeScreenshot: "[S2-계좌인증]_건너뛰기_완료"
+
+# ================================================================
+# [간편비밀번호 설정]
+# ================================================================
+
+# [27-1] 지문인증 사용 여부 → [나중에] 선택
+- takeScreenshot: "[S2-27-1]_지문인증_화면"
+- tapOn: "${REG_LATER}"
+- waitForAnimationToEnd
+
+# [27-2] 간편 비밀번호 설정: 1212 입력
+- takeScreenshot: "[S2-27-2]_간편비밀번호_설정화면"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# [27-3] 간편 비밀번호 재입력: 1212
+- takeScreenshot: "[S2-27-3]_간편비밀번호_재입력화면"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# [27-4] 성공 바텀시트 → [OK]
+- takeScreenshot: "[S2-27-4]_성공바텀시트_등록완료"
+- tapOn: "OK"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# [27-5] 보이스 피싱 주의 바텀시트 → 체크박스 선택 → [확인]
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - takeScreenshot: "[S2-27-5]_보이스피싱주의_바텀시트"
+      - tapOn: "${REG_VOICE_PHISHING_CONFIRM}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-6]_체크박스_선택_확인버튼_활성화"
+      - tapOn: "${REG_VOICE_PHISHING_OK}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-7]_확인_바텀시트닫힘"
+
+# [27-6] 은행 연결 바텀시트 → [아니요]
+- runFlow:
+    when:
+      visible: "${REG_NO}"
+    commands:
+      - takeScreenshot: "[S2-27-8]_은행연결_바텀시트"
+      - tapOn: "${REG_NO}"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[S2-27-9]_아니요_선택_완료"
+
+# ================================================================
+# S2 완료: test006 로그아웃 → seungsoo818 계정 로그인 → 홈 화면 확인
+# ================================================================
+- waitForAnimationToEnd
+- tapOn: "${NAV_PROFILE}"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "${REG_LOGOUT}"
+    direction: DOWN
+- tapOn: "${REG_LOGOUT}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOGOUT_CONFIRM}"
+    commands:
+      - tapOn: "${REG_LOGOUT_CONFIRM}"
+      - waitForAnimationToEnd
+- takeScreenshot: "[LOGOUT]_로그아웃_완료"
+
+# seungsoo818 로그인
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "usernameId"
+- inputText: "seungsoo818"
+- tapOn:
+    id: "securityKeyboardEditText"
+- waitForAnimationToEnd
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- takeScreenshot: "[LOGIN-2]_로그인_제출"
+
+# 지문인증 사용 여부 → 나중에 (항상 노출)
+- tapOn: "${REG_LATER}"
+- waitForAnimationToEnd
+- takeScreenshot: "[LOGIN-3]_지문인증_나중에"
+
+# 간편비밀번호 설정 (조건부: 미설정 시에만 노출)
+- runFlow:
+    when:
+      visible: "간편비밀번호"
+    commands:
+      - takeScreenshot: "[LOGIN-4]_간편비밀번호_설정화면"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[LOGIN-5]_간편비밀번호_재입력화면"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "OK"
+      - waitForAnimationToEnd
+
+# 홈 화면 확인
+- waitForAnimationToEnd
+- takeScreenshot: "[LOGIN-6]_홈화면_확인"
+- assertVisible:
+    text: "${TXT_GREETING}"

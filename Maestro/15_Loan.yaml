@@ -1,0 +1,79 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Loan / Personal Finance
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] Loan - iOS: Loan / Android: Personal Finance Title & icon Check
+# ----------------------------------------------------------------
+# 주의(2026-07-15, 사용자 확인): 이 메뉴는 외국인 계정 전용 기능이라, 테스트 계정
+# (seungsoo818)의 국적을 임의로 "외국인"으로 설정한 상태에서 진입 경로/element를
+# 확인함. 국내(내국인) 계정에서는 이 메뉴 자체가 노출되지 않을 수 있음.
+#
+# 진입 경로: Home > "금융 & 결제" 섹션 > "개인 금융" 탭 → GME Finance(외국인 전용
+# GME Loan Service) 화면. Android는 메뉴명이 "Personal Finance"(개인 금융)이고,
+# 화면 진입 후 실제 타이틀 텍스트는 "GME Finance"로 표시됨(별개 패키지
+# `...livetest.loan_module`의 액티비티).
+# element id: 타이틀 텍스트 `titleText`("GME Finance"), 마스코트 아이콘
+# `bottom_man_image`, 뒤로가기 `back`(loan_module 패키지 소속).
+# 주의(실기기 확인): assertVisible에 id와 text를 함께 주면(예: id: titleText,
+# text: "GME Finance") 실패함(화면에 둘 다 실제로 존재해도 실패) - id 단독
+# assertVisible과 text 단독 assertVisible로 분리해야 정상 통과함.
+- scrollUntilVisible:
+    element:
+      text: "개인 금융"
+    direction: DOWN
+- tapOn: "개인 금융"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "com.gmeremit.online.gmeremittance_native.livetest.loan_module:id/titleText"
+- assertVisible:
+    text: "GME Finance"
+- assertVisible:
+    id: "com.gmeremit.online.gmeremittance_native.livetest.loan_module:id/bottom_man_image"
+
+# ================================================================
+# 홈 복귀
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest.loan_module:id/back"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd

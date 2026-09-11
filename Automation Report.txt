@@ -1,0 +1,5 @@
+cat > "/mnt/c/Users/GME/qa_daily.bat" << 'EOF'
+@echo off
+wsl bash -lc "~/qa_daily.sh"
+EOF
+echo "qa_daily.bat 생성 완료"

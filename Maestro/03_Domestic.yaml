@@ -1,0 +1,345 @@
+
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 03 국내 송금 테스트
+# 실행:
+#   .\run_test.ps1 -lang ko -flow 03_Domestic.yaml
+#
+# 사전 조건:
+#   간편비밀번호 설정 상태 (PIN: 1212)
+#
+# 처리 항목:
+#   [Wallet]
+#   [01] Wallet → KFTC 은행계좌 송금
+#          ├ 계좌번호 입력 시 은행 리스트 노출 확인
+#          └ 간편비밀번호 오류/정상 + similar 에러 시 금액 변경 재시도
+#   [02] Wallet → 다른 월렛 송금
+#          ├ 동일 월렛 계좌 송금 불가 확인
+#          ├ 계속 버튼 활성/비활성 확인
+#          └ 간편비밀번호 일치 시 송금 성공 + 영수증 다운로드 확인
+#   [03] Wallet → 타인 은행계좌 송금
+#          ├ 계좌번호 입력 시 은행 리스트 노출 확인
+#          └ 수수료 부과 확인
+#   [04] Wallet → 내 은행계좌 송금 (TODO)
+#   [KFTC]
+#   [05] KFTC → 타인 Wallet 송금 불가 동작 확인
+#   [06] KFTC → My Wallet OTP 불일치 시 송금불가 확인
+# ================================================================
+
+# 공통 Setup: 앱 시작 → 간편비밀번호 1212 → 홈 확인
+- launchApp
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] Wallet → KFTC 은행계좌 송금
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- tapOn: "계속"
+# 계좌번호 입력 → 은행 리스트 노출 확인
+- tapOn: "계좌번호 입력"
+- inputText: "3333276033972"
+- hideKeyboard
+- assertVisible:
+    text: "${KFTC_BANK_CHIP}"
+# 카카오뱅크 선택
+- tapOn: "${KFTC_BANK_CHIP}"
+# 금액 1 입력
+- tapOn: "금액"
+- inputText: "2"
+- hideKeyboard
+- tapOn: "계속"
+- tapOn: "확인"
+# 간편비밀번호 오류 → 정상 입력
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# similar 에러 발생 시 금액 2원으로 변경 후 재시도
+- runFlow:
+    when:
+      visible: "Similar transaction found. Please perform the transaction after 1 minutes."
+    commands:
+      - tapOn: "확인"
+      - tapOn: "금액"
+      - eraseText: 20
+      - inputText: "2"
+      - hideKeyboard
+      - tapOn: "계속"
+      - tapOn: "확인"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "영수증 보기"
+    timeout: 15000
+- tapOn: "영수증 보기"
+- pressKey: "back"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 10000
+
+# ----------------------------------------------------------------
+# [02] Wallet → 다른 월렛 송금
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- tapOn: "계속"
+# LEE SEUNGSOO 선택 → 동일 계좌 에러 확인
+- tapOn: "LEE SEUNGSOO"
+- assertVisible:
+    text: "동일한 계좌번호로 거래할 수 없습니다"
+# PARK DOYOUNG 선택
+- tapOn: "PARK DOYOUNG"
+# 금액 입력 전 계속 버튼 비활성화 확인
+# 2026-08-10 실기기 확인: "계속" 버튼 id = btn_ok2, 금액 미입력 시 enabled=false.
+# text 셀렉터는 활성/비활성 구분을 못 하므로 id + enabled 로 검증할 것.
+- assertVisible:
+    id: "btn_ok2"
+    enabled: false
+# 금액 1 입력 → 계속 버튼 활성화 확인
+- tapOn: "금액"
+- inputText: "2"
+- hideKeyboard
+- assertVisible:
+    id: "btn_ok2"
+    enabled: true
+- tapOn: "계속"
+- tapOn: "확인"
+# 간편비밀번호 입력 → 송금 성공
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# similar 에러 발생 시 금액 2원으로 변경 후 재시도
+- runFlow:
+    when:
+      visible: "Similar transaction found. Please perform the transaction after 1 minutes."
+    commands:
+      - tapOn: "확인"
+      - tapOn: "금액"
+      - eraseText: 20
+      - inputText: "1"
+      - hideKeyboard
+      - tapOn: "계속"
+      - tapOn: "확인"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "영수증 보기"
+    timeout: 15000
+- tapOn: "영수증 보기"
+- waitForAnimationToEnd
+# 영수증 다운로드 버튼 탭 → PDF 생성 후 "연결 프로그램" 앱 선택 다이얼로그 노출 확인
+- tapOn:
+    id: "btn_download"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "연결 프로그램"
+- pressKey: back
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ----------------------------------------------------------------
+# [03] Wallet → 타인 은행계좌 송금
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- tapOn: "계속"
+# 계좌번호 입력 → 은행 리스트 노출 확인
+- tapOn: "계좌번호 입력"
+- inputText: "64700065401013"
+- hideKeyboard
+- assertVisible:
+    text: "IBK기업은행"
+# 신한은행 선택
+- tapOn: "IBK기업은행"
+# 금액 1 입력
+- tapOn: "금액"
+- inputText: "3"
+- hideKeyboard
+- tapOn: "계속"
+# 수취인 세부 정보 확인 바텀시트에서 수수료 노출 확인
+# 2026-08-10 실기기 확인(실측값: 금액 3 KRW / 송금 수수료 1,000 KRW / 총액 1,003 KRW):
+#   - 라벨 실제 텍스트는 "송금 수수료:"(콜론 포함). Maestro text 셀렉터는 전체매칭이라
+#     기존 "송금 수수료"로는 실패했음 → 라벨은 id transfer_fee_txt 로 검증.
+#   - "총액"은 콜론이 없어 text 그대로 매칭됨.
+#   - 수수료가 실제로 부과되는지(0원이 아닌지)는 id+text 동시지정으로 금액 형식 검증.
+#     이 시트에서는 id+text 동시지정이 정상 동작함(실측).
+- assertVisible:
+    id: "transfer_fee_txt"
+- assertVisible:
+    id: "transferfee"
+    text: "[1-9][0-9,]* KRW"
+- assertVisible:
+    text: "총액"
+- assertVisible:
+    id: "totalamount"
+    text: "[1-9][0-9,]* KRW"
+- tapOn: "확인"
+# 간편비밀번호 입력 → 송금 성공
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "영수증 보기"
+    timeout: 15000
+- tapOn: "확인"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ----------------------------------------------------------------
+# [04] Wallet → 내 은행계좌 송금
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- tapOn: "계속"
+- tapOn:
+    id: "iv_hideShowMyAccounts"
+# 카카오뱅크 선택
+- tapOn: "카카오뱅크"
+# 금액 1 입력
+- tapOn: "금액"
+- inputText: "2"
+- hideKeyboard
+- tapOn: "계속"
+- tapOn: "확인"
+# 간편 비밀번호 입력
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "영수증 보기"
+    timeout: 15000
+- tapOn: "확인"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ----------------------------------------------------------------
+# [05] KFTC → 타인 Wallet 송금 불가 동작 확인
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- extendedWaitUntil:
+    visible:
+      text: "출금 계좌를 선택하세요"
+    timeout: 10000
+- tapOn: ".*${KFTC_BANK}.*"
+- tapOn: "계속"
+# PARK DOYOUNG 선택 및 금액 입력
+- tapOn: "PARK DOYOUNG"
+- tapOn: "금액"
+- inputText: "1"
+- hideKeyboard
+- tapOn: "계속"
+# 계속 탭 직후 실패 팝업 바로 노출 (확인 화면 없음)
+- extendedWaitUntil:
+    visible:
+      text: "You cannot transfer to GME wallet."
+    timeout: 10000
+- assertVisible:
+    text: "You cannot transfer to GME wallet."
+- tapOn: "확인"
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ----------------------------------------------------------------
+# [06] KFTC → My Wallet OTP 불일치 시 송금불가 확인
+# ----------------------------------------------------------------
+- tapOn: "국내송금"
+- extendedWaitUntil:
+    visible:
+      text: "출금 계좌를 선택하세요"
+    timeout: 10000
+- tapOn: ".*${KFTC_BANK}.*"
+- tapOn: "계속"
+# LEE SEUNGSOO 선택 및 금액 입력
+- tapOn: "LEE SEUNGSOO"
+- tapOn: "금액"
+- inputText: "1"
+- hideKeyboard
+- tapOn: "계속"
+# 수취인 세부 정보 확인 바텀시트
+- tapOn: "확인"
+# OTP 전송 안내 팝업 닫기
+- tapOn: "OK"
+# "1"을 4번 탭 — retryTapIfNoChange:false 로 각 탭 후 settle 대기 제거
+- tapOn:
+    text: "1"
+    retryTapIfNoChange: false
+- tapOn:
+    text: "1"
+    retryTapIfNoChange: false
+- tapOn:
+    text: "1"
+    retryTapIfNoChange: false
+- tapOn:
+    text: "1"
+    retryTapIfNoChange: false
+- tapOn: "입력완료"
+# OTP 불일치 → 에러 팝업 "실패 - 비밀번호 확인 중 오류가 발생했습니다." 확인
+- extendedWaitUntil:
+    visible:
+      text: "고객센터 연결하기"
+    timeout: 10000
+- takeScreenshot: otp_fail_confirmed
+- tapOn: "OK"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - pressKey: back

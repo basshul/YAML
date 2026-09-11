@@ -1,0 +1,303 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: MY WALLET
+# 앱 1회 실행 후 [01] ~ [04] 순서대로 연속 실행
+#
+# 계정 유형 구분 (홈 화면 계좌번호 prefix 기준)
+#   일반 사용자  : 계좌번호가 0664 또는 9424 로 시작
+#   Easy Remit : 계좌번호가 0664 또는 9424 로 시작하지 않는 사용자
+#
+# [GME Wallet 탭] 옵션 구성
+#   일반 사용자  : 즉시입금(KFTC 미연결 시 '즉시 입금 설정'), 은행 입금, 편의점 입금, ATM 입금
+#   Easy Remit : 편의점 입금, ATM 입금
+#
+# [GMEPay 탭] 옵션 구성
+#   일반 한국인              : 즉시 입금, GME Wallet에서 입금
+#   일반 외국인 / Easy Remit  : Easy Wallet에서 입금(VA 없으면 '가상계좌 신청'),
+#                              GME Wallet에서 입금
+#
+# 라벨 정정(2026-08-06): 앱이 한국어라 실제 텍스트는 "가상계좌 신청"임.
+#   기존 yaml의 "Apply Virtual Account"는 어떤 계정에서도 매칭되지 않아
+#   assertNotVisible이 항상 무의미하게 통과하고 있었음 → 전부 한국어로 교체.
+# ================================================================
+
+# 앱 실행 및 로그인 (PIN 1212)
+# 주의(2026-08-03): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 직후 공지/프로모션 팝업이 뜨는 계정이 있음(2026-08-06 test123에서 "Register your team📢").
+#   balloon과 마찬가지로 별도 윈도우라 떠 있는 동안 홈 노드를 못 읽음 → 조건부로 "취소" 닫기.
+- extendedWaitUntil:
+    visible:
+      text: "열기|로그인 세션이 만료|Home"
+    timeout: 20000
+#   ※ "취소"를 tapOn 하면 팝업이 닫히는 순간 탭이 아래 홈 화면으로 새어 들어가
+#      "해외송금" 버튼을 눌러버리는 현상이 있었음 → back으로 닫고, 그래도 홈이 아니면 back 한 번 더.
+- runFlow:
+    when:
+      visible:
+        text: "열기"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            notVisible:
+              text: "Home"
+          commands:
+            - pressKey: back
+            - waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|Home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "Home"
+          timeout: 20000
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 홈 → My Wallet 진입 (GME Wallet 잔액 행 탭)
+# 주의(2026-08-04): 기존 `tapOn: "***** KRW"`는 홈에 마스킹 잔액이 **4개**(카카오뱅크/신한/
+#   케이뱅크/GME Wallet) 있어서 항상 첫번째(카카오뱅크) 행을 탭 → "계좌/은행 명세서" 화면으로
+#   잘못 진입했음. 홈은 Compose UI라 clickable=true 노드가 없고 행 전체가 클릭영역이라
+#   클릭영역은 체브론(">")이 있는 **잔액 행**이고, 계좌번호 줄은 복사 아이콘 줄이라 탭해도 무반응.
+#   → "GME Wallet" 라벨을 앵커로 그 **아래**에 있는 잔액 행을 특정해서 탭.
+#   (17_WalletStatement.yaml의 `point: "89%,43%"` 좌표 방식은 기기 해상도가 바뀌면 깨지므로 지양)
+#   주의(2026-08-06): 앵커를 계좌번호로 두면 **계정마다 번호가 달라** 깨짐
+#   (seungsoo818=06640154622502 / test123=2031157) → 계정 무관한 "GME Wallet" 라벨을 앵커로 사용.
+#   은행 계좌들의 잔액 행은 GME Wallet 라벨보다 위에 있어 below로 유일하게 특정됨.
+- tapOn:
+    text: "***** KRW"
+    below:
+      text: "GME Wallet"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] [High] My Wallet 화면 진입 - 기본 요소 노출 확인
+#             (타이틀, GME Wallet 섹션, 입금/송금 버튼, GMEPay 섹션)
+# ----------------------------------------------------------------
+- assertVisible:
+    text: "My Wallet"
+- assertVisible:
+    text: "GME Wallet"
+- assertVisible:
+    text: "입금"
+- assertVisible:
+    text: "송금"
+- assertVisible:
+    text: "GMEPay"
+
+# ----------------------------------------------------------------
+# [02] [High] GME Wallet 입금 버튼 탭
+#             - 바텀시트 노출 확인
+#             - 계정 유형별 노출/미노출 옵션 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "입금"
+    index: 0
+- waitForAnimationToEnd
+
+# 공통: 바텀시트 노출 확인
+- assertVisible:
+    text: "입금 방법을 선택하세요"
+
+# ── 일반 사용자 (은행 입금 노출) ────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        text: "은행 입금"
+    commands:
+      # 노출 확인
+      - assertVisible:
+          text: "은행 입금"
+      - assertVisible:
+          text: "편의점 입금"
+      # ⚠️ BLOCKED (2026-08-06 양쪽 계정으로 확정): "ATM 입금" 검증 불가 — 주석 처리.
+      #   원인은 기기 해상도가 아니라 **시트 항목 수**임(2026-08-04엔 해상도 탓으로 오판했었음).
+      #   - 일반 사용자(seungsoo818): 항목 4개(즉시입금/은행/편의점/ATM) → 마지막 "ATM 입금"이
+      #     접근성 트리 bounds `[0,0][0,0]`으로 나와 maestro가 "보이지 않음"으로 판정(화면엔 그려짐).
+      #     실측: 편의점 입금 [189,1945][384,2003] 까지는 정상, ATM 입금부터 [0,0][0,0].
+      #     시트에 scrollable 노드가 없고 드래그로도 확장 안 됨 → 우회 불가.
+      #   - Easy Remit(test123): 항목 2개뿐이라 클리핑 없이 **정상 검증됨**(아래 분기 참고).
+      #   → 같은 기기에서 계정만 바꾸면 통과하므로 앱의 바텀시트 레이아웃 문제로 봐야 함.
+      # - assertVisible:
+      #     text: "ATM 입금"
+      # 즉시입금: KFTC 연결 시 '즉시입금', 미연결 시 '즉시 입금 설정'
+      - runFlow:
+          when:
+            visible:
+              text: "즉시입금"
+          commands:
+            - assertVisible:
+                text: "즉시입금"
+            - assertNotVisible:
+                text: "즉시 입금 설정"
+      - runFlow:
+          when:
+            visible:
+              text: "즉시 입금 설정"
+          commands:
+            - assertVisible:
+                text: "즉시 입금 설정"
+            - assertNotVisible:
+                text: "즉시입금"
+      # 미노출 확인 (Easy Remit에는 없는 옵션)
+      - assertNotVisible:
+          text: "Easy Wallet에서 입금"
+      - assertNotVisible:
+          text: "가상계좌 신청"
+
+# ── Easy Remit 사용자 (은행 입금 미노출) ─────────────────────────
+- runFlow:
+    when:
+      notVisible:
+        text: "은행 입금"
+    commands:
+      # 노출 확인
+      - assertVisible:
+          text: "편의점 입금"
+      # Easy Remit 계정은 시트 항목이 2개(편의점/ATM)뿐이라 클리핑이 없어 정상 검증됨
+      #   (2026-08-06 test123 계정으로 확인. 일반 사용자 분기는 항목 4개라 여전히 클리핑 — 아래 참고)
+      - assertVisible:
+          text: "ATM 입금"
+      # 미노출 확인 (일반 사용자 전용 옵션)
+      - assertNotVisible:
+          text: "즉시입금"
+      - assertNotVisible:
+          text: "즉시 입금 설정"
+      - assertNotVisible:
+          text: "은행 입금"
+
+# 바텀시트 닫기 → My Wallet 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "My Wallet"
+
+# ----------------------------------------------------------------
+# [03] [High] GME Wallet 송금 버튼 탭 - 바텀시트 발생 확인
+#             (해외송금 / 국내송금)
+# ----------------------------------------------------------------
+- tapOn: "송금"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "해외송금"
+- assertVisible:
+    text: "국내송금"
+
+# 바텀시트 닫기 → My Wallet 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "My Wallet"
+
+# ----------------------------------------------------------------
+# [04] [High] GMEPay 입금 버튼 탭
+#             - 바텀시트 노출 확인
+#             - 계정 유형별 노출/미노출 옵션 확인
+#
+#  분기 기준: '즉시 입금' 노출 여부
+#   즉시 입금 노출    → 일반 한국인
+#   즉시 입금 미노출  → 일반 외국인 또는 Easy Remit (동일 옵션 구성)
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "GMEPay"
+    direction: DOWN
+- tapOn:
+    text: "입금"
+    index: 1
+- waitForAnimationToEnd
+
+# 공통: 바텀시트 노출 확인 (GMEPay 탭 선택 상태)
+- assertVisible:
+    text: "입금 방법을 선택하세요"
+
+# ── 일반 한국인 (즉시 입금 노출) ──────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        text: "즉시 입금"
+    commands:
+      # 노출 확인
+      - assertVisible:
+          text: "즉시 입금"
+      - assertVisible:
+          text: "GME Wallet에서 입금"
+      # 미노출 확인
+      - assertNotVisible:
+          text: "Easy Wallet에서 입금"
+      - assertNotVisible:
+          text: "가상계좌 신청"
+
+# ── 일반 외국인 / Easy Remit (즉시 입금 미노출) ───────────────────
+- runFlow:
+    when:
+      notVisible:
+        text: "즉시 입금"
+    commands:
+      # ⚠️ BLOCKED (2026-08-06, 기기 의존): "GME Wallet에서 입금"이 이 시트의 **마지막 항목**이라
+      #   [02] 일반 사용자 분기의 "ATM 입금"과 **동일한 클리핑**이 발생함.
+      #   실기기 dump에서 bounds가 [0,0][0,0]으로 나와 maestro가 "보이지 않음"으로 판정
+      #   (화면에는 그려짐). 시트 scroll·확장 불가 → 우회 없음. 세로가 긴 기기에서 재확인 필요.
+      # - assertVisible:
+      #     text: "GME Wallet에서 입금"
+      # VA 계좌 보유 시 'Easy Wallet에서 입금', 미보유 시 '가상계좌 신청'
+      - runFlow:
+          when:
+            visible:
+              text: "Easy Wallet에서 입금"
+          commands:
+            - assertVisible:
+                text: "Easy Wallet에서 입금"
+            - assertNotVisible:
+                text: "가상계좌 신청"
+      - runFlow:
+          when:
+            visible:
+              text: "가상계좌 신청"
+          commands:
+            - assertVisible:
+                text: "가상계좌 신청"
+            - assertNotVisible:
+                text: "Easy Wallet에서 입금"
+      # 미노출 확인
+      - assertNotVisible:
+          text: "즉시 입금"

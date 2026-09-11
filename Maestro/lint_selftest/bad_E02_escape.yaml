@@ -1,0 +1,5 @@
+appId: ${APP_ID}
+---
+# E02: 이중인용 안 \s 는 유효한 YAML 이스케이프가 아니다 → Parsing Failed
+- assertVisible:
+    text: "GMEPay\s*입금"

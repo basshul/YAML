@@ -1,0 +1,838 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: MY QR — 구 UI
+# ================================================================
+#  진행: 2026-08-19 구 UI 기준 **전면 재작성**. 이전 버전은 개편 UI 기준이라 진입부터 깨졌다.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# ★ 이 재작성의 핵심: **좌표를 거의 다 버렸다.**
+#   종전 파일은 좌표 탭이 11군데였고 "기기 교체 시 재보정 필수"라는 주석까지 달려 있었다
+#   (S23 1080x2340 → Note 9 1080x2220으로 바뀌며 6개 중 4개가 어긋난 이력).
+#   구 UI는 native라 **필요한 요소에 id가 전부 있다** → 해상도 의존이 사라졌다.
+#   (남은 좌표는 [03]의 "바텀시트 바깥 탭" 한 종류뿐이고, 이건 좌표 말고 방법이 없다)
+#
+# 개편UI → 구 UI 구조 차이 (2026-08-19 실측):
+#   진입    개편UI는 홈 우상단 좌표(76%,7%)로 My QR 직행.
+#           구 UI는 **홈 잔액 카드의 아이콘 스위처**를 거친다:
+#             `qrScan`(카드 상단 QR 아이콘) → 카드가 QR 페이지로 바뀌고 하단 버튼 라벨이
+#             `btnTransfer`="지금 송금하기" / `txvDepositOrViewStatement`="받기" 로 바뀐다
+#             → **"받기"(`txvDepositOrViewStatement`)** 를 눌러야 My QR로 간다.
+#           ⚠️ 잔액 카드는 홈 **최상단**에 있다. 직전 케이스에서 스크롤된 채 돌아오면 카드가
+#             접근성 트리에 없으므로 `scrollUntilVisible`(UP)로 먼저 올려야 한다.
+#   My QR  `domestic_qr.DomesticQrGenerateView` / title "내 QR"
+#           customername / qrcard+qrimage / **enteramount**("금액 입력") / receive_to("받을 계좌:")
+#           / **accountinfo**("GME Wallet (…)") / **download**(QR 저장) / **share**(QR 공유하기)
+#           / **scanqr**(우상단 스캔) / back
+#           ⚠️ 구 UI My QR에는 **"글로벌 QR"·"국내 송금" 버튼이 없다**(개편UI에만 있던 것).
+#             종전 [02]는 그 두 버튼을 눌렀는데 구 UI에서는 성립하지 않아 케이스를 재정의했다.
+#   계좌변경 `accountinfo` 탭 → 바텀시트 `txvTitle`("받는 계좌") / `close` / `rvKftcList`
+#           / 행마다 name(은행명) + balance(계좌번호). **은행명 텍스트로 탭**한다
+#           (행 순서는 계정의 연결 계좌에 따라 밀리므로 index·좌표 금지 — 개편UI 시절 실제 사고).
+#   금액입력 `enteramount` 탭 → 바텀시트에 `amount` 입력칸 하나뿐(확인 버튼 없음).
+#           숫자 입력 후 **시트 바깥을 탭**하면 닫히면서 값이 확정되고, `enteramount` 라벨이
+#           "금액 입력" → "1 원"으로 바뀐다(이 변화로 판정한다).
+#   QR스캔  `scanqr` → **`domesticremit.send.view.DomesticRemitActivity`**(출금 계좌 선택,
+#           행 id `mainlayout`, 하단 `btn_ok`"계속") → **`domestic_qr.DomesticQrScanView`**
+#           (title "QR 스캔" / scanToPay / **galleryImagePick**). 개편UI의 `galleryImagePick`은 그대로다.
+#
+# ✅ **송금 완주까지 커버한다 (2026-08-20 KFTC 복구 후 추가)**
+#   2026-08-19에는 `btn_ok2`("계속")를 누르면 **"실패 - (06640154622502) / Failed"** 만 떴다.
+#   🚫 원인은 **livetest 환경의 KFTC 서버 연결 불가**였다(환경 이슈 / 앱 결함 아님).
+#      금액·은행을 바꿔도 동일했다(카카오뱅크 1원·1,000원 / 케이뱅크 1,000원) → 조합 문제가 아니었다.
+#   ✅ **2026-08-20 KFTC 복구 확인** → `btn_ok2` 이후 구간(수취인 세부 정보 확인 → 간편비밀번호
+#      1212 → 성공 시트 → 영수증 SUCCESS)을 [05]에 붙였고 **EXIT=0 2회 / 165스텝**으로 검증했다.
+#   💰 금액은 **1원으로 유지**한다(2026-08-20 사용자 지시 — 어제 1,000원으로 올렸던 것을 되돌렸다).
+#      GME Wallet → 카카오뱅크로 실제 1원이 나가지만 **본인 계좌 간 이동이라 손실이 아니다.**
+#   ※ QR 공유(Teams 전송)도 빼지 않았다 — 수신자가 본인이라 안전하다([01] 주석 참고).
+#
+# 케이스 목록:
+#   [01] Receive - QR코드 공유동작 확인            (Teams로 본인에게 전송까지 완주)
+#   [02] Receive - 받는 계좌 변경 동작 확인        (기본 GME Wallet → 신한은행 → 원복)
+#   [03] Receive - 금액 입력 동작 확인             (1원 입력 → 반영 → 원복)
+#   [04] Receive - QR코드 저장 동작 확인
+#   [05] Sending - QR 스캔 진입 + **금액 담긴 QR 스캔 시 자동입력 확인** → **송금 완주**
+#        (계좌+금액 세팅 → QR 저장 → 스캔 → 은행·금액 자동입력 → 확인 → PIN → 성공 → 영수증)
+#   [06] Receive - **Amount 미입력 상태** QR 송금받기 → **송금 완주**
+#        (계좌만 세팅한 QR → 스캔 → 금액은 비어 있음 → 직접 입력 → 확인 → PIN → 성공 → 영수증)
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\08_MyQR_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# ---------------- My QR 진입 ----------------
+# 잔액 카드는 홈 최상단 → 스크롤 위치와 무관하게 올려서 잡는다
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    visibilityPercentage: 20
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+# 카드가 QR 페이지로 바뀌면 하단 버튼 라벨이 "지금 송금하기"/"받기"로 바뀐다
+- extendedWaitUntil:
+    visible:
+      id: "txvDepositOrViewStatement"
+    timeout: 15000
+- assertVisible: "받기"
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: "${SCR_MY_QR}"
+- assertVisible:
+    id: "customername"
+- assertVisible:
+    id: "accountinfo"
+- assertVisible:
+    id: "enteramount"
+- assertVisible:
+    id: "download"
+- assertVisible:
+    id: "share"
+- assertVisible:
+    id: "scanqr"
+- takeScreenshot: "[00]_내QR_진입"
+
+# ----------------------------------------------------------------
+# [01] [Low] Receive - QR코드 공유동작 확인
+# ----------------------------------------------------------------
+# 공유 시트 → Teams → "basshu" 검색 → **본인 채팅으로 전송**까지 완주한다.
+#   ※ 수신자 "Basshu(이승수)"는 **이 계정 본인**이다(basshul@gmeremit.com).
+#     타인에게 나가는 발송이 아니라 자기 자신에게 보내는 것이라 반복 실행해도 안전하다.
+#     (2026-08-19 한 번 '외부 발송'으로 잘못 보고 시트 확인까지만 줄였다가 되돌린 케이스다)
+#   ※ Teams는 좌표가 아니라 **앱 이름 텍스트**로 탭한다 — 설치 앱 구성에 따라 아이콘 위치가 바뀐다.
+#   ※ Teams 내부 문구는 앱 언어가 아니라 **기기 언어**를 따른다.
+#   ※ Teams 콜드스타트가 느려 waitForAnimationToEnd로는 부족 → 로딩을 명시적으로 대기한다.
+# ⚠️ **Teams를 먼저 강제 종료해야 수신자를 고를 수 있다 (2026-08-19 실측)**
+#   Teams가 살아 있으면 공유 시 **직전 수신자가 이미 선택된 작성 화면**으로 열린다
+#   (`share_detail`에 "In App Message" 같은 **그룹**이 박힌 상태, 검색창 없음).
+#   그 화면에서는 수신자를 바꿀 수단이 없다 — 수신자명을 탭해도 반응 없고,
+#   `navigationBack`은 Teams를 그냥 빠져나온다.
+#   → 공유 전에 Teams를 죽이면 항상 **수신자 선택 화면**(검색창 + 목록)으로 열린다.
+- stopApp:
+    appId: "com.microsoft.teams"
+- tapOn:
+    id: "share"
+- extendedWaitUntil:
+    visible:
+      id: "sem_resolver_recyclerview"
+    timeout: 20000
+- takeScreenshot: "[01]_QR공유_시트"
+# ⚠️⚠️ **"Teams"라는 이름이 시트에 두 종류로 존재한다 — 잘못 누르면 그룹 채팅으로 보낸다**
+#   ① 시트 최상단 **직접공유(바로가기) 아이콘**: 특정 채팅으로 바로 보내는 항목이고
+#      각 아이콘에 **content-desc "Teams" 배지**가 붙어 있다(예: "In App Message",
+#      "Basshu's question" ← **둘 다 그룹 채팅**이다).
+#   ② 그 아래 **전체 앱 목록의 Teams 앱**(text "Teams") ← 이걸 눌러야 수신자 선택 화면이 열린다.
+#   `scrollUntilVisible`/`tapOn`의 텍스트 매칭은 content-desc도 잡으므로, 스크롤 없이 그냥
+#   `tapOn: "Teams"` 하면 **①의 배지에 먼저 걸려 그룹 채팅 작성 화면으로 들어간다**
+#   (2026-08-19 실제로 "In App Message" 그룹이 수신자로 박힌 화면이 떴다).
+#   → **시트를 먼저 펼쳐 직접공유 행을 화면 밖으로 밀어낸 뒤** 앱 목록의 Teams를 누른다.
+- repeat:
+    times: 3
+    commands:
+      - swipe:
+          start: "50%, 88%"
+          end: "50%, 38%"
+      - waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Teams"
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 20
+- tapOn: "Teams"
+- waitForAnimationToEnd
+# Teams 공유 화면 = `ShareToSkypeTeamsActivity`
+#   `share_search_bar`+`editTextView`("채팅 및 채널 검색") / `people_picker_list`(최근 채팅 목록)
+#   / 우상단 `action_bar_send_share`("메시지 보내기")
+#   ⚠️ "메시지 보내기"는 **항상 보인다** — 그것만 기다리면 수신자를 안 고른 채로 눌러버린다.
+#     반드시 검색해서 수신자를 먼저 선택해야 한다.
+#
+# 🎯 **개인(basshu 본인)에게만 보낸다 — 그룹 채팅에 보내지 않는다 (2026-08-19 사용자 지시)**
+#   "basshu"로 검색하면 결과에 **개인과 그룹이 섞여 나온다**:
+#     · 개인 → id **`userName`**("Basshu(이승수)") + `people_picker_title`("나") + `user_avatar`
+#     · 그룹 → id **`team_or_channel_name`** + `chat_detail`("채팅: Santosh, Adhikari" 처럼 참가자 나열)
+#            예: "Basshu's question", "이승수(Basshu)" ← 이름만 보면 개인처럼 보이지만 **그룹이다**
+#   → **텍스트로 탭하지 말고 `userName` id로 탭한다.** 텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
+- extendedWaitUntil:
+    visible:
+      id: "editTextView"
+    timeout: 40000
+- tapOn:
+    id: "editTextView"
+- inputText: "basshu"
+# 개인 항목이 뜰 때까지 대기(검색 결과 로딩이 수 초 걸린다)
+- extendedWaitUntil:
+    visible:
+      id: "userName"
+    timeout: 30000
+- assertVisible: "Basshu\\(이승수\\)"
+- tapOn:
+    id: "userName"
+- waitForAnimationToEnd
+- tapOn:
+    id: "action_bar_send_share"
+- waitForAnimationToEnd
+# 전송 후 앱으로 복귀한다(내 QR 화면)
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 40000
+- assertVisible: "${SCR_MY_QR}"
+- takeScreenshot: "[01]_QR공유_전송후_내QR복귀"
+
+# ----------------------------------------------------------------
+# [02] [Medium] Receive - 받는 계좌 변경 동작 확인 (Default: GME Wallet)
+# ----------------------------------------------------------------
+# 기본값은 GME Wallet. 다른 계좌로 바꿨다가 다시 GME Wallet으로 원복한다(멱등 유지).
+# ⚠️ **연동 계좌 목록은 계정 상태에 따라 바뀐다.** 종전에 쓰던 **`케이뱅크`가 사라졌고**
+#   (2026-08-28 실측: GME Wallet / 신한은행 / 카카오뱅크 3개) 그 탓에 [02]에서 실행이 멈췄다.
+#   `카카오뱅크`는 [05][06]의 실송금 조합이라 건드리지 않고 **`신한은행`** 을 쓴다.
+#   여기서 다시 깨지면 목록부터 덤프로 확인할 것 — 앱 버그가 아니라 계정 연동 상태 변화다.
+- assertVisible: ".*GME Wallet.*"
+- tapOn:
+    id: "accountinfo"
+- extendedWaitUntil:
+    visible:
+      id: "rvKftcList"
+    timeout: 20000
+- assertVisible: "받는 계좌"
+# ⚠️ **여기는 일부러 하드코딩을 유지한다.** `카카오뱅크`는 [05][06]의 실송금 조합이라
+#   동적 선택으로 집히면 그 분리가 깨진다(`14_01 [25]`와 상황이 다르다).
+#   대신 **전제를 명시적으로 단언**한다 — 이 줄이 없으면 목록이 바뀌었을 때
+#   아래 tapOn이 `Element not found`로 죽어 셀렉터 버그처럼 오진하게 된다.
+- assertVisible: "신한은행"
+- tapOn: "신한은행"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: ".*신한은행.*"
+- takeScreenshot: "[02]_받는계좌_신한은행"
+# 원복
+- tapOn:
+    id: "accountinfo"
+- extendedWaitUntil:
+    visible:
+      id: "rvKftcList"
+    timeout: 20000
+- tapOn: "GME Wallet"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: ".*GME Wallet.*"
+
+# ----------------------------------------------------------------
+# [03] [Medium] Receive - 금액 입력 동작 확인
+# ----------------------------------------------------------------
+# 입력 전 라벨은 "금액 입력"이고, 값을 넣으면 "1 원"으로 바뀐다.
+# ⚠️ 이 바텀시트에는 확인 버튼이 없다 — **시트 바깥을 탭**해야 닫히면서 값이 확정된다.
+#   (이 파일에 남은 유일한 좌표 탭이다. 시트는 화면 하단이라 상단 20% 지점은 항상 바깥이다)
+- assertVisible: "${MYQR_ENTER_AMOUNT}"
+- tapOn:
+    id: "enteramount"
+- extendedWaitUntil:
+    visible:
+      id: "amount"
+    timeout: 15000
+- tapOn:
+    id: "amount"
+- inputText: "1"
+- hideKeyboard
+- tapOn:
+    point: "50%, 20%"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: ".*1 원.*"
+- takeScreenshot: "[03]_금액입력_1원"
+# 원복 — 금액을 지워 "금액 입력" 상태로 되돌린다
+- tapOn:
+    id: "enteramount"
+- extendedWaitUntil:
+    visible:
+      id: "amount"
+    timeout: 15000
+- tapOn:
+    id: "amount"
+- eraseText: 10
+- hideKeyboard
+- tapOn:
+    point: "50%, 20%"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: "${MYQR_ENTER_AMOUNT}"
+
+# ----------------------------------------------------------------
+# [04] [Low] Receive - QR코드 저장 동작 확인
+# ----------------------------------------------------------------
+# 저장 후 갤러리가 열리는 기기도 있고 토스트만 뜨는 기기도 있어 복귀를 조건부로 처리한다
+# (Note 9는 토스트만 뜬다 — 무조건 back×2를 하면 홈까지 나가버린다).
+- tapOn:
+    id: "download"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- takeScreenshot: "[04]_QR저장_내QR복귀"
+
+# ----------------------------------------------------------------
+# [05] [High] Sending - QR 스캔 진입 확인
+# ----------------------------------------------------------------
+# ⚠️ **실제 송금은 하지 않는다**(헤더 "의도적으로 뺀 것" 참고). 자동입력 확인까지만 본다.
+#   경로: (계좌+금액 세팅 → QR 저장) → scanqr → DomesticRemitActivity(출금 계좌 → 계속)
+#         → DomesticQrScanView → galleryImagePick → 저장한 QR 선택 → 국내송금 화면 자동입력 확인
+#
+# ⚠️ **순서가 중요하다** — QR 세팅·저장은 **My QR 화면에서** 해야 한다.
+#   `scanqr`를 먼저 누르면 화면이 스캔 쪽으로 넘어가 `accountinfo`가 없어진다
+#   (2026-08-19 실제로 이 순서를 잘못 짜서 `Tap on id: accountinfo... FAILED`로 죽었다).
+#
+# ⚠️ 앞의 [04]가 저장한 QR은 **GME Wallet / 금액 없음** 상태다([02][03]이 원복하기 때문).
+#   "금액이 담긴 QR"을 검증하려면 **여기서 계좌+금액을 세팅해 QR을 새로 저장**해야 한다.
+- tapOn:
+    id: "accountinfo"
+- extendedWaitUntil:
+    visible:
+      id: "rvKftcList"
+    timeout: 20000
+# ⚠️ 실송금 조합이라 계좌를 **의도적으로 고정**한다 → 동적 선택 금지.
+#   대신 전제를 단언한다(연동 계좌 목록은 계정 상태에 따라 바뀐다).
+- assertVisible: "카카오뱅크"
+- tapOn: "카카오뱅크"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- tapOn:
+    id: "enteramount"
+- extendedWaitUntil:
+    visible:
+      id: "amount"
+    timeout: 15000
+- tapOn:
+    id: "amount"
+- inputText: "1"
+- hideKeyboard
+- tapOn:
+    point: "50%, 20%"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+- assertVisible: ".*1 원.*"
+- assertVisible: ".*카카오뱅크.*"
+# 이 상태(카카오뱅크 + 1원)로 QR 저장
+- tapOn:
+    id: "download"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+
+# 스캔 → 갤러리에서 방금 저장한 QR 선택
+# ※ 피커(`com.android.documentsui`)는 최근순 정렬이고 파일명이 `gmeqr*.jpg`다.
+#   run_test.ps1이 push하는 test_*.jpg가 더 최신이라 앞에 오지만,
+#   **`gmeqr` 패턴 중 첫 번째가 방금 저장한 QR**이다(실행마다 (1)(2)(3)… 늘어난다).
+- tapOn:
+    id: "scanqr"
+- extendedWaitUntil:
+    visible:
+      id: "paymentSourceListRv"
+    timeout: 20000
+- assertVisible: "출금 계좌를 선택하세요"
+- assertVisible:
+    id: "btn_ok"
+- tapOn:
+    id: "btn_ok"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 20000
+- assertVisible: "QR 스캔"
+- assertVisible:
+    id: "scanToPay"
+- takeScreenshot: "[05]_QR스캔_화면진입"
+- tapOn:
+    id: "galleryImagePick"
+- extendedWaitUntil:
+    visible: "gmeqr.*"
+    timeout: 30000
+- tapOn:
+    text: "gmeqr.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "recipientAccountNoFormInputField"
+    timeout: 30000
+- assertVisible: "국내 송금"
+# QR에 담긴 값이 그대로 채워졌는지 — 은행 / 금액
+- assertVisible: ".*카카오뱅크.*"
+- assertVisible:
+    id: "amount"
+- assertVisible: ".*1 원.*"
+- assertVisible:
+    id: "btn_ok2"
+- takeScreenshot: "[05-1]_QR스캔_금액자동입력"
+
+# ================================================================
+# ✅ **KFTC 복구됨 (2026-08-20 사용자 확인) → 송금을 완주한다**
+# ================================================================
+# 2026-08-19에는 `btn_ok2`를 누르면 "실패 - (06640154622502) / Failed"만 떴다
+# (livetest KFTC 서버 연결 불가 — 환경 이슈였고 앱 결함이 아니었다).
+# 복구 후 실측하니 **정상 송금된다** → 완주 구간을 붙였다.
+#
+# 💰 실제로 1원이 GME Wallet → 카카오뱅크로 나간다. **본인 계좌 간 이동이라 손실이 아니다**
+#   (사용자 승인: "1원 송금도 내 계좌안에서 이동을 하는거라 실제로 송금이 되도 상관없어").
+#   금액은 **1원으로 유지할 것**(2026-08-20 사용자 지시 — 어제 1,000원으로 올렸던 것을 되돌렸다).
+#
+# 이 구간이 덮는 ClickUp 케이스 — QR이 **카카오뱅크(=Wallet 아님) + 금액 1원**이므로:
+#   `z8nfn6ma5r` Receive - **Amount 입력 상태** QR 송금받기          → complete (2026-08-20)
+#   `z8nfn6ma5u` Receive - **받는계좌 변경 후** QR 송금받기 (Wallet → 카카오뱅크) → complete
+#   `z8nfn6ma5y` Sending - **Wallet 아닌 다른계좌** QR스캔 후 송금    → complete
+#   ※ `z8nfn6ma5t`(Amount **미입력** 상태)는 **[06]이 담당한다**(2026-08-20 추가).
+- tapOn:
+    id: "btn_ok2"
+# 수취인 세부 정보 확인 바텀시트
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirmFinal"
+    timeout: 30000
+- assertVisible: "수취인 세부 정보 확인"
+- assertVisible: ".*KAKAO Bank.*"
+- assertVisible: ".*3333276033972.*"
+- assertVisible: ".*1 KRW.*"
+- takeScreenshot: "[05-2]_수취인세부정보_확인"
+- tapOn:
+    id: "btnConfirmFinal"
+# 간편 비밀번호 <정상 PIN> — 잠금화면 컴포넌트를 재사용한다(`input_dot_1`).
+# ⚠️ 이 화면은 보안 키패드라 **스크린샷 금지**(FLAG_SECURE) → assert로만 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 결과 바텀시트 — 서버 응답을 기다려야 하므로 넉넉히 잡는다
+- extendedWaitUntil:
+    visible:
+      id: "txvDialogTitle"
+    timeout: 60000
+- assertVisible: "성공"
+- assertVisible: ".*successfully send 1 KRW.*"
+- takeScreenshot: "[05-3]_송금성공"
+# ⚠️ 이 시트는 **id와 라벨이 어긋난다**(2026-08-20 실측):
+#   `contactSupport` = "확인" / **`btnOk` = "영수증 보기"**. 이름만 보고 고르면 반대로 누른다.
+- tapOn:
+    id: "btnOk"
+- extendedWaitUntil:
+    visible:
+      id: "txvStatusValue"
+    timeout: 30000
+- assertVisible: "거래 상세 내역"
+- assertVisible: "SUCCESS"
+- assertVisible: ".*3333276033972.*"
+- assertVisible: ".*1 KRW.*"
+# CLICKUP: z8nfn6ma5r
+# CLICKUP: z8nfn6ma5u
+# CLICKUP: z8nfn6ma5y
+- takeScreenshot: "[05-4]_영수증_SUCCESS"
+- tapOn:
+    id: "iv_back"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [06] [High] Receive - **Amount 미입력 상태** QR 송금받기 동작 확인
+# CLICKUP: z8nfn6ma5t
+# ----------------------------------------------------------------
+# [05]와의 차이는 **금액을 넣지 않은 QR**을 쓴다는 것 하나다.
+#   [05] QR에 금액이 담겨 있다 → 국내송금 화면에 금액까지 자동 채워진다
+#   [06] QR에 금액이 없다     → **계좌·은행만 채워지고 금액은 비어 있다** → 송금자가 직접 넣는다
+# 받는 계좌는 [05]와 같이 카카오뱅크로 둔다(송금이 실제로 성공하는 조합).
+#
+# 2026-08-20 실측 — 금액 미입력 QR을 스캔한 국내송금 화면:
+#   `recipientAccountNoFormInputField` > "3333276033972"  ← 자동입력
+#   `recipientBankSelectionFormInputField` > "카카오뱅크"   ← 자동입력
+#   `amount` 텍스트 = **"금액"**(플레이스홀더 = 비어 있다는 뜻)
+#   ⚠️ **`btn_ok2`("계속")는 금액이 비어 있어도 트리에 존재한다.**
+#     `uiautomator dump`에는 안 잡혀서 "없다"고 판단했다가 `assertNotVisible`이 실패했다
+#     (2026-08-20) — 덤프는 **화면에 보이는 범위**만 담고 maestro는 **계층 전체**를 보기 때문이다.
+#     → "금액이 비어 있음"은 `amount`의 플레이스홀더("금액")로만 판정한다.
+#       [[feedback_maestro_text_vs_id]]와 같은 부류의 함정이다.
+#
+# 💰 [05]와 마찬가지로 실제 1원이 나간다(본인 계좌 간 이동).
+
+# ---- 홈으로 정규화한 뒤 My QR 재진입 ----
+- repeat:
+    times: 4
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - pressKey: back
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# 잔액 카드는 홈 최상단이다 → 올려서 잡는다
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    visibilityPercentage: 20
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txvDepositOrViewStatement"
+    timeout: 15000
+- assertVisible: "받기"
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+
+# ---- 받는 계좌 = 카카오뱅크 (이미 그 상태면 건너뛴다) ----
+- runFlow:
+    when:
+      notVisible: ".*카카오뱅크.*"
+    commands:
+      - tapOn:
+          id: "accountinfo"
+      - extendedWaitUntil:
+          visible:
+            id: "rvKftcList"
+          timeout: 20000
+      # ⚠️ 실송금 조합이라 계좌 고정. 동적 선택 금지 — 전제만 단언한다.
+      - assertVisible: "카카오뱅크"
+      - tapOn: "카카오뱅크"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+- assertVisible: ".*카카오뱅크.*"
+
+# ---- 금액 **미입력** 상태를 보장한다 ----
+# `enteramount` 라벨이 "금액 입력"이면 비어 있다는 뜻이고, 값이 있으면 "1 원"처럼 바뀐다.
+# 직전 케이스가 금액을 남겼을 수 있으므로 남아 있으면 지운다.
+- runFlow:
+    when:
+      notVisible: "금액 입력"
+    commands:
+      - tapOn:
+          id: "enteramount"
+      - extendedWaitUntil:
+          visible:
+            id: "amount"
+          timeout: 15000
+      - tapOn:
+          id: "amount"
+      - eraseText: 12
+      - hideKeyboard
+      # 이 바텀시트는 확인 버튼이 없다 — **바깥을 탭**해야 닫히면서 값이 확정된다
+      - tapOn:
+          point: "50%, 20%"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+- assertVisible: "금액 입력"
+- takeScreenshot: "[06-1]_내QR_금액미입력_카카오뱅크"
+
+# ---- 금액 없는 QR 저장 ----
+- tapOn:
+    id: "download"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "qrimage"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "qrimage"
+    timeout: 20000
+
+# ---- 스캔 → 금액이 비어 있는지 확인 ----
+- tapOn:
+    id: "scanqr"
+- extendedWaitUntil:
+    visible:
+      id: "paymentSourceListRv"
+    timeout: 20000
+- tapOn:
+    id: "btn_ok"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 20000
+- tapOn:
+    id: "galleryImagePick"
+- extendedWaitUntil:
+    visible: "gmeqr.*"
+    timeout: 30000
+- tapOn:
+    text: "gmeqr.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "recipientAccountNoFormInputField"
+    timeout: 30000
+- assertVisible: "국내 송금"
+# 계좌·은행은 자동으로 채워진다
+- assertVisible: ".*3333276033972.*"
+- assertVisible: ".*카카오뱅크.*"
+# 금액은 비어 있다 — `amount`에 플레이스홀더 "금액"이 그대로 보인다(값이 들어오면 "1 원"으로 바뀐다)
+- assertVisible: "금액"
+- takeScreenshot: "[06-2]_QR스캔_금액미입력"
+
+# ---- 금액을 직접 입력하고 송금 완주 ----
+- tapOn:
+    id: "amount"
+- inputText: "1"
+- hideKeyboard
+- waitForAnimationToEnd
+- assertVisible: ".*1 원.*"
+- extendedWaitUntil:
+    visible:
+      id: "btn_ok2"
+    timeout: 20000
+- takeScreenshot: "[06-3]_금액_직접입력"
+- tapOn:
+    id: "btn_ok2"
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirmFinal"
+    timeout: 30000
+- assertVisible: "수취인 세부 정보 확인"
+- assertVisible: ".*1 KRW.*"
+- tapOn:
+    id: "btnConfirmFinal"
+# 간편 비밀번호 <정상 PIN> — 보안 키패드라 스크린샷 금지
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txvDialogTitle"
+    timeout: 60000
+- assertVisible: "성공"
+- assertVisible: ".*successfully send 1 KRW.*"
+- takeScreenshot: "[06-4]_송금성공_금액직접입력"
+# `btnOk` = "영수증 보기"(라벨과 id가 어긋난다 — [05] 주석 참고)
+- tapOn:
+    id: "btnOk"
+- extendedWaitUntil:
+    visible:
+      id: "txvStatusValue"
+    timeout: 30000
+- assertVisible: "SUCCESS"
+- assertVisible: ".*1 KRW.*"
+- takeScreenshot: "[06-5]_영수증_SUCCESS"
+- tapOn:
+    id: "iv_back"
+- waitForAnimationToEnd
+
+# ---------------- 홈 복귀 ----------------
+- pressKey: back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000

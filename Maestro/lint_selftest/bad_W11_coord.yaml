@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+# W11: 좌표 탭인데 케이스 안에 결과 단언이 없다
+#   해상도가 바뀌면 조용히 빗나가고 그대로 통과한다
+- tapOn:
+    point: "50%, 48%"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"

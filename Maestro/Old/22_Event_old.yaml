@@ -1,0 +1,272 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Event — 구 UI
+# ================================================================
+#  진행: 2026-08-19 구 UI 기준 **전면 재작성**.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# ★ **2026-07-09 기록이 더 이상 맞지 않는다 — 원래 케이스를 그대로 커버할 수 있게 됐다.**
+#   당시엔 "진행 중인 이벤트: 항상 내역 없음"이라 **지난 이벤트 배너 → 외부 Facebook 링크**로
+#   케이스를 대체했었다. 2026-08-19 실측 결과:
+#     · **"진행 중인 이벤트"에 이벤트가 존재한다**(배너 4개 이상).
+#     · 그중 **"룰렛 돌리기 이벤트"** = 원래 TODO가 말한 **Spin & Win**이다.
+#     · 그 안에 **"공유" 탭 = Share With my Friends**가 있고,
+#       "친구 초대하기" → **Send Link / Share QR** 바텀시트가 뜬다.
+#   → 대체 케이스를 버리고 **원래 정의대로** 재작성했다.
+#
+# 개편UI → 구 UI 전환에서 바뀐 것:
+#   진입    개편UI는 홈 서비스 그리드의 "이벤트"를 탭했지만, **구 UI 홈 그리드에는 "이벤트"가 없다**
+#           (그리드 11종: 해외송금/국내 송금/오늘의 환율/모바일 충전 및 청구서 결제/해외송금 받기/
+#            입금/ATM 출금/GME Wallet 거래내역/통신 서비스/증명서 발급/예약하기).
+#           구 UI는 **하단 내비 `bottom_item_event`** 가 이벤트 탭이다.
+#   홈 판정 `text: "Home"` → 하단 내비 **id `bottom_item_home`**
+#
+# 화면 구조 (2026-08-19 실측):
+#   이벤트 목록 — 헤더 "이벤트" / 탭 **"진행 중인 이벤트" / "지난 이벤트"** / 배너 카드들(기간 텍스트 동반)
+#   룰렛 화면 — `friend_invite.spin_the_wheel.SpinTheWheelActivity`, 헤더 "룰렛 돌리기"
+#     탭 **"룰렛"**(남은 횟수 배지) / **"공유"**
+#     룰렛 탭: 룰렛 휠 + **PLAY!** + "친구 초대하기"
+#     공유 탭: "5,000 KRW를 받으세요." + 혜택 목록 + **"친구 초대하기"**
+#   공유 바텀시트 — `shareText` / **`btn_send_link`("링크 보내기")** / **`btn_share_qr`("QR 공유하기")**
+#     / `note`("참고: 초대 링크는 WeChat에서 지원되지 않습니다.")
+#     → 25_Profile_old [02] 친구 초대와 **같은 컴포넌트**다(셀렉터 재사용).
+#
+# ⚠️ **누르지 말 것 2가지**
+#   1) **PLAY!** — 실제로 룰렛이 돌아가 포인트가 지급되고 남은 횟수가 소모된다.
+#   2) **공유 시트의 대상 앱/채팅** — 실제로 초대 링크가 발송된다.
+#      시트가 떴는지와 내용물(초대 URL 유무)까지만 보고 back으로 나온다.
+#
+# ⚠️ 이벤트 화면은 **Jetpack Compose**라 `uiautomator dump`가 "could not get idle state"로
+#   자주 실패한다(애니메이션 때문). maestro는 자체 계층을 읽어 동작하지만, **탭/배너에 id가 없어
+#   텍스트로 잡아야 한다.** 배너 제목("룰렛 돌리기 이벤트")은 이벤트가 교체되면 바뀔 수 있다
+#   → 그때는 배너 제목만 갱신하면 된다(구조는 그대로).
+#
+# ClickUp 상태: `z8nfn6ma61` (Ongoing Events - Share With my Friends 동작 확인 - Send Link / Share QR)
+#   2026-09-07 확인: 시나리오 `z8nfn6m9z7` 의 유일한 케이스이며 이름도 일치한다. 상태는 이미 `complete`.
+#   ⚠️ "ClickUp:" 으로 시작하면 리포트 스크립트가 **커버 완료 마커로 오인**한다
+#     (`# CLICKUP:` 파서가 대소문자를 가리지 않는다) → 산문 주석은 "ClickUp 상태:" 로 쓴다.
+#     `z8nfn6ma??` 에서 `z8nfn6ma` 를 케이스 ID로 뽑아 매일 유령 ID 경고가 떴다(2026-09-07 수정).
+#   → 이제 **원래 정의대로 커버**한다. 단 실제 발송·PLAY는 하지 않으므로
+#     "동작 확인"의 범위를 어디까지로 볼지에 따라 complete / partial이 갈린다 → 보고 시 명시.
+#   ※ 2026-08-19 ClickUp API 레이트 리밋으로 케이스 ID 확인·갱신 못 함 → 해제 후 처리.
+#
+# 케이스:
+#   [01] Ongoing Events - Share With my Friends (Send Link / Share QR) — Spin & Win
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\22_Event_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [Low] Ongoing Events - Share With my Friends 동작 확인
+#            - Send Link / Share QR (Spin & Win)
+# ----------------------------------------------------------------
+# 이벤트 탭 진입 (구 UI는 하단 내비)
+- tapOn:
+    id: "bottom_item_event"
+- extendedWaitUntil:
+    visible: "진행 중인 이벤트"
+    timeout: 30000
+- assertVisible: "지난 이벤트"
+- takeScreenshot: "[01-1]_이벤트_진행중목록"
+
+# 진행 중인 이벤트에서 Spin & Win(룰렛 돌리기) 배너 진입
+- scrollUntilVisible:
+    element:
+      text: "룰렛 돌리기 이벤트"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 20
+- tapOn: "룰렛 돌리기 이벤트"
+- extendedWaitUntil:
+    visible: "룰렛 돌리기"
+    timeout: 30000
+# 🚫 PLAY!는 누르지 않는다(실제 룰렛 회전·포인트 지급). 노출만 확인한다.
+- assertVisible: "PLAY!"
+- assertVisible: "공유"
+- takeScreenshot: "[01-2]_룰렛돌리기_진입"
+
+# 공유 탭 = Share With my Friends
+- tapOn: "공유"
+- extendedWaitUntil:
+    visible: "친구 초대하기"
+    timeout: 20000
+- assertVisible: "이런 혜택을 드려요!"
+- takeScreenshot: "[01-3]_공유탭_ShareWithMyFriends"
+
+# 친구 초대하기 → Send Link / Share QR 바텀시트
+- tapOn: "친구 초대하기"
+- extendedWaitUntil:
+    visible:
+      id: "btn_send_link"
+    timeout: 20000
+- assertVisible:
+    id: "btn_share_qr"
+- assertVisible:
+    id: "shareText"
+- assertVisible:
+    id: "note"
+- takeScreenshot: "[01-4]_공유바텀시트"
+
+# ---- Send Link → 시스템 공유 시트에 초대 링크가 실린다 ----
+# 🚫 대상은 절대 탭하지 말 것(실제 발송). 시트 내용물만 보고 back.
+- tapOn:
+    id: "btn_send_link"
+# ⚠️ **공유 시트를 `sem_resolver_recyclerview` id 로 판정하지 말 것** — 삼성 구버전 전용 id다.
+#   2026-09-09 SM-S911N / Android 16(One UI) 실측: 시트는 정상적으로 뜨는데 이 id가 없어 실패했다.
+#   → 시트 제목(텍스트 공유 / 이미지 공유)으로 판정한다. 영문 로케일도 함께 받는다.
+- extendedWaitUntil:
+    #   실측 제목: 링크 공유 = **"텍스트 공유"** / QR 공유 = **"이미지 1개"**(개수가 붙는다).
+    visible: "텍스트 공유|이미지 [0-9]+개|Share text|[0-9]+ image[s]?"
+    timeout: 20000
+- assertVisible: ".*online\\.gmeremit\\.com.*"
+- takeScreenshot: "[01-5]_SendLink_초대링크"
+# ⚠️ 시스템 공유 시트를 back으로 닫으면 **앱의 공유 바텀시트도 같이 닫힌다**(2026-08-19 실측).
+#   그래서 "바텀시트가 안 보이면 back을 한 번 더" 식의 조건부를 넣으면 **화면을 벗어나 버린다**
+#   (실제로 그렇게 짰다가 홈까지 나가서 실패했다).
+#   → back 한 번으로 공유 탭까지 돌아온 뒤 **"친구 초대하기"를 다시 눌러 바텀시트를 재오픈**한다.
+- pressKey: back
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "친구 초대하기"
+    timeout: 20000
+- tapOn: "친구 초대하기"
+- extendedWaitUntil:
+    visible:
+      id: "btn_share_qr"
+    timeout: 20000
+
+# ---- Share QR → 같은 시트에 QR 이미지가 실린다(링크 텍스트 없음) ----
+- tapOn:
+    id: "btn_share_qr"
+# ⚠️ **공유 시트를 `sem_resolver_recyclerview` id 로 판정하지 말 것** — 삼성 구버전 전용 id다.
+#   2026-09-09 SM-S911N / Android 16(One UI) 실측: 시트는 정상적으로 뜨는데 이 id가 없어 실패했다.
+#   → 시트 제목(텍스트 공유 / 이미지 공유)으로 판정한다. 영문 로케일도 함께 받는다.
+- extendedWaitUntil:
+    #   실측 제목: 링크 공유 = **"텍스트 공유"** / QR 공유 = **"이미지 1개"**(개수가 붙는다).
+    visible: "텍스트 공유|이미지 [0-9]+개|Share text|[0-9]+ image[s]?"
+    timeout: 20000
+# ⚠️ 종전엔 "QR 공유에는 링크 텍스트가 없다"고 보고 assertNotVisible 로 판정했는데,
+#   2026-09-09 SM-S911N / Android 16 실측: **이미지 시트에 안내 문구(초대 링크 포함)가 함께 실린다.**
+#   → 링크 부재로 판정하지 않고, **"이미지 N개" 시트로 열렸다는 것**(위 대기)과 QR 썸네일 캡처로 본다.
+#   ※ 링크 공유([01-5])와의 차이는 시트 제목이다: "텍스트 공유" vs "이미지 1개".
+- takeScreenshot: "[01-6]_ShareQR_이미지"
+- pressKey: back
+- waitForAnimationToEnd
+# 위와 같은 이유 — back 한 번이면 공유 탭으로 돌아온다(바텀시트는 닫힌 상태)
+- extendedWaitUntil:
+    visible: "친구 초대하기"
+    timeout: 20000
+
+# ---------------- 홈 복귀 ----------------
+# 지금은 룰렛 화면(공유 탭)이다 → back으로 이벤트 목록 → 하단 내비로 홈
+- pressKey: back
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "진행 중인 이벤트"
+    timeout: 20000
+- tapOn:
+    id: "bottom_item_home"
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000

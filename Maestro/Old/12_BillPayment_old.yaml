@@ -1,0 +1,373 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Bill Payment (해외 청구서 결제) — 구 UI
+# ================================================================
+#  진행: 2026-08-25 구 UI 기준 재작성. (원본 개편UI판 백업: `.bak_20260825`)
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\12_BillPayment_old.yaml"
+#
+# 결제정보(사용자 지정): Nepal / 모바일 충전 / 휴대폰 9847266238 / 20 NPR
+#   → 휴대폰 번호 검증 시 "NTC PREPAID"로 인식됨. 비고(필수)="TEST"
+#
+# ★ 제약(사용자 지정, IntlTopup과 동일):
+#   - 실제 결제 발생 → [06]은 **"간편 비밀번호 입력 화면"까지만**(PIN 미입력).
+#   - KFTC 결제(은행계좌 출금) + 생체인증 경로는 BLOCKED. GME Wallet 경로만.
+#
+# ---------------------------------------------------------------
+# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-25 실측)
+# ---------------------------------------------------------------
+#   진입 그리드 항목  "청구서 결제" → **"모바일 충전 및 청구서 결제"**
+#                     구 UI는 충전과 청구서 결제가 **한 항목으로 합쳐져 있다**.
+#                     라벨이 2줄로 소프트랩되므로 `.*모바일 충전.*` 정규식으로 탭한다.
+#   2단 허브 화면     **이 파일에서는 이게 진짜 변화다.** 개편UI에서는 "청구서 결제"가 홈 그리드의
+#                     **독립 항목**이라 한 번 탭하면 바로 결제 화면이었는데, 구 UI에서는
+#                     충전과 합쳐진 허브 **`MobileTopUpAndBillPaymentActivity`** 안으로 들어갔다.
+#                     (허브 자체는 개편UI에도 있었지만 충전 전용이었다 — 10·11이 쓰던 그 2단이다)
+#                     여기서 **`international_bill_payment`**(해외 청구서 결제 서비스)로 들어간다.
+#                     ⚠️ 10·11·12 세 파일이 모두 이 허브를 통과한다([[project_10_domestictopup]]).
+#   홈 판정          `text: "홈"` → id **`bottom_item_home`**
+#                     (`btnTransfer`는 홈이 스크롤 위치를 유지해 화면 밖일 수 있다 — 아래 참고)
+#   결제 화면 자체    **바뀐 것이 없다.** `OverSeasBillPaymentActivity`의
+#                     `dp_country_selection` / `dp_biller_selection` / `searchEditText` /
+#                     `btnProceed` / `btnOk` / `input_dot_1` 전부 개편UI와 동일하다.
+#                     → [01]~[06] 본문은 셀렉터를 바꿀 필요가 없었다.
+#
+# ---------------------------------------------------------------
+# 화면 구조 (2026-08-25 실측 / Note 9 1080x2220)
+# ---------------------------------------------------------------
+#   허브 `overseas_bill_payment.mobile_topup_billpayment.MobileTopUpAndBillPaymentActivity`
+#     `iv_back` / `toolbar_title`("모바일 충전 및 청구서 결제")
+#     `domestic_topUp` / `international_topUp` / `international_bill_payment` / `csButton`
+#   결제 화면 `overseas_bill_payment.views.OverSeasBillPaymentActivity`
+#     `iv_back` / `toolbar_title`("해외 청구서 결제 서비스")
+#     `dp_country_selection`(EditText, "국가를 선택하세요")
+#     `dp_biller_selection`(EditText, "청구인 선택")
+#     국가·청구 구분·청구인 리스트: `searchEditText`(검색)
+#     청구인별 입력필드 `rvField` / 출금계좌 리스트("GME Wallet" 등) / `btnProceed`("진행")
+#   결제내역 확인화면: `btnOk`("GME Wallet을 사용하여 결제")
+#   간편비번: `ActivityLockScreen` (`input_dot_1`~`input_dot_4`)
+#
+# ★ 함정(개편UI에서 확인, 구 UI에서도 유효):
+#   - 국가 검색어와 목록항목이 **동일 텍스트면 검색창이 탭된다** → 부분검색("Nep")으로 회피
+#   - **비고 필드는 필수** → 비워두면 "진행"이 비활성
+#   - maestro `inputText`는 **한글(비ASCII) 미지원** → 한글 청구인명은 검색 불가,
+#     검색창 존재만 확인하고 목록에서 직접 탭한다([[feedback_maestro_ascii_input]])
+#
+# 케이스:
+#   [01] Country 리스트 및 선택 (Nepal)
+#   [02] Country 검색 동작 확인
+#   [03] Biller Category(청구 구분) 리스트 및 선택 (모바일/전화)
+#   [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)
+#   [05] Biller별 입력 필드 노출 확인 (→ "휴대폰 번호")
+#   [06] Wallet 결제 - 필드 입력 → 결제내역 → **간편비밀번호 화면까지만**
+#   [BLOCKED] KFTC 결제 + 생체인증 (은행계좌 출금)
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 코치마크 balloon이 떠 있으면 닫는다(04_Menu_History에서 확인된 패턴)
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# ---------------- 진입: 홈 그리드 → 허브 → 해외 청구서 결제 서비스 ----------------
+# 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
+- scrollUntilVisible:
+    element:
+      text: ".*모바일 충전.*"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    text: ".*모바일 충전.*"
+- extendedWaitUntil:
+    visible:
+      id: "international_bill_payment"
+    timeout: 30000
+- tapOn:
+    id: "international_bill_payment"
+- extendedWaitUntil:
+    visible:
+      id: "dp_country_selection"
+    timeout: 30000
+- assertVisible: "해외 청구서 결제 서비스"
+- takeScreenshot: "shots_12_billpayment_old/00_진입"
+
+# ----------------------------------------------------------------
+# [02] Country 검색 동작 확인 / [01] 국가 리스트 및 선택 (Nepal)
+#   * 검색어는 목록항목과 다른 부분문자("Nep")로 → 목록 "Nepal" 탭
+#     (검색어와 항목이 같으면 검색창이 탭되는 함정 회피)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "dp_country_selection"
+- extendedWaitUntil:
+    visible:
+      id: "searchEditText"
+    timeout: 15000
+- takeScreenshot: "shots_12_billpayment_old/01_국가리스트"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Nep"
+- extendedWaitUntil:
+    visible:
+      text: "Nepal"
+    timeout: 10000
+- takeScreenshot: "shots_12_billpayment_old/02_국가검색"
+- tapOn: "Nepal"
+- extendedWaitUntil:
+    visible:
+      id: "dp_biller_selection"
+    timeout: 15000
+
+# ----------------------------------------------------------------
+# [03] Biller Category(청구 구분) 리스트 및 선택 (모바일/전화)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "dp_biller_selection"
+- extendedWaitUntil:
+    visible:
+      text: "청구 구분"
+    timeout: 15000
+- takeScreenshot: "shots_12_billpayment_old/03_청구구분"
+- tapOn: "모바일/전화"
+
+# ----------------------------------------------------------------
+# [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)
+#   ★ maestro inputText는 한글(비ASCII) 미지원 → 한글 청구인명 검색 불가.
+#     검색창(searchEditText) 존재만 확인하고 목록에서 직접 선택한다.
+#     (ASCII 청구인명은 검색 가능 - 예: Sri Lanka > Ceylon Electricity Board)
+# ----------------------------------------------------------------
+- assertVisible:
+    id: "searchEditText"
+- takeScreenshot: "shots_12_billpayment_old/04_청구인리스트"
+- tapOn: "모바일 충전"
+
+# ----------------------------------------------------------------
+# [05] Biller별 입력 필드 노출 확인 (모바일 충전 → "휴대폰 번호")
+# ----------------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      text: "휴대폰 번호"
+    timeout: 15000
+- takeScreenshot: "shots_12_billpayment_old/05_입력필드"
+
+# ----------------------------------------------------------------
+# [06] Wallet 결제 - 필드 입력 → 결제내역 → 간편비밀번호 화면까지만
+#   ★ 실제 결제 방지: 간편비번 화면 도달만 확인하고 **PIN을 입력하지 않는다**.
+#   비고(필수) 미입력 시 "진행" 비활성 → "TEST" 입력.
+# ----------------------------------------------------------------
+- tapOn: "휴대폰 번호"
+- inputText: "9847266238"
+- hideKeyboard
+# 번호 검증 → NTC PREPAID 인식
+- extendedWaitUntil:
+    visible:
+      text: "NTC PREPAID"
+    timeout: 20000
+- tapOn: "금액"
+- inputText: "20"
+- hideKeyboard
+- tapOn: "비고"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn: "GME Wallet"
+# 모든 필드 충족 → 진행 활성화
+- extendedWaitUntil:
+    visible:
+      text: "진행"
+      enabled: true
+    timeout: 15000
+- takeScreenshot: "shots_12_billpayment_old/06_1_입력완료"
+- tapOn:
+    text: "진행"
+    enabled: true
+# 결제내역 확인 화면 → GME Wallet 결제
+- extendedWaitUntil:
+    visible:
+      text: "GME Wallet을 사용하여 결제"
+    timeout: 20000
+- takeScreenshot: "shots_12_billpayment_old/06_2_결제내역"
+- tapOn: "GME Wallet을 사용하여 결제"
+# 간편비밀번호 화면 도달 확인 — **여기서 정지. PIN 입력 안 함.**
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 20000
+- takeScreenshot: "shots_12_billpayment_old/06_3_간편비번화면_정지"
+
+# ================================================================
+# 결제 취소 → 홈 복귀 (실제 결제 없음)
+# ================================================================
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# 결제 결과 확인 — 성공/실패 어느 쪽이든 응답 화면을 먼저 기다린다.
+#   ⚠️ 앱은 PIN 입력 전까지 잔액을 검증하지 않으므로, 부족하면 여기서 서버가 거부한다.
+- extendedWaitUntil:
+    visible:
+      text: "결제가 완료|완료되었습니다|성공|오류|실패|Insufficient|insufficient"
+    timeout: 120000
+- takeScreenshot: "shots_12_billpayment_old/06_4_결제결과"
+# 성공 판정 — 실패 응답이면 여기서 FAIL로 드러난다(조용히 통과하지 않게 한다).
+- assertVisible:
+    text: ".*(결제가 완료|완료되었습니다|성공).*"
+
+# ⚠️ 결제 성공 시 **"성공" 화면이 먼저 뜨고, 이걸 닫지 않으면 홈까지 못 나온다.**
+#   ⚠️ **11과 12의 성공 UI 구조가 다르다**(2026-08-28 실측):
+#     · `11_IntlTopup`  = 다이얼로그, 확인 버튼 **`btn_diaog_ok`** (앱 오타 `diaog`)
+#     · `12_BillPayment` = **바텀시트**(`design_bottom_sheet`), 확인 버튼 **`btnOk`**
+#       (+ `btn_save_biller` "청구 정보 저장" — 누르면 청구인이 저장되므로 **누르지 말 것**)
+#   11 기준으로 `btn_diaog_ok`만 넣었다가 12에서 조건이 안 맞아 그냥 지나갔고,
+#   시트가 화면을 덮은 채 `iv_back`을 못 찾아 실패했다 → **두 id를 함께 받는다.**
+- runFlow:
+    when:
+      visible:
+        id: "btnOk|btn_diaog_ok"
+    commands:
+      - tapOn:
+          id: "btnOk|btn_diaog_ok"
+      - waitForAnimationToEnd
+
+# 결제 화면 → 허브 → 홈. ⚠️ back 1탭이 액티비티를 벗어난다고 가정하지 않는다
+#   — 홈 하단 내비가 보일 때까지 `iv_back`을 반복해서 결정적으로 빠져나온다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - tapOn:
+          id: "iv_back"
+      - waitForAnimationToEnd
+# 홈 재진입 시 인앱 배너가 다시 뜰 수 있다
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# ⚠️ 복귀한 홈은 스크롤 위치를 유지한다 → 홈 도달은 `bottom_item_home`으로 판정하고
+#   `btnTransfer`는 UP 스크롤로 끌어올려 확인한다([[project_old_ui_migration]]).
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertVisible:
+    id: "btnTransfer"
+- takeScreenshot: "shots_12_billpayment_old/07_홈복귀"
+
+# ================================================================
+# [BLOCKED] KFTC 결제 + 생체인증 (은행계좌 출금: 카카오/신한/케이뱅크)
+#   - 출금계좌를 은행계좌로 선택 시 KFTC 결제 + 생체(지문/Face) 인증 필요
+#   - 생체인증 자동화 불가 + 실제 결제 발생 → 자동화 대상 제외(BLOCKED)
+# ================================================================

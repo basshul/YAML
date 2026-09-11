@@ -1,0 +1,92 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# 인바운드 송금인 등록 - 신분증 사진 3종 업로드 헬퍼 (13_ReceiveOverseas.yaml [07-2] 등에서 사용)
+#
+# 흐름(실기기 확인 2026-08-07):
+#   문서 행 탭 → OCRImageCaptureActivity(카메라) → captureBtnImageView(촬영)
+#   → NativeCropActivity → "완료"(크롭 확정) → 프리뷰("재시도"/"완료") → "완료" → 문서 목록 복귀
+#
+# 문서 3종(위→아래 순서, captureImage index 0/1/2). **국가마다 종류가 다름**:
+#   베트남: Alien ID Card / Sender Citizenship front Image / Sender Citizenship Back Image
+#   몽골  : Sender Citizenship front Image / Sender Citizenship Back Image / Selfie With Citizenship Card
+#   → 이 헬퍼는 종류와 무관하게 index 0/1/2를 순서대로 처리하므로 양쪽에 그대로 재사용 가능.
+#
+# ※ 등록 직후 삭제하는 테스트 데이터라 **사진 내용은 무관**(카메라로 아무거나 촬영).
+#   갤러리 버튼(galleryBtnImageView)도 있으나 카메라 촬영이 외부 앱 의존이 없어 더 안정적.
+# ※ 크롭 화면과 프리뷰 화면 모두 "완료" 텍스트를 가지고 있어, 크롭 확정 후에는
+#   프리뷰에만 있는 "재시도"를 기다린 뒤 "완료"를 눌러야 같은 화면을 두 번 누르지 않음.
+
+# --- 1번째 문서: Alien ID Card ---
+- tapOn:
+    id: "captureImage"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "captureBtnImageView"
+    timeout: 20000
+- tapOn:
+    id: "captureBtnImageView"
+- extendedWaitUntil:
+    visible:
+      text: "완료"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "재시도"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "유효한 신분증을 업로드해 주세요."
+    timeout: 20000
+
+# --- 2번째 문서: Sender Citizenship front Image ---
+- tapOn:
+    id: "captureImage"
+    index: 1
+- extendedWaitUntil:
+    visible:
+      id: "captureBtnImageView"
+    timeout: 20000
+- tapOn:
+    id: "captureBtnImageView"
+- extendedWaitUntil:
+    visible:
+      text: "완료"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "재시도"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "유효한 신분증을 업로드해 주세요."
+    timeout: 20000
+
+# --- 3번째 문서: Sender Citizenship Back Image ---
+- tapOn:
+    id: "captureImage"
+    index: 2
+- extendedWaitUntil:
+    visible:
+      id: "captureBtnImageView"
+    timeout: 20000
+- tapOn:
+    id: "captureBtnImageView"
+- extendedWaitUntil:
+    visible:
+      text: "완료"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "재시도"
+    timeout: 20000
+- tapOn: "완료"
+- extendedWaitUntil:
+    visible:
+      text: "유효한 신분증을 업로드해 주세요."
+    timeout: 20000

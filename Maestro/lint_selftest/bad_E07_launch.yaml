@@ -1,0 +1,4 @@
+appId: ${APP_ID}
+---
+# E07: 본문 launchApp이 빌드를 하드코딩 → -AppId를 무시한다
+- launchApp: com.gmeremit.online.gmeremittance_native.livetest

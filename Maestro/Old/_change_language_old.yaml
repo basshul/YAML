@@ -1,0 +1,122 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 앱 언어를 ${LANG_LABEL} 로 변경 — 구 UI (2026-08-14 작성)
+# ================================================================
+# 호출:
+#   - runFlow:
+#       file: _change_language_old.yaml
+#       env:
+#         LANG_LABEL: "English"
+#
+# ⚠️ **언어를 바꾸면 앱이 통째로 재시작된다**(SplashScreen + Server Override, 2026-08-14 실측).
+#   그래서 이 헬퍼는 "직전 전환으로 재시작된 상태"에서 시작해 홈까지 복구한 뒤 다음 언어로 바꾼다.
+#   첫 호출은 이미 홈이므로 복구 블록이 전부 SKIP된다.
+#   ※ 이 재시작은 **세션을 유지해 PIN을 다시 묻지 않는다**(24회 전부 `input_dot_1` SKIP, 2026-08-14).
+#     그래도 PIN 블록은 남겨 둔다 — 세션이 만료된 상태로 들어오면 그때는 잠금화면이 뜬다.
+#
+# ⚠️ **모든 판정을 언어 무관 셀렉터로 한다.** 화면 문구가 매 회 바뀌기 때문:
+#   - 잠금화면: 문구("4자리 숫자를 입력하세요") 대신 **id `input_dot_1`**
+#   - PIN 키패드: content-desc가 숫자라 언어 무관
+#   - 홈: **id `btnTransfer`**
+#   - 드로어 "설정": 드로어 항목에는 **resource-id가 없어** 텍스트로 탭할 수밖에 없다.
+#     APK에서 `setting_text`/`settings_text`의 25개 로케일 값을 뽑아 정규식으로 나열했다.
+#     (오탐 방지로 `above: bottom_item_home` 제약을 함께 건다)
+#   - 언어 목록 항목명은 **자국어 표기 고정**이라 앱 언어와 무관하다(한국어/English/中文 …).
+# ================================================================
+
+# ---------------- 재시작 복구: 스플래시 → PIN → 홈 ----------------
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "check_customer"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn_diaog_ok"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 90000
+
+# ---------------- 드로어 → 설정 → 언어 → ${LANG_LABEL} ----------------
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 20000
+- tapOn:
+    text: "설정|Settings|Ajustes|Ayalar|Ayarlar|Configuración|Configurações|Cài đặt|Paramètre|Paramètres|Pengaturan|Sozlash|Настройки|Орнотуу|Орнотуулар|Параметрлер|Тохиргоо|اعداد|الإعدادات|ترتیبات|سیٹنگ|सेटिङ|সেটিংস|සැකසුම්|การตั้งค่า|ตั้งค่า|ການຕັ້ງຄ່າ|ချိန်ညှိရန်|កំណត់|設定|设置"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "view_language"
+    timeout: 20000
+- tapOn:
+    id: "view_language"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "${LANG_LABEL}"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "${LANG_LABEL}"
+- waitForAnimationToEnd

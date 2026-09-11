@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+# W12: 앞에 입력이 없는 hideKeyboard = 키보드가 없으면 뒤로가기로 동작한다
+- tapOn:
+    id: "bottom_item_home"
+- waitForAnimationToEnd
+- hideKeyboard
+- assertVisible:
+    id: "bottom_item_home"

@@ -1,0 +1,431 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: ATM Withdraw (ATM 출금) — 구 UI
+# ================================================================
+#  진행: 2026-08-20 구 UI 기준 **전면 재작성**.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# ---------------------------------------------------------------
+# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-20 실측)
+# ---------------------------------------------------------------
+#   진입     개편UI는 "금융 & 결제" 섹션의 content-desc를 탭했지만,
+#            구 UI는 홈 서비스 그리드의 **`title` "ATM 출금"** 이다(그리드 11종 중 7번째, 스크롤 필요).
+#   홈 판정  `text: "Home"` → 상단 **id `btnTransfer`** / 하단 내비 `bottom_item_home`
+#   뒤로가기 `pressKey: back` → 화면 자체의 **id 탭**(`iv_back` / `backView`)으로 바꿨다.
+#            back은 어디까지 전파될지 화면마다 달라 오작동 이력이 있다.
+#   ✅ **ATM 화면 element id는 구 UI에서도 전부 그대로다**(재실측 확인).
+#      `atmWithdrawalFirstTimeGuide` / `btnNext` / `amount` / `plusAmount` / `minusAmount`
+#
+# ---------------------------------------------------------------
+# 화면 구조 (2026-08-20 실측)
+# ---------------------------------------------------------------
+#   ATM 출금 `atm_withdrawal.AtmWithdrawalV2`
+#     `backView`(뒤로) / 헤더 "ATM 출금" / `historyLayout`("거래 내역")
+#     `gmeWalletView` > "GME 총 잔액" + **`walletBalance`**(예: "99 KRW")
+#     `withdrawalAmountText`("출금 금액")
+#     `amountInput` > `minusAmount` / `inputAmountLyt` > **`amount`("1")** + `defaultText`("0,000 KRW")
+#       / `plusAmount`
+#     `errorMessage`("잔액이 충분하지 않습니다.")  ← 잔액 부족일 때만 뜬다
+#     `atmWithdrawalFirstTimeGuide`("ATM 인출을 처음 사용하시나요?") / `arrow_icon`
+#     `btnNext`("다음")
+#   출금 가이드 `easyremit.guide.EasyRemitGuideActivity`
+#     `iv_back` / `titleTxt`("ATM에서 출금하는 방법") / "현금을 인출할 편의점을 선택하세요."
+#     `serviceProviderRv` > `rootView` × 5 > `titleTxt` = GS25 / CU / 7-Eleven / emart24 / Ministop
+#     ⚠️ `titleTxt`는 **헤더와 각 행에 중복**된다 → id 하나로 특정하지 말고 텍스트로 볼 것.
+#     ⚠️ `assertVisible`에 **id와 text를 함께 주면 실패**한다 → 분리해서 assert
+#        ([[project_15_loan]]에서 확인된 함정).
+#
+# ---------------------------------------------------------------
+# ⚠️ **[02]~[04]는 잔액 조건이 붙는다 (`enabled` 가드로 감쌈)**
+# ---------------------------------------------------------------
+#   `-`/`+`/`다음` 버튼은 GME Wallet 잔액이 **출금액+수수료(10,000 + 1,500 = 11,500 KRW)**
+#   이상이어야 활성화된다. 부족하면 세 버튼 모두 `enabled=false`가 되고
+#   `errorMessage`("잔액이 충분하지 않습니다.")가 뜬다(2026-08-20 잔액 99 KRW에서 실측).
+#   → [02]~[04]를 **`btnNext`가 enabled일 때만** 실행되도록 감쌌다.
+#     잔액이 부족하면 로그에 SKIPPED로 남고(조용히 통과하지 않는다), 채워지면
+#     **파일을 고치지 않고 그대로** 전체 케이스가 돌아간다.
+#   ✅ 2026-08-20 사용자가 13,000원을 충전한 뒤 **4케이스 전부 실행·PASS(EXIT=0 2회, 94스텝)**.
+#     `enabled` 셀렉터는 이 파일에서 동작 확인했다(로그에 `id: btnNext, disabled`로 표시된다).
+#
+# ⚠️ **[04]는 실제 자금이 움직인다** (신청 시 출금액+수수료가 차감/보류된다)
+#   실제 편의점에서 현금을 뽑는 것까지는 확인하지 않되(사용자 지시), **신청 → 정보 화면 확인 →
+#   취소**까지 실행해 자금을 복원한다. 취소가 성공해야 잔액이 되돌아온다.
+#   알려진 이슈(2026-07-09): 취소 확인 시점에 신청 OTP가 만료돼 있으면 올바른 간편비밀번호를
+#   넣어도 "OTP 코드가 만료되었습니다"가 뜨고 새 출금번호 화면으로 돌아간다
+#   → 한 번 더 취소하면 정상 처리된다. **자가복구 로직으로 반영해 뒀다.**
+#
+# ClickUp 상태: 상위 `z8nfn6m9z0` complete / 4케이스 전부 complete (2026-08-20)
+#   ⚠️ "ClickUp:" 으로 시작하면 리포트 스크립트가 **커버 완료 마커로 오인**한다
+#     (`# CLICKUP:` 파서가 대소문자를 가리지 않는다) → 산문 주석은 "ClickUp 상태:" 로 쓴다.
+#     `z8nfn6m9z0` 은 **시나리오 노드 ID**라 케이스 매핑에 없어 매일 유령 ID 경고가 떴다(2026-09-07 수정).
+#   [01] `z8nfn6ma6d` / [02] `z8nfn6ma6b` / [03] `z8nfn6ma6a` / [04] `z8nfn6ma6c`
+#
+# 케이스:
+#   [01] [Low]  Withdraw - First time using ATM Withdrawal → 출금 가이드 진입 확인
+#   [02] [Low]  Withdraw - [다음] → ATM 선택 바텀시트 발생 확인  (⏸ 잔액 조건)
+#   [03] [High] Withdraw - 출금금액 입력 동작 확인 (- / + )        (⏸ 잔액 조건)
+#   [04] [High] Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인 (⏸ 잔액 조건)
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\16_ATMWithdraw_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ---------------- ATM 출금 진입 ----------------
+# 홈 서비스 그리드는 비동기 로딩이다 → 항목이 실제로 그려질 때까지 기다린다.
+- scrollUntilVisible:
+    element:
+      text: "ATM 출금"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn: "ATM 출금"
+- extendedWaitUntil:
+    visible:
+      id: "atmWithdrawalFirstTimeGuide"
+    timeout: 40000
+- assertVisible: "출금 금액"
+- assertVisible:
+    id: "walletBalance"
+- takeScreenshot: "[00]_ATM출금_진입"
+
+# ----------------------------------------------------------------
+# [01] [Low] Withdraw - First time using ATM Withdrawal 선택 시
+#            가이드 페이지 이동 확인 (출금 가이드 정상 진입)
+# CLICKUP: z8nfn6ma6d
+# ----------------------------------------------------------------
+- tapOn:
+    id: "atmWithdrawalFirstTimeGuide"
+- extendedWaitUntil:
+    visible:
+      id: "serviceProviderRv"
+    timeout: 30000
+# ⚠️ id `titleTxt`는 헤더·각 행에 중복되므로 텍스트로 본다(id+text 동시 지정도 금지).
+- assertVisible: "ATM에서 출금하는 방법"
+- assertVisible: "현금을 인출할 편의점을 선택하세요."
+# 편의점 목록이 실제로 채워졌는지 — 첫 항목과 마지막 항목으로 확인
+- assertVisible: "GS25"
+- assertVisible: "Ministop"
+- takeScreenshot: "[01-1]_출금가이드_편의점목록"
+# back 대신 화면의 뒤로가기 id를 쓴다(전파 범위가 화면마다 달라 사고 이력이 있다)
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "atmWithdrawalFirstTimeGuide"
+    timeout: 20000
+- assertVisible: "출금 금액"
+- takeScreenshot: "[01-2]_ATM출금_복귀"
+
+# ================================================================
+# ⏸ [02]~[04] — 잔액이 11,500 KRW 이상일 때만 실행된다
+# ================================================================
+# 잔액이 부족하면 `btnNext`가 `enabled=false`로 남으므로, 그것을 그대로 조건으로 쓴다.
+#   · 잔액 충분 → 아래 블록이 실행되고 [02]~[04]가 검증된다.
+#   · 잔액 부족 → 블록이 SKIP되고 로그에 SKIPPED로 남는다(조용히 통과하는 게 아니다).
+# `enabled` 셀렉터는 2026-08-20 실기기에서 동작 확인했다(`btnNext, disabled`로 표시된다).
+- runFlow:
+    when:
+      visible:
+        id: "btnNext"
+        enabled: true
+    commands:
+      # ------------------------------------------------------------
+      # [02] [Low] Withdraw - [다음] 선택 시 ATM 선택 바텀시트 발생 확인
+      # CLICKUP: z8nfn6ma6b
+      # ------------------------------------------------------------
+      - tapOn:
+          id: "btnNext"
+      - extendedWaitUntil:
+          visible:
+            id: "rvAtmWithdrawalSP"
+          timeout: 30000
+      - assertVisible: "현금을 인출할 편의점을 선택하세요."
+      - takeScreenshot: "[02-1]_ATM선택_바텀시트"
+      - tapOn:
+          id: "close"
+      - extendedWaitUntil:
+          visible:
+            id: "atmWithdrawalFirstTimeGuide"
+          timeout: 20000
+
+      # ------------------------------------------------------------
+      # [03] [High] Withdraw - 출금금액 입력 동작 확인 (- / + )
+      # CLICKUP: z8nfn6ma6a
+      # ------------------------------------------------------------
+      # 금액은 편집 가능한 `amount`("1")와 고정 접미사 `defaultText`("0,000 KRW")로 **분리**돼 있다.
+      # 그래서 "10,000 KRW" 전체 문자열로는 매칭되지 않는다 → `amount` 값으로 검증한다.
+      # ⚠️ 여기서는 id+text 동시 지정이 정상 동작한다(값 자체를 봐야 하므로 이 형태가 맞다).
+      - tapOn:
+          id: "plusAmount"
+      - waitForAnimationToEnd
+      - assertVisible:
+          id: "amount"
+          text: "2"
+      - takeScreenshot: "[03-1]_금액증가_20000"
+      # 다음 케이스를 위해 기본값(10,000)으로 되돌린다
+      - tapOn:
+          id: "minusAmount"
+      - waitForAnimationToEnd
+      - assertVisible:
+          id: "amount"
+          text: "1"
+      - takeScreenshot: "[03-2]_금액감소_10000_복귀"
+
+      # ------------------------------------------------------------
+      # [04] [High] Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인
+      # CLICKUP: z8nfn6ma6c
+      # ------------------------------------------------------------
+      # ⚠️ 여기서부터 **실제 자금이 움직인다**(출금액+수수료 차감/보류).
+      #   아래 정리 단계의 "취소"가 성공해야 자금이 복원된다 — 중간에 끊지 말 것.
+      - tapOn:
+          id: "btnNext"
+      - extendedWaitUntil:
+          visible:
+            id: "rvAtmWithdrawalSP"
+          timeout: 30000
+      - tapOn: "GS25"
+      - extendedWaitUntil:
+          visible: ".*신청하시겠습니까.*"
+          timeout: 20000
+      - takeScreenshot: "[04-1]_신청확인_팝업"
+      - tapOn:
+          id: "btnApply"
+      # 간편비밀번호 <정상 PIN> — 키패드가 매번 재배치되므로 탭 사이 정착 대기 필수
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            id: "withdrawalNumber"
+          timeout: 40000
+      - assertVisible:
+          id: "timelimit"
+      - takeScreenshot: "[04-2]_ATM출금정보_출금번호"
+
+      # ---- 정리(사후처리): 실제 편의점 방문 없이 취소해 자금을 복원한다 ----
+      # 🚫 **여기서 실패하면 실제 출금 신청이 "입금 대기 중"으로 남는다** — 반드시 성공시켜야 한다.
+      #
+      # 2026-08-20 실측: 취소는 **한 번에 안 되는 경우가 있다.** 두 가지 실패 모양을 봤다.
+      #   (a) `btnCancel` 탭 후 취소 확인 팝업이 **아예 안 뜨고** 대신 공용 다이얼로그
+      #       (`txt_dialog_title` "실패 - (지갑번호)" / `txt_dialog_message` "Failed",
+      #        버튼 id **`btn_diaog_ok`** ← 앱 오타 그대로)가 뜬다.
+      #       ↳ 종전 코드는 확인 팝업을 `extendedWaitUntil`로 단정 대기해서 **여기서 죽었고**,
+      #         그 사이 `timelimit`이 만료돼 신청이 취소되지 않은 채 남았다(2회차 실패 원인).
+      #   (b) PIN 입력 후 "OTP 코드가 만료되었습니다"가 뜨고 새 출금번호 화면으로 돌아간다.
+      # 두 경우 모두 **다이얼로그를 닫고 다시 취소하면 처리된다** → 단정 대기 대신 **재시도 루프**로 바꿨다.
+      #
+      # 루프 1회 = [떠 있는 다이얼로그 닫기] → [취소 가능하면 취소 시도]
+      # 취소가 성공하면 `btnCancel`이 사라지므로 남은 회차는 자동으로 SKIP된다.
+      - repeat:
+          times: 3
+          commands:
+            # 실패/오류/OTP만료 등 공용 다이얼로그가 떠 있으면 먼저 닫는다
+            - runFlow:
+                when:
+                  visible:
+                    id: "btn_diaog_ok"
+                commands:
+                  - tapOn:
+                      id: "btn_diaog_ok"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible:
+                    id: "btnCancel"
+                commands:
+                  - tapOn:
+                      id: "btnCancel"
+                  - waitForAnimationToEnd
+                  # 확인 팝업이 떴을 때만 진행한다(안 뜨면 다음 회차에서 다시 시도)
+                  - runFlow:
+                      when:
+                        visible: ".*취소하시겠습니까.*"
+                      commands:
+                        - tapOn:
+                            id: "btn_yes"
+                        # 간편비밀번호 <정상 PIN> — 키패드 재배치 때문에 탭 사이 정착 대기 필수
+                        - tapOn: "1"
+                        - waitForAnimationToEnd
+                        - tapOn: "2"
+                        - waitForAnimationToEnd
+                        - tapOn: "1"
+                        - waitForAnimationToEnd
+                        - tapOn: "2"
+                        - waitForAnimationToEnd
+      # 마지막으로 남은 다이얼로그가 있으면 닫는다
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+            - waitForAnimationToEnd
+      - takeScreenshot: "[04-3]_신청취소_완료"
+
+      # ---- 취소가 실제로 됐는지 **거래 내역으로 확인**한다 ----
+      # 화면이 바뀐 것만 보면 "취소된 줄 알았는데 대기 중으로 남아 있는" 상태를 놓친다
+      # (2026-08-20에 실제로 그랬다). 내역의 상태값으로 확인해야 한다.
+      #   상태값: "입금 대기 중"(미취소) / "취소 완료"(정상 처리)
+      #
+      # ⚠️ **취소가 성공하면 앱이 ATM 화면을 닫고 홈으로 빠진다**(2026-08-20 실측).
+      #   그래서 `historyLayout`을 조건으로만 감싸면 성공 경로에서 **검증이 통째로 SKIP된다**
+      #   (실제로 그렇게 짰다가 죽은 코드가 됐다) → 홈이면 ATM 화면으로 **다시 들어가서** 확인한다.
+      - runFlow:
+          when:
+            notVisible:
+              id: "historyLayout"
+          commands:
+            - scrollUntilVisible:
+                element:
+                  text: "ATM 출금"
+                direction: DOWN
+                timeout: 25000
+                visibilityPercentage: 20
+            - tapOn: "ATM 출금"
+            - extendedWaitUntil:
+                visible:
+                  id: "historyLayout"
+                timeout: 40000
+      - tapOn:
+          id: "historyLayout"
+      - extendedWaitUntil:
+          visible:
+            id: "tv_status"
+          timeout: 30000
+      # ⚠️ `assertNotVisible`은 **문자열이 틀려도 통과한다** — 오타면 아무것도 검증하지 못한 채
+      #   "대기 건 없음"으로 넘어간다. 그래서 **먼저 긍정으로 상태값을 읽고 있음을 증명**한다.
+      #   위 362행 실측대로 취소가 정상 처리되면 상태는 "취소 완료"다.
+      #   ⚠️ 두 문구 다 **부분매칭 정규식**으로 쓴다. 텍스트가 전체매칭이라 리터럴로 두면
+      #     `취소완료`(공백 없음) 같은 변형에서 긍정은 **깨지고** 부정은 **조용히 통과한다**
+      #     — `"국내송금"` vs 실측 `"국내 송금"`으로 실제로 물린 것과 같은 부류다.
+      - assertVisible: ".*취소.*완료.*"
+      # 대기 중인 신청이 하나도 남아 있지 않아야 한다 — 이게 이 케이스의 사후 안전장치다
+      #   (위 assertVisible이 통과했으므로 이 화면의 상태 문자열을 실제로 읽고 있다는 게 보장된다)
+      - assertNotVisible: ".*입금.*대기.*"
+      - takeScreenshot: "[04-4]_출금내역_대기건없음"
+      - tapOn:
+          id: "backView"
+      - waitForAnimationToEnd
+
+# ---------------- 홈 복귀 ----------------
+# [02]~[04]가 SKIP됐으면 여기는 ATM 출금 화면이고, 실행됐으면 취소 완료 화면이다.
+# 어느 쪽이든 화면 뒤로가기 id로 홈까지 올라간다.
+- runFlow:
+    when:
+      visible:
+        id: "backView"
+    commands:
+      - tapOn:
+          id: "backView"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# ⚠️ 진입 때 그리드까지 스크롤했으므로 홈으로 돌아와도 **상단 `btnTransfer`는 트리에 없다**
+#   (2026-08-20 실측 실패 — 15_Loan과 같은 함정). 홈 판정은 **하단 내비**로 한다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000

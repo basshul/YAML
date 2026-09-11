@@ -1,0 +1,4 @@
+appId: ${APP_ID}
+---
+# W02: 어디에서도 긍정 검증된 적 없는 문구를 assertNotVisible
+- assertNotVisible: "존재하지않는문구ZZZ"

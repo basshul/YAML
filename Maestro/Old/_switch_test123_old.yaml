@@ -1,0 +1,240 @@
+appId: ${APP_ID}
+---
+# 헬퍼 — 구 UI에서 test123(외국인) 계정으로 전환한다.
+#   `25_Profile_Foreign_old.yaml`을 돌리기 전에 이 파일로 계정을 맞춘다.
+#
+# 경로(구 UI): 홈 → iv_nav(드로어) → "로그아웃" → "예"
+#   → 잠금화면 → loginpwidhidpass("아이디/비밀번호로 로그인")
+#   → "기존 간편 비밀번호는 해지됩니다" → btn_diaog_ok
+#   → 로그인 폼(usernameId / securityKeyboardEditText) → <구 비밀번호(폐기)> → "입력완료"(= 즉시 제출)
+#   → "간편 비밀번호 생성" → <정상 PIN> 두 번 → btnOk → 홈(btnTransfer)
+#
+# ⚠️ btnTransfer 도달 전에는 "닫기" 같은 **범용 팝업 닫기를 절대 넣지 말 것**
+#   (2026-08-14 사고: 의도치 않은 X 아이콘을 눌러 로그인이 완주하지 못했다)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "닫기"
+      # ⚠️ 맹목적 팝업 닫기 — 상세 사유는 07_TodaysRate_old.yaml 의 같은 블록 주석 참고.
+      #   요약: 런처 이탈 사고 이력이 있으나, id로 안 닫히는 팝업이 남아 진입이 막힐 수 있어
+      #   지우지 않고 **이미 홈에 도달했으면 누르지 않도록** 가드만 좁혔다.
+      notVisible:
+        id: "btnTransfer"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ---- 로그아웃 ----
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 15000
+- tapOn:
+    text: "로그아웃"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "예"
+    commands:
+      - tapOn: "예"
+      - waitForAnimationToEnd
+
+# ---- 잠금화면 → 아이디/비밀번호 로그인 ----
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn:
+    id: "loginpwidhidpass"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "btn_diaog_ok"
+    commands:
+      - tapOn:
+          id: "btn_diaog_ok"
+      - waitForAnimationToEnd
+
+# ---- test123 / <구 비밀번호(폐기)> ----
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "test123"
+- tapOn:
+    id: "securityKeyboardEditText"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+# ⚠️ **여기에는 다른 계정(test251024)용 비밀번호 시퀀스가 박혀 있었다** — 2026-09-09 사용자 확인으로 교체.
+#   계정마다 비밀번호가 다르고, 로그인 실패는 5회 제한이라 틀린 값으로 돌리면 계정이 잠긴다.
+#   **값은 여기에 적지 않는다** — 정본은 메모리 [[project_01_login]] 이다.
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# ---- 지문/간편비밀번호 ----
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+# test123은 로그인 직후 "증빙 서류 안내"(문서가 만료되었습니다) 바텀시트가 뜬다 → 나중에 하기
+- runFlow:
+    when:
+      visible:
+        id: "remindLaterBtn"
+    commands:
+      - tapOn:
+          id: "remindLaterBtn"
+      - waitForAnimationToEnd
+# 이어서 인앱 배너 팝업(btnOne "열기" / btnTwo "닫기") → id로 정확히 닫는다
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 60000
+- assertVisible:
+    id: "bottom_item_profile"

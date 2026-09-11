@@ -1,0 +1,167 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Bill Payment (해외 청구서 결제)
+# ================================================================
+# 진입: 홈 → (스크롤) "청구서 결제"
+# 결제정보(사용자 지정): Nepal / Mobile Recharge / 휴대폰 9847266238 / 20 NPR
+#   → 휴대폰 번호 검증 시 "NTC PREPAID"로 인식됨. 비고(필수)="TEST"
+#
+# ★ 제약(사용자 지정, IntlTopup과 동일):
+#   - 실제 결제 발생 → [06]은 "간편 비밀번호 입력 화면"까지만(PIN 미입력).
+#   - KFTC 결제(은행계좌 출금) + 생체인증 경로는 BLOCKED. GME Wallet 경로만.
+#
+# 화면/id (OverSeasBillPaymentActivity):
+#   dp_country_selection(국가) / dp_biller_selection(청구 구분·청구인) /
+#   출금계좌 리스트("GME Wallet" 등) / rvField(청구인별 입력필드) / btnProceed "진행"
+#   국가·청구인·biller 리스트: searchEditText(검색)
+#   결제내역 확인화면: btnOk "GME Wallet을 사용하여 결제"
+#   간편비번: ActivityLockScreen "간편 비밀번호를 입력하세요" (input_dot_1~4)
+# ★ 함정:
+#   - 국가 검색어와 목록항목이 동일 텍스트면 검색창이 탭됨 → 부분검색("Nep")으로 회피
+#   - 비고 필드는 필수 → 비워두면 "진행" 비활성
+# ================================================================
+
+# ---- 진입: launch → PIN 1212 → 홈 ----
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요|홈"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+# ---- 청구서 결제 진입 ----
+- scrollUntilVisible:
+    element:
+      text: "청구서 결제"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "청구서 결제"
+- extendedWaitUntil:
+    visible:
+      id: "dp_country_selection"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [02] Country 검색 동작 확인 / [01] 국가 리스트 및 선택 (Nepal)
+#   * 검색어는 목록항목과 다른 부분문자("Nep")로 → 목록 "Nepal" 탭
+# ----------------------------------------------------------------
+- tapOn:
+    id: "dp_country_selection"
+- extendedWaitUntil:
+    visible:
+      id: "searchEditText"
+    timeout: 15000
+- tapOn:
+    id: "searchEditText"
+- inputText: "Nep"
+- extendedWaitUntil:
+    visible:
+      text: "Nepal"
+    timeout: 10000
+- tapOn: "Nepal"
+- extendedWaitUntil:
+    visible:
+      id: "dp_biller_selection"
+    timeout: 15000
+
+# ----------------------------------------------------------------
+# [03] Biller Category(청구 구분) 리스트 및 선택 (모바일/전화)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "dp_biller_selection"
+- extendedWaitUntil:
+    visible:
+      text: "청구 구분"
+    timeout: 15000
+- tapOn: "모바일/전화"
+
+# ----------------------------------------------------------------
+# [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)
+#   ★ maestro inputText는 한글(비ASCII) 미지원 → 한글 biller명 검색 불가.
+#     검색창(searchEditText) 존재만 확인하고 목록에서 직접 선택.
+#     (ASCII biller명은 검색 가능 - 예: Sri Lanka > Ceylon Electricity Board)
+# ----------------------------------------------------------------
+- assertVisible:
+    id: "searchEditText"
+- tapOn: "모바일 충전"
+
+# ----------------------------------------------------------------
+# [05] Biller별 입력 필드 노출 확인 (Mobile Recharge → "휴대폰 번호")
+# ----------------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      text: "휴대폰 번호"
+    timeout: 15000
+
+# ----------------------------------------------------------------
+# [06] Wallet 결제 - 필드 입력 → 결제내역 → 간편비밀번호 화면까지만
+#   ★ 실제 결제 방지: 간편비번 화면 확인 후 back으로 취소(PIN 미입력).
+#   비고(필수) 미입력 시 "진행" 비활성 → "TEST" 입력.
+# ----------------------------------------------------------------
+- tapOn: "휴대폰 번호"
+- inputText: "9847266238"
+- hideKeyboard
+# 번호 검증 → NTC PREPAID 인식
+- extendedWaitUntil:
+    visible:
+      text: "NTC PREPAID"
+    timeout: 20000
+- tapOn: "금액"
+- inputText: "20"
+- hideKeyboard
+- tapOn: "비고"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn: "GME Wallet"
+# 모든 필드 충족 → 진행 활성화
+- extendedWaitUntil:
+    visible:
+      text: "진행"
+      enabled: true
+    timeout: 15000
+- tapOn:
+    text: "진행"
+    enabled: true
+# 결제내역 확인 화면 → GME Wallet 결제
+- extendedWaitUntil:
+    visible:
+      text: "GME Wallet을 사용하여 결제"
+    timeout: 20000
+- tapOn: "GME Wallet을 사용하여 결제"
+# 간편비밀번호 화면 도달 확인 (여기서 정지, PIN 입력 안 함)
+- extendedWaitUntil:
+    visible:
+      text: "간편 비밀번호를 입력하세요"
+    timeout: 20000
+- assertVisible:
+    id: "input_dot_1"
+# 결제 취소(back) → 실제 결제 없음
+- pressKey: back
+- waitForAnimationToEnd
+
+# ================================================================
+# [BLOCKED] KFTC 결제 + 생체인증 (은행계좌 출금: 카카오/신한/케이뱅크)
+#   - 출금계좌를 은행계좌로 선택 시 KFTC 결제 + 생체(지문/Face) 인증 필요
+#   - 생체인증 자동화 불가 + 실제 결제 발생 → 자동화 대상 제외(BLOCKED)
+# ================================================================

@@ -1,0 +1,98 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- launchApp
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료되었습니다."
+    commands:
+      - tapOn: "확인"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 10000
+
+# 정보 탭으로 전환
+- tapOn: "정보"
+
+# ----------------------------------------------------------------
+# [23] [Low] Global QR - Overseas QR Pay Guide 선택시 가이드 화면으로 이동 확인
+# ----------------------------------------------------------------
+- scroll
+- tapOn: "글로벌 QR"
+- assertVisible:
+    text: "국가 선택"
+- assertVisible:
+    text: "해외 QR Pay 가이드"
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [24] [High] Global QR - Wallet 지불 동작 확인
+# ----------------------------------------------------------------
+- scroll
+- tapOn: "글로벌 QR"
+- assertVisible:
+    text: "국가 선택"
+- tapOn: "Cambodia(KHR)"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "송금 방법 선택"
+- assertVisible:
+    text: "계좌 입금"
+- assertVisible:
+    text: "QR Pay"
+- assertVisible:
+    text: "스캔하기"
+- tapOn: "스캔하기"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "스캔, 업로드 또는 QR로 결제하세요."
+
+- tapOn:
+    id: "galleryImagePick"
+- waitForAnimationToEnd
+- tapOn:
+    point: "20%, 41%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "결제"
+- assertVisible:
+    text: "CHANSOKOL MORK"
+- assertVisible:
+    text: "사용 가능한 잔액.*"
+- assertVisible:
+    text: "결제 금액"
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "글로벌 QR"

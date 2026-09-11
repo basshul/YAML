@@ -1,0 +1,488 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: MENU - 미완료 케이스 (설정 / 프로필 하위)
+# (기존 완료: 04_01 Change Simple PW, 04_06 Change Languages,
+#             History는 04_Menu_History.yaml로 분리 완료)
+# ================================================================
+# 진입 경로(2026-07-28 재조사):
+#   - 앱 언어 = 한국어. 하단 네비 = 홈/내역/카드/프로필.
+#   - 설정: 하단 "프로필" 탭 → 우상단 기어 아이콘(Compose, id 없음, 좌표 92%,6%) → "설정"
+#   - 설정 화면 element id(native):
+#       delete_gme_account / view_referral_code / view_marketing
+#       view_change_pin_code / view_change_password / view_language
+#   - 세션 만료 시 PIN→세션만료 다이얼로그→로그인화면으로 튕김.
+#     토큰 만료되면 01_01_Login_Success.yaml로 재로그인 필요(계정 seungsoo818).
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회) - 04_Menu_History 검증 패턴
+- launchApp
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|홈"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "홈"
+          timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+# ================================================================
+# [설정 진입] 프로필 → 기어 아이콘 → 설정
+# ================================================================
+- tapOn:
+    text: "프로필"
+- extendedWaitUntil:
+    visible:
+      text: "정보 수정"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+- tapOn:
+    point: "92%,6%"
+- extendedWaitUntil:
+    visible:
+      text: "설정"
+    timeout: 20000
+
+# ================================================================
+# [Settings - Delete Account] GME 회원 탈퇴
+# ================================================================
+
+# ----------------------------------------------------------------
+# [02] [High] 계정삭제 동의 진입 - 동의 체크박스 미선택시 "계속" 비활성화
+# ----------------------------------------------------------------
+- tapOn:
+    id: "delete_gme_account"
+- extendedWaitUntil:
+    visible:
+      id: "continueBtn"
+    timeout: 20000
+# 체크박스(termscondition) 미선택 → 계속(continueBtn) 비활성
+- assertVisible:
+    id: "continueBtn"
+    enabled: false
+
+# ----------------------------------------------------------------
+# [01] [Medium] 계정 삭제 사유 진입 - 사유 미선택시 "계정 삭제하기" 비활성화
+# ----------------------------------------------------------------
+# 동의 체크 → 계속 활성화 → 계속 → 사유 화면
+- tapOn:
+    id: "termscondition"
+- assertVisible:
+    id: "continueBtn"
+    enabled: true
+- tapOn:
+    id: "continueBtn"
+- extendedWaitUntil:
+    visible:
+      id: "deleteBtn"
+    timeout: 20000
+# 사유 미선택 → 삭제 버튼(deleteBtn) 비활성
+- assertVisible:
+    id: "deleteBtn"
+    enabled: false
+# 사유 선택 → 삭제 버튼 활성화 확인 (실제 삭제는 하지 않음)
+- tapOn:
+    text: "보안 상의 우려"
+- assertVisible:
+    id: "deleteBtn"
+    enabled: true
+# 설정으로 복귀 (사유화면 → 동의화면 → 설정)
+- tapOn:
+    id: "iv_back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      text: "설정"
+    timeout: 20000
+
+# ================================================================
+# [Settings - Referral Code] 추천인 번호
+# ================================================================
+
+# ----------------------------------------------------------------
+# [03] [Medium] 추천인 번호 입력 동작 확인 (다이얼로그)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "view_referral_code"
+- extendedWaitUntil:
+    visible:
+      id: "etReferralCode"
+    timeout: 20000
+- tapOn:
+    id: "etReferralCode"
+- inputText: "TEST123"
+- assertVisible:
+    text: "TEST123"
+# 취소(btnCancel)로 종료 - 실제 코드 적용 안 함
+- tapOn:
+    id: "btnCancel"
+- extendedWaitUntil:
+    visible:
+      text: "설정"
+    timeout: 20000
+
+# ================================================================
+# [Settings - Marketing] 마케팅 수신 동의 사용
+# ================================================================
+
+# ----------------------------------------------------------------
+# [04] [Low] 마케팅 수신 동의 ON/OFF 토글 동작 확인
+#      view_marketing = Switch(row 전체). 토글 시 "[GME] <일시>" 확인 다이얼로그.
+#      * 테스트 끝에 원래 상태(ON)로 복원함
+# ----------------------------------------------------------------
+- assertVisible:
+    id: "view_marketing"
+    checked: true
+# ON → OFF
+- tapOn:
+    id: "view_marketing"
+- extendedWaitUntil:
+    visible:
+      text: "확인"
+    timeout: 20000
+- tapOn: "확인"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "view_marketing"
+    checked: false
+# OFF → ON (복원)
+- tapOn:
+    id: "view_marketing"
+- extendedWaitUntil:
+    visible:
+      text: "확인"
+    timeout: 20000
+- tapOn: "확인"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "view_marketing"
+    checked: true
+
+# ================================================================
+# [Settings - Change Simple PW] 간편 비밀번호 변경
+# ================================================================
+
+# ----------------------------------------------------------------
+# [05] [Medium] 숫자 키패드 [X](닫기) → 취소 팝업 아니요/예 동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "view_change_pin_code"
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 20000
+# [X] 키패드 닫기 → 취소 팝업
+- tapOn: "닫기"
+- extendedWaitUntil:
+    visible:
+      text: "간편 비밀번호 재설정을 그만하시겠습니까?"
+    timeout: 20000
+# 아니요(btnCancel): 팝업 닫힘, 화면 유지
+- tapOn:
+    id: "btnCancel"
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 20000
+# 다시 [X] → 예(btnOk): 화면 나가기 → 설정 복귀
+- tapOn: "닫기"
+- extendedWaitUntil:
+    visible:
+      id: "btnOk"
+    timeout: 20000
+- tapOn:
+    id: "btnOk"
+- extendedWaitUntil:
+    visible:
+      text: "설정"
+    timeout: 20000
+
+# ================================================================
+# ↓↓↓ 이하 미착수 (2026-07-28 조사한 element id 반영) ↓↓↓
+# ================================================================
+
+# ================================================================
+# [Settings - Change Password] 로그인 비밀번호 변경 [06]~[12]
+#   → 별도 정규 파일로 분리: 04_02_Change_LoginPassword.yaml
+#     (간편 비밀번호 변경 04_01_Change_SimplePassword.yaml 과 대칭 구조)
+#     실기기 end-to-end 100% PASS (2026-07-29). [12]는 실제 변경 후 원복.
+# ================================================================
+
+# ================================================================
+# [About GME] GME 소개 (프로필 → GME 소개)
+# ================================================================
+# ----------------------------------------------------------------
+# [13] Follow us on [f] → 페이스북(브라우저) 진입
+#   iv_fb 탭 → 삼성인터넷 브라우저로 facebook.com. back 1회로 앱 복귀.
+# ----------------------------------------------------------------
+# 직전 [05]가 설정 화면에서 끝남 → iv_back으로 프로필 복귀(설정엔 하단 nav 없음)
+- runFlow:
+    when:
+      visible:
+        text: "설정"
+    commands:
+      - tapOn:
+          id: "iv_back"
+      - extendedWaitUntil:
+          visible:
+            text: "정보 수정"
+          timeout: 20000
+- tapOn:
+    text: "프로필"
+- extendedWaitUntil:
+    visible:
+      text: "정보 수정"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: "GME 소개"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "GME 소개"
+- extendedWaitUntil:
+    visible:
+      id: "iv_fb"
+    timeout: 20000
+- tapOn:
+    id: "iv_fb"
+# 외부 브라우저(facebook)로 이탈 → GME의 iv_fb 사라짐으로 검증
+# (maestro assertVisible은 appId 스코프라 브라우저 내용은 못 읽음)
+- extendedWaitUntil:
+    notVisible:
+      id: "iv_fb"
+    timeout: 20000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      id: "iv_fb"
+    timeout: 15000
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      text: "정보 수정"
+    timeout: 20000
+
+# ================================================================
+# [Branch] 지점 (프로필 → 지점)
+#   각 지점 카드: branch_address(주소+복사 span) / language_select(한/영) /
+#   tv_time(영업시간 펼침/접기) / naver_map_link,kakao_map_link,google_map_link(지도)
+#   * 첫 지점(안산, index 0) 기준. 복사 링크는 주소 TextView 내 span → 좌표 탭.
+# ================================================================
+- scrollUntilVisible:
+    element:
+      text: "지점"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "지점"
+- extendedWaitUntil:
+    visible:
+      id: "agentListRv"
+    timeout: 20000
+# ----------------------------------------------------------------
+# [14] 주소 복사 → "복사 완료" 토스트
+#   기본(영문 주소, 2줄)일 때 "복사"는 2번째 줄 끝. 첫 지점 좌표 탭.
+# ----------------------------------------------------------------
+- tapOn:
+    point: "36%,35%"
+- extendedWaitUntil:
+    visible:
+      text: "복사 완료"
+    timeout: 10000
+# ----------------------------------------------------------------
+# [15] 주소 한/영 변환 (language_select: "한국어 주소" ↔ "English Address")
+# ----------------------------------------------------------------
+- assertVisible:
+    id: "language_select"
+- tapOn:
+    id: "language_select"
+- extendedWaitUntil:
+    visible:
+      text: "English Address"
+    timeout: 10000
+- tapOn:
+    id: "language_select"
+- extendedWaitUntil:
+    visible:
+      text: "한국어 주소"
+    timeout: 10000
+# ----------------------------------------------------------------
+# [16] 영업시간 노출/비노출 (tv_time 탭 → 요일별 시간 펼침/접기)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tv_time"
+- extendedWaitUntil:
+    visible:
+      text: "10:00 ~ 19:00"
+    timeout: 10000
+- tapOn:
+    id: "tv_time"
+- assertNotVisible:
+    text: "10:00 ~ 19:00"
+# ----------------------------------------------------------------
+# [17] 지도 선택 → 외부 지도 앱(구글맵) 진입
+#   지도 앱 진입 후 back은 런처로 감 → GME 복귀는 launchApp + PIN 재진입.
+# ----------------------------------------------------------------
+- tapOn:
+    id: "google_map_link"
+- extendedWaitUntil:
+    notVisible:
+      id: "agentListRv"
+    timeout: 15000
+# --- 지도앱에서 GME 복귀 (재실행 + PIN) ---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요|홈"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+# ================================================================
+# [Inbound Account] 송금 받을 계좌 (프로필 → 송금 받을 계좌 → "송금 받을 계좌 관리")
+#   화면 id: accountListRv(등록계좌목록: name/number/iv_delete_inbound),
+#            accAddImageView(+추가), 추가 바텀시트(dp_bank_selection 은행선택,
+#            et_account_number 계좌번호, startPennyTestButton "추가")
+# ----------------------------------------------------------------
+# [18] 은행리스트 및 선택 / [19] 계좌번호 입력
+#   → 계좌 연결(추가)은 penny test/OTP 인증 필요 → 자동화 불가 (BLOCKED)
+#      (dp_bank_selection→은행리스트, et_account_number 입력까지는 되나 완료 불가)
+# ----------------------------------------------------------------
+# [20] 인바운드 등록계좌 삭제 - 신한은행 110629096870 (사용자 지정)
+#   ★ 2026-07-30 실기기에서 실제 삭제 완료(일회성 파괴적, 대상 계좌 제거됨).
+#     재실행 불가(대상 이미 삭제됨, 재등록은 OTP 필요).
+#   삭제 흐름: 프로필 → "송금 받을 계좌" → 대상 행의 iv_delete_inbound 탭
+#            → "계정을 삭제하시겠습니까?" → "예" → "성공" 다이얼로그 "확인"
+#   ⚠️ 셀렉터 주의(중요): 모든 계좌 행이 iv_delete_inbound 동일 id 공유.
+#      relative 셀렉터 `rightOf: text "<번호>"`는 flaky하여 엉뚱한 행을 선택함
+#      (실제로 rightOf가 다른 계좌를 삭제하는 사고 발생). 반드시 대상 번호와
+#      같은 y의 삭제 버튼을 좌표로 정확히 탭할 것. [[feedback_maestro_relative_selector]]
+
+# ================================================================
+# [Link Bank Account] 은행 계좌 연결 관리 (프로필 → 은행 계좌 연결)
+#   화면 id: accountListRv(bankNameTxtView/accNo/iv_remove_acc/imgvMainAccount/
+#            txvIsMainAccount "기본 계좌"), csButton(고객센터[?]),
+#            accAddImageView/newAccount/tv_register_text(은행 계좌 등록)
+# ================================================================
+# ----------------------------------------------------------------
+# [21] csButton([?]) → CS(고객센터) 팝업 발생 확인
+#   팝업: "실시간 채팅"/전화(1811-2961)/운영시간 + "취소"
+# ----------------------------------------------------------------
+- tapOn:
+    text: "프로필"
+- extendedWaitUntil:
+    visible:
+      text: "정보 수정"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: "은행 계좌 연결"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "은행 계좌 연결"
+- extendedWaitUntil:
+    visible:
+      id: "csButton"
+    timeout: 20000
+- tapOn:
+    id: "csButton"
+- extendedWaitUntil:
+    visible:
+      text: "실시간 채팅"
+    timeout: 15000
+- tapOn: "취소"
+- extendedWaitUntil:
+    visible:
+      id: "csButton"
+    timeout: 15000
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      text: "정보 수정"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [22] KFTC 계좌 삭제 - K Bank 1001*****8 (사용자 승인)
+#   ★ 2026-07-30 실기기에서 실제 삭제 완료(일회성 파괴적, 재실행 불가).
+#     KAKAO Bank(기본 계좌)는 유지.
+#   흐름: 은행 계좌 연결 → 대상 행 iv_remove_acc 탭 → "계속할까요?" → "예"
+#        → 삭제(목록 갱신, 성공 다이얼로그 없이 조용히 반영)
+#   ⚠️ iv_remove_acc는 모든 행 동일 id 공유 → relative 셀렉터(rightOf) 금지,
+#      대상 계좌와 같은 y의 삭제 아이콘을 좌표로 정확히 탭할 것.
+#      [[feedback_maestro_relative_selector]]
+# ----------------------------------------------------------------
+# [23] Face - ID Card/Passport 촬영 → 카메라 자동화 불가 (BLOCKED)
+# [24] Face - 셀피 촬영 → 카메라 자동화 불가 (BLOCKED)

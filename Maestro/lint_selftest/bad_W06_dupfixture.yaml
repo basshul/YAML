@@ -1,0 +1,6 @@
+appId: ${APP_ID}
+---
+# W06: 같은 신원 픽스처를 두 번 쓴다 → 서버가 소모하면 두 번째가 필패
+- inputText: "dup_case@example.com"
+- waitForAnimationToEnd
+- inputText: "dup_case@example.com"

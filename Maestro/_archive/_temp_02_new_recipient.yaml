@@ -1,0 +1,172 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# 임시: [02] 새 수취인 추가 단독 테스트 (Kazakhstan / MoneyGram 현금 지급)
+
+# 앱 실행 및 홈 화면 진입
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "Home"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 해외송금 > 예약 탭 진입
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- waitForAnimationToEnd
+
+# 사전 정리: SCHEDULE TRANSFER TEST 수취인이 있으면 삭제
+- runFlow:
+    when:
+      visible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "delete"
+          index: 0
+      - waitForAnimationToEnd
+      - tapOn: "예"
+      - waitForAnimationToEnd
+
+# 수취인 추가 폼 진입
+- tapOn: "수취인 추가하기"
+- waitForAnimationToEnd
+- tapOn:
+    id: "tv_addRecipient"
+- waitForAnimationToEnd
+
+# 국가: Kazakhstan
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Kazakhstan"
+- tapOn:
+    text: "Kazakhstan"
+    index: 1
+- waitForAnimationToEnd
+
+# 송금방법: 현금 지급 (드롭다운 탭 후 선택)
+- tapOn: "송금 방법을 선택하세요"
+- waitForAnimationToEnd
+- tapOn: "현금 지급"
+- waitForAnimationToEnd
+
+# 은행/에이전트: MoneyGram
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "money"
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "MONEYGRAM"
+- waitForAnimationToEnd
+
+# 이름 (First: schedule / Middle: transfer / Last: test)
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "schedule"
+- hideKeyboard
+- tapOn:
+    id: "recieverMiddleNameFormInputField"
+- inputText: "transfer"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "test"
+- hideKeyboard
+
+# 핸드폰 번호
+- waitForAnimationToEnd
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "123456789"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 주소
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "GME"
+- hideKeyboard
+
+# 도시
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 관계: 본인
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "본인"
+- waitForAnimationToEnd
+
+# 송금 사유: 임금 / 급여 (스크롤 후)
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "급여 / 임금"
+
+# 제출
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+
+# 저장 성공 바텀시트: 아니요 (목록 복귀)
+- tapOn:
+    id: "btnContactSupport1"
+
+# 예약 수취인 목록 확인
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- assertVisible:
+    text: "SCHEDULE TRANSFER TEST"
+
+# 사후 정리: schedule test 삭제
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- waitForAnimationToEnd
+- tapOn:
+    id: "delete"
+    index: 0
+- waitForAnimationToEnd
+- tapOn: "예"

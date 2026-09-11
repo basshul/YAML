@@ -1,0 +1,106 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- launchApp
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 10000
+
+# [30] Balance
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 80%"
+- waitForAnimationToEnd
+- tapOn:
+    id: "imgvArrow"
+- assertVisible:
+    text: "GME Pay"
+- assertVisible:
+    text: "잔액"
+- pressKey: back
+
+# [31] Recharge
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 10000
+- tapOn:
+    id: "uparrow"
+- extendedWaitUntil:
+    visible:
+      text: "충전"
+    timeout: 5000
+- tapOn: "충전"
+- waitForAnimationToEnd
+- tapOn: "GME Wallet"
+- waitForAnimationToEnd
+- tapOn: "1"
+- tapOn: "완료"
+- waitForAnimationToEnd
+- tapOn: "다음"
+- waitForAnimationToEnd
+- tapOn: "확인"
+- waitForAnimationToEnd
+- tapOn: "9"
+- tapOn: "8"
+- tapOn: "7"
+- tapOn: "6"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "비밀번호가 맞지 않습니다.*"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Pay 충전이 완료되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# [32] Refund
+# 충전 완료 "확인" 탭 → 카드 탭으로 복귀, 바텀시트 닫혀있음 → uparrow 재탭
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 10000
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 80%"
+- waitForAnimationToEnd
+- tapOn:
+    id: "uparrow"
+- extendedWaitUntil:
+    visible:
+      text: "환불"
+    timeout: 5000
+- tapOn: "환불"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Pay 환불"
+- pressKey: back
+- waitForAnimationToEnd
+
+# [33] GME Shop
+# [32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨
+- extendedWaitUntil:
+    visible:
+      text: "쇼핑"
+    timeout: 5000
+- tapOn: "쇼핑"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Shop"
+- pressKey: back

@@ -1,0 +1,9 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# 촬영(카메라) 화면에서 셔터 탭 → 크롭/확인 화면 진입
+# 화면이 FLAG_SECURE 라 스크린샷으로는 확인 불가하지만 접근성 트리는 정상 노출되므로
+# resource-id 기반 셀렉터로 안정 동작함.
+- tapOn:
+    id: "captureBtnImageView"
+- waitForAnimationToEnd
+- waitForAnimationToEnd

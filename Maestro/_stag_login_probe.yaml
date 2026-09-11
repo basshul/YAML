@@ -1,0 +1,53 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# stag 서버 계정 존재 확인용 1회 프로브
+#   .\run_test.ps1 은 쓰지 않고 직접 실행:
+#   maestro --device R3CW90MTK9H test --env STAG_ID=test123 _stag_login_probe.yaml
+#
+# 결과 판독:
+#   "이 ID는 존재하지 않습니다."  → 해당 ID 자체가 stag 서버에 없음
+#   그 외 오류(비밀번호 불일치 등) → ID는 존재, 비밀번호만 필요
+# 비밀번호 추측 반복은 계정 잠금 위험이 있어 시도 1회로 제한함.
+# ================================================================
+
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "신규 회원"
+    timeout: 40000
+
+- tapOn:
+    id: "btn_lgn"
+- tapOn:
+    id: "usernameId"
+- inputText: "${STAG_ID}"
+
+# 비밀번호: Gmetest1! (livetest 계정 기본값) 1회만 입력
+- tapOn:
+    id: "securityKeyboardEditText"
+- tapOn:
+    id: "transKeypad_row4"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- takeScreenshot: "_probe_${STAG_ID}"

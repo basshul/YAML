@@ -1,0 +1,736 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: HOME
+# 앱 1회 실행 후 [01] ~ [20] 순서대로 연속 실행
+# 각 케이스: 홈 화면 버튼 탭 → 1depth 화면 이동 확인 → 홈 복귀
+#
+# 실행 방법 (반드시 run_test.ps1 사용 — 언어 env 변수 필수):
+#   한국어: .\run_test.ps1 -lang ko -flow 09_Home.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 09_Home.yaml
+# ================================================================
+
+# 앱 실행 및 로그인 (PIN 1212)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] 홈 화면 기본 요소 노출 확인
+# ----------------------------------------------------------------
+- assertVisible:
+    text: "${TXT_GREETING}"
+- assertVisible:
+    text: "${TXT_NAME_SUFFIX}"
+- assertVisible:
+    text: "${TXT_ACCOUNT}"
+- assertVisible:
+    text: "GME Wallet"
+# GMEPay 가상 계좌: 비한국 계정에서만 노출
+- runFlow:
+    when:
+      visible:
+        text: "${TXT_GMEPAY_VIRTUAL}"
+    commands:
+      - assertVisible:
+          text: "${TXT_GMEPAY_VIRTUAL}"
+- assertVisible:
+    text: "${TXT_REGISTER_BANK}"
+
+# 잔액 표시 상태 확인 (***** 노출 여부로 마스킹 상태 직접 판별)
+- runFlow:
+    when:
+      visible:
+        text: "\\*\\*\\*\\*\\* KRW"
+    commands:
+      - assertVisible:
+          text: "\\*\\*\\*\\*\\* KRW"
+- runFlow:
+    when:
+      notVisible:
+        text: "\\*\\*\\*\\*\\* KRW"
+    commands:
+      - assertNotVisible:
+          text: "\\*\\*\\*\\*\\* KRW"
+
+# 송금 버튼 4종
+- assertVisible:
+    text: "${TXT_OVERSEAS_REMIT}"
+- assertVisible:
+    text: "${TXT_DOMESTIC_REMIT}"
+- assertVisible:
+    text: "${TXT_RECEIVE_OVERSEAS}"
+- assertVisible:
+    text: "${TXT_DEPOSIT}"
+
+# 하단 내비
+- assertVisible:
+    text: "${NAV_HOME}"
+- assertVisible:
+    text: "${NAV_HISTORY}"
+- assertVisible:
+    text: "${NAV_CARD}"
+- assertVisible:
+    text: "${NAV_PROFILE}"
+
+# 배너 노출 확인 (송금 섹션 ~ 최근 내역 사이)
+# ※ scrollUntilVisible: 최근 내역으로 스크롤 시 배너 인디케이터가 위에 노출됨
+- scrollUntilVisible:
+    element:
+      text: "${TXT_RECENT_HISTORY}"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    text: "\\d+/\\d+"
+- assertVisible:
+    text: "${TXT_RECENT_HISTORY}"
+- assertVisible:
+    text: "${TXT_MORE}"
+
+# 서비스 바로가기 (더 스크롤 후 확인)
+- scrollUntilVisible:
+    element:
+      text: "${TXT_CERTIFICATE}"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    text: "${TXT_FINANCE_PAYMENT}"
+- assertVisible:
+    text: "${TXT_ATM}"
+- assertVisible:
+    text: "${TXT_MOBILE_CHARGE}"
+- assertVisible:
+    text: "${TXT_BILL_PAYMENT}"
+# 개인 금융: 비한국 계정 또는 iOS에서만 노출
+- runFlow:
+    when:
+      visible:
+        text: "${TXT_PERSONAL_FINANCE}"
+    commands:
+      - assertVisible:
+          text: "${TXT_PERSONAL_FINANCE}"
+- assertVisible:
+    text: "${TXT_LIFE_TRAVEL}"
+- assertVisible:
+    text: "${TXT_GME_MOBILE}"
+- assertVisible:
+    text: "${TXT_RESERVATION}"
+- assertVisible:
+    text: "${TXT_CERTIFICATE}"
+
+# [01] 완료 후 앱 재시작 → 홈 화면 상단에서 [02] 시작
+- stopApp
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [02] [High] QR 버튼 탭 → 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    point: "76%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_QR}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [03] [High] 알림 버튼 탭 → 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    point: "89%, 7%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_NOTIFICATION}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [04] [Medium] 잔액 토글 상태 앱 재시작 후 유지 확인
+# ----------------------------------------------------------------
+# 화면 상단 고정 (토글 버튼이 최상단에 위치)
+- scrollUntilVisible:
+    element:
+      text: "${TXT_GREETING}"
+    direction: UP
+    timeout: 10000
+- takeScreenshot: "[04-debug]_토글_탭_전_화면_확인"
+
+# 초기 상태 정규화: 마스킹 상태이면 먼저 해제하여 '잔액 노출' 상태로 맞춤
+- runFlow:
+    when:
+      visible:
+        text: "\\*\\*\\*\\*\\* KRW"
+    commands:
+      - tapOn:
+          text: "${TXT_BALANCE}"
+      - waitForAnimationToEnd
+
+# 잔액 숨김 상태 저장 확인 (노출 → 숨김 → 재시작 → ***** KRW 유지)
+- tapOn:
+    text: "${TXT_BALANCE}"
+- waitForAnimationToEnd
+- stopApp
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+- assertVisible:
+    text: "\\*\\*\\*\\*\\* KRW"
+
+# 잔액 노출 상태 저장 확인
+- tapOn:
+    text: "${TXT_BALANCE}"
+- waitForAnimationToEnd
+- stopApp
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "${NAV_HOME}"
+    timeout: 30000
+- assertNotVisible:
+    text: "\\*\\*\\*\\*\\* KRW"
+
+# ----------------------------------------------------------------
+# [05] [High] GME Wallet 카드 탭 → My Wallet 화면 이동 확인
+# ----------------------------------------------------------------
+# GME Wallet 잔액 행 탭 → My Wallet 이동
+# .*KRW 패턴으로 잔액 금액 무관 매칭, index:1 = 카카오뱅크(0) 다음 GME Wallet(1)
+- tapOn:
+    text: ".*KRW"
+    index: 1
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_MY_WALLET}"
+
+# 홈 복귀 (My Wallet back 시 앱 종료 다이얼로그 발생 가능 → 아니오로 닫기)
+- pressKey: "back"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "${HOME_EXIT_CONFIRM}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [06] [High] 해외송금 탭 → 수취인 선택 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [07] [High] 국내송금 탭 → 국내송금 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn: "${TXT_DOMESTIC_REMIT}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_DOMESTIC_REMIT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [08] [High] 해외송금 받기 탭 → 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn: "${TXT_RECEIVE_OVERSEAS}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_RECEIVE_REMIT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [09] [High] 입금 탭 → 입금 방법 선택 바텀시트 발생 확인
+# ----------------------------------------------------------------
+- tapOn: "${TXT_DEPOSIT}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_SELECT_DEPOSIT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [10] [Medium] 최근 내역 더보기 탭 → 내역 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_MORE}"
+    direction: DOWN
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn: "${TXT_MORE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_HISTORY}"
+
+# 홈 복귀 (한국어: History 탭 전환 → bottom nav / 영어: 서브화면 → back)
+- runFlow:
+    when:
+      visible:
+        text: "${NAV_HOME}"
+    commands:
+      - tapOn: "${NAV_HOME}"
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [21] [High] 배너 자동 롤링 확인
+# ※ [10] 직후 홈 화면에서 배너가 이미 노출된 상태 → 스크롤 불필요
+# ※ 배너가 2개 이상인 경우만 롤링 검증 (1개면 runFlow 모두 SKIP)
+# ※ 롤링 주기 3~4초 → extendedWaitUntil timeout: 10000 으로 여유 확보
+# ----------------------------------------------------------------
+- assertVisible:
+    text: "\\d+/\\d+"
+
+# 케이스 A: 현재 1/2 → 2/2 롤링 → 다시 1/2 복귀 확인
+- runFlow:
+    when:
+      visible:
+        text: "1/2"
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            text: "1/2"
+          timeout: 10000
+      - assertVisible:
+          text: "2/2"
+      - extendedWaitUntil:
+          notVisible:
+            text: "2/2"
+          timeout: 10000
+      - assertVisible:
+          text: "1/2"
+
+# 케이스 B: 현재 2/2 → 1/2 롤링 확인 (케이스 A 이후에는 1/2이므로 SKIP)
+- runFlow:
+    when:
+      visible:
+        text: "2/2"
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            text: "2/2"
+          timeout: 10000
+      - assertVisible:
+          text: "1/2"
+
+# ----------------------------------------------------------------
+# [22] [High] 배너 선택 → 외부 링크 열림 → 홈 복귀
+# ----------------------------------------------------------------
+- assertVisible:
+    text: "\\d+/\\d+"
+
+# 배너 콘텐츠 탭 (인디케이터 제외한 좌측 본문 영역)
+- tapOn:
+    point: "40%, 40%"
+- waitForAnimationToEnd
+
+# 홈 복귀 (외부 브라우저/웹뷰에서 back)
+- pressKey: back
+- waitForAnimationToEnd
+# back 1회로 부족한 경우 재시도
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [11] [Medium] 최근 내역 재송금 탭 (국내) → 국내 송금 출금 계좌 선택 화면 이동 확인
+# ※ index: 0 = 최근 내역 첫 번째 재송금 버튼 (국내 거래 기준)
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_RESEND}"
+    direction: DOWN
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    text: "${TXT_RESEND}"
+    index: 0
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_DOMESTIC_REMIT}"
+- assertVisible:
+    text: "${SCR_SELECT_WITHDRAW}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [12] [Medium] 최근 내역 재송금 탭 → 화면 이동 확인
+# ※ 최근 내역이 2개 이상이면 index: 1 (두 번째), 1개뿐이면 index: 0 (첫 번째)
+# ※ 해외 거래 내역 존재 시 해외송금 상세 화면, 국내 거래 시 국내 송금 화면 이동
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_RESEND}"
+    direction: DOWN
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    text: "${TXT_RESEND}"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "${TXT_OVERSEAS_REMIT}"
+    commands:
+      - assertVisible:
+          text: "${TXT_OVERSEAS_REMIT}"
+- runFlow:
+    when:
+      visible:
+        text: "${SCR_DOMESTIC_REMIT}"
+    commands:
+      - assertVisible:
+          text: "${SCR_DOMESTIC_REMIT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [13] [High] ATM 출금 탭 → ATM 출금 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_ATM}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_ATM}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${TXT_ATM}"
+- assertVisible:
+    text: "${SCR_ATM_AMOUNT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [14] [High] 모바일 충전 탭 → 모바일 충전 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_MOBILE_CHARGE}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_MOBILE_CHARGE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${TXT_MOBILE_CHARGE}"
+- assertVisible:
+    text: "${SCR_MOBILE_CHARGE_SERVICE}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [15] [High] 청구서 결제 탭 → 청구서 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_BILL_PAYMENT}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_BILL_PAYMENT}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_BILL}"
+- assertVisible:
+    text: "${SCR_SELECT_COUNTRY}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [16] [High] GME 모바일 탭 → GME 텔레콤 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_GME_MOBILE}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_GME_MOBILE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_GME_TELECOM}"
+- assertVisible:
+    text: "${TXT_GME_MOBILE}"
+
+# 홈 복귀 (외부 앱 복귀 시 홍보 팝업 재발생 가능)
+- pressKey: "back"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "${BTN_CLOSE}"
+    commands:
+      - tapOn: "${BTN_CLOSE}"
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [17] [High] 예약 탭 → 예약 바텀시트 발생 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_RESERVATION}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_RESERVATION}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_TRAIN_TICKET}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [18] [High] 증명서 발급 탭 → 증명서 발급 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_CERTIFICATE}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_CERTIFICATE}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${TXT_CERTIFICATE}"
+- assertVisible:
+    text: "${SCR_CERTIFICATE_DESC}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [19] [High] 이벤트 탭 → 이벤트 화면 이동 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_EVENT}"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "${TXT_EVENT}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${TXT_EVENT}"
+- assertVisible:
+    text: "${SCR_ONGOING_EVENT}"
+
+# 홈 복귀
+- pressKey: "back"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# ----------------------------------------------------------------
+# [20] [Medium] 플로팅 버튼 탭 → 고객지원 바텀시트 항목 확인 및 각 항목 진입
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${TXT_GREETING}"
+    direction: UP
+    timeout: 10000
+
+# 바텀시트 노출 및 항목 확인
+- tapOn:
+    point: "91%, 78%"
+- waitForAnimationToEnd
+- takeScreenshot: "[20-1]_CS_바텀시트_노출"
+- assertVisible:
+    text: "${SCR_SUPPORT_Q}"
+- assertVisible:
+    text: "${SCR_LIVE_CHAT}"
+- assertVisible:
+    text: "${SCR_KAKAO}"
+- assertVisible:
+    text: "${SCR_PHONE}"
+
+# Live Chat 탭 → 화면 이동 확인 → 홈 복귀
+- tapOn: "${SCR_LIVE_CHAT}"
+- waitForAnimationToEnd
+- takeScreenshot: "[20-2]_Live_Chat_진입"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - pressKey: Back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# Kakao 탭 → 화면 이동 확인 → 홈 복귀
+- tapOn:
+    point: "91%, 78%"
+- waitForAnimationToEnd
+- tapOn: "${SCR_KAKAO}"
+- waitForAnimationToEnd
+- takeScreenshot: "[20-3]_Kakao_진입"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - pressKey: Back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# 1811-2961 탭 → 전화 연결 화면 확인 → 홈 복귀
+- tapOn:
+    point: "91%, 78%"
+- waitForAnimationToEnd
+- tapOn: "${SCR_PHONE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[20-4]_전화연결_진입"
+- pressKey: Back
+- waitForAnimationToEnd
+- pressKey: Back
+- waitForAnimationToEnd
+# 전화 다이얼러에서 복귀 시 CS 바텀시트가 다시 노출될 수 있음 → Cancel로 닫기
+- runFlow:
+    when:
+      visible:
+        text: "${TXT_CANCEL}"
+    commands:
+      - tapOn: "${TXT_CANCEL}"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "${NAV_HOME}"
+    commands:
+      - pressKey: Back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "${NAV_HOME}"
+
+# 취소 버튼 확인
+- tapOn:
+    point: "91%, 78%"
+- waitForAnimationToEnd
+- tapOn: "${TXT_CANCEL}"
+- waitForAnimationToEnd
+- takeScreenshot: "[20-5]_취소_홈복귀"
+- assertVisible:
+    text: "${NAV_HOME}"
+

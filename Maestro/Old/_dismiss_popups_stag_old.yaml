@@ -1,0 +1,63 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 홈을 덮는 팝업 큐를 전부 닫는다 — 구 UI (2026-08-21 작성)
+# ⚠️ 파일명에 stag가 있지만 **빌드 전용이 아니다**. 팝업은 livetest 빌드에도 뜨므로
+#   appId를 `${APP_ID}`로 바꿔 어느 빌드에서나 쓸 수 있게 했다(2026-08-27).
+# ================================================================
+# 호출:
+#   - runFlow:
+#       file: _dismiss_popups_stag_old.yaml
+#
+# ⚠️ **팝업은 하나가 아니라 큐로 연달아 뜬다**(stag 72000062 실측).
+#   하나만 닫고 홈(btnTransfer)을 기다리면 다음 팝업에 가려 타임아웃으로 죽는다.
+#   실제 사고: 24개 언어 플로우 첫 언어에서 `btnTransfer is visible` FAILED
+#              — 배너 B를 닫았더니 그 아래에 비밀번호 변경 안내가 깔려 있었음.
+#
+# 확인된 팝업 4종(전부 bottom_sheet):
+#   1) 비밀번호 변경 안내   imgvClose / btnChangeNow / btn6MonthsLater
+#      → `btn6MonthsLater`("6개월 뒤에 변경하기").
+#        ⚠️ `btnChangeNow`는 비밀번호 변경 화면으로 진입하므로 절대 누르지 말 것.
+#   2) 자동이체 갱신 안내   close / btn_okay / btnCancel
+#      → `btnCancel`("취소").
+#        ⚠️ `btn_okay`는 실제 자동이체 갱신이라 절대 누르지 말 것.
+#   3) 인앱배너 B(캐러셀)   scrim / bannerImage / btnDontShowToday / btnClose
+#      → `btnDontShowToday`("오늘 하루 보지 않기")로 하루치를 억제한다.
+#   4) 인앱배너 A          inAppBannersViewPager / imgvCross(X) / btnOne / btnTwo
+#      → `imgvCross`.
+#   5) **증빙 서류 안내**    updateBtn / remindLaterBtn  ← 2026-08-27 추가 (7.20.0-stag 실측)
+#      → `remindLaterBtn`("나중에 하기").
+#        ⚠️ `updateBtn`("지금 업로드")은 서류 업로드 화면으로 진입하므로 절대 누르지 말 것.
+#      이 팝업 때문에 `01_01_Login_Success`가 배너를 닫은 뒤에도 `btnTransfer` assert로 실패했다.
+#
+# 팝업이 없으면 while 조건이 거짓이라 통째로 SKIP된다(홈에서 호출해도 안전).
+# `times`로 상한을 둬서 닫히지 않는 팝업이 있어도 무한 루프에 빠지지 않게 한다.
+# ================================================================
+
+- repeat:
+    times: 6
+    while:
+      visible:
+        id: "btn6MonthsLater|btnCancel|btnDontShowToday|imgvCross|remindLaterBtn|btnClose"
+    commands:
+      - tapOn:
+          id: "btn6MonthsLater"
+          optional: true
+      - tapOn:
+          id: "btnCancel"
+          optional: true
+      - tapOn:
+          id: "btnDontShowToday"
+          optional: true
+      - tapOn:
+          id: "imgvCross"
+          optional: true
+      - tapOn:
+          id: "remindLaterBtn"
+          optional: true
+      # 7.20.0 배너는 닫기 id가 `btnClose`다(7.19.x는 `btnTwo`).
+      #   `btnDontShowToday`가 먼저 처리되므로 여기까지 오는 건 그 버튼이 없는 배너다.
+      - tapOn:
+          id: "btnClose|btnTwo"
+          optional: true
+      - waitForAnimationToEnd

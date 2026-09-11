@@ -1,0 +1,69 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# Step 2/3 UI 확인용 진단 테스트 (GME Wallet 1회 - 미래 날짜)
+
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 해외송금 → 예약 탭 → GME Wallet 선택
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- waitForAnimationToEnd
+- tapOn:
+    id: "foreground"
+    index: 0
+- waitForAnimationToEnd
+
+# 1회 선택 → 날짜/시간 기본값(미래) 유지
+- tapOn:
+    id: "three_month"
+- waitForAnimationToEnd
+- tapOn:
+    id: "et_dateSelection"
+- waitForAnimationToEnd
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "time_selection"
+- waitForAnimationToEnd
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+
+# Step 1 → Step 2 진입
+- tapOn:
+    id: "btn_continue"
+- waitForAnimationToEnd
+
+# Step 2: 금액 입력 (수취인 받을 금액)
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "10"
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: debug_step2_amount
+- tapOn:
+    id: "btn_continue"
+- waitForAnimationToEnd
+
+# Step 3 화면 스크린샷
+- takeScreenshot: debug_step3
+- waitForAnimationToEnd

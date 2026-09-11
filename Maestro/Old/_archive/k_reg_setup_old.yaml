@@ -1,0 +1,107 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# 금보원 시트 - 회원가입 캡처/녹화 차단 검증용 진입 플로우
+# ================================================================
+# 목적: stag 빌드에서 회원가입 경로를 타고 "신분증 타입 선택" 화면까지 진입.
+#       이후 촬영/크롭/OCR 화면별 캡처·녹화 차단 검증은 sec_check.ps1 이 담당하므로
+#       이 플로우는 화면 진입까지만 책임짐.
+#
+# 실행:
+#   maestro --device R3CW90MTK9H test \
+#     --env KB_ID=kbwtest01 --env KB_PHONE=90380701 --env KB_NAT=내국인 k_reg_setup.yaml
+#
+# 주의: 실제 가입 완료 단계까지 가지 않음(실데이터 생성 방지). 신분증 화면 검증 후 중단.
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# stag 빌드 Server Override 스플래시
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "신규 회원"
+    timeout: 40000
+- tapOn: "신규 회원"
+- waitForAnimationToEnd
+
+# 이용약관: 모두 동의 → 확인
+- assertVisible:
+    text: "이용약관"
+- tapOn: "모두 동의합니다"
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# Sign Up 기본 정보
+- extendedWaitUntil:
+    visible:
+      text: "사용자 ID"
+    timeout: 20000
+- tapOn: "사용자 ID"
+- inputText: "${KB_ID}"
+- waitForAnimationToEnd
+
+# 비밀번호 / 비밀번호 확인: <정상 비밀번호> (보안 키패드 - 접근성 레이블 탭)
+- tapOn: "비밀번호"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+- tapOn: "비밀번호 확인"
+- waitForAnimationToEnd
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# 휴대폰 번호 (010 뒤 8자리)
+- tapOn: "휴대폰 번호"
+- waitForAnimationToEnd
+- inputText: "${KB_PHONE}"
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 국적 선택 (내국인 / 외국인)
+- tapOn: "국적"
+- waitForAnimationToEnd
+- tapOn: "${KB_NAT}"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${KB_NAT}"
+
+# 다음 → 신분증 타입 선택 화면
+- tapOn: "다음"
+- waitForAnimationToEnd
+- waitForAnimationToEnd

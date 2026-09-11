@@ -1,0 +1,4 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# W09: 헤더 appId 하드코딩 → -AppId로 빌드를 바꿀 수 없다
+- waitForAnimationToEnd

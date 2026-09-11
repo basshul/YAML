@@ -1,0 +1,287 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: GME Wallet Statement — 구 UI
+# ================================================================
+#  진행: 2026-08-18 구 UI 기준 **전면 재작성**. 이전 버전은 개편 UI 기준이라 진입부터 깨졌다.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# ⚠️ **한국인 계정(seungsoo818) 기준.** 이 파일은 한국어 문구를 직접 쓴다(구 UI는 id가 대부분
+#   살아 있어 언어 의존이 적고, 남은 몇 개는 이 화면 고유 문구다). 다국어 순회 대상이 아니다.
+#
+# 개편UI → 구 UI 전환에서 실제로 바뀐 것 (2026-08-18 실측):
+#   진입 경로 **개편UI: 홈 좌표(89%,43%) → "My Wallet" → "내역"(index 0) → 계좌 화면** 3단계였는데,
+#             구 UI는 **홈 서비스 그리드 "GME Wallet 거래내역" 한 번**으로 바로 계좌 화면에 간다.
+#             → 중간의 My Wallet 화면과 좌표 탭이 전부 사라졌다(Compose 좌표 함정도 같이 사라짐).
+#   홈 판정   `text: "Home"` → 하단 내비 **id `bottom_item_home`**
+#   화면      `new_history.account.NewAccountHistoryActivity` — toolbar_title "계좌"
+#             `transactionTabLayout`("Wallet 거래내역" / "은행 명세서") / `txvWalletNumber`
+#             / `txvBalance`("잔액") + `txvTranAmount` / `filterView` + `txvDateText` + `imgvFilter`
+#             / `walletStatementHistoryRv` / `downloadLayout` + `download` / `imgvSearchIcon`
+#   필터 시트 **개편UI와 id 체계가 같다**(그대로 재사용): dialog_header("설정") / `dialog_close`
+#             / `tv_period`("조회 기간") / `one_month`("1개월") `three_month` `one_year`
+#             / `date1` `date2` / `tv_search`("Status") / `rb_all`("모든 거래") `rb_deposit`("입금")
+#             `rb_withdrawal`("출금") / `search`("검색")
+#
+# ⚠️ **홈 그리드 라벨은 줄바꿈이 들어 있다**: `GME Wallet\n거래내역`.
+#   Maestro 텍스트 매칭은 전체매칭인데 `.`은 개행에 안 걸리므로 `.*거래내역.*`으로는 못 잡는다
+#   → **`[\s\S]*거래내역[\s\S]*`**를 쓴다. ("거래내역"은 붙여쓰기라 하단 내비의 "거래 내역"(공백)과
+#     구분된다 — 홈에서 유일하다)
+#
+# ⚠️ **잔액은 비동기 로딩이다.** 진입 직후에는 `txvBalance`/`txvTranAmount`가 아예 없고 수십 초 뒤에
+#   채워진다(실측: 7초 시점엔 없고 27초 시점엔 있었다). 15초로는 부족해 **90초**로 기다린다.
+#
+# ⚠️ 홈으로 돌아오면 **인앱 배너 팝업이 다시 뜬다** → `btnTwo`로 닫아야 홈 요소가 보인다
+#   ([[project_07_todaysrate]]와 같은 함정).
+#
+# 📌 필터 결과 검증 포인트: 적용한 필터가 **`txvDateText`에 그대로 찍힌다**
+#   기본 "2026-02-18 ~ 2026-08-18 / ALL" → 입금 필터 적용 후 "… / Deposit"(실측).
+#   날짜 필터는 오늘 날짜에 따라 값이 바뀌므로 **하드코딩하지 않고 "변했는지"로 판정**한다.
+#
+# ClickUp `[GME Wallet Statement] 시나리오`(z8nfn6m9z1) 대조 — 2026-08-18
+#   ✅ 커버완료 2건 (= 이 시나리오의 케이스 전부)
+#      z8nfn6ma62  Statement - 잔액 정상 노출 확인        → [01]
+#      z8nfn6ma63  Statement - 필터동작 확인 - 상태, 날짜 → [02]
+#   ※ 같은 화면을 쓰는 History 쪽 케이스가 따로 있다(진입 경로가 거래내역 탭이라 이 파일 범위 아님):
+#     z8nfn6ma4x Wallet Statement 잔액 / z8nfn6ma4y 필터 / z8nfn6ma50 검색
+#     z8nfn6ma51 Bank Statement 조회 / z8nfn6ma52 Bank Statement 검색
+#     → 04_Menu_History_old 작업 시 **이 화면 셀렉터를 그대로 재사용할 수 있다**(은행 명세서 탭,
+#       `imgvSearchIcon` 검색까지 여기 다 있다).
+#
+# 케이스 목록:
+#   [01] [High] Statement - 잔액 정상 노출 확인
+#   [02] [High] Statement - 필터동작 확인 - 상태, 날짜
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\17_WalletStatement_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+# 잠금화면을 명시적으로 대기한 뒤 PIN 입력(캐시된 홈에 먼저 매칭되는 레이스 회피).
+# 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수 — 오입력 누적은 계정 잠금이다.
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] Statement - 잔액 정상 노출 확인
+# CLICKUP: z8nfn6ma62
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "[\\s\\S]*거래내역[\\s\\S]*"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "[\\s\\S]*거래내역[\\s\\S]*"
+- extendedWaitUntil:
+    visible:
+      id: "toolbar_title"
+    timeout: 20000
+- assertVisible: "계좌"
+- assertVisible:
+    id: "transactionTabLayout"
+- assertVisible: "Wallet 거래내역"
+- assertVisible: "은행 명세서"
+- assertVisible:
+    id: "txvWalletNumber"
+# 잔액은 비동기 로딩 — 넉넉히 기다린다(헤더 주석 참고)
+- extendedWaitUntil:
+    visible:
+      id: "txvBalance"
+    timeout: 90000
+- assertVisible: "잔액"
+- assertVisible:
+    id: "txvTranAmount"
+- assertVisible:
+    id: "walletStatementHistoryRv"
+- takeScreenshot: "[01]_계좌_잔액노출"
+
+# ----------------------------------------------------------------
+# [02] [High] Statement - 필터동작 확인 - 상태, 날짜
+# CLICKUP: z8nfn6ma63
+# ----------------------------------------------------------------
+# 필터 적용 전 조회기간 문자열을 보관해 둔다(날짜는 실행일에 따라 달라지므로 값이 아니라
+#   **변했는지**로 판정한다)
+- assertVisible:
+    id: "txvDateText"
+- copyTextFrom:
+    id: "txvDateText"
+- evalScript: ${output.beforeFilter = maestro.copiedText}
+
+# ---- 필터 시트 요소 확인 ----
+- tapOn:
+    id: "imgvFilter"
+- extendedWaitUntil:
+    visible:
+      id: "search"
+    timeout: 20000
+- assertVisible: "설정"
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "date1"
+- assertVisible:
+    id: "date2"
+- assertVisible:
+    id: "rb_all"
+- assertVisible:
+    id: "rb_deposit"
+- assertVisible:
+    id: "rb_withdrawal"
+- assertVisible:
+    id: "dialog_close"
+- takeScreenshot: "[02-1]_필터시트"
+
+# ---- 상태 필터: 입금 ----
+# 적용 결과가 txvDateText 뒤에 "/ Deposit"으로 찍힌다(영문 고정 문자열)
+- tapOn:
+    id: "rb_deposit"
+- tapOn:
+    id: "search"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Deposit[\\s\\S]*"
+    timeout: 20000
+- takeScreenshot: "[02-2]_상태필터_입금"
+
+# ---- 날짜 필터: 1개월 ----
+# 조회기간이 실제로 좁혀졌는지 = 문자열이 바뀌었는지로 본다
+- tapOn:
+    id: "imgvFilter"
+- extendedWaitUntil:
+    visible:
+      id: "one_month"
+    timeout: 20000
+- tapOn:
+    id: "one_month"
+- tapOn:
+    id: "search"
+- waitForAnimationToEnd
+- copyTextFrom:
+    id: "txvDateText"
+- assertTrue: ${maestro.copiedText !== output.beforeFilter}
+# 날짜를 바꿔도 상태 필터(입금)는 유지된다
+- assertVisible: "[\\s\\S]*Deposit[\\s\\S]*"
+- takeScreenshot: "[02-3]_날짜필터_1개월"
+
+# ---- 원복: 모든 거래 + 1년 ----
+# 다음 실행이 같은 조건에서 시작하도록 되돌린다(rb_all 동작 확인도 겸한다)
+- tapOn:
+    id: "imgvFilter"
+- extendedWaitUntil:
+    visible:
+      id: "rb_all"
+    timeout: 20000
+- tapOn:
+    id: "rb_all"
+- tapOn:
+    id: "one_year"
+- tapOn:
+    id: "search"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*ALL[\\s\\S]*"
+    timeout: 20000
+- takeScreenshot: "[02-4]_필터_원복"
+
+# ================================================================
+# 홈 복귀
+# ================================================================
+- pressKey: back
+- waitForAnimationToEnd
+# 홈으로 돌아오면 배너 팝업이 다시 뜬다 → 닫고 하단 내비로 판정
+# (그리드까지 스크롤한 상태라 상단 `btnTransfer`는 트리에 없다)
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000

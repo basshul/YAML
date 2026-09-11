@@ -1,0 +1,68 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 구 UI 홈 → "해외송금 받기" 진입
+# ================================================================
+# 13_ReceiveOverseas_old가 3군데에서 같은 진입을 반복하므로 분리했다.
+#
+# ⚠️ **구 UI 그리드 라벨에는 실제 개행이 들어 있다** — `title` 값이 "해외송금\n받기"다.
+#   maestro 텍스트 매칭은 **개행을 넘지 못한다** → `해외송금 받기`(공백)로는 안 잡힌다.
+#   `해외송금[\s\S]*받기` 로 잡아야 한다([[feedback_maestro_regex_yaml]]).
+#   ※ YAML 이중인용에서는 백슬래시를 2겹으로 쓴다.
+# ⚠️ 그리드 첫 항목이 "해외송금"(해외 송금 보내기)이라 `해외송금`만으로 잡으면 **다른 메뉴**로 간다
+#   → 반드시 `받기`까지 포함한 패턴을 쓸 것.
+# ⚠️ 홈 그리드는 비동기 로딩 + 스크롤 필요 → scrollUntilVisible 로 실제 렌더까지 기다린다.
+# ================================================================
+
+# 홈 복귀 직후 인앱 배너가 떠 있을 수 있다
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "해외송금[\\s\\S]*받기"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn: "해외송금[\\s\\S]*받기"
+- waitForAnimationToEnd
+
+# ★ **구 UI에는 개편UI에 없던 "수취 방법 선택" 바텀시트가 한 단계 더 있다** (2026-08-20 실측)
+#   `sheetTitle`("수취 방법 선택") / `closeButton`
+#   `individualRemittanceRow`("개인 송금" — 청구서 없이 개인 은행 계좌로 받기)
+#   `invoicePaymentRow`("청구서 지급" — 인보이스로 대학·병원·기업 계좌에 지급)
+#   → 13_ReceiveOverseas의 케이스들은 인바운드 환율계산·송금인 등록 흐름이므로 **개인 송금**이다.
+#     통과하면 `newInboundType.view.InsertPinAndRecieveActivity`("송금 받기")로 간다.
+#   ⚠️ 시트가 없는 경로(이미 목적 화면인 경우)도 있을 수 있어 **조건부**로 처리한다.
+- extendedWaitUntil:
+    visible:
+      text: "수취 방법 선택|송금 받기|받는 계좌"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "individualRemittanceRow"
+    commands:
+      - tapOn:
+          id: "individualRemittanceRow"
+      - waitForAnimationToEnd
+
+# ★ 시트를 닫으면 다음 화면이 **새로 로드된다**. 로딩이 끝나기 전에 호출부가 분기 조건을
+#   평가하면 **모든 갈래가 조용히 SKIP되어 엉뚱한 화면에 남는다.**
+#   2026-09-04 실측: 카드 목록(ActiveTxnListActivity)이 뜨는 중인데 `"받는 계좌"` 조건이 SKIP됐고,
+#   호출부가 그대로 진행해 `tv_countryCode`를 못 찾고 죽었다.
+#   → 도달 가능한 세 화면 중 하나가 나올 때까지 **여기서** 기다린다(호출부마다 넣지 않아도 되게).
+#     수취인 목록 = "수취 방법"(`tv_htr`) / 카드 목록 = "받는 계좌" / 요청 상세 = "요청 완료"
+- extendedWaitUntil:
+    visible:
+      text: "수취 방법|받는 계좌|요청 완료"
+    timeout: 40000

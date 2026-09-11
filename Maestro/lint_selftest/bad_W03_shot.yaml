@@ -1,0 +1,6 @@
+appId: ${APP_ID}
+---
+# W03: 캡처 차단 화면 근처의 takeScreenshot
+- assertVisible:
+    id: "captureBtnImageView"
+- takeScreenshot: "shot"

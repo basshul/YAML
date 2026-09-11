@@ -1,0 +1,174 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: ATM Withdraw
+# ================================================================
+# 2026-07-09 실기기 탐색으로 [01]~[04] 전체 작성 완료.
+# 진입 경로: Home > 금융 & 결제 > "ATM 출금" (스크롤 필요, content-desc="ATM 출금")
+# [01]~[04]는 같은 "ATM 출금" 화면에서 이어서 진행(재진입 불필요) - 마지막 [04]에서
+# 신청/취소까지 마친 뒤에만 Home으로 복귀함.
+#
+# 주의(실기기 확인, 중요): "다음"/"+"/"-" 버튼은 GME Wallet 잔액이 출금액+수수료
+# (기본 10,000 + 1,500 = 11,500 KRW) 이상이어야 활성화됨. 잔액이 부족하면 전부
+# disabled 상태로 남고 "잔액이 충분하지 않습니다." 에러만 노출되어 [02]~[04] 진행이
+# 불가능함 - 테스트 계정에 최소 11,500 KRW 이상의 GME Wallet 잔액이 있어야 함.
+#
+# 주의(실기기 확인, 중요): [04]에서 "신청"은 실제로 GME Wallet에서 출금액+수수료를
+# 차감/보류하는 실제 자금 액션임. 이 테스트는 실제 편의점에서 물리적으로 현금을 뽑는
+# 것까지는 확인하지 않지만(사용자 지시), 신청 자체와 그 직후의 "취소"까지는 실행해서
+# ATM Withdrawal 정보 화면 노출을 검증함 - 취소 성공 시 자금이 복원됨.
+#
+# 알려진 이슈(실기기 확인, 2026-07-09): "취소" 확인 시점에 신청 시 발급된 OTP가
+# 만료되어 있으면, 올바른 간편비밀번호를 입력해도 "OTP 코드가 만료되었습니다" 에러가
+# 뜨고 취소가 처리되지 않은 채 새 출금번호로 갱신된 화면으로 돌아감. 이 경우 확인 후
+# 취소를 한 번 더 시도하면 정상 처리됨 - 아래 [04]에 자가복구(self-heal) 로직으로 반영.
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ATM 출금 진입: Home > 금융 & 결제 섹션까지 스크롤 후 탭
+- scrollUntilVisible:
+    element:
+      text: "ATM 출금"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "ATM 출금"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "출금 금액"
+
+# ----------------------------------------------------------------
+# [01] [Low] Withdraw - First time using ATM Withdrawal 선택 시 가이드 페이지 이동 확인
+#            - 출금가이드 정상 진입 확인
+# ----------------------------------------------------------------
+
+- tapOn:
+    id: "atmWithdrawalFirstTimeGuide"
+- assertVisible:
+    text: "ATM에서 출금하는 방법"
+- assertVisible:
+    id: "serviceProviderRv"
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "출금 금액"
+
+# ----------------------------------------------------------------
+# [02] [Low] Withdraw - [Next] 버튼 선택 시 ATM 선택 바텀시트 발생 확인
+#            - ATM 리스트 및 선택 확인
+# ----------------------------------------------------------------
+
+- tapOn:
+    id: "btnNext"
+- assertVisible:
+    text: "현금을 인출할 편의점을 선택하세요."
+- assertVisible:
+    id: "rvAtmWithdrawalSP"
+- tapOn:
+    id: "close"
+
+# ----------------------------------------------------------------
+# [03] [High] Withdraw - 출금금액 입력동작 확인 (- / + 동작 확인)
+# ----------------------------------------------------------------
+
+# 금액 표시는 "1"(편집 가능한 id: amount)과 "0,000 KRW"(고정 접미사) 두 요소로
+# 분리되어 있어 전체 문자열("10,000 KRW")로는 assertVisible 매칭이 안 됨(실기기 확인,
+# 2026-07-09) - id: amount 노드의 값("1"/"2")으로 검증
+
+# + 버튼 확인 (10,000 → 20,000)
+- tapOn:
+    id: "plusAmount"
+- assertVisible:
+    id: "amount"
+    text: "2"
+
+# - 버튼 확인 (20,000 → 10,000, 다음 케이스를 위해 기본값으로 복귀)
+- tapOn:
+    id: "minusAmount"
+- assertVisible:
+    id: "amount"
+    text: "1"
+
+# ----------------------------------------------------------------
+# [04] [High] Withdraw - Apply 동작 확인 - ATM Withdrawal 정보 확인
+# ----------------------------------------------------------------
+
+- tapOn:
+    id: "btnNext"
+- assertVisible:
+    text: "현금을 인출할 편의점을 선택하세요."
+- tapOn: "GS25"
+- assertVisible:
+    text: ".*신청하시겠습니까.*"
+- tapOn:
+    id: "btnApply"
+# 간편비밀번호 입력 (숫자 배치가 매번 랜덤이라 content-desc 기반 tapOn 사용)
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- assertVisible:
+    id: "withdrawalNumber"
+- assertVisible:
+    id: "timelimit"
+
+# 정리(사후처리): 실제 편의점 방문 없이 신청을 취소해 자금을 복원함
+- tapOn:
+    id: "btnCancel"
+- assertVisible:
+    text: ".*취소하시겠습니까.*"
+- tapOn:
+    id: "btn_yes"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# 자가복구: OTP 만료로 취소가 실패하면 확인 후 한 번 더 시도
+- runFlow:
+    when:
+      visible:
+        text: ".*OTP.*만료.*"
+    commands:
+      - tapOn: "확인"
+      - tapOn:
+          id: "btnCancel"
+      - assertVisible:
+          text: ".*취소하시겠습니까.*"
+      - tapOn:
+          id: "btn_yes"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 15000

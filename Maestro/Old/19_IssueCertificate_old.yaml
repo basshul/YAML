@@ -1,0 +1,393 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Issue Certificate (증명서 발급)
+# 범위(사용자 지시): 각 증명서를 "인증 수단(본인인증) 선택" 화면까지만 진행.
+#   → 인증수단은 실제로 선택하지 않음(그 이후 본인인증/발급은 미진행).
+# 진입: 홈 하단 서비스 목록의 "증명서 발급"(ActivityGovHome). 증명서 선택 → 약관 동의
+#   → (증명서별 선행 단계) → WeCheck "시작하기" → "인증 수단 선택"(GovServiceWebActivity, WebView).
+# 증명서별 선행 단계:
+#   [01] 외국인등록사실증명: 없음(약관 후 바로 WeCheck)
+#   [02] 소득금액증명(홈택스): 조회기간(시작/종료 연도) 선택 → 계속
+#   [03] 주민등록초본 / [04] 주민등록등본(정부24): 주소(시/도 + 시군구) 직접 선택 → 계속
+# 주의: WeCheck 세션은 지연 시 만료(WC0006)되므로 흐름을 지체 없이 진행. 홈 서비스목록은
+#   비동기 로딩이라 scrollUntilVisible(가시성 20%, centerElement)로 견고화.
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+# ⚠️ 2026-08-19 구 UI로 교체. 개편UI 기준이던 부분을 전부 고쳤다:
+#   1) `launchApp` 뒤 첫 화면을 **명시적으로 기다린다** — 그냥 waitForAnimationToEnd만 두면
+#      콜드 스타트에서 Server Override가 늦게 떠 아래 조건부 블록이 전부 SKIP되고 홈 판정에서 죽는다.
+#   2) **Server Override 처리 추가** — 종전 파일엔 아예 없었다(livetest 빌드는 매 실행 노출).
+#   3) 홈 판정 `text: "홈"` → 구 UI 하단 내비 라벨은 **"홈으로"**라 전체매칭에 안 걸린다 → id `btnTransfer`.
+#   4) 세션만료 `OK → 홈` 처리 제거 — 구 UI에서 세션이 끊기면 **ID/비밀번호 재로그인**이 필요해
+#      다이얼로그만 닫는 건 무의미하다. 뜨면 실패로 드러내고 `01_01_Login_Success_old.yaml`로 복구한다.
+#   5) 보이스피싱·인앱배너 팝업 처리 추가(구 UI에서 실제로 뜬다).
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기 필수 —
+#   없으면 maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력됨(누적되면 계정 잠금 위험).
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+- waitForAnimationToEnd
+# 홈 코치마크 balloon(별도 팝업 윈도우)이 뜨면 아래 노드를 못 읽으므로 먼저 닫기
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] [High] Certificate - 외국인등록사실증명(Certificate of Alien Registration)
+#            인증 수단 선택 단계까지 정상 진행 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "외국인등록사실증명"
+    timeout: 20000
+- tapOn: "외국인등록사실증명"
+- waitForAnimationToEnd
+# 약관 동의 (해당 증명서 최초 진행 시에만 노출)
+- runFlow:
+    when:
+      visible:
+        id: "agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "agreeallcheckboxtitle"
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+# WeCheck 인트로 → 시작하기 → 인증 수단 선택(여기까지만)
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+# 인증수단 미선택 → back으로 홈 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+# 홈 복귀 판정 — 서비스 목록까지 스크롤한 상태로 돌아오므로 상단 `btnTransfer`는 트리에 없다.
+# 스크롤과 무관한 하단 내비로 보고, 재등장하는 인앱 배너는 먼저 닫는다.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [02] [High] Certificate - 소득금액증명(Certificate of Alien Income, 홈택스)
+#            조회기간(연도) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "소득금액증명"
+    timeout: 20000
+- tapOn: "소득금액증명"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "agreeallcheckboxtitle"
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+# 홈택스 소득증명 전용: 조회기간(시작/종료 연도) 선택 → 계속 (기본값 수락)
+- extendedWaitUntil:
+    visible:
+      text: "원하는 기간을 선택해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "fromyear"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "toyear"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+# 홈 복귀 판정 — 서비스 목록까지 스크롤한 상태로 돌아오므로 상단 `btnTransfer`는 트리에 없다.
+# 스크롤과 무관한 하단 내비로 보고, 재등장하는 인앱 배너는 먼저 닫는다.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [03] [High] Certificate - 주민등록초본(Resident Registration, For Koreans)
+#            주소(시/도+시군구) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "주민등록초본"
+    timeout: 20000
+- tapOn: "주민등록초본"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "agreeallcheckboxtitle"
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+# 주민등록 증명서 전용: 주소(시/도 + 시군구) 직접 선택 → 계속
+- extendedWaitUntil:
+    visible:
+      text: "주민등록상 주소를 확인해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "dp_city"
+- tapOn: "서울특별시"
+- tapOn:
+    id: "dp_address"
+- tapOn: "강남구"
+- tapOn:
+    id: "btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+# 홈 복귀 판정 — 서비스 목록까지 스크롤한 상태로 돌아오므로 상단 `btnTransfer`는 트리에 없다.
+# 스크롤과 무관한 하단 내비로 보고, 재등장하는 인앱 배너는 먼저 닫는다.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [04] [High] Certificate - 주민등록등본(Household Register, For Koreans)
+#            주소(시/도+시군구) 선택 → 인증 수단 선택 단계까지
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "증명서 발급"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+    centerElement: true
+- tapOn: "증명서 발급"
+- extendedWaitUntil:
+    visible:
+      text: "주민등록등본"
+    timeout: 20000
+- tapOn: "주민등록등본"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "agreeallcheckboxtitle"
+    commands:
+      - tapOn:
+          id: "agreeallcheckboxtitle"
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+# 주민등록 증명서 전용: 주소(시/도 + 시군구) 직접 선택 → 계속
+- extendedWaitUntil:
+    visible:
+      text: "주민등록상 주소를 확인해 주세요."
+    timeout: 20000
+- tapOn:
+    id: "dp_city"
+- tapOn: "서울특별시"
+- tapOn:
+    id: "dp_address"
+- tapOn: "강남구"
+- tapOn:
+    id: "btn_next"
+- extendedWaitUntil:
+    visible:
+      text: "시작하기"
+    timeout: 20000
+- tapOn: "시작하기"
+- extendedWaitUntil:
+    visible:
+      text: "인증 수단 선택"
+    timeout: 30000
+- assertVisible: "인증 수단을 선택해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+# 홈 복귀 판정 — 서비스 목록까지 스크롤한 상태로 돌아오므로 상단 `btnTransfer`는 트리에 없다.
+# 스크롤과 무관한 하단 내비로 보고, 재등장하는 인앱 배너는 먼저 닫는다.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000

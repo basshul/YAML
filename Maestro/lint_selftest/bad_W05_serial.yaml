@@ -1,0 +1,5 @@
+appId: ${APP_ID}
+---
+# W05: 기기 시리얼 하드코딩 (주석에 있어도 잡아야 한다)
+#   .\run_test.ps1 -flow x.yaml -device 0123456789abcdef
+- waitForAnimationToEnd

@@ -1,0 +1,6 @@
+appId: ${APP_ID}
+---
+# W10: 연동 계좌 목록에서 은행명을 전제 단언 없이 탭
+- assertVisible:
+    id: "rvKftcList"
+- tapOn: "신한은행"

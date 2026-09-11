@@ -1,0 +1,91 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- tapOn:
+    id: "btn_lgn"
+- tapOn:
+    id: "usernameId"
+- inputText: "seungsoo818"
+- tapOn:
+    id: "securityKeyboardEditText"
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "오류"
+    commands:
+      - tapOn: "확인"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "securityKeyboardEditText"
+      - tapOn: "대문자 키보드 변경"
+      - tapOn: "Capital G 히읃"
+      - tapOn: "m 으"
+      - tapOn: "e 디귿"
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "특수문자변경"
+      - tapOn: "느낌표"
+      - tapOn: "입력완료"
+      - waitForAnimationToEnd
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "간편비밀번호"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000

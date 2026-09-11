@@ -1,0 +1,255 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Booking
+# ================================================================
+# 참고: "예약"(기차표 예매) 메뉴는 외부 파트너(LACUCARACHA/라차) WebView 연동으로,
+# 화면 대부분에 resource-id가 없어 text 기반 셀렉터 위주로 작성됨.
+# [02]는 실제 GME Pay 결제(실제 자금 이동)까지 수행하므로, 반복 실행 시 비용이
+# 누적되지 않도록 결제 완료 직후 동일 주문을 자동으로 취소까지 진행한다.
+# (KTX 예매는 예매일 기준 1일 뒤 ~ 최대 한달 이내 날짜만 선택 가능하며,
+#  가급적 먼 미래 날짜로 예약해야 취소 수수료가 발생하지 않는다.)
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [High] View Booking History - 예약 이력 정상노출 확인
+# ----------------------------------------------------------------
+
+# Home > (스크롤) > 생활 & 여행 > "예약" > 바텀시트 > "예매 내역 조회"
+- scrollUntilVisible:
+    element:
+      text: "예약"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: "예약"
+- waitForAnimationToEnd
+- assertVisible: "기차표 예매"
+- assertVisible: "예매 내역 조회"
+- tapOn: "예매 내역 조회"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "주문내역조회"
+    timeout: 15000
+- assertVisible: "상세조회 / 진행상태"
+
+# 홈 복귀
+- repeat:
+    while:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [High] Book Train Ticket - KTX 예약 동작 정상적으로 진행되는지 확인
+#            - GME Pay 결제 동작 확인 (결제 완료 후 즉시 주문 취소로 원복)
+# ----------------------------------------------------------------
+
+- scrollUntilVisible:
+    element:
+      text: "예약"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: "예약"
+- waitForAnimationToEnd
+- tapOn: "기차표 예매"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "KTX"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "departure"
+    timeout: 10000
+
+# 출발지: 서울 / 도착지: 수원 (최근 조회 구간 목록에서 선택)
+# 참고: 출발/도착 입력란은 placeholder 텍스트("출발"/"도착")가 접근성 트리에
+# 노출되지 않아 id 셀렉터 사용 필요 (departure/arrival)
+- tapOn:
+    id: "departure"
+- waitForAnimationToEnd
+- tapOn: "서울"
+- tapOn:
+    id: "arrival"
+- waitForAnimationToEnd
+- tapOn: "수원"
+
+# 날짜 선택: 다음 달로 이동 후 1일 선택 (예매일 기준 항상 먼 미래 날짜가 되도록 함,
+# 취소 수수료 발생 방지 - feedback_booking_date 참고)
+# 참고: 날짜 필드는 React 자동생성 id(":r4:")라 불안정하고 placeholder 텍스트도
+# 접근성 트리에 노출되지 않아 좌표 탭 사용
+- tapOn:
+    point: "288,1338"
+- waitForAnimationToEnd
+- tapOn:
+    point: "81%,36%"
+- tapOn: "1"
+
+# 열차 검색 및 첫 번째 열차 바로예약
+- tapOn: "열차검색"
+- waitForAnimationToEnd
+- assertVisible: "바로예약"
+- tapOn: "바로예약"
+- waitForAnimationToEnd
+- assertVisible: "예매"
+
+# 탑승자 정보: 예매자와 동일
+- tapOn: "예매자와 동일"
+
+# 라차 T 이용권: 1,000원권으로 변경 (기본 5,000원권 → 최저가로 비용 절감,
+# 어떤 금액을 선택해도 결제 총액에 그대로 더해지며 할인으로 상쇄되지 않음)
+- scrollUntilVisible:
+    element:
+      text: "1,000 원"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: "1,000 원"
+
+# 약관 전체 동의 후 예매하기
+- scrollUntilVisible:
+    element:
+      text: "전체 동의"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn:
+    point: "14%,91%"
+- scrollUntilVisible:
+    element:
+      text: "예매하기"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: "예매하기"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "주문 상세"
+    timeout: 15000
+
+# 주문 상세 페이지 - 결제하기 (GME 페이가 기본 선택되어 있음)
+- scrollUntilVisible:
+    element:
+      text: ".*원 결제하기"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: ".*원 결제하기"
+- waitForAnimationToEnd
+
+# 네이티브 결제 확인 팝업 - PAY (잔액 부족 시 연결계좌 자동충전 경고 노출됨)
+- assertVisible: "PAY"
+- tapOn: "PAY"
+- waitForAnimationToEnd
+
+# 간편 비밀번호(PIN) 입력 - 키패드 배열이 매번 랜덤이므로 content-desc(숫자) 기반으로 탭
+- assertVisible: "간편 비밀번호를 입력하세요"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+
+# 결제 완료 확인
+- extendedWaitUntil:
+    visible:
+      text: "결제완료"
+    timeout: 15000
+- assertVisible: "티겟 구매가 정상적으로 완료되었습니다."
+- tapOn: "주문 내역 목록"
+- waitForAnimationToEnd
+- assertVisible: "주문 완료"
+
+# 방금 결제한 주문 상세로 진입 (목록 맨 위 = 최신 주문)
+- tapOn:
+    point: "89%,29%"
+- waitForAnimationToEnd
+- assertVisible: "주문 상세"
+
+# 주문 취소하기 (예매일로부터 충분히 먼 날짜라 취소 수수료 0원)
+- scrollUntilVisible:
+    element:
+      text: "주문 취소하기"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 100
+    timeout: 15000
+- tapOn: "주문 취소하기"
+# 취소 수수료 계산은 파트너사 API 호출 후 노출되며, 이 WebView 콘텐츠는
+# Maestro의 접근성 트리 기반 assertVisible/extendedWaitUntil로는 안정적으로
+# 감지되지 않아(실제로는 렌더링되어 있어도 계속 not visible로 판정됨),
+# 픽셀 비교 기반의 waitForAnimationToEnd로 대체 (충분히 긴 timeout 부여)
+- waitForAnimationToEnd:
+    timeout: 30000
+# 실제 제출 버튼(두 번째 "주문 취소하기")은 접근성 트리상 bounds가 항상
+# height=0으로 측정되어 scrollUntilVisible/tapOn(text)로는 안정적으로 탭할 수
+# 없음이 확인됨 (index:1 반복 실패). 좌표 기반 스크롤+탭으로 대체.
+- swipe:
+    start: "540,1600"
+    end: "540,700"
+- waitForAnimationToEnd
+- tapOn:
+    point: "540,1652"
+- assertVisible: "정말로 주문을 취소하시겠습니까?"
+- tapOn: "확인"
+- assertVisible: "주문 취소가 완료되었습니다."
+- tapOn: "확인"
+
+# 홈 복귀 (WebView 자체 종료 후 앱 재시작으로 확실하게 복귀)
+- stopApp
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000

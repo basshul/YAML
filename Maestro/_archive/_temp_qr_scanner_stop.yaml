@@ -1,0 +1,22 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 10000
+- tapOn: "정보"
+- scroll
+- tapOn: "글로벌 QR"
+- assertVisible:
+    text: "국가 선택"
+- tapOn: "Cambodia(KHR)"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "스캔하기"
+- tapOn: "스캔하기"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "스캔, 업로드 또는 QR로 결제하세요."

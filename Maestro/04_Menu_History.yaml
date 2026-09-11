@@ -1,0 +1,882 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: MENU - History (거래/이력 내역)
+# (04_Menu_remaining.yaml에서 분리, 2026-07-16)
+# ================================================================
+
+# 공통 설정 진입 헬퍼:
+# launchApp → (앱은 실행 시마다 간편비밀번호 잠금) PIN 1212 → 팝업 닫기 → 홈 확인
+# 주의(2026-07-22): launchApp 직후 캐시된 홈이 잠깐 보였다가 잠금화면이 뜨는 레이스가 있어
+#   "홈 notVisible" 가드로는 PIN 입력을 건너뛰어 잠금화면에 갇힘. 잠금화면("4자리 숫자를
+#   입력하세요")을 명시적으로 기다렸다가 PIN 입력하도록 변경. PIN 키패드는 매번 랜덤 배치라
+#   좌표가 아닌 text("1"/"2")로 탭. PIN 1212.
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- waitForAnimationToEnd
+# PIN 입력 후 "로그인 세션이 만료되었습니다" 다이얼로그(토큰 만료 시)가 뜨거나 홈이 뜰 때까지 대기.
+# 다이얼로그가 뜨면 OK로 재인증(→홈). 안뜨면 그대로 진행.
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|홈"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "홈"
+          timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+# ================================================================
+# [History]
+# ================================================================
+
+# ----------------------------------------------------------------
+# 하단 "내역" 탭 > 송금 진입 (진입 시 "해외송금" 탭이 기본 선택됨)
+# 데이터 현황(2026-07-22, seungsoo818/LEE SEUNGSOO, PIN 1212):
+#   해외송금/예약송금/국내송금 데이터 O, 송금받기 비어있음.
+#   * 재송금(txvResendButton): 테스트 수취인이 비활성 → "수취인 활성화" 확인창(아니요=취소).
+#   * KFTC/Wallet 결제수단 구분: History 상세엔 송금방법(Bank Transfer)만 표시되어 구분 불가.
+#   * 이력다운로드(fb_printHistory): Android10에서 앱이 미선언 WRITE 권한을 체크하여
+#     "저장소 권한 필요" 모달(back으로 안닫힘, 확인=설정 딥링크)이 떠 다운로드 완료 불가 = 앱 버그.
+#     → 이력다운로드 케이스([06][14][18]) BLOCKED 처리, ClickUp/메모리에 버그 기록.
+# 송금 리스트 공통 element id: imgvSearchIcon(검색), searchEditText, imgvFilter(필터), fb_printHistory.
+# 해외/국내 행 상세 진입: 각 행 tv_gme_control_no(거래번호) index:0. 예약 행: ll_wholeView index:0.
+# 필터 바텀시트("설정"): one_month/three_month(기본)/one_year, date1/date2, search, dialog_close.
+# ----------------------------------------------------------------
+# 홈 코치마크 balloon("잔액 보기" 등, 별도 팝업 윈도우)이 뜨면 nav가 가려지므로 먼저 닫기
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- tapOn:
+    text: "내역"
+- waitForAnimationToEnd
+- tapOn:
+    text: "^송금$"
+- waitForAnimationToEnd
+- assertVisible: "해외송금"
+
+# ----------------------------------------------------------------
+# [01] [High] History - Remittance - 해외송금 상세페이지 재송금(Send Money) 동작 확인
+#   상세 진입 → 재송금 → (테스트 수취인 비활성) "수취인 활성화" 확인창 노출 → 아니요로 취소
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/tv_gme_control_no"
+    index: 0
+- waitForAnimationToEnd
+# 상세 진입 시 뜨는 코치마크 balloon 팝업(별도 윈도우: 떠있으면 maestro가 상세 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "송금 방법"
+    timeout: 15000
+- tapOn: "재송금"
+# 재송금은 API로 수취인 상태 확인 후 "수취인 활성화" 확인 다이얼로그를 띄우므로(비동기) 넉넉히 대기
+- extendedWaitUntil:
+    visible:
+      text: "아니요"
+    timeout: 30000
+- tapOn: "아니요"
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "해외송금"
+
+# ----------------------------------------------------------------
+# [02] [Medium] History - Remittance - 해외송금 Wallet 송금내역 재송금 - BLOCKED
+#   KFTC vs Wallet 결제수단이 History 상세에서 관찰되지 않음(송금방법=Bank Transfer만 표시).
+#   [01]과 동일 동작밖에 재현되지 않아 결제수단별 구분 검증 불가 → BLOCKED.
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [03] [Medium] History - Remittance - 해외송금 검색동작 확인
+#   "GME" 검색 시 수취인 "GME TEST" 노출(대소문자 무시)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "GME"
+- waitForAnimationToEnd
+- assertVisible: "GME TEST"
+- eraseText: 3
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] [Low] History - Remittance - 해외송금 필터동작 확인
+#   필터 → "설정" 바텀시트 → 1개월(one_month) → 검색(search)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "해외송금"
+
+# ----------------------------------------------------------------
+# [05] [Low] History - Remittance - 해외송금 영수증 다운로드 동작 확인
+#   상세 → 영수증 → PDF "연결 프로그램"(안드로이드 앱 선택창) 노출 → back으로 복귀
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/tv_gme_control_no"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "송금 방법"
+    timeout: 15000
+- tapOn: "영수증"
+- waitForAnimationToEnd
+- assertVisible: "연결 프로그램"
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "해외송금"
+
+# ----------------------------------------------------------------
+# [06] [Low] History - Remittance - 해외송금 이력 다운로드 동작 확인 - BLOCKED
+#   fb_printHistory 탭 시 "저장소 권한 필요" 모달(back 안닫힘, 확인=설정 딥링크)로 완료 불가.
+#   Android10에서 앱이 미선언 WRITE 권한을 체크하는 앱 버그 → BLOCKED (헤더 주석 참고).
+# ----------------------------------------------------------------
+
+# ================================================================
+# 예약 송금 내역 탭 (상단 탭 전환)
+# ================================================================
+- tapOn:
+    text: "예약 송금 내역"
+- waitForAnimationToEnd
+- assertVisible: "예약 송금 내역"
+
+# ----------------------------------------------------------------
+# [07] [Medium] History - Remittance - 스케줄송금 필터 동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "예약 송금 내역"
+
+# ----------------------------------------------------------------
+# [08] [Medium] History - Remittance - 스케줄송금 상세페이지 확인
+#   예약 행(ll_wholeView) 탭 → ScheduleHistoryDetailReceipt(예약 상세) 진입
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/ll_wholeView"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "예약 송금"
+    timeout: 15000
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "예약 송금 내역"
+
+# ----------------------------------------------------------------
+# [09] [Low] History - Remittance - 스케줄송금 이력 다운로드 동작 확인 - BLOCKED
+#   fb_printHistory 저장소 권한 앱 버그로 다운로드 완료 불가 → BLOCKED (헤더 주석 참고).
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [10] [Low] History - Remittance - 스케줄송금 검색동작 확인
+#   "TEST" 검색 시 예약 수취인 "SCHEDULETRANSFERTRANSFERTESTTEST" 노출
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "TEST"
+- waitForAnimationToEnd
+- assertVisible: "SCHEDULETRANSFERTRANSFERTESTTEST"
+- eraseText: 4
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ================================================================
+# 국내 송금 탭 (상단 탭 전환)
+# 국내송금 데이터는 이름/금액/날짜가 유동적이므로 이름 하드코딩 대신 첫 행
+# 상태배지("성공") index:0 로 상세 진입. 검색은 계정에 존재하는 수취인명
+# "tomas"로 해당 이력("TOMAS") 노출을 검증함(대소문자 무시).
+# ================================================================
+- tapOn:
+    text: "국내 송금"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [11] [Medium] History - Remittance - 국내송금 검색동작 확인
+#            - 수취인명 "tomas"(소문자) 검색 시 해당 이력("TOMAS") 노출 확인
+#            - 앱 검색은 대소문자 무시. seungsoo818 계정에 TOMAS 국내송금 내역 존재.
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "tomas"
+- waitForAnimationToEnd
+- assertVisible: "TOMAS"
+- eraseText: 6
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [12] [Medium] History - Remittance - 국내송금 상세페이지 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "성공"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "거래 상세 내역"
+    timeout: 15000
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [13] [Low] History - Remittance - 국내송금 영수증 다운로드 동작 확인
+#            - 상세 진입 > 영수증 > PDF 연결 프로그램(앱 선택창) 노출 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "성공"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "거래 상세 내역"
+    timeout: 15000
+- tapOn: "영수증"
+- waitForAnimationToEnd
+- assertVisible: "연결 프로그램"
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible: "국내 송금"
+
+# ----------------------------------------------------------------
+# [14] [Low] History - Remittance - 국내송금 이력 다운로드 동작 확인 - BLOCKED
+#   fb_printHistory 탭 시 "저장소 권한 필요" 모달(back 안닫힘, 확인=설정 딥링크)로 완료 불가.
+#   Android10에서 앱이 미선언 WRITE 권한을 체크하는 앱 버그 → BLOCKED (헤더 주석 참고).
+#   (참고: 과거엔 Home 복귀했으나 현재 빌드에서 저장소 권한 버그로 리그레션됨)
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [15] [Low] History - Remittance - 국내송금 필터동작 확인
+#            - [13] 이후 국내 송금 리스트에서 필터 적용([14] 다운로드 삭제로 재진입 불필요)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "국내 송금"
+
+# ================================================================
+# 송금 받기(인바운드) 탭 (상단 탭 전환)
+# 데이터 없음("조회된 거래가 없습니다") → 상세/이력다운로드 BLOCKED. 검색/필터 UI만 검증.
+# ================================================================
+- tapOn:
+    text: "송금 받기"
+- waitForAnimationToEnd
+- assertVisible: "송금 받기"
+
+# ----------------------------------------------------------------
+# [16] [Medium] History - Remittance - 인바운드 필터 동작 확인
+#   데이터는 없으나 필터 UI("설정" 바텀시트) 정상 동작 검증
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "송금 받기"
+
+# ----------------------------------------------------------------
+# [17] [Medium] History - Remittance - 인바운드 상세페이지 확인 - BLOCKED
+#   인바운드(송금 받기) 데이터가 없어 상세 진입 불가 → BLOCKED.
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [18] [Low] History - Remittance - 인바운드 이력 다운로드 동작 확인 - BLOCKED
+#   데이터 없음 + fb_printHistory 저장소 권한 앱 버그 → BLOCKED (헤더 주석 참고).
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [19] [Medium] History - Remittance - 인바운드 검색 동작 확인
+#   매칭 없는 문자열("ZZZZZ") 검색 시 "조회된 거래가 없습니다" 노출(데이터 비의존)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "ZZZZZ"
+- waitForAnimationToEnd
+- assertVisible: "조회된 거래가 없습니다"
+- eraseText: 5
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ================================================================
+# [History - Account] 계좌 (Wallet 거래내역 / 은행 명세서)
+# 진입: 송금 화면에서 back → 내역 메인 → "계좌". 화면=NewAccountHistoryActivity.
+# id: imgvSearchIcon/searchEditText, imgvFilter, txvDateText, txvWalletNumber,
+#   walletStatementHistoryRv(리스트), download(이력다운로드), txvBalance(은행 잔액),
+#   btnCheckStatement("거래내역 확인"). 필터 바텀시트("설정"): one_month/three_month/one_year
+#   + Status(rb_all 모든거래/입금/출금), search, dialog_close.
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/iv_back"
+- waitForAnimationToEnd
+- assertVisible: "계좌"
+- tapOn:
+    text: "계좌"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [20] [Medium] History - Account - Wallet Statement 잔액 확인
+#   진입 시 "Wallet 거래내역" 탭 기본. 데이터/잔액 로딩이 최대 약 2분 소요(실기기) → 넉넉히 대기.
+# ----------------------------------------------------------------
+- assertVisible: "Wallet 거래내역"
+- extendedWaitUntil:
+    visible:
+      text: "잔액"
+    timeout: 150000
+
+# ----------------------------------------------------------------
+# [23] [Medium] History - Account - Wallet Statement 검색동작 확인
+#   매칭 없는 문자열("ZZZZZ") 검색 시 "조회된 거래가 없습니다" 노출(데이터 비의존).
+#   ※ Wallet 검색은 수취인명("tomas")으로 매칭 안 됨(검색 대상 필드 불명확) → 비매칭 검증 채택.
+#   ※ 검색은 서버 조회라 결과 반영이 느림(수십초). [21] 필터(one_month) 적용 시 이 계좌
+#     Wallet 데이터가 조회기간에서 빠져 비므로 검색을 필터 이전에 수행(케이스번호≠실행순서).
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "ZZZZZ"
+- extendedWaitUntil:
+    visible:
+      text: "조회된 거래가 없습니다"
+    timeout: 40000
+- eraseText: 5
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [21] [Low] History - Account - Wallet Statement 필터 동작 확인
+#   필터 → "설정"(조회기간+Status) → 1개월 → 검색 (검색 케이스 이후 실행)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "Wallet 거래내역"
+
+# ----------------------------------------------------------------
+# [22] [Low] History - Account - Wallet Statement 이력 다운로드 동작 확인 - BLOCKED
+#   download 버튼 탭 시 저장소 권한 앱 버그(Android10 WRITE 미선언)로 완료 불가 → BLOCKED.
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [24] [Low] History - Account - Bank Statement 조회 확인
+#   은행 명세서 탭 → 잔액(txvBalance)/거래내역확인 노출 → "거래내역 확인"(은행 조회) 탭.
+#   무료 조회 횟수 소진 상태라 "사용권 구매" 유도 다이얼로그 노출 → 취소(구매=실결제 금지).
+# ----------------------------------------------------------------
+- tapOn:
+    text: "은행 명세서"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "거래내역 확인"
+    timeout: 30000
+- assertVisible: "잔액"
+- tapOn: "거래내역 확인"
+- extendedWaitUntil:
+    visible:
+      text: "취소"
+    timeout: 15000
+- tapOn: "취소"
+- waitForAnimationToEnd
+- assertVisible: "거래내역 확인"
+
+# ----------------------------------------------------------------
+# [25] [Medium] History - Account - Bank Statement 검색 동작 확인 - BLOCKED
+#   은행 명세서 조회가 유료(무료 조회 소진)라 명세서 데이터를 로드할 수 없어 검색 대상 없음 → BLOCKED.
+# ----------------------------------------------------------------
+
+# ================================================================
+# [History - GMEPAY] GME Pay (탭: 모든 거래 / 사용 내역 / 결제 내역)
+# 진입: 계좌 화면에서 back → 내역 메인 → "GME Pay". 화면=GmePayNewHistoryActivity.
+# id: imgvSearchIcon/searchEditText, imgvFilter, rvGmePayStatement, txvBalance.
+# ※ GME Pay 검색은 입력/Enter로도 리스트가 필터되지 않고(검색 이력 제안만 노출) 결과 필터 동작이
+#   비결정적 → 검색 케이스는 검색창 열림+입력 반영(기능)까지만 검증. 비매칭 문자열 검증 불가
+#   (지주 "zzzz…" 테스트데이터 존재로 ZZZZZ도 매칭됨).
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/iv_back"
+- waitForAnimationToEnd
+- assertVisible: "GME Pay"
+- tapOn:
+    text: "GME Pay"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [26] [Medium] History - GMEPAY - All(모든 거래) 탭 잔액 확인
+# ----------------------------------------------------------------
+- assertVisible: "모든 거래"
+- extendedWaitUntil:
+    visible:
+      text: "잔액"
+    timeout: 60000
+
+# ----------------------------------------------------------------
+# [27] [Medium] History - GMEPAY - All 탭 이력 및 검색동작 확인
+#   이력/잔액 노출 확인 + 검색창 열림·입력 반영 검증(결과 필터는 앱 동작상 검증 불가, 위 주석 참고)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "QWXZ7788"
+- assertVisible: "QWXZ7788"
+- eraseText: 8
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [28] [Low] History - GMEPAY - Card Expenses(사용 내역) 이력 및 검색동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "사용 내역"
+- waitForAnimationToEnd
+- assertVisible: "사용 내역"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "QWXZ7788"
+- assertVisible: "QWXZ7788"
+- eraseText: 8
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [29] [Low] History - GMEPAY - Purchase History(결제 내역) 이력 및 검색동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "결제 내역"
+- waitForAnimationToEnd
+- assertVisible: "결제 내역"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "QWXZ7788"
+- assertVisible: "QWXZ7788"
+- eraseText: 8
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ================================================================
+# [History - Top-up] 선불폰 충전 (탭: 국내 송금(Domestic) / 해외(International))
+# 진입: GME Pay 화면에서 back → 내역 메인 → "선불폰 충전". 화면=NewTopUpHistoryActivity.
+# id는 송금 화면과 동일: imgvSearchIcon/searchEditText, imgvFilter, transactionHistoryRv,
+#   tv_amount/tv_status. 필터 "설정" one_month/search, 검색은 송금과 동일(ZZZZZ→"조회된 거래가 없습니다").
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/iv_back"
+- waitForAnimationToEnd
+- assertVisible: "선불폰 충전"
+- tapOn:
+    text: "선불폰 충전"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [30] [Medium] History - Top-up - Domestic(국내 송금) Topup 리스트 노출 확인
+# ----------------------------------------------------------------
+- assertVisible: "국내 송금"
+- extendedWaitUntil:
+    visible:
+      id: "com.gmeremit.online.gmeremittance_native.livetest:id/tv_amount"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [31] [Low] History - Top-up - Domestic Topup 필터 동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "국내 송금"
+
+# ----------------------------------------------------------------
+# [32] [Medium] History - Top-up - Domestic Topup 검색 동작 확인
+#   매칭 없는 문자열("ZZZZZ") 검색 시 "조회된 거래가 없습니다" 노출(데이터 비의존)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "ZZZZZ"
+- extendedWaitUntil:
+    visible:
+      text: "조회된 거래가 없습니다"
+    timeout: 30000
+- eraseText: 5
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [33] [Medium] History - Top-up - International(해외) Topup 리스트 노출 확인
+# ----------------------------------------------------------------
+- tapOn:
+    text: "해외"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "com.gmeremit.online.gmeremittance_native.livetest:id/tv_amount"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [34] [Low] History - Top-up - International Topup 필터 동작 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "해외"
+
+# ----------------------------------------------------------------
+# [35] [Medium] History - Top-up - International Topup 검색 동작 확인
+#   매칭 없는 문자열("ZZZZZ") 검색 시 "조회된 거래가 없습니다" 노출
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "ZZZZZ"
+- extendedWaitUntil:
+    visible:
+      text: "조회된 거래가 없습니다"
+    timeout: 30000
+- eraseText: 5
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ================================================================
+# [History - Coupon Box / Reward Point / Bill Payment]
+# 진입: 선불폰 충전 화면에서 back → 내역 메인 → "청구서"(BillPaymentHistoryActivity).
+# ※ 내역>청구서는 Bill Payment 내역만 제공(단일 "청구서 내역", 현재 데이터 없음).
+#   쿠폰박스/리워드포인트는 내역(History)에서 접근 불가한 별도 메뉴 → [36][37][38] N/A(범위 밖).
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/iv_back"
+- waitForAnimationToEnd
+- assertVisible: "청구서"
+- tapOn:
+    text: "청구서"
+- waitForAnimationToEnd
+- assertVisible: "청구서 내역"
+
+# ----------------------------------------------------------------
+# [36] Coupon Box - N/A: 쿠폰박스는 내역(History) 탭에서 접근 불가(별도 메뉴) → 본 파일 범위 밖.
+# [37] Reward Point 필터 - N/A: 리워드포인트도 내역(History)에 없음 → 범위 밖.
+# [38] Reward Point → GME Shop - N/A: 동일(범위 밖).
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# [39] [Medium] History - Bill Payment - Bill Payment History 필터 동작 확인
+#   필터 UI("설정") → 1개월 → 검색 정상 동작 검증
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvFilter"
+- waitForAnimationToEnd
+- assertVisible: "설정"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/one_month"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/search"
+- waitForAnimationToEnd
+- assertVisible: "청구서 내역"
+
+# ----------------------------------------------------------------
+# [40] [Medium] History - Bill Payment - Bill Payment History 검색 동작 확인
+#   검색창 열림 + 입력 반영 검증. ※ 청구서 내역은 데이터 로딩이 느려 진입 시점에 따라 비어있거나
+#   데이터가 있고, 검색 결과 필터 동작도 비결정적이라(입력해도 리스트가 안 비워짐) 기능 검증까지만.
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/searchEditText"
+- inputText: "ZZZZZ"
+- assertVisible: "ZZZZZ"
+- eraseText: 5
+- waitForAnimationToEnd
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/imgvSearchIcon"
+- waitForAnimationToEnd
+
+# ================================================================
+# [History - My Usage] 사용 내역 (내역 메인 우상단, MyUsageActivity)
+# 진입: 청구서 화면에서 back → 내역 메인 → "사용 내역".
+# id: 월이동 previous(←)/next(→)/date_filter, 차트토글 view_pie_chart(막대→파이)/
+#   view_line_chart(파이→막대), 차트뷰 hori_chart_view(막대)/pie_chart_view(파이),
+#   카테고리 gme_card/overseas_transfer/domestic_transfer/bill_payment/atm_withdrawal/international_topup.
+# ================================================================
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/iv_back"
+- waitForAnimationToEnd
+- assertVisible: "사용 내역"
+- tapOn:
+    text: "사용 내역"
+- waitForAnimationToEnd
+- assertVisible: "총 지출"
+
+# ----------------------------------------------------------------
+# [41] [Medium] History - My Usage - [←],[→] 버튼 선택 시 날짜(월) 변경 확인
+#   ※ 월 라벨은 실행 시점 기준(현재 2026-07). 이전달=June, 현재=July. 월 바뀌면 갱신 필요.
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/previous"
+- waitForAnimationToEnd
+- assertVisible: "June, 2026"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/next"
+- waitForAnimationToEnd
+- assertVisible: "July, 2026"
+
+# ----------------------------------------------------------------
+# [42] [Low] History - My Usage - [Chart] 버튼 선택 시 막대/도넛 차트 변경 확인
+#   막대(hori_chart_view) → view_pie_chart 탭 → 파이(pie_chart_view) → view_line_chart 탭 → 막대 복귀
+# ----------------------------------------------------------------
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/view_pie_chart"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/pie_chart_view"
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/view_line_chart"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/hori_chart_view"
+
+# ----------------------------------------------------------------
+# [44]~[48] 카테고리 선택 시 화면 진입 확인
+#   대상 화면이 카테고리마다 다르므로, 사용내역 전용 텍스트("총 지출")가 사라지는지로 진입을 검증하고
+#   back으로 사용내역 복귀(pushed activity). gme_card만 탭전환형(back→홈)이라 [43]은 맨 뒤 배치.
+# ----------------------------------------------------------------
+# [44] [Low] History - My Usage - Overseas Transfer(해외송금) 선택 시 화면 진입 확인
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/overseas_transfer"
+- extendedWaitUntil:
+    notVisible:
+      text: "총 지출"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "총 지출"
+    timeout: 15000
+
+# [45] [Low] History - My Usage - Domestic Transfer(국내 송금) 선택 시 화면 진입 확인
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/domestic_transfer"
+- extendedWaitUntil:
+    notVisible:
+      text: "총 지출"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "총 지출"
+    timeout: 15000
+
+# [46] [Low] History - My Usage - International Bill Payment(청구서) 선택 시 화면 진입 확인
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/bill_payment"
+- extendedWaitUntil:
+    notVisible:
+      text: "총 지출"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "총 지출"
+    timeout: 15000
+
+# [47] [Low] History - My Usage - ATM Withdrawal 선택 시 화면 진입 확인
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/atm_withdrawal"
+- extendedWaitUntil:
+    notVisible:
+      text: "총 지출"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "총 지출"
+    timeout: 15000
+
+# [48] [Low] History - My Usage - International Top-up 선택 시 화면 진입 확인
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/international_topup"
+- extendedWaitUntil:
+    notVisible:
+      text: "총 지출"
+    timeout: 15000
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "총 지출"
+    timeout: 15000
+
+# [43] [Low] History - My Usage - GME Card 선택 시 화면 진입 확인 (맨 뒤 배치)
+#   gme_card는 하단 '카드' 탭으로 전환(back→홈)되어 복귀가 다르므로 마지막에 수행(이후 케이스 없음).
+- tapOn:
+    id: "com.gmeremit.online.gmeremittance_native.livetest:id/gme_card"
+- extendedWaitUntil:
+    visible:
+      text: "카드 관리"
+    timeout: 15000
+

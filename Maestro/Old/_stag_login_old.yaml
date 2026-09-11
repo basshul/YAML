@@ -1,0 +1,139 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# 금보원 시트 테스트용 stag 빌드 로그인 헬퍼
+# ================================================================
+# stag 빌드(com.gmeremit...stag)는 서버 gmeuat.gmeremit.com:5022 를 사용.
+# 콜드 실행 시 "Server Override" 다이얼로그가 항상 노출되며 STAG가
+# 기본 선택 상태이므로 CONTINUE만 탭하면 됨.
+#
+# 이미 로그인된 상태면 간편비밀번호(<정상 PIN>) 입력만 하고 통과.
+# 로그아웃 상태면 seungsoo818 / <정상 비밀번호>로 **1회만** 로그인한다.
+# ⛔ 폐기 비밀번호 재시도는 넣지 말 것(2026-09-02 제거) — 성공 가능성이 0인데
+#   로그인 5회 제한만 깎는다. 1차가 실패하면 그대로 실패시키는 편이 낫다.
+# ================================================================
+
+- launchApp
+- waitForAnimationToEnd
+
+# Server Override 스플래시 (stag 빌드 매 실행 노출)
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+
+# 스플래시 로딩 완료 대기: 초기화면("신규 회원") 또는 간편비밀번호 잠금화면
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "keyboardView|btn_lgn|tvTitle"
+    timeout: 40000
+    optional: true
+
+# 간편비밀번호 잠금 화면(초기화면 아님)이면 <정상 PIN> 입력
+- runFlow:
+    when:
+      notVisible:
+        text: "신규 회원"
+    commands:
+      # 잠금화면 도달 확정
+      - extendedWaitUntil:
+          visible:
+            id: "input_dot_1"
+          timeout: 20000
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+
+# 로그아웃 상태: 아이디/비밀번호 로그인
+- runFlow:
+    when:
+      visible:
+        text: "신규 회원"
+    commands:
+      - tapOn:
+          id: "btn_lgn"
+      - tapOn:
+          id: "usernameId"
+      - inputText: "seungsoo818"
+
+      # 로그인 시도 1: <정상 비밀번호>
+      - tapOn:
+          id: "securityKeyboardEditText"
+      # ⚠️ transKeypad_row4 탭 제거(2026-09-02) — 행 컨테이너를 누르면 문자가 하나 잘못 들어가 로그인이 실패한다.
+      - tapOn: "대문자 키보드 변경"
+      - tapOn: "Capital G 히읃"
+      - tapOn: "m 으"
+      - tapOn: "e 디귿"
+      - tapOn: "t 시옫"
+      - tapOn: "e 디귿"
+      - tapOn: "s 니은"
+      - tapOn: "t 시옫"
+      - tapOn: "1"
+      - tapOn: "특수문자변경"
+      - tapOn: "느낌표"
+      - tapOn: "입력완료"
+      - waitForAnimationToEnd
+
+      # ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
+      #   성공 가능성이 0인 재시도로 로그인 5회 제한을 깎는 건 순손실이다 —
+      #   재시도 값은 이미 폐기된 비밀번호이고, 실패하면 카운터만 하나 더 줄어든다.
+      #   1차가 실패하면 그대로 **시끄럽게 실패**시키는 편이 진단에도 유리하다.
+      #   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+
+# 간편비밀번호 설정 (조건부)
+# ⚠️ 종전 가드는 `visible: "간편비밀번호"` 였다. **텍스트는 전체매칭**이라 실제 문구
+#   "앱에서 사용할 간편 비밀번호를 생성해 주세요"와 매칭되지 않아 **블록이 통째로 SKIP**됐다
+#   → PIN이 설정되지 않은 채 넘어간다(06_Registration 결함 #1과 같은 부류).
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      # PIN 재입력 화면 도달 확정 — 이전 화면에도 input_dot_1이 있어 id로는 전환을 판정할 수 없다
+      - extendedWaitUntil:
+          visible:
+            text: ".*간편 비밀번호를 다시 입력.*"
+          timeout: 20000
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+
+# 보이스 피싱 바텀시트 (조건부)
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+
+# 홈 진입 대기
+# ⚠️ 구 UI 홈에는 "Home" 텍스트가 **없다**(개편 UI 전용) → 40초 타임아웃으로 죽는다.
+#   구 UI 홈 도달 판정은 하단 내비 `bottom_item_home`이다(언어·문구에 흔들리지 않는다).
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 40000

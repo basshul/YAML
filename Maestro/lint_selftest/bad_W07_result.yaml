@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+# W07: 결과 갈래인데 앞에 도달 강제(extendedWaitUntil)가 없다 → 아무것도 안 떠도 EXIT=0
+- runFlow:
+    when:
+      visible: "송금이 완료되었습니다"
+    commands:
+      - tapOn:
+          id: "btnOk"

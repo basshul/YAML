@@ -1,0 +1,43 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+- launchApp
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료되었습니다."
+    commands:
+      - tapOn: "확인"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+
+- tapOn: "프로필"
+- waitForAnimationToEnd
+- tapOn: "쿠폰"
+- waitForAnimationToEnd
+- takeScreenshot: coupon_box_available
+- runFlow:
+    when:
+      visible:
+        text: "사용 완료"
+    commands:
+      - tapOn: "사용 완료"
+      - waitForAnimationToEnd
+      - takeScreenshot: coupon_box_used

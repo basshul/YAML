@@ -1,0 +1,44 @@
+# lint_flows.ps1 예외 목록
+#
+# 형식:  RULE 파일명:줄     (그 줄 하나만 제외)
+#        RULE 파일명        (그 파일 전체에서 그 규칙 제외)
+#
+# ⚠️ 규칙: **"확인해서 의도된 것임을 확정한 것"만** 넣는다.
+#    "시끄러워서" 넣기 시작하면 이 검사기의 의미가 없어진다.
+#    넣을 때는 왜 안전한지 한 줄 주석을 반드시 붙일 것.
+
+# --- W09_HEADER_APPID ---
+# 아래는 .stag 빌드 전용 검증 파일이다(EasyCare 언어별 UI). livetest 회귀 대상이 아니고
+# -AppId 로 빌드를 갈아탈 일이 없으므로 헤더 하드코딩이 의도된 것이다.
+W09_HEADER_APPID 27_EasyCare_i18n_stag_old.yaml
+W09_HEADER_APPID 27_EasyCare_i18n_long_stag_old.yaml
+W09_HEADER_APPID _change_language_stag_old.yaml
+W09_HEADER_APPID _easycare_coverage_stag_old.yaml
+W09_HEADER_APPID _smoke_easycare_i18n_old.yaml
+W09_HEADER_APPID _stag_login_old.yaml
+W09_HEADER_APPID _stag_login_probe_old.yaml
+
+# --- 2026-09-01: 조각 파일 예외를 **전부 해소**했다. 되살리지 말 것 ---
+#   · `charge_old.yaml`  → 예외로 덮지 않고 **고쳤다**(`appId: ${APP_ID}`).
+#     하드코딩된 `.sgt` 빌드는 기기에 설치돼 있지도 않아 launch부터 실패하던 상태였다.
+#     이 파일은 지금도 쓰는 **지갑 충전 유틸**이다 — 잔액이 필요한 플로우 전에 손으로 돌린다.
+#   · `k_reg_setup_old.yaml` / `k_step_*_old.yaml`(5개) → **`Old\_archive\`로 이관**했다.
+#     06_Registration 카메라·OCR 디버깅용 조각인데 2026-08-04 판이라 그 뒤 결함 11건이
+#     반영돼 있지 않다. 사유·되살릴 조건은 `Old\_archive\README.md` 참고.
+#     이관으로 W09 5건 + E04 5건이 함께 사라졌다.
+
+# --- W13_INDEX_AFTER_SCROLL ---
+# 2026-09-10: `13_ReceiveOverseas_old.yaml` 은 `13_01`~`13_07` 분할본으로 대체된 **중복 원본**이고
+#   run_suite 에서 명시적으로 제외돼 있다(`14_Deposit_old.yaml` 과 같은 처지). 실행되지 않는다.
+#   ⚠️ 지적 내용 자체는 **맞다** — 이 파일 3곳이 바로 2026-09-08 에 엉뚱한 송금인을 지운 그 패턴이다.
+#   실제로 도는 쪽(`13_05`·`13_06`)은 이름 앵커 + centerElement 로 **고쳤다**. 원본은 이력으로만 남긴다.
+#   → 이 파일을 다시 실행 대상으로 되살린다면 **이 예외부터 지우고 3곳을 고칠 것.**
+W13_INDEX_AFTER_SCROLL 13_ReceiveOverseas_old.yaml
+
+# --- E04_ENV_UNDEFINED: 예외 없음 (2026-09-11 해소) ---
+# `21_Card [12]` 의 카드 CVC 는 카드마다 다른 자격정보라 파일·env 에 둘 수 없었다.
+# 처음엔 `-ExtraEnv` 주입 + **줄 단위 예외**로 뒀는데 편집으로 줄이 밀려 하루에 두 번 어긋났다.
+# 최종: **`[11]` 이 카드 정보 화면의 `cvcnumbertext` 를 읽어 `output.cvc1~3` 로 넘긴다**
+#   → 참조가 env 가 아니므로 E04 가 발생하지 않는다. 예외도, 주입도 필요 없다.
+#   (`run_test.ps1 -ExtraEnv` 자체는 다른 용도로 남겨 뒀다.)
+

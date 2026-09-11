@@ -1,0 +1,911 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Overseas Transfer - 예약 송금 / 필터 / 수취인 추가
+# 실행: .\run_test.ps1 -lang ko -flow 02_02_Overseas_Schedule.yaml
+#
+# [Add Recipient] [01][03][04][05] 수취인 추가 시나리오 (병합)
+#   [01] [High]   바텀시트 및 새 수취인 추가 폼 진입 확인
+#   [03] [Medium] 기존 수취인 목록 노출 확인
+#   [04] [Medium] 기존 수취인 정상 추가 동작 확인
+#   [05] [Medium] 이미 예약된 수취인 추가 시 중복 팝업 확인
+# [06] [Medium] 예약 탭 - 수취인 화면 필터(설정) 동작 확인
+# [02] [High]   Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)
+# [시나리오 1] [High]   KFTC 예약 - 매달 Step 1~3 확인 후 1회 Step 1~3 확인
+#                       (KFTC는 OTP/생체인증 필요로 실제 제출 불가 - Step 3까지만 검증)
+# [시나리오 2] [High]   GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 성공
+# [시나리오 3] [High]   GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 + 예약 성공
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입
+# 주의(2026-08-03): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|Home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "Home"
+          timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "나중에"
+    commands:
+      - tapOn: "나중에"
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ================================================================
+# [Add Recipient] [01][03][04][05] 수취인 추가 시나리오
+# ================================================================
+
+# 사전 정리 Step 1: 내역 > 예약 송금 내역에서 활성 예약 모두 취소
+- tapOn: "내역"
+- tapOn: "송금"
+- tapOn: "예약 송금 내역"
+- runFlow:
+    when:
+      visible:
+        text: "활성화"
+    commands:
+      - tapOn: "활성화"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - tapOn: "예"
+
+# 홈 복귀: launchApp으로 확실한 홈 진입 (back 횟수가 예약 상태에 따라 달라짐)
+- launchApp
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 사전 정리 Step 2: TESTUPDATE GME / BASSHU TEST GME 예약 탭 잔류 시 삭제
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "BASSHU TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+
+# [01] 바텀시트 및 새 수취인 추가 폼 진입 확인
+- tapOn: "수취인 추가하기"
+- assertVisible:
+    id: "tv_addRecipient"
+- assertVisible:
+    id: "tv_addExistingRecipient"
+- tapOn:
+    id: "tv_addRecipient"
+- assertVisible:
+    id: "recieverCountrySelectionFormInputField"
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "수취인을 선택하세요."
+    commands:
+      - pressKey: back
+
+# [03] 기존 수취인 목록 노출 확인
+- tapOn: "수취인 추가하기"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "기존 수취인 추가"
+- tapOn:
+    id: "tv_close"
+
+# [04] 기존 수취인 정상 추가 동작 확인
+#      TESTUPDATE GME(미예약)를 예약 목록에 추가
+- tapOn: "수취인 추가하기"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "기존 수취인 추가"
+- tapOn: "TESTUPDATE GME"
+- assertVisible:
+    text: "TESTUPDATE GME"
+
+# [05] 이미 예약된 수취인 추가 시 중복 팝업 확인
+#      TESTUPDATE GME ([04]에서 추가된 상태)
+- tapOn: "수취인 추가하기"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "기존 수취인 추가"
+- tapOn: "TESTUPDATE GME"
+- assertVisible:
+    id: "txt_dialog_message"
+- assertVisible:
+    text: "중복된 수취인"
+- tapOn:
+    id: "btn_diaog_ok"
+
+# 사후 정리: TESTUPDATE GME 예약 목록에서 삭제
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "delete"
+    index: 0
+- tapOn: "예"
+- runFlow:
+    when:
+      notVisible:
+        text: "수취인을 선택하세요."
+    commands:
+      - pressKey: back
+      
+# ================================================================
+# [02] Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)
+#      [시나리오 1~3]에서 사용할 수취인 추가 (사후 정리는 [시나리오 3] 이후)
+# ================================================================
+
+# 사전 정리: SCHEDULE TRANSFER TEST 수취인이 있으면 삭제 시도
+# - 예약 없음: btn_yes(예) → 삭제 완료
+# - 예약 있음: btn_diaog_ok(확인) → 삭제 불가 팝업 닫기 → 기존 수취인 유지
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- runFlow:
+    when:
+      visible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      # 정상 삭제 확인 팝업 (예약 없음)
+      - runFlow:
+          when:
+            visible:
+              id: "btn_yes"
+          commands:
+            - tapOn:
+                id: "btn_yes"
+      # 예약된 송금으로 삭제 불가 팝업 (예약 있음)
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+
+# SCHEDULE TRANSFER TEST가 없는 경우만 새로 추가 (삭제 성공 or 원래 없었던 경우)
+- runFlow:
+    when:
+      notVisible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn: "수취인 추가하기"
+      - tapOn:
+          id: "tv_addRecipient"
+      # 국가: Kazakhstan
+      - tapOn:
+          id: "recieverCountrySelectionFormInputField"
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "Kazakhstan"
+      - tapOn:
+          text: "Kazakhstan"
+          index: 1
+      # 송금방법: 현금 지급
+      - tapOn: "송금 방법을 선택하세요"
+      - tapOn: "현금 지급"
+      # 은행/에이전트: MoneyGram
+      - tapOn:
+          id: "recieverBankSelectionFormInputField"
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "money"
+      - hideKeyboard
+      - tapOn: "MONEYGRAM"
+      # 이름 (First: schedule / Middle: transfer / Last: test)
+      - tapOn:
+          id: "recieverFirstNameFormInputField"
+      - inputText: "schedule"
+      - hideKeyboard
+      - tapOn:
+          id: "recieverMiddleNameFormInputField"
+      - inputText: "transfer"
+      - hideKeyboard
+      - tapOn:
+          id: "recieverLastNameFormInputField"
+      - inputText: "test"
+      - hideKeyboard
+      # 핸드폰 번호
+      - tapOn:
+          id: "recieverMobileNoFormInputField"
+      - inputText: "123456789"
+      - hideKeyboard
+      # 주소
+      - tapOn:
+          id: "recieverAddressFormInputField"
+      - inputText: "GME"
+      - hideKeyboard
+      # 도시
+      - tapOn:
+          id: "recieverCityFormInputField"
+      - inputText: "TEST"
+      - hideKeyboard
+      # 관계: 본인
+      - tapOn:
+          id: "recieverRelationSelectionFormInputField"
+      - tapOn: "본인"
+      # 송금 사유: 급여 / 임금 (스크롤 후)
+      - swipe:
+          direction: UP
+          element:
+            id: "scrollView"
+          duration: 1200
+      - extendedWaitUntil:
+          visible:
+            id: "recieverTransferReasonSelectionFormInputField"
+          timeout: 10000
+      - tapOn:
+          id: "recieverTransferReasonSelectionFormInputField"
+      - tapOn: "급여 / 임금"
+      # 제출
+      - tapOn:
+          id: "btn_submit"
+      # 중복 수취인 오류 처리
+      - runFlow:
+          when:
+            visible:
+              text: "오류"
+          commands:
+            - tapOn: "확인"
+            - pressKey: back
+      # 저장 성공 바텀시트: 아니요 (목록 복귀)
+      - runFlow:
+          when:
+            visible:
+              id: "btnContactSupport1"
+          commands:
+            - tapOn:
+                id: "btnContactSupport1"
+
+# 예약 수취인 목록 확인
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- assertVisible:
+    text: "SCHEDULE TRANSFER TEST"
+
+# ================================================================
+# [06] 예약 탭 - 수취인 화면 필터(설정) 동작 확인
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- tapOn:
+    id: "imgvFilter"
+- assertVisible:
+    text: "설정"
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "et_searchText"
+- tapOn:
+    id: "one_month"
+- assertVisible:
+    id: "date1"
+- assertVisible:
+    id: "date2"
+# 닫기 → 예약 탭 수취인 목록 복귀
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+
+
+# ================================================================
+# [시나리오 1] KFTC 예약 - 매달 Step 1~3 확인 후 1회 Step 1~3 확인
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "예약 송금"
+- tapOn: "${KFTC_BANK}"
+
+# --- 매달 설정 (Step 1) ---
+- assertVisible:
+    id: "one_month"
+- tapOn:
+    id: "et_daySelection"
+- assertVisible:
+    text: "일"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "시간대"
+- tapOn:
+    id: "confirmBtn"
+- scroll
+- assertVisible:
+    text: "종료일"
+- tapOn:
+    id: "et_endDateSelection"
+- assertVisible:
+    text: "종료일"
+- tapOn:
+    id: "confirmBtn"
+- assertVisible:
+    id: "et_endDateSelection"
+
+# --- 매달 Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+
+# --- 매달 Step 3: 동의 및 저장 화면 확인 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "인증 처리 중"
+- scroll
+- assertVisible:
+    text: "동의 및 저장"
+
+# --- Step 3 → Step 1으로 이동 ---
+- pressKey: back
+- pressKey: back
+
+# --- 1회 전환 및 설정 (Step 1) ---
+- tapOn:
+    id: "three_month"
+- tapOn:
+    id: "et_dateSelection"
+- assertVisible:
+    text: "일자"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "시간대"
+- tapOn:
+    id: "confirmBtn"
+
+# --- 1회 Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+
+# --- 1회 Step 3: 동의 및 저장 화면 확인 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "인증 처리 중"
+- scroll
+- assertVisible:
+    text: "동의 및 저장"
+
+# --- 홈 복귀 ---
+- pressKey: back
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ================================================================
+# [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 성공
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "예약 송금"
+- assertVisible:
+    text: "GME Wallet"
+
+# --- 실패 케이스: 1회 + 당일(기본값) + 지난 시간(00:00~01:00) ---
+- tapOn:
+    id: "three_month"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "시간대"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "인증 처리 중"
+- scroll
+- tapOn: "동의 및 저장"
+- runFlow:
+    when:
+      visible:
+        text: "서비스 이용 안내"
+    commands:
+      - tapOn: "동의"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# 당일+지난시간 예약 불가 에러 팝업 확인
+- assertVisible:
+    text: ".*오류.*"
+- tapOn: "확인"
+
+# --- Step 3 → Step 1으로 이동 ---
+- pressKey: back
+- pressKey: back
+
+# --- 성공 케이스: 날짜 다음달로 변경 ---
+- tapOn:
+    id: "et_dateSelection"
+- assertVisible:
+    text: "일자"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "인증 처리 중"
+- scroll
+- tapOn: "동의 및 저장"
+- runFlow:
+    when:
+      visible:
+        text: "서비스 이용 안내"
+    commands:
+      - tapOn: "동의"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# 예약 성공 확인
+- assertVisible:
+    text: "성공"
+- assertVisible:
+    text: ".*첫 번째 예약 송금.*"
+
+# 성공 팝업 닫기 (back으로 닫히지 않으므로 "다시 보내기" 탭)
+- tapOn: "다시 보내기"
+
+# --- 홈 복귀 ---
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ================================================================
+# [시나리오 3] 준비 - 기존 수취인(TESTUPDATE GME)을 예약 탭에 추가
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+- tapOn: "수취인 추가하기"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- tapOn: "TESTUPDATE GME"
+- assertVisible:
+    text: "TESTUPDATE GME"
+
+# ================================================================
+# [시나리오 3] GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 + 예약 성공
+# (TESTUPDATE GME 카드 사용 - 준비 단계에서 추가됨, 목록 최상단 index 0)
+# ================================================================
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "예약 송금"
+- assertVisible:
+    text: "GME Wallet"
+
+# --- 매달 설정 (Step 1): 종료일 이전 날짜 선택 불가 확인 ---
+- assertVisible:
+    id: "one_month"
+- tapOn:
+    id: "et_daySelection"
+- assertVisible:
+    text: "일"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "시간대"
+- tapOn:
+    id: "confirmBtn"
+- scroll
+- assertVisible:
+    text: "종료일"
+# 종료일 picker: 과거 날짜 선택 시 최솟값(오늘)으로 자동 보정
+- tapOn:
+    id: "et_endDateSelection"
+- assertVisible:
+    text: "종료일"
+- tapOn:
+    id: "confirmBtn"
+- assertVisible:
+    id: "et_endDateSelection"
+
+# --- Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "2000"
+- hideKeyboard
+
+# --- Step 3: 동의 및 저장 → PIN → 성공 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "인증 처리 중"
+- scroll
+- tapOn: "동의 및 저장"
+- runFlow:
+    when:
+      visible:
+        text: "서비스 이용 안내"
+    commands:
+      - tapOn: "동의"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+# 예약 성공 확인
+- assertVisible:
+    text: "성공"
+- assertVisible:
+    text: ".*첫 번째 예약 송금.*"
+
+# --- 사후 정리: 활성 예약 모두 취소 ([시나리오 2] + [시나리오 3]) ---
+- tapOn: "영수증 보기"
+- assertVisible:
+    text: "예약 송금 내역"
+- runFlow:
+    when:
+      visible:
+        text: "활성화"
+    commands:
+      - tapOn: "활성화"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+# 취소 후 활성화 탭 재진입 → 남은 예약 추가 취소
+- runFlow:
+    when:
+      visible:
+        text: "활성화"
+    commands:
+      - tapOn: "활성화"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "송금이 예약되었습니다."
+    commands:
+      - scroll
+      - tapOn: "취소"
+      - assertVisible:
+          text: "송금 예약을 취소하시겠습니까?"
+      - tapOn: "예"
+
+# --- 홈 복귀 ---
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# 사후 정리: 예약 수취인 목록에서 삭제
+# (TESTUPDATE GME가 index 0 = 최신, SCHEDULE TRANSFER TEST가 index 1)
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- tapOn: "예약"
+# TESTUPDATE GME 먼저 삭제 (index 0)
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+# SCHEDULE TRANSFER TEST 삭제 (TESTUPDATE GME 삭제 후 index 0)
+- runFlow:
+    when:
+      visible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back

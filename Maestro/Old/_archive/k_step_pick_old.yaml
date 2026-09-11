@@ -1,0 +1,23 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# 신분증 타입 선택 화면에서 ${KB_IDTYPE} 선택 → [다음] → 촬영(카메라) 화면 진입
+# launchApp 없음: 직전 화면 상태를 이어받아 동작 (검증 스텝 사이에 끼워 실행)
+- tapOn: "${KB_IDTYPE}"
+- waitForAnimationToEnd
+- tapOn: "다음"
+- waitForAnimationToEnd
+
+# 카메라 권한 요청 (최초 1회)
+- runFlow:
+    when:
+      visible: "앱 사용 중에만 허용"
+    commands:
+      - tapOn: "앱 사용 중에만 허용"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "허용"
+    commands:
+      - tapOn: "허용"
+      - waitForAnimationToEnd
+- waitForAnimationToEnd

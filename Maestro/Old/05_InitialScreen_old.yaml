@@ -1,0 +1,273 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 05 초기 화면 테스트 (로그인 전)
+# 실행:
+#   한국어: .\run_test.ps1 -lang ko -flow 05_InitialScreen.yaml
+#   영어:   .\run_test.ps1 -lang en -flow 05_InitialScreen.yaml
+#
+# 테스트 항목:
+#   [01] 초기 화면 요소 노출 확인 (하단 **앱 버전 표시** 포함 — z8nfn6ma0f)
+#   [02] 언어 변경 (전환 → 복귀)
+#   [03] 환율 탭 전환 (계좌 입금 / 현금 지급 / 모바일 월렛)
+#   [04] 환율 조회 - 금액 입력 / 통화 변경
+#   [05] 신규 회원 버튼 → 1 depth 이동 확인
+#   [06] 로그인 버튼 → 1 depth 이동 확인
+#   [07] 지점 찾기 버튼 → 1 depth 이동 확인
+#   [08] 고객센터(채팅) 버튼 → 팝업 노출 확인
+# ================================================================
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Server Override 다이얼로그(livetest 빌드 실행 시 서버선택 스플래시) 노출 시 CONTINUE
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|언어 선택|신규 회원"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+
+# 서비스 이용 안내 화면 (앱 최초 실행 / clearState 후 조건부 노출)
+- runFlow:
+    when:
+      visible: "서비스 이용 안내"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "허용"
+          commands:
+            - tapOn: "허용"
+            - waitForAnimationToEnd
+
+# clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env에만 적용)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [01] 초기 화면 요소 노출 확인
+# ----------------------------------------------------------------
+- takeScreenshot: "[01-1]_초기화면_전체"
+- assertVisible:
+    id: "selectLangBg"
+- assertVisible:
+    text: "${INIT_TAB_BANK}"
+- assertVisible:
+    text: "${INIT_TAB_CASH}"
+- assertVisible:
+    text: "${INIT_TAB_MOBILE}"
+- assertVisible:
+    id: "btn_rgstr"
+- assertVisible:
+    id: "btn_lgn"
+- assertVisible:
+    id: "fab_branch"
+- assertVisible:
+    id: "fab_chat"
+# 하단 앱 버전 표시 — ClickUp z8nfn6ma0f (2026-08-20 추가)
+# CLICKUP: z8nfn6ma0f
+# 실측값: `appVersionTxtView` = "앱 버전 7.19.1-livetest (livetest)"
+# ⚠️ 라벨("앱 버전")은 앱 언어에 따라 바뀌고 버전 숫자는 빌드마다 바뀐다
+#   → 라벨·버전을 하드코딩하지 않고 **id + 버전 숫자 패턴**으로만 본다(언어·빌드 무관).
+# ⚠️ id와 text를 한 `assertVisible`에 함께 주면 실패하는 사례가 있어 **분리해서** assert한다
+#   ([[project_15_loan]]에서 확인된 함정).
+- assertVisible:
+    id: "appVersionTxtView"
+- assertVisible: ".*\\d+\\.\\d+\\.\\d+.*"
+- takeScreenshot: "[01-2]_초기화면_요소_노출확인_완료"
+
+# ----------------------------------------------------------------
+# [02] 언어 변경 확인 (전환 후 원래 언어로 복귀)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "selectLangBg"
+- waitForAnimationToEnd
+- takeScreenshot: "[02-1]_언어선택_목록"
+- tapOn: "${INIT_LANG_SWITCH_TO}"
+- waitForAnimationToEnd
+# 언어 변경 → 앱 재시작 → Server Override 재노출 처리 → 초기화면 재진입 대기
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[02-2]_언어변경_완료"
+- tapOn:
+    id: "selectLangBg"
+- waitForAnimationToEnd
+- takeScreenshot: "[02-3]_언어선택_목록_변경후"
+- tapOn: "${INIT_LANG_SWITCH_BACK}"
+- waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[02-4]_언어복귀_완료"
+
+# ----------------------------------------------------------------
+# [03] 환율 탭 전환 확인
+# ----------------------------------------------------------------
+- takeScreenshot: "[03-1]_계좌입금_탭_기본선택"
+- tapOn: "${INIT_TAB_CASH}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-2]_현금지급_탭_선택"
+- tapOn: "${INIT_TAB_MOBILE}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-3]_모바일월렛_탭_선택"
+- tapOn: "${INIT_TAB_BANK}"
+- waitForAnimationToEnd
+- takeScreenshot: "[03-4]_계좌입금_탭_복귀"
+
+# ----------------------------------------------------------------
+# [04] 환율 조회 - 금액 입력 / 통화 변경
+# ----------------------------------------------------------------
+- tapOn:
+    id: "sendAmountEdTxt"
+- eraseText: 10
+- inputText: "200000"
+- pressKey: Enter
+- waitForAnimationToEnd
+- takeScreenshot: "[04-1]_송금금액_변경"
+- tapOn:
+    id: "countrySelectionSpinner"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-2]_통화선택_목록"
+- tapOn: "${INIT_CURRENCY_SEARCH}"
+- inputText: "cambodia"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-3]_통화검색_결과"
+- tapOn: "Cambodia (USD)"
+- waitForAnimationToEnd
+- takeScreenshot: "[04-4]_통화변경_완료"
+
+# ----------------------------------------------------------------
+# [05] 신규 회원 → 약관 화면 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_rgstr"
+- waitForAnimationToEnd
+- takeScreenshot: "[05]_신규회원_약관화면"
+- pressKey: Back
+- waitForAnimationToEnd
+- pressKey: Back
+- waitForAnimationToEnd
+# back으로 앱 종료→재실행 시 Server Override 처리 후 초기화면 재진입 대기
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [06] 로그인 → 로그인 화면 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+# ⚠️ **로그인 화면에는 스크린샷을 찍지 말 것 (2026-08-19 실측 실패)**
+#   `loginV2.view.LoginV2Activity`는 보안 키패드를 쓰는 화면이라 **FLAG_SECURE**다.
+#   `takeScreenshot`이 `io.grpc.StatusRuntimeException: INTERNAL: Screenshot returned null`
+#   로 죽고 **플로우 전체가 EXIT=1**이 된다(케이스 내용은 정상인데 스크린샷 때문에 실패했다).
+#   → 스크린샷 대신 **화면 요소 assert로 도달을 확인**한다([[feedback_flagsecure_verify]]).
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 20000
+- assertVisible:
+    id: "securityKeyboardEditText"
+- assertVisible:
+    id: "btn_submit"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [07] 지점 찾기 → 지점 목록 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "fab_branch"
+- waitForAnimationToEnd
+- takeScreenshot: "[07-1]_지점찾기_화면"
+- assertVisible:
+    text: "${INIT_BRANCH_TITLE}"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[07-2]_초기화면_복귀"
+
+# ----------------------------------------------------------------
+# [08] 고객센터(채팅) → 팝업 노출 확인 (1 depth)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "fab_chat"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-1]_고객센터_팝업"
+- assertVisible:
+    text: "${INIT_CHAT_POPUP}"
+- tapOn: "${INIT_CHAT_NO}"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-2]_팝업_아니요_선택"
+- tapOn:
+    id: "fab_chat"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-3]_고객센터_팝업_재노출"
+- tapOn: "${INIT_CHAT_YES}"
+- waitForAnimationToEnd
+- takeScreenshot: "[08-4]_고객센터_연결"
+- pressKey: Back
+- waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "selectLangBg"
+    timeout: 20000
+- takeScreenshot: "[08-5]_초기화면_복귀"

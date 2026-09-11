@@ -1,0 +1,41 @@
+{
+  "_comment": "lint_flows.ps1 설정. 전부 '실제로 한 번 물린' 실측값이다. 추측으로 추가하지 말 것.",
+
+  "wrongLabels": [
+    { "bad": "국내송금",            "good": "국내 송금",                              "why": "구 UI 홈 그리드 실측 라벨(공백). 텍스트 전체매칭이라 조용히 SKIP된다" },
+    { "bad": "GMEPay 가상 계좌",    "good": "GME Pay 가상 계좌",                      "why": "실제 라벨에 공백. assertNotVisible로 쓰여 아무것도 검증하지 못했다" },
+    { "bad": "Apply Virtual Account","good": "가상계좌 신청",                          "why": "실제 라벨과 다름. assertNotVisible이 무조건 통과했다" },
+    { "bad": "간편비밀번호",         "good": "앱에서 사용할 간편 비밀번호를 생성해 주세요", "why": "06_Registration 결함 #1. 조건 블록이 SKIP되어 PIN 화면에 갇혔다" },
+    { "bad": "간편 비밀번호",        "good": "간편 비밀번호를 입력하세요",              "why": "02_01 [02]가 PIN을 입력한 적 없이 통과한 원인" },
+    { "bad": "로그인 세션이 만료",   "good": "로그인 세션이 만료 + 개행 대응 패턴",   "why": "문구에 개행이 섞여 있어 .* 로는 부족하다. 단일인용으로 개행 포함 패턴을 쓸 것" },
+    { "bad": "케이뱅크",            "good": "신한은행",   "level": "WARN",            "why": "⚠️ '사라졌다'는 목록마다 다르다. 2026-08-28 QR 받는계좌 목록엔 없었지만(08_MyQR 정지), 2026-09-01 국내송금 출금계좌 목록엔 **있다**. 목록이 다른 것이므로 일괄 치환 금지 — 전제 단언으로 해결할 것(W10)" },
+    { "bad": "인터넷 접속이 원활하지 않습니다", "good": "실패 - (계좌번호)",           "why": "7.20.0에서 충전 실패 문구가 바뀌었다" }
+  ],
+
+  "_wrongTapLabels": "⚠️ 라벨 하나가 화면마다 다른 뜻이면 여기 넣지 말 것 — 문맥을 못 봐서 오탐만 만든다. 그런 건 env 값을 고쳐 한 곳에서 관리한다. 실례: '예약'은 홈 그리드에선 틀렸지만(실측=예약하기) 해외송금 수취인 선택 화면에선 맞는 탭 이름이라 7건 전부 오탐이었다 → 규칙 대신 env TXT_RESERVATION 값을 고쳤다(2026-09-01).",
+  "wrongTapLabels": [],
+
+  "_v3OnlySelectors": "⛔ '4자리 숫자를 입력하세요'를 여기 다시 넣지 말 것. 개편 UI 전용이 아니다 — 구 UI ActivityLockScreen 실기기 덤프에 그대로 있다(2026-09-01). 이 규칙을 믿고 76곳을 걷어냈다가 되돌린 사고가 있었다. PIN 화면은 두 UI가 아예 같다.",
+  "v3OnlySelectors": [
+    { "pat": "text:\\s*.Home.\\s*$",      "why": "구 UI 홈에는 Home 텍스트가 없다 → 도달 대기가 타임아웃하고, notVisible 가드는 항상 참이 된다. id: bottom_item_home 을 쓸 것" }
+  ],
+
+  "genericLabels": ["닫기", "Close"],
+
+  "_accountList": "연동 계좌 목록. 내용이 계정 상태에 따라 바뀌고 **화면마다 목록이 다르다**(2026-09-01 실측: QR 받는계좌엔 케이뱅크가 없는데 국내송금 출금계좌엔 있다) → 은행명 하드코딩 시 전제 단언 필수",
+  "accountListMarkers": ["rvKftcList"],
+
+  "_captureBlocked": "⚠️ icon_thumbnail 은 뺐다 — 25_Profile 이 그 화면에서 takeScreenshot으로 EXIT=0을 받았다(캡처 가능). 오탐 4건의 원인이었다",
+  "captureBlockedMarkers": [
+    "OCRImageCaptureActivity", "NativeCropActivity",
+    "DriverIdVerfication", "LoginV2Activity", "captureBtnImageView",
+    "galleryBtnImageView", "GmeTelecomPostPaid"
+  ],
+
+  "_resultVocabulary": "⚠️ '오류'/'실패'는 빼야 한다 — 로그인 재시도 같은 **복구 갈래**에 정상적으로 쓰이며, 그건 거짓 통과 패턴이 아니다(오탐 6건의 원인). 겨냥하는 것은 '결과 도달을 기다리지 않고 성공 갈래만 조건부로 둔' 경우다",
+  "resultVocabulary": ["송금이 완료", "충전이 완료", "결제가 완료", "완료되었습니다", "성공적으로"],
+
+  "credentialVarNames": ["PW_CUR_LAST", "PW_NEW_LAST"],
+
+  "injectedEnvVars": ["APP_ID", "SHOT", "LANG_LABEL", "STAG_ID"]
+}

@@ -1,0 +1,238 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 01_03 로그인 화면 — 비파괴 구간 ([01]~[05])
+#
+# 왜 분리했나:
+#   원본 `01_Login_screen_old.yaml`의 **[06]이 비밀번호를 실제로 초기화**한다.
+#   Maestro에는 케이스 선택 옵션이 없어 원본을 돌리면 [06]까지 딸려 실행되고,
+#   그러면 모든 yaml이 전제하는 비밀번호가 무효화돼 **뒤 플로우 전체가 깨진다**
+#   (admin 재설정 전까지 복구 불가). → 회귀 스위트에는 **이 파일**을 넣는다.
+#   [06][07]은 `01_05_Login_Password_Reset_old.yaml`로 분리했고, admin에 붙을 수 있을 때만 돌린다.
+#
+# 테스트 항목:
+#   [00] 로그인 화면 구성요소 노출 (FLAG_SECURE라 이미지 대신 assert 5종)
+#   [01] [Low] Chat - 로그인 화면에서 채팅 화면 이동 확인
+#   [02] [Low] Register Here - 이용약관 동의 화면 노출 확인
+#   [03] [Low] 아이디 찾기 - 아이디 찾기 화면 이동 확인
+#   [04] [Low] 비밀번호 찾기 - 비밀번호 찾기 화면 이동 확인
+#   [05] [Medium] 아이디 찾기 - 휴대폰 번호 / 생년월일 입력 후 조회
+#
+# ⚠️ `clearState`라 실행하면 **로그아웃된다** → 이후 `01_01_Login_Success_old.yaml` 필요.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\01_03_Login_screen_safe_old.yaml"
+# ================================================================
+# ⚠️ 진입 블록(launchApp clearState → Server Override → 언어 전환 → 로그인 화면 assert)은
+#   **원본 `01_Login_screen_old.yaml` 19~79행을 그대로 복사한 것**이다.
+#   원본을 고치면 여기도 같이 고칠 것 — 분리본이 갈라지면 조용히 깨진다
+#   (`_Korean`/`_Foreigner` 분리 때 Server Override 블록이 통째로 빠져 첫 화면에서 죽은 전례).
+#   ⛔ `LoginV2Activity`는 FLAG_SECURE라 takeScreenshot을 넣으면 플로우가 통째로 죽는다.
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Server Override 다이얼로그(livetest 빌드 서버선택 스플래시) 노출 시 CONTINUE
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|언어 선택|신규 회원"
+    timeout: 20000
+- runFlow: "_server_override_old.yaml"
+
+# 서비스 이용 안내 팝업 (조건부)
+- runFlow:
+    when:
+      visible: "서비스 이용 안내"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "허용"
+          commands:
+            - tapOn: "허용"
+            - waitForAnimationToEnd
+
+# clearState 후 언어 자동 전환 (en 실행 시: "신규 회원" 감지 → English 전환)
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+
+- tapOn:
+    id: "btn_lgn"
+- waitForAnimationToEnd
+# ⚠️ **`LoginV2Activity`는 FLAG_SECURE라 스크린샷을 찍을 수 없다**(2026-08-26 확정).
+#   Maestro는 여기서 `INTERNAL: Screenshot returned null`로 **플로우 전체가 죽는다**
+#   (실제로 이 파일이 1분 9초 만에 EXIT=1로 중단됐다).
+#   판정 근거: `adb exec-out screencap`이 런처 3.4MB·스플래시 137KB인데 이 화면만 **0바이트**,
+#   윈도우 플래그도 `fl=81812100`으로 `0x2000`(FLAG_SECURE) 비트가 켜져 있다.
+#   ※ `adb shell screencap -p /sdcard/...`는 Android 10 저장소 정책 때문에 **런처에서도 0바이트**라
+#     판정에 쓰면 안 된다 — 반드시 `exec-out`으로 대조군과 함께 볼 것.
+#   → 이미지 증적 대신 **화면 구성요소 assert**로 대체한다.
+#   ※ 이 화면을 벗어난 [01]~[07]의 스크린샷 16개는 전부 다른 액티비티라 정상 동작한다
+#     (LoungeActivity / TermsAndConditionV2Activity / FindIdPasswordActivity / ResetPassV2Activity).
+- assertVisible:
+    id: "usernameId"
+- assertVisible:
+    id: "securityKeyboardEditText"
+- assertVisible:
+    id: "btn_submit"
+- assertVisible:
+    id: "tv_forgotpass"
+- assertVisible:
+    id: "tvFindUserId"
+
+# ----------------------------------------------------------------
+# [01] [Low] Chat - 로그인 화면에서 채팅 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "ivChannelTalk"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Global Money Express"
+- takeScreenshot: "[01]_채팅_화면_이동"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [02] [Low] Register Here - 이용약관 동의 화면 노출 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "register"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${REG_TERMS_TITLE}"
+- takeScreenshot: "[02]_이용약관_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] [Low] 아이디 찾기 - 아이디 찾기 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tvFindUserId"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_ID_TITLE}"
+- takeScreenshot: "[03]_아이디찾기_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] [Low] 비밀번호 찾기 - 비밀번호 찾기 화면 이동 확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tv_forgotpass"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_PW_TITLE}"
+- takeScreenshot: "[04]_비밀번호찾기_화면"
+- pressKey: Back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] [Medium] 아이디 찾기 - 휴대폰 번호 / 생년월일 입력 후 조회
+# ----------------------------------------------------------------
+- tapOn:
+    id: "tvFindUserId"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_FIND_ID_TITLE}"
+- takeScreenshot: "[05-1]_아이디찾기_화면"
+
+# 휴대폰 번호 입력 후 키패드 닫기
+- tapOn:
+    id: "edtMobileNumber"
+- inputText: "01090381905"
+- pressKey: Enter
+- waitForAnimationToEnd
+- takeScreenshot: "[05-2]_휴대폰번호_입력"
+
+# 생년월일 선택 (바텀시트 스크롤 휠: 연도/월/일)
+- tapOn:
+    id: "edtDob"
+- waitForAnimationToEnd
+- takeScreenshot: "[05-3]_날짜피커_오픈"
+
+# ⚠️ **날짜 휠은 좌표로 만지면 안 된다** (2026-08-26 실측으로 원인 3중 확정).
+#   종전 코드는 `point: "27%,68%"` 식이었고 **한 번도 제대로 동작한 적이 없었다**:
+#   ① y=68%(1424)는 휠의 **위쪽 버튼**(bounds 1358~1531)이라 longPress하면 값이 계속 **감소**만 한다
+#      (실측: 1996 → 1992). 편집용 `numberpicker_input`은 1531~1657(≈76%)이다.
+#      68%에서는 포커스도 안 잡히고 키보드도 안 뜬다(`focused=0` / `mInputShown=false`).
+#   ② 포커스가 없으니 뒤이은 `pressKey: Enter`가 **바텀시트로 전달돼 시트를 닫아버린다**
+#      → `confirmBtn`이 계층에서 사라지고 `Element not found: confirmBtn`으로 실패한다.
+#      **이게 원래 증상이라 "id가 틀렸다"로 오진하기 쉽다 — id는 멀쩡하다.**
+#   ③ 포커스가 잡혀 키보드가 열리면 바텀시트가 밀려 **좌표가 또 어긋난다**(일자 휠에서 재현).
+#   → 좌표를 전부 버리고 **`numberpicker_input`의 index 0/1/2**로 지정한다(연도/월/일).
+#     세 휠이 같은 id를 공유하므로 index가 유일하게 안정적인 선택자다.
+#   ⚠️ 각 단계 뒤 `assertVisible: confirmBtn`은 **시트가 닫히는 순간을 즉시 잡기 위한 가드**다.
+#     빼지 말 것 — 없으면 값이 안 들어간 채로 뒤에서 엉뚱하게 실패한다.
+
+# 연도
+- longPressOn:
+    id: "numberpicker_input"
+    index: 0
+- eraseText: 6
+- inputText: "1988"
+- pressKey: Enter
+- waitForAnimationToEnd
+- assertVisible:
+    id: "confirmBtn"
+
+# 월
+- longPressOn:
+    id: "numberpicker_input"
+    index: 1
+- eraseText: 5
+- inputText: "Aug"
+- pressKey: Enter
+- waitForAnimationToEnd
+- assertVisible:
+    id: "confirmBtn"
+
+# 일
+- longPressOn:
+    id: "numberpicker_input"
+    index: 2
+- eraseText: 4
+- inputText: "18"
+- pressKey: Enter
+- waitForAnimationToEnd
+- assertVisible:
+    id: "confirmBtn"
+
+- takeScreenshot: "[05-4]_날짜_선택완료"
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+# ⚠️ 날짜가 **틀린 값으로 조용히 들어가는** 사고가 있었다(1973-07-04 / 1988-08-26).
+#   조회 성공 여부로만 보면 늦게 드러나므로 여기서 값을 직접 확인한다.
+#   텍스트 assert는 전체매칭이라 정확한 표시형식(YYYY-MM-DD)으로 적는다.
+- assertVisible: "1988-08-18"
+- takeScreenshot: "[05-5]_날짜_확인"
+
+- tapOn:
+    id: "btn_submit1"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${LOGIN_SUCCESS}"
+- takeScreenshot: "[05-6]_조회결과"
+
+- tapOn: "${REG_CONFIRM}"
+- waitForAnimationToEnd
+# ⚠️ 조회결과 팝업에서 확인을 누르면 **로그인 화면으로 돌아간다** → `LoginV2Activity`는
+#   FLAG_SECURE라 여기서 `takeScreenshot`을 쓰면 플로우가 통째로 죽는다(2026-08-26 실제 EXIT=1).
+#   → 이미지 증적 대신 로그인 화면 복귀를 assert로 확인한다.
+- assertVisible:
+    id: "usernameId"
+
+# ----------------------------------------------------------------

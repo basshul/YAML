@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+# W13: 고정 스와이프 직후의 index 셀렉터 — 해상도가 바뀌면 다른 행을 집는다
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 40%"
+- waitForAnimationToEnd
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- assertVisible:
+    id: "delete"

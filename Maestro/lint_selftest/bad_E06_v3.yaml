@@ -1,0 +1,11 @@
+appId: ${APP_ID}
+---
+# E06: 개편 UI 전용 셀렉터 — 구 UI 홈에는 "Home" 텍스트가 없다
+#   도달 대기는 타임아웃하고, notVisible 가드로 쓰면 항상 참이 된다. id: bottom_item_home 을 쓸 것.
+#
+# ⛔ 이 픽스처에 "4자리 숫자를 입력하세요"를 쓰지 말 것 — 그 문구는 V3 전용이 **아니다**
+#    (구 UI ActivityLockScreen 실기기 덤프에 그대로 있다, 2026-09-01).
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 40000

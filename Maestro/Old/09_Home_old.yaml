@@ -1,0 +1,732 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: HOME (구 UI)
+# ================================================================
+#  진행: 한국인 계정 EXIT=0(175스텝, 15케이스). 외국인 계정(test123) 분기는 [01]에서 검증 완료(2026-08-13).
+#
+# ClickUp `[HOME] 시나리오`(z8nfn6m9ym, 29건) 대조 — 2026-08-13
+#   각 케이스 위의 `# CLICKUP:` 주석을 데일리 리포트(run_report_old.ps1)가 읽어 complete로 올린다.
+#   **실기기에서 실제로 검증한 것만** 달았다. 아래 부분커버/미커버는 일부러 뺀 것이니 임의로 채우지 말 것.
+#
+#   ✅ 커버완료 9건
+#      z8nfn6ma1a  Total Wallet Balance 숨기기/보이기      → [02]
+#      z8nfn6ma1n  QR 선택시 QR 페이지 전환                → [04]
+#      z8nfn6ma1r  Reward Points 노출 + 선택시 페이지 이동  → [01](노출) + [06](이동)
+#      z8nfn6ma19  Total GME Balance 노출 + Available 전환 → [01](노출) + [07](총 잔액 분해)
+#      z8nfn6ma1b  Transfer → 송금 바텀시트(해외/국내)      → [09]
+#      z8nfn6ma1c  Deposit → GME Deposit Service 이동      → [10]
+#      z8nfn6ma1t  실시간 환율 표시 + Today's Rate 이동     → [01](표시) + [11](이동)
+#      z8nfn6ma1u  [말풍선] → Customer Support 팝업        → [12]
+#      z8nfn6ma17  Wallet Number 노출 + Copy 동작          → [01](노출) + [14](복사 토스트)
+#
+#   ◐ 부분커버 6건 (to do 유지 — 케이스명의 뒷절이 미검증)
+#      z8nfn6ma11  알림 내역 표시 + **검색 동작**    → [05]는 검색창 노출만 확인, 실제 검색 미수행
+#      z8nfn6ma14  공지사항 내역 표시 + **검색 동작** → 위와 같음
+#      z8nfn6ma1d  Bank 전환 + **Wallet에서 스와이프시 Bank 이동** → [08]은 아이콘 탭 전환만,
+#                  [03] 스와이프는 은행 페이지 도달을 검증하지 않는다
+#      z8nfn6ma1p  QR Send → 바텀시트(Global QR/Local)  → [04]는 버튼 노출만, 탭 안 함
+#      z8nfn6ma1q  QR Receive → My QR 이동             → 위와 같음
+#      z8nfn6ma1v  Customer Support 챗봇 전환(Live Chat) → [12]는 항목 노출만, 진입 안 함
+#
+#   ✗ 미커버 14건 — 알림 선택/삭제(ma12,ma13), 공지 선택(ma15), Bank 하위 5건
+#      (ma1f KFTC 번호 Copy / ma1g Bank Balance 마스킹 / ma1h Bank Transfer /
+#       ma1j Check Statement / ma1k 스와이프 계좌추가 / ma1m Add bank account),
+#      Customer Support 외부 채널 5건(ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그 /
+#      ma1z 카카오 / ma20 전화번호 자동입력)
+# 2026-08-11 작성. 대상 화면 = HomeActivityV2.
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# 이 화면은 resource-id가 전부 살아 있어 **id 기반으로 작성**했다.
+# 덕분에 언어(ko/en) 의존이 거의 없다 — env 문자열 대신 id를 쓴다.
+# 구성: 툴바(드로어/알림) + GME Wallet 번호·총 잔액 카드(계좌별 페이저) + 송금/입금 버튼
+#       + 배너 슬라이더 + 환율 + 서비스 그리드 11개 + 플로팅 고객지원 + 하단 내비 5개.
+# 하단 내비 라벨은 text가 아니라 content-desc이므로 id로 검증한다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml"
+#   (Maestro 루트에서 실행 — run_test.ps1이 env\ko.env를 CWD 기준으로 읽음)
+#
+# ================================================================
+# 외국인 계정(test123) 확인 항목 — **2건뿐** (2026-08-13 사용자 확정) / 실행 결과 기록
+# ================================================================
+# 이 파일은 2026-08-12 **한국인 계정(seungsoo818)에서 EXIT=0(175스텝) 확인**됐다.
+# 외국인 계정으로 확인할 항목은 아래 2건이고, 둘 다 [01] 안에 있다.
+# 2026-08-13 test123(외국인 / GMEPay 미신청 / 은행 미연결)으로 실행한 결과:
+#
+#    ✅ [01] GME Pay 가상 계좌 영역 노출: tv_easywallet_account_title / tv_easywallet_account_limit
+#           → 둘 다 노출 확인. 같은 실행에서 환율 영역(rlExchangeRateView) 부재도 확인.
+#    ⏸ [01] 서비스 그리드의 "개인 금융" 노출 — **보류(2026-08-13 사용자 지시)**
+#           → **test123에서는 미노출**. 그리드는 11종뿐이었다(홈 최하단까지 덤프로 확인).
+#             "외국인 전용으로 추가된다"는 2026-08-12 기록이 이 계정에서는 재현되지 않음 — 조건 불명.
+#             livetest 환경에서는 노출 조건을 갖춘 계정을 만들기 까다로워 추후 재확인하기로 함.
+#             (조건부라 미노출 계정에서는 SKIP되므로 이 파일 실행에는 지장 없음)
+#
+# ※ [02]~[15]는 **외국인 계정 재실행 대상이 아니다**(2026-08-13 사용자 확정).
+#   따라서 test123 실행은 [01] 통과까지만 확인하면 되고, 파일 전체 EXIT=0을 요구하지 않는다.
+#   외국인 계정에는 환율 영역이 없어 [11](rlExchangeRateView 탭)은 실패할 수 있으나,
+#   [11]은 한국인 계정에서 이미 검증된 케이스라 그대로 둔다.
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- waitForAnimationToEnd
+# livetest 빌드는 재실행 시 서버선택 스플래시를 띄움
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+# 잠금화면을 명시적으로 대기한 뒤 PIN 입력.
+#   캐시된 홈이 잠깐 보였다가 잠금화면이 뜨는 레이스가 있어 "홈 notVisible" 가드는 쓰지 않는다.
+#   PIN 키패드는 탭마다 배치가 재섞이므로 각 탭 사이에 정착 대기 필수(오입력 누적 = 계정 잠금).
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+# 로그인 직후 팝업들(순서 무관, 조건부)
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "닫기"
+      # ⚠️ 맹목적 팝업 닫기 — 상세 사유는 07_TodaysRate_old.yaml 의 같은 블록 주석 참고.
+      #   요약: 런처 이탈 사고 이력이 있으나, id로 안 닫히는 팝업이 남아 진입이 막힐 수 있어
+      #   지우지 않고 **이미 홈에 도달했으면 누르지 않도록** 가드만 좁혔다.
+      notVisible:
+        id: "btnTransfer"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+# 홈 진입 확인
+# ⚠️ 종전엔 `btnTransfer`만 30초 기다렸다. 2026-09-02 스위트 실행에서 이게 **20스텝에서 FAILED**로 죽었다
+#   (원인: 앞 항목이 홈을 그리드까지 스크롤한 상태로 남겼고, `clearState` 없는 `launchApp`은
+#    이전 태스크를 **재개**한다 → 구 UI 홈은 스크롤 위치를 유지하므로 상단 카드가 트리에 없다).
+#   → 도달 판정은 **항상 보이는 하단 내비**로 하고, `btnTransfer`는 UP 스크롤로 끌어올린다.
+#     아래 [01]이 상단 카드 요소들을 검사하므로 여기서 끌어올려 두는 게 전제이기도 하다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [01] [High] 홈 화면 기본 요소 노출 확인
+# ----------------------------------------------------------------
+# 상단 툴바 (고정 영역)
+- assertVisible:
+    id: "iv_nav"
+- assertVisible:
+    id: "noticeView"
+
+# 잔액 카드 (homeScreenBalancePager - 계좌별 페이저)
+- assertVisible:
+    id: "txvWalletNumberTitle"
+- assertVisible:
+    id: "txvWalletNumber"
+- assertVisible:
+    id: "txvBalanceType"
+- assertVisible:
+    id: "txvBalanceValue"
+- assertVisible:
+    id: "txvCopyToClipBoard"
+- assertVisible:
+    id: "imgViewEye"
+
+# 잔액 카드 상단 아이콘 3종 + 리워드 포인트
+- assertVisible:
+    id: "imgWallteIcon"
+- assertVisible:
+    id: "llBankLogo"
+- assertVisible:
+    id: "qrScan"
+- assertVisible:
+    id: "llRewardPoints"
+- assertVisible:
+    id: "txvRewardPoint"
+- assertVisible:
+    id: "txvRewardPointValue"
+
+# 메인 버튼 2종
+- assertVisible:
+    id: "btnTransfer"
+- assertVisible:
+    id: "txvDepositOrViewStatement"
+
+# 배너 슬라이더 + 인디케이터(n/N)
+- assertVisible:
+    id: "gmeImageSlider"
+- assertVisible:
+    id: "txvCountLabel"
+- assertVisible:
+    text: "\\d+/\\d+"
+
+# 잔액 카드 아래 영역 — **계정 국적에 따라 구성이 갈린다**(2026-08-12 실측)
+#   한국인: 환율 영역        rlExchangeRateView / txvCollAmount(KRW) / txvPAmount(USD)
+#   외국인: GME Pay 가상 계좌 tv_easywallet_account_title / tv_easywallet_account_limit(일일 입금 한도)
+#           → 환율 영역은 **아예 없다**(스크롤해도 없음)
+# 두 계정 유형을 모두 커버하기 위해 분기로 검증한다.
+#   ※ 한 번 실행하면 해당 계정의 분기만 타므로, 전체 커버리지는 **양쪽 계정으로 각각 실행**해야 나온다
+#     (14_Deposit / 23_MyWallet과 동일한 방식).
+- assertVisible: "GME Pay 가상 계좌|KRW"
+- runFlow:
+    when:
+      visible:
+        id: "rlExchangeRateView"
+    commands:
+      - assertVisible:
+          id: "txvCollAmount"
+      - assertVisible:
+          id: "txvPAmount"
+# ✅ test123 검증완료 (2026-08-13) — 외국인 분기가 실제로 실행됨을 확인했다.
+#   tv_easywallet_account_title / tv_easywallet_account_limit 둘 다 노출.
+#   같은 실행에서 rlExchangeRateView 부재(assertNotVisible)도 확인 — 외국인에는 환율 영역이 없다.
+#   ※ test123은 GMEPay 미신청 계정이라 limit 자리의 문구가 한도가 아니라
+#     "지금 가상계좌 신청하기"다(신청 완료 계정은 "남은 일일 입금 한도: N KRW").
+#     id는 동일하므로 이 검증 코드는 두 상태 모두에서 통과한다.
+- runFlow:
+    when:
+      visible:
+        id: "tv_easywallet_account_title"
+    commands:
+      - assertVisible:
+          id: "tv_easywallet_account_limit"
+
+# 플로팅 고객지원 버튼
+- assertVisible:
+    id: "llChatCardView"
+
+# 하단 내비 5종 — 라벨이 text가 아니라 content-desc라 id로 검증
+- assertVisible:
+    id: "bottom_item_home"
+- assertVisible:
+    id: "bottom_item_history"
+- assertVisible:
+    id: "bottom_item_pay"
+- assertVisible:
+    id: "bottom_item_event"
+- assertVisible:
+    id: "bottom_item_profile"
+
+# 서비스 그리드 11종 (스크롤 필요)
+#   ※ "모바일 충전\n및 청구서 결제", "해외송금\n받기", "GME Wallet\n거래내역"은 줄바꿈이 들어간
+#     단일 TextView다. Maestro text 셀렉터는 전체매칭이라 앞부분만 쓰면 실패하므로
+#     줄바꿈을 포함해 정규식 ".*"로 이어준다.
+- scrollUntilVisible:
+    element:
+      text: "예약하기"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    text: "해외송금"
+- assertVisible:
+    text: "국내 송금"
+- assertVisible:
+    text: "오늘의 환율"
+- assertVisible:
+    text: "모바일 충전.*청구서 결제"
+- assertVisible:
+    text: "해외송금.*받기"
+- assertVisible:
+    text: "입금"
+- assertVisible:
+    text: "ATM 출금"
+- assertVisible:
+    text: "GME Wallet.*거래내역"
+- assertVisible:
+    text: "통신 서비스"
+- assertVisible:
+    text: "증명서 발급"
+- assertVisible:
+    text: "예약하기"
+# ⚠️ test123(외국인)에서도 "개인 금융" **미노출** — 조건 불명 (2026-08-13 실측)
+#   "외국인 계정에서만 추가된다"(2026-08-12 기록)는 test123에서 재현되지 않았다.
+#   홈 최하단까지 스크롤한 uiautomator 덤프 기준 그리드는 위 11종뿐이고 "금융"/"대출" 텍스트가 없다.
+#   → 국적만으로 갈리는 게 아니라 다른 계정 속성(어드민 국적 세부값 / 서비스 신청 상태 등)에
+#     달린 것으로 보인다. 조건이 확인되면 그 계정으로 재검증할 것.
+#   조건부(runFlow when visible)라 노출되지 않는 계정에서는 SKIP되므로 그대로 둔다.
+- runFlow:
+    when:
+      visible:
+        text: "개인 금융"
+    commands:
+      - assertVisible:
+          text: "개인 금융"
+
+# 최상단 복귀
+- scrollUntilVisible:
+    element:
+      id: "txvWalletNumberTitle"
+    direction: UP
+    timeout: 10000
+
+# ----------------------------------------------------------------
+# [02] [Medium] 잔액 마스킹 토글(눈 아이콘) 동작 확인
+# CLICKUP: z8nfn6ma1a
+# ----------------------------------------------------------------
+# ※ 마스킹 표기는 별표가 아니라 **"XXX"**(ASCII X 3개)다. 2026-08-11 실측:
+#   노출 상태 txvBalanceValue="3,099" → 마스킹 상태 txvBalanceValue="XXX".
+#   별표 패턴("\*+")을 쓰면 항상 실패한다.
+# 초기 상태 정규화: 마스킹 상태면 먼저 해제해 '잔액 노출'로 맞춤
+- runFlow:
+    when:
+      visible:
+        id: "txvBalanceValue"
+        text: "XXX"
+    commands:
+      - tapOn:
+          id: "imgViewEye"
+      - waitForAnimationToEnd
+
+# 노출 → 마스킹 전환 확인
+- tapOn:
+    id: "imgViewEye"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvBalanceValue"
+    text: "XXX"
+
+# 마스킹 → 노출 복귀 확인
+- tapOn:
+    id: "imgViewEye"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "txvBalanceValue"
+    text: "XXX"
+
+# ----------------------------------------------------------------
+# [03] [Medium] 잔액 카드 페이저 스와이프 → 계좌 전환 확인
+# ----------------------------------------------------------------
+# 잔액 카드는 계좌별 페이지로 구성됨(현 계정 6개). 스와이프 시 GME Wallet 번호/잔액 라벨이
+# 계좌에 맞게 바뀌는지 확인. 계좌 구성은 계정마다 달라 값은 검증하지 않고 요소 유지만 확인한다.
+- swipe:
+    from:
+      id: "homeScreenBalancePager"
+    direction: LEFT
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvBalanceValue"
+- swipe:
+    from:
+      id: "homeScreenBalancePager"
+    direction: RIGHT
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvWalletNumberTitle"
+- assertVisible:
+    id: "txvBalanceValue"
+
+# ----------------------------------------------------------------
+# [04] [High] QR 아이콘 탭 → 잔액 카드가 QR 페이지로 전환 확인
+# CLICKUP: z8nfn6ma1n
+# CLICKUP-PARTIAL: z8nfn6ma1p | "지금 송금하기" 버튼 노출만 확인, 탭 후 바텀시트(Global QR/Local)는 미확인
+# CLICKUP-PARTIAL: z8nfn6ma1q | "받기" 버튼 노출만 확인, 탭 후 My QR 화면 이동은 미확인
+# ----------------------------------------------------------------
+# 화면 이동도, 바텀시트도 아니다. 잔액 카드 상단의 아이콘 3종
+# (imgWallteIcon=지갑 / llBankLogo=은행 / qrScan=QR)은 **잔액 카드 페이저의 페이지를 바꾸는**
+# 스위처이고, 페이지에 따라 하단 버튼 2개의 라벨이 함께 바뀐다.
+#   지갑 페이지 → "송금" / "입금"
+#   QR 페이지   → "지금 송금하기" / "받기"
+#   은행 페이지 → "송금" / "거래내역 확인"
+# ※ 이 상태에서 pressKey back을 하면 시트가 없으므로 back이 액티비티로 전파돼
+#   "앱을 종료하시겠습니까?" 다이얼로그가 뜬다. 복귀는 지갑 아이콘 탭으로 한다.
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "QR을 사용하여 보내기 또는 받기"
+- assertVisible:
+    id: "btnTransfer"
+    text: "지금 송금하기"
+- assertVisible:
+    id: "txvDepositOrViewStatement"
+    text: "받기"
+# 지갑 아이콘으로 GME Wallet 페이지 복귀
+- tapOn:
+    id: "imgWallteIcon"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvWalletNumberTitle"
+- assertVisible:
+    id: "btnTransfer"
+    text: "송금"
+
+# ----------------------------------------------------------------
+# [05] [High] 알림 아이콘 탭 → 공지사항/알림 화면 이동 확인
+# CLICKUP-PARTIAL: z8nfn6ma11 | 알림 내역 표시는 확인, 검색창 노출만 보고 실제 검색은 미수행
+# CLICKUP-PARTIAL: z8nfn6ma14 | 공지사항 내역 표시는 확인, 검색창 노출만 보고 실제 검색은 미수행
+# ----------------------------------------------------------------
+# NotificationAndNoticeActivity — 공지사항 / 알림 두 탭 + 검색
+- tapOn:
+    id: "noticeView"
+- extendedWaitUntil:
+    visible:
+      text: "공지사항"
+    timeout: 15000
+- assertVisible:
+    text: "알림"
+- assertVisible:
+    text: "검색어를 입력해 주세요."
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [06] [Medium] 리워드 포인트 탭 → 리워드 포인트 내역 화면 이동 확인
+# CLICKUP: z8nfn6ma1r
+# ----------------------------------------------------------------
+# RewardPointHistoryActivity
+- tapOn:
+    id: "llRewardPoints"
+- extendedWaitUntil:
+    visible:
+      text: "보유 포인트"
+    timeout: 15000
+- assertVisible:
+    text: "리워드 포인트"
+- assertVisible:
+    text: "포인트 사용하기"
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [07] [High] 잔액 영역 탭 → 잔액 상세(총 잔액 분해) 노출 확인
+# CLICKUP: z8nfn6ma19
+# ----------------------------------------------------------------
+# 화면 이동이 아니라 홈 위에 잔액 상세가 펼쳐진다(총 잔액 = GME Wallet + GME Pay).
+# ※ 이 동작도 잔액 카드 페이지에 따라 다르다 — **지갑 페이지에서만** 상세가 열리고,
+#   은행 페이지에서는 아무 반응이 없다. 그래서 [04]에서 지갑 페이지로 복귀시킨 상태를 전제로 한다.
+# 금액은 계정마다 달라 라벨만 검증한다.
+- tapOn:
+    id: "llBalanceSection"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "총 잔액"
+- assertVisible:
+    text: "GME Wallet"
+- assertVisible:
+    text: "GME Pay"
+# 닫기: 바텀시트로 뜨면 시트 밖 탭, 그래도 홈이 아니면 back
+- runFlow:
+    when:
+      visible:
+        id: "touch_outside"
+    commands:
+      - tapOn:
+          id: "touch_outside"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "btnTransfer"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [08] [Medium] 은행 아이콘 탭 → 잔액 카드가 연결 은행 계좌로 전환 확인
+# CLICKUP-PARTIAL: z8nfn6ma1d | 아이콘 탭 전환은 확인, "Wallet에서 스와이프시 Bank 이동"은 [03]이 은행 페이지 도달을 검증하지 않아 미확인
+# ----------------------------------------------------------------
+# 화면 이동이 아니라 잔액 카드 페이저가 은행 계좌 페이지로 전환된다.
+# 이때 하단 버튼도 "송금 / 거래내역 확인"으로 바뀐다(GME Wallet 카드에서는 "송금 / 입금").
+- tapOn:
+    id: "llBankLogo"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "거래내역 확인"
+- assertVisible:
+    id: "txvBalanceType"
+# 지갑 아이콘으로 GME Wallet 카드 복귀
+- tapOn:
+    id: "imgWallteIcon"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvWalletNumberTitle"
+- assertVisible:
+    id: "txvDepositOrViewStatement"
+
+# ----------------------------------------------------------------
+# [09] [High] 송금 버튼 탭 → 송금 종류 바텀시트 노출 확인
+# CLICKUP: z8nfn6ma1b
+# ----------------------------------------------------------------
+# 이건 진짜 BottomSheetDialog다(dismiss 영역 id=touch_outside).
+# 항목: 해외송금(llQrContainer) / 국내 송금(llLocalTransfer)
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "해외송금"
+- assertVisible:
+    text: "국내 송금"
+- assertVisible:
+    id: "llLocalTransfer"
+# 시트 밖 탭으로 닫기(back보다 안전 — 시트가 back을 소비하지 않는 화면이 섞여 있음)
+- tapOn:
+    id: "touch_outside"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [10] [High] 입금 버튼 탭 → 입금 서비스 화면 이동 확인
+# CLICKUP: z8nfn6ma1c
+# ----------------------------------------------------------------
+# ActivityDepositMenu — 타이틀 "입금 서비스", 입금 수단 카드 5종
+#   GME Wallet 입금 / ATM 입금 / GMEPay\n입금 / 자동이체 입금 / 현장 입금
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- extendedWaitUntil:
+    visible:
+      text: "입금 서비스"
+    timeout: 15000
+- assertVisible:
+    id: "cardGmeWalletDeposit"
+- assertVisible:
+    id: "cardAtmDeposit"
+- assertVisible:
+    id: "cardViewGmePayDeposit"
+- assertVisible:
+    id: "cardAutoDebitDeposit"
+- assertVisible:
+    text: "현장 입금"
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [11] [High] 환율 영역 탭 → 오늘의 환율 화면 이동 확인
+# CLICKUP: z8nfn6ma1t
+# ----------------------------------------------------------------
+# ExchangeRateActivity
+- tapOn:
+    id: "rlExchangeRateView"
+- extendedWaitUntil:
+    visible:
+      text: "오늘의 환율"
+    timeout: 15000
+- assertVisible:
+    text: "송금 방법 선택"
+- assertVisible:
+    text: "송금할 금액"
+- assertVisible:
+    text: "현재 환율"
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [12] [Medium] 플로팅 고객지원 버튼 탭 → 고객지원 바텀시트 항목 확인
+# CLICKUP: z8nfn6ma1u
+# CLICKUP-PARTIAL: z8nfn6ma1v | "실시간 채팅" 항목 노출만 확인, 탭 후 챗봇 화면 전환은 미확인
+# ----------------------------------------------------------------
+- tapOn:
+    id: "llChatCardView"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "사용 중 궁금한 점이 있으신가요?"
+- assertVisible:
+    id: "chatView"
+- assertVisible:
+    text: "실시간 채팅"
+# ⚠️ **채널 구성과 대표번호를 문자열로 박지 말 것** — 서버가 바꾼다(2026-09-03 실측).
+#   `"Kakao"`로 기다리고 있었으나 실제 목록은 Facebook / Instagram / **Telegram** 이고 Kakao는 없다.
+#   대표번호도 1811-2961 → 1811-2904 → **1811-2927** 로 두 번 바뀌었다
+#   (`26_Menu_old.yaml [01-1]`이 이미 같은 이유로 id 판정으로 바꿔 뒀다).
+#   이 케이스가 보는 건 "고객지원 팝업이 뜨고 채널과 대표번호가 노출되는가"이지
+#   특정 채널이 무엇인가가 아니다 → **컨테이너와 항목 id로 판정**한다(2026-09-03 실기기 덤프).
+- assertVisible:
+    id: "rvMediaView"
+- assertVisible:
+    id: "media_name"
+- assertVisible:
+    id: "callTxtView"
+- tapOn:
+    id: "btnCancel"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [13] [High] 좌상단 메뉴 탭 → 드로어 열림 및 메뉴 항목 확인
+# ----------------------------------------------------------------
+# iv_nav는 DrawerLayout(drawer_home)을 여는 햄버거 메뉴다. 액티비티는 그대로이고
+# 홈 노드도 계층에 함께 남아 있으므로, 드로어가 열렸는지는 드로어 전용 항목으로 판별해야 한다.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txt_user_name"
+- assertVisible:
+    id: "txt_contact"
+- assertVisible:
+    id: "txt_user_email"
+- assertVisible:
+    text: "은행 계좌 연결"
+- assertVisible:
+    text: "송금 받을 계좌"
+- assertVisible:
+    text: "지점"
+- assertVisible:
+    text: "GME 소개"
+- assertVisible:
+    text: "설정"
+- assertVisible:
+    text: "개인정보 처리 방침"
+- assertVisible:
+    text: "이용약관"
+- assertVisible:
+    text: "로그아웃"
+# 드로어 닫기
+#   ⚠️ back은 드로어를 닫으면서 액티비티까지 전파돼 "앱을 종료하시겠습니까?"가 뜬다.
+#   드로어 위에서 왼쪽 스와이프도 닫히지 않았다(둘 다 2026-08-11 실측).
+#   DrawerLayout은 열려 있는 동안 우측 콘텐츠가 스크림으로 덮이므로,
+#   화면 우측 끝 요소를 탭하면 스크림에 닿아 드로어가 닫힌다(좌표 없이 id로 지정 가능).
+- tapOn:
+    id: "bottom_item_profile"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "앱을 종료하시겠습니까?"
+    commands:
+      - tapOn: "아니요"
+      - waitForAnimationToEnd
+- assertNotVisible:
+    id: "txt_user_email"
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 10000
+
+# ----------------------------------------------------------------
+# [14] [Medium] GME Wallet 번호 복사 → 복사 완료 토스트 확인
+# CLICKUP: z8nfn6ma17
+# ----------------------------------------------------------------
+# ⚠️ 토스트 검증 주의 (2026-08-12 실측):
+#   - `uiautomator dump`에는 토스트가 **잡히지 않지만** Maestro의 assertVisible은 **본다**.
+#     (화면 텍스트를 uiautomator로 읽어야 정확한 경우가 많은데, 토스트는 정반대다)
+#   - 토스트는 약 2초 후 사라지므로 탭과 assert 사이에 대기를 넣으면 안 된다.
+#     waitForAnimationToEnd를 끼우면 실패한다.
+#   - 클립보드에 실제로 들어간 값 검증은 붙여넣을 입력 필드가 필요해 홈 화면 밖으로 나가야 한다.
+#     홈의 책임 범위를 넘으므로 여기서는 복사 동작(토스트)까지만 확인한다.
+- tapOn:
+    id: "txvCopyToClipBoard"
+- assertVisible: ".*복사.*"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvWalletNumber"
+
+# ----------------------------------------------------------------
+# [15] [Medium] 배너 탭 → 화면 이동 후 홈 복귀 확인
+# ----------------------------------------------------------------
+# ⚠️ 배너 목적지는 **비결정적**이다. 배너 6개가 자동 롤링하고 항목마다 목적지가 다르다
+#   (2026-08-12 실측: "EasyGo 카드" 배너 → GMECardOwnerActivity. 그 외 친구 초대·룰렛 이벤트 등 존재).
+#   실행 시점에 어느 배너가 떠 있는지 정해지지 않으므로 목적지를 고정 검증할 수 없다.
+#   → **판정 기준: 배너를 탭했을 때 에러만 발생하지 않으면 PASS**(사용자 확정, 2026-08-12).
+#   "홈을 벗어났는지"조차 검증하지 않는다 — 배너에 따라 이동하지 않는 것도 정상일 수 있고,
+#   그걸 실패로 잡으면 배너 구성이 바뀔 때마다 깨지는 불안정한 케이스가 된다.
+#   탭 이후에는 어디로 갔든 홈으로 되돌려 다음 케이스에 영향을 주지 않게만 한다.
+#   외부 브라우저로 나가는 배너도 있을 수 있어 복귀는 조건부 back 반복으로 처리한다.
+- assertVisible:
+    id: "txvCountLabel"
+- tapOn:
+    id: "ll_allView"
+- waitForAnimationToEnd
+- repeat:
+    times: 4
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "scrollViewHomeFragment"
+          commands:
+            - runFlow:
+                when:
+                  visible: "앱을 종료하시겠습니까?"
+                commands:
+                  - tapOn: "아니요"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "scrollViewHomeFragment"
+                commands:
+                  - pressKey: back
+                  - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "scrollViewHomeFragment"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# 남은 작업
+# ----------------------------------------------------------------
+#   드로어 메뉴 9종 진입  [13]에서 노출만 확인함 — 각 항목 진입은 별도 케이스로 확장 필요
+#
+# ※ 진입(1depth 이동) 케이스는 이 파일에서 다루지 않는다 —
+#   서비스 그리드 11종과 하단 내비 4종의 목적지는 각각 전용 시나리오 파일이 담당하며,
+#   그쪽에서 진입까지 함께 확인되므로 여기서 중복 검증하지 않는다.
+#   홈의 책임은 "그 진입점들이 화면에 제대로 노출되는가"까지이고 그건 [01]에서 검증한다.

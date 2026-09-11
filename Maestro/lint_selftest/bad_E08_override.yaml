@@ -1,0 +1,13 @@
+appId: ${APP_ID}
+---
+# 픽스처: launchApp 을 하는데 Server Override(LIVETEST 강제) 처리가 없다.
+# stag 빌드에서는 서버 기본값이 STAG라 이대로면 조용히 gmeuat 로 돈다 → E08.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn: "1"
+- tapOn: "2"
+- assertVisible:
+    id: "bottom_item_home"

@@ -1,0 +1,98 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Event
+# ================================================================
+# 2026-07-09 실기기 탐색 결과 원래 TODO가 전제한 상황(진행 중인 이벤트 존재 + 전용
+# "Share With my Friends"/Send Link/Share QR 버튼, "Spin & Win" 이벤트)이 현재
+# 계정/환경에는 존재하지 않음을 확인함:
+# - "진행 중인 이벤트" 탭: 항상 "내역 없음"(데이터 없음)
+# - "지난 이벤트" 탭에만 배너가 있으며, 탭하면 앱 내 상세/공유 화면이 아니라 즉시
+#   외부 브라우저(Chrome)로 Facebook 공유 링크(facebook.com/share/...)가 열림
+# 사용자 확인 하에, 이 "지난 이벤트 배너 → 외부 공유 링크 이동" 동작으로 [01]을
+# 대체 작성함(실제 앱에 존재하는 유일한 "공유" 관련 동작).
+# 화면이 Jetpack Compose 기반이라 탭/카드에 resource-id가 없음 - 탭은 text 기반,
+# 배너 카드는 화면 내 고정 위치(탭 바로 아래 첫 카드)를 percentage point로 탭함
+# (배너 콘텐츠 자체는 주기적으로 바뀌므로 텍스트/id 기반보다 안정적).
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [Low] Ongoing Events - Share With my Friends 동작 확인
+#            - Send Link / Share QR (Spin & Win)
+#            → 2026-07-09 정정: 위 사유로 "지난 이벤트 배너 → 외부 공유 링크 이동"
+#              동작 확인으로 대체
+# ----------------------------------------------------------------
+
+# 이벤트 화면 진입: Home > (스크롤 필요) > 생활 & 여행 섹션 > "이벤트"
+- scrollUntilVisible:
+    element:
+      text: "이벤트"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "이벤트"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "진행 중인 이벤트"
+
+# 진행 중인 이벤트: 현재 데이터 없음(참고용 확인, 위 주석 참고)
+- assertVisible:
+    text: "내역 없음"
+
+# 지난 이벤트 탭으로 전환 후 첫 배너 탭 → 외부 브라우저(Facebook 공유 링크) 이동 확인
+- tapOn: "지난 이벤트"
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,31%"
+- extendedWaitUntil:
+    visible:
+      text: ".*facebook.*"
+    timeout: 10000
+
+# 앱으로 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- assertVisible:
+    text: "이벤트"
+
+# Home으로 복귀
+- pressKey: back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    text: "Home"

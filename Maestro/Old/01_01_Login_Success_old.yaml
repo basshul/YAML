@@ -1,0 +1,222 @@
+appId: ${APP_ID}
+env:
+  # 현재 로그인 비밀번호 = <비밀번호 앞부분><PW_CUR_LAST>  ("느낌표"=`!` / "골뱅이"=`@`)
+  # 자동화 표준은 <정상 비밀번호> / <대체 비밀번호> 2종이다([[project_01_login]]).
+  PW_CUR_LAST: "느낌표"
+---
+# ================================================================
+# 01_01 최초 로그인 (clearState → 로그인 → PIN <정상 PIN> 설정) — 구 UI
+# ================================================================
+#  진행: **EXIT=0 / 5케이스** (2026-08-14 구 UI 기준 재작성 + 실기기 seungsoo818).
+#    실행 후 콜드 재시작으로 **PIN <정상 PIN> 유효**까지 재확인함.
+#
+#  실측 메모 (2026-08-14, 조건부라 실행에는 지장 없음):
+#    - [04] 간편 비밀번호 설정이 **SKIP됐다** — clearState로 앱 데이터를 지워도 로그인하면
+#      기존 PIN(<정상 PIN>)이 그대로 유효했다. PIN은 기기 저장이 아니라 **계정(서버) 쪽 상태**로 보인다.
+#      (반대로 잠금화면에서 "아이디/비밀번호로 로그인"을 타면 기존 PIN이 해지돼 재등록을 요구한다)
+#    - [01] "서비스 이용 안내"도 SKIP됐다(clearState로는 초기화되지 않는 플래그로 추정).
+#    - [05] "보이스 피싱 주의"는 실제로 떠서 처리됐다.
+#
+# 용도: 다른 시나리오 실행 전 **로그인 상태를 만드는 셋업 플로우**.
+#   clearState로 앱 데이터를 지우므로 앱 언어도 기기 기본(한국어)으로 돌아간다.
+#
+# 케이스:
+#   [01] clearState 후 초기 진입 처리(서버선택 / 서비스 이용 안내 / 권한)
+#   [02] 로그인 — seungsoo818 / <비밀번호 앞부분><PW_CUR_LAST>
+#   [03] 지문인증 등록 제안 → "나중에" (조건부)
+#   [04] 간편 비밀번호 설정 → <정상 PIN> (조건부)
+#   [05] 로그인 후 팝업 정리 → 홈 도달 확인
+#
+# 2026-08-14 수정 3건:
+#   1. ⚠️ **`transKeypad_row4` 탭 제거** — `securityKeyboardEditText` 직후 이걸 누르면 키패드의 문자
+#      하나가 더 입력돼 비밀번호가 깨진다([[project_14_deposit]]에 실제 로그인 실패 사고 기록).
+#   2. ⚠️ **`<구 비밀번호(폐기)>` 폴백 블록 제거** — `<구 비밀번호(폐기)>`는 admin 임의 발급값이라 표준이 아니고,
+#      그 블록이 쓰던 `securityKeyboardClearAllImageView`는 이 화면에 **존재하지 않는다**.
+#      비밀번호가 바뀌면 폴백에 기대지 말고 위 `env`를 고칠 것(틀린 시도는 5회 잠금을 소모한다).
+#   3. 간편 비밀번호 설정 조건을 실제 문구에 맞춰 정규식으로 교체
+#      (`"간편비밀번호"`는 전체매칭이라 "앱에서 사용할 간편 비밀번호를 생성해 주세요"와 매칭되지 않는다).
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\01_01_Login_Success_old.yaml"
+# ================================================================
+
+# ----------------------------------------------------------------
+# [01] clearState 후 초기 진입 처리
+# ----------------------------------------------------------------
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|서비스 이용 안내|신규 회원"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+# 서비스 이용 안내(최초 실행/clearState 후) → 확인 → OS 권한 허용
+- runFlow:
+    when:
+      visible: "서비스 이용 안내"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "허용"
+          commands:
+            - tapOn: "허용"
+            - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "허용"
+          commands:
+            - tapOn: "허용"
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [02] 로그인 — seungsoo818 / <비밀번호 앞부분><PW_CUR_LAST>
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_lgn"
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 20000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "seungsoo818"
+# ⚠️ securityKeyboardEditText 탭 직후 transKeypad_row4를 누르지 말 것(문자 오입력)
+- tapOn:
+    id: "securityKeyboardEditText"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "입력완료"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] 지문인증 등록 제안 → "나중에" (조건부)
+# ----------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+    commands:
+      - tapOn: "나중에"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] 간편 비밀번호 설정 → <정상 PIN> (조건부)
+# ----------------------------------------------------------------
+# 화면 문구: "앱에서 사용할 간편 비밀번호를 생성해 주세요" → 부분매칭 정규식으로 판정
+- runFlow:
+    when:
+      visible: ".*간편 비밀번호를 생성.*"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] 로그인 후 팝업 정리 → 홈 도달 확인
+# ----------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+
+# ⚠️ **홈 팝업은 하나가 아니라 큐로 연달아 뜬다.** 단발 조건부로는 못 잡는다.
+#   2026-08-27 실측(7.20.0-stag): 인앱 배너를 닫자 그 아래 **"증빙 서류 안내"**(`remindLaterBtn`)가
+#   깔려 있어 `btnTransfer` assert가 계속 실패했다.
+#   → 팝업 종류·순서를 이 파일에 복사하지 말고 **헬퍼 한 곳에서** 처리한다.
+#     헬퍼는 닫히는 팝업이 없어질 때까지 반복하고, 상한(times)이 있어 무한 루프에 빠지지 않는다.
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 90000
+# 구 UI 홈 확인 (개편 UI면 이 요소들이 없다)
+- assertVisible:
+    id: "iv_nav"
+- assertVisible:
+    id: "bottom_item_profile"
+- takeScreenshot: login_first_home

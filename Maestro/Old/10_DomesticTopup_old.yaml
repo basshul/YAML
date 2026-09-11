@@ -1,0 +1,391 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Domestic Topup (국내 선불폰 충전) — 구 UI
+# ================================================================
+#  진행: 2026-08-24 구 UI 기준 재작성. (원본 개편UI판 백업: `.bak_20260824`)
+#
+# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
+#   adb shell dumpsys window | Select-String mCurrentFocus
+#     → ...homeV2.view.HomeActivityV2
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\10_DomesticTopup_old.yaml"
+#   ※ 기기가 1대면 `-device`는 생략한다(러너가 adb로 자동 감지). 시리얼을 적지 말 것 — 기기는 교체된다.
+#
+# ---------------------------------------------------------------
+# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-24 실측)
+# ---------------------------------------------------------------
+#   진입 그리드 항목  "모바일 충전" → **"모바일 충전 및 청구서 결제"**
+#                     구 UI는 충전과 청구서 결제가 **한 항목으로 합쳐져 있다**.
+#                     라벨이 2줄로 소프트랩되므로 `.*모바일 충전.*` 정규식으로 탭한다.
+#   2단 허브 화면     **허브 자체는 개편UI에도 있었다**(개편UI도 "모바일 충전" → "국내 충전 서비스"
+#                     2단이었고 그 2단이 이 허브다). 구 UI에서 달라진 건 1단 라벨과,
+#                     허브에 **청구서 결제까지 들어왔다는 것**이다.
+#                     허브 = **`MobileTopUpAndBillPaymentActivity`**:
+#                     `domestic_topUp`(국내 충전) / `international_topUp`(해외 충전)
+#                     / `international_bill_payment`(해외 청구서 결제) / `iv_back` / `csButton`
+#                     ⚠️ **10·11·12 세 파일이 모두 이 허브를 통과한다.**
+#                     2단 라벨("국내 충전 서비스")은 개편UI와 같지만 **id가 있으니 id로 탭한다**.
+#   홈 판정          `text: "Home"` → id **`btnTransfer`**
+#   홈 복귀          `repeat while notVisible "Home"` 식 back 루프
+#                     → **`back`(충전화면) → `iv_back`(허브)** 2탭으로 결정적으로 나온다
+#   PPS 확인 다이얼로그 `tapOn: "예"`(텍스트) → id **`btnOk`**
+#                     (`txvDialogTitle`="정보" / `txvDialogDescription` / `btnCancel`="아니요")
+#   충전 세부 정보 시트 `tapOn: "계속"`(텍스트) → id **`continueBtn`**
+#                     (`heading` / `close` / `mobileno` / `paymentamount`)
+#   잠금화면 판정      `text: "간편 비밀번호를 입력하세요"` → id **`input_dot_1`**
+#
+# ---------------------------------------------------------------
+# 화면 구조 (2026-08-24 실측 / Note 9 1080x2220)
+# ---------------------------------------------------------------
+#   허브 `overseas_bill_payment.mobile_topup_billpayment.MobileTopUpAndBillPaymentActivity`
+#     `iv_back` / `toolbar_title`("모바일 충전 및 청구서 결제")
+#     `appCompatTextView6`("충전 서비스") / `domestic_topUp` / `international_topUp`
+#     `tv_billPaymentService`("청구서 결제 서비스") / `international_bill_payment` / `csButton`
+#   충전화면 `localtopup.DomesticTopupActivity`
+#     `back` / `title`("국내 선불폰 충전 서비스") / `mobileno`(EditText) / `contact` / `button_continue`("충전")
+#     ※ **id가 개편UI와 전부 동일하다** — [01]~[03] 본문은 셀렉터를 바꿀 필요가 없었다.
+#   PPS 다이얼로그 — `txvDialogDescription`("선불 서비스(PPS)를 이용하고 계신가요?") / `btnCancel` / `btnOk`
+#   충전 세부 정보 시트 — `heading`("충전 세부 정보") / `mobileno` / `accountnumbertext`("총 결제 금액")
+#     / `paymentamount`("10,000 KRW") / `line1`~`line3`(안내문) / `continueBtn`("계속") / `close`
+#   계좌 선택 — 같은 액티비티, `gmeTextView12`("계좌 선택")
+#     `mainlayout` × N > `name` / `balance`
+#       (GME Wallet 06640154622502 / 카카오뱅크 / 케이뱅크 / 신한은행 — 은행 잔액은 `XXX,XXX KRW` 마스킹)
+#     `confirm_btn`("계속")
+#
+# ⚠️ **[04]는 실제 충전 요청을 서버로 보낸다.** 다만 이 화면에 넣는 번호(010-9038-1905,
+#   계정 소유 안전 번호)는 선불폰 충전이 불가능한 번호라 정상 PIN(<정상 PIN>)을 넣어도 서버가
+#   실패로 떨궈 **실자금 이동이 없다**(2026-07-15 실기기 확인, GME Wallet 잔액 유지).
+#   이 "실패"가 케이스 제목이 의도한 검증 대상이다.
+#   ⚠️ 실패 응답까지 걸리는 시간이 매우 불규칙하다(수 초 ~ 90초 초과도 관찰) → timeout 180000.
+#
+# ⚠️ **[03] 이후 번호를 반드시 되돌린다.** [03]이 실제 연락처(타인 번호)로 필드를 바꾸므로,
+#   [04]의 실제 요청이 타인 번호로 나가면 안 된다.
+#
+# 케이스:
+#   [01] [High]   Phone Number - 자동입력된 핸드폰 번호 노출 확인
+#   [02] [Medium] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인
+#   [03] [Medium] Phone Number - 주소록 버튼 선택 시 주소록 번호 필드 반영 확인
+#   [04] [High]   Wallet Charging (PPS) - PPS 번호 충전 동작 확인 (Simple PW) — 실패동작으로 확인
+#
+# 케이스 실행 순서(2026-07-15 사용자 지시 유지): [01]~[04]는 전부 같은 충전 화면 안에서
+#   이어서 진행하고, 홈 복귀는 [04] 완료 후 마지막에 한 번만 수행한다.
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ---------------- 진입: 홈 그리드 → 허브 → 국내 충전 서비스 ----------------
+# 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
+- scrollUntilVisible:
+    element:
+      text: ".*모바일 충전.*"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    text: ".*모바일 충전.*"
+- extendedWaitUntil:
+    visible:
+      id: "domestic_topUp"
+    timeout: 30000
+- assertVisible:
+    id: "international_topUp"
+- assertVisible:
+    id: "international_bill_payment"
+- takeScreenshot: "shots_10_domestictopup_old/00_허브_모바일충전및청구서결제"
+
+- tapOn:
+    id: "domestic_topUp"
+- extendedWaitUntil:
+    visible:
+      id: "mobileno"
+    timeout: 30000
+- assertVisible: "국내 선불폰 충전 서비스"
+
+# ----------------------------------------------------------------
+# [01] [High] Phone Number - 자동입력된 핸드폰 번호 노출 확인
+# ----------------------------------------------------------------
+# 계정에 등록된 휴대폰 번호가 자동으로 채워진다.
+- assertVisible:
+    id: "mobileno"
+- assertVisible:
+    id: "contact"
+- assertVisible:
+    id: "button_continue"
+- takeScreenshot: "shots_10_domestictopup_old/01_번호_자동입력"
+
+# ----------------------------------------------------------------
+# [02] [Medium] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인
+# ----------------------------------------------------------------
+# 참고(실기기 확인) 2가지 — 구 UI에서도 동일하다:
+# 1. 필드 맨 앞 "010"은 고정 접두사라 삭제되지 않음(계속 지워도 "010-"에서 멈춤)
+#    - 나머지 8자리만 지우고 새로 입력된다. 11자리를 그대로 입력하면 앞의 "010"과
+#      합쳐져 자릿수가 깨지므로 **8자리 숫자만** 입력해야 한다.
+# 2. `tapOn: id: mobileno`(뷰 중앙 탭)는 커서를 텍스트 끝이 아니라 중간에 위치시켜
+#    eraseText가 뒷부분 숫자를 못 지우고 남기는 경우가 있었다
+#    ("010-9038-1905" → 잘못된 "010-0101-2345" 형태로 깨짐)
+#    → 필드 **우측 근처를 좌표로** 탭해야 커서가 끝에 위치한다.
+#    2026-08-24 구 UI 실측: `mobileno` bounds [41,254][949,398] (1080x2220)
+#    → 75%,14% = (810,311)로 필드 우측 안쪽에 떨어진다. 기존 좌표를 그대로 쓴다.
+#    ※ 커서가 잘못 잡히면 바로 아래 text assert가 실패하므로 조용히 깨지지는 않는다.
+- tapOn:
+    point: "75%,14%"
+- eraseText: 15
+- inputText: "12345678"
+- hideKeyboard
+- assertVisible:
+    id: "mobileno"
+    text: "010-1234-5678"
+- takeScreenshot: "shots_10_domestictopup_old/02_번호_수동입력"
+
+# ----------------------------------------------------------------
+# [03] [Medium] Phone Number - 주소록 버튼 선택 시 주소록 번호 모바일 필드에 추가 동작 확인
+# ----------------------------------------------------------------
+# 참고: "주소록" 아이콘 탭 시 GME 앱 내부 화면이 아니라 단말기의 삼성 연락처
+# 앱(com.samsung.android.app.contacts) Picker가 뜬다.
+# 주의(데이터 의존성): 목록 첫 번째 연락처(index 0, "트윗김씨")의 번호는
+# "010594373612"(12자리)로 이 필드가 기대하는 "010"+8자리 형식보다 한 자리 많아
+# 대시 포맷팅이 깨지고 "충전" 버튼이 비활성화된다 - 뒤이은 [04]가 실제로 충전을
+# 시도해야 하므로, 정상 8자리 형식으로 반영되는 "Korea, Anil"(01077519519)을
+# **이름으로 지정해** 선택한다. **index 기반 선택은 이 데이터셋에서 안전하지 않다.**
+- tapOn:
+    id: "contact"
+- waitForAnimationToEnd
+- assertVisible: "연락처 선택"
+- tapOn: "Korea, Anil"
+- extendedWaitUntil:
+    visible:
+      id: "mobileno"
+    timeout: 30000
+- assertVisible: "국내 선불폰 충전 서비스"
+- takeScreenshot: "shots_10_domestictopup_old/03_주소록_반영"
+
+# ----------------------------------------------------------------
+# 번호 초기화 ([03]에서 "Korea, Anil"(010-7751-9519, 실제 연락처)로 바뀐 번호를
+# [04]의 실제 충전 신청 전에 반드시 계정 소유 안전 번호(010-9038-1905)로 되돌림)
+# ----------------------------------------------------------------
+# 사용자 지시(2026-07-15): [04]가 실제로 Request를 진행시키는 단계이므로,
+# 실제 연락처(타인 번호)로 신청이 나가면 안 되고 반드시 010-9038-1905로 신청되어야 한다.
+- tapOn:
+    point: "75%,14%"
+- eraseText: 15
+- inputText: "90381905"
+- hideKeyboard
+- assertVisible:
+    id: "mobileno"
+    text: "010-9038-1905"
+
+# ----------------------------------------------------------------
+# [04] [High] Wallet Charging (PPS) - PPS 번호 충전 동작 확인 (Simple PW)
+#            - 실패동작으로 확인가능
+# ----------------------------------------------------------------
+# 헤더의 ⚠️ 참고: 이 번호는 충전 불가 번호라 정상 PIN을 넣어도 서버가 실패로 떨군다
+# (실자금 이동 없음). 그 실패 자체가 검증 대상이다.
+- tapOn:
+    id: "button_continue"
+- extendedWaitUntil:
+    visible:
+      id: "txvDialogDescription"
+    timeout: 60000
+- assertVisible: "선불 서비스(PPS)를 이용하고 계신가요?"
+- tapOn:
+    id: "btnOk"
+- extendedWaitUntil:
+    visible:
+      id: "continueBtn"
+    timeout: 60000
+- assertVisible: "충전 세부 정보"
+- assertVisible:
+    id: "paymentamount"
+- takeScreenshot: "shots_10_domestictopup_old/04_1_충전세부정보"
+- tapOn:
+    id: "continueBtn"
+- extendedWaitUntil:
+    visible:
+      id: "confirm_btn"
+    timeout: 60000
+- assertVisible: "계좌 선택"
+- takeScreenshot: "shots_10_domestictopup_old/04_2_계좌선택"
+- tapOn:
+    id: "confirm_btn"
+# 간편 비밀번호 — 구 UI 잠금화면 판정은 id `input_dot_1`
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 60000
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 실패 응답 대기 — 시간이 매우 불규칙하다(헤더 참고). 3분까지 기다린다.
+# ⚠️ **실패 문구가 빌드마다 다르다**(2026-08-28 7.20.0-stag 실측):
+#   7.19.x = "인터넷 접속이 원활하지 않습니다"
+#   7.20.0 = **"실패 - (06640154622502)"** (바텀시트, `txvDialogTitle` / 버튼 `btnOk`)
+#   문구 하나만 기다리면 **실패 응답이 정상적으로 왔는데도** 타임아웃으로 죽는다
+#   (실제로 3분을 기다린 뒤 FAILED가 났다) → 두 문구를 함께 받는다.
+#   ⚠️ 여기서 기다리는 "실패"는 **검증 대상**이다 — 테스트 번호가 선불폰이 아니라
+#     서버가 거부하는 것이 정상 동작이고, 실자금 이동은 없다.
+- extendedWaitUntil:
+    visible:
+      text: ".*(인터넷 접속이 원활하지 않습니다|실패).*"
+    timeout: 180000
+- takeScreenshot: "shots_10_domestictopup_old/04_3_충전실패"
+# 7.20.0의 실패 화면은 바텀시트이고 확인 버튼에 id가 있다(`btnOk`) → id 우선, 텍스트는 예비.
+- runFlow:
+    when:
+      visible:
+        id: "btnOk"
+    commands:
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "OK|확인"
+    commands:
+      - tapOn: "OK|확인"
+      - waitForAnimationToEnd
+
+# ================================================================
+# 홈 복귀 ([01]~[04] 전체 완료 후 1회만 수행)
+# ================================================================
+# ⚠️ **`back` 1탭으로는 충전 화면을 벗어나지 못한다** (2026-08-24 실측으로 확인).
+#   "계좌 선택"은 별도 액티비티가 아니라 **같은 `DomesticTopupActivity`의 뷰 전환**이다.
+#   [04] 실패 다이얼로그를 닫으면 계좌 선택 뷰에 남아 있고, 여기서 `back`을 누르면
+#   액티비티를 나가는 게 아니라 **번호 입력 뷰로 되돌아간다** → 허브가 안 나와
+#   `iv_back` 어서션이 FAILED로 죽었다(첫 실행에서 실제로 그렇게 실패했다).
+#   → 허브(`iv_back`)가 보일 때까지 `back`을 반복해서 결정적으로 빠져나온다.
+#   ※ 허브에는 `back`이 없고 `iv_back`만 있어서 두 id가 겹치지 않는다(루프가 안전하게 멈춘다).
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "iv_back"
+    commands:
+      - tapOn:
+          id: "back"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "iv_back"
+    timeout: 30000
+- tapOn:
+    id: "iv_back"
+# 홈 재진입 시 인앱 배너가 다시 뜰 수 있다
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# ⚠️ **복귀한 홈은 스크롤 위치를 유지한다** (2026-08-24 실측으로 확인).
+#   진입할 때 `scrollUntilVisible`로 그리드까지 내려놨기 때문에 돌아와도 그리드 화면이고
+#   상단 카드의 `btnTransfer`("송금")는 **화면 밖**이다 → `btnTransfer` 어서션이 FAILED로 죽었다
+#   (두 번째 실행에서 실제로 그렇게 실패했다. [[project_25_profile]]의 스크롤 유지 함정과 같다).
+#   → 홈 도달 판정은 **항상 보이는 하단 내비 `bottom_item_home`** 으로 하고,
+#     `btnTransfer`는 UP 스크롤로 끌어올려 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertVisible:
+    id: "btnTransfer"
+- takeScreenshot: "shots_10_domestictopup_old/05_홈복귀"

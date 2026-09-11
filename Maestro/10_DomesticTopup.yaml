@@ -1,0 +1,182 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Domestic Topup
+# ================================================================
+
+# 앱 최초 실행 (전체 suite 1회)
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 30000
+
+# 진입 경로: Home(스크롤 필요) > 금융 & 결제 섹션 > "모바일 충전" > "국내 충전 서비스"
+# → "국내 선불폰 충전 서비스" 화면. 계정에 등록된 휴대폰 번호가 자동으로 채워짐.
+# element id: 뒤로가기 `back`, 번호 입력 필드 `mobileno`, 주소록 아이콘 `contact`,
+# 충전 버튼 `button_continue`. 충전 탭 시 "선불 서비스(PPS)를 이용하고 계신가요?"
+# 확인 다이얼로그 → [예] → "충전 세부 정보"(휴대폰 번호/총 결제 금액) 바텀시트 →
+# [계속] → 계좌 선택 화면(`confirm_btn`) → [계속] → 간편 비밀번호 입력.
+#
+# 케이스 실행 순서 참고(2026-07-15, 사용자 지시): [01]~[04]는 전부 같은
+# "국내 선불폰 충전 서비스" 화면 안에서 이어서 진행하고, 홈 복귀는 [04] 완료
+# 후 전체 섹션 마지막에 한 번만 수행함(케이스 중간에 홈으로 복귀하지 않음).
+- scrollUntilVisible:
+    element:
+      text: "모바일 충전"
+    direction: DOWN
+- tapOn: "모바일 충전"
+- waitForAnimationToEnd
+- tapOn: "국내 충전 서비스"
+- waitForAnimationToEnd
+- assertVisible: "국내 선불폰 충전 서비스"
+
+# ----------------------------------------------------------------
+# [01] [High] Phone Number - 자동입력된 핸드폰 번호 노출 확인
+# ----------------------------------------------------------------
+- assertVisible:
+    id: "mobileno"
+
+# ----------------------------------------------------------------
+# [02] [Medium] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인
+# ----------------------------------------------------------------
+# 참고(실기기 확인) 2가지:
+# 1. 필드 맨 앞 "010"은 고정 접두사라 삭제되지 않음(계속 지워도 "010-"에서
+#    멈춤) - 나머지 8자리만 지우고 새로 입력됨. 11자리를 그대로 입력하면
+#    앞의 "010"과 합쳐져 자릿수가 깨지므로 8자리 숫자만 입력해야 함.
+# 2. `tapOn: id: mobileno`(뷰 중앙 탭)는 커서를 텍스트 끝이 아니라 중간에
+#    위치시켜 eraseText가 뒷부분 숫자를 못 지우고 남기는 경우가 있었음
+#    (실기기 확인, "010-9038-1905" → 잘못된 "010-0101-2345" 형태로 깨짐) -
+#    필드 우측 근처를 좌표 기반(point)으로 탭해야 커서가 끝에 위치함.
+- tapOn:
+    point: "75%,14%"
+- eraseText: 15
+- inputText: "12345678"
+- hideKeyboard
+- assertVisible:
+    id: "mobileno"
+    text: "010-1234-5678"
+
+# ----------------------------------------------------------------
+# [03] [Medium] Phone Number - 주소록 버튼 선택 시 주소록 번호 모바일 필드에 추가 동작 확인
+# ----------------------------------------------------------------
+# 참고: "주소록" 아이콘 탭 시 GME 앱 내부 화면이 아니라 단말기의 삼성 연락처
+# 앱(com.samsung.android.app.contacts) Picker가 뜸(기기에 저장된 실제 테스트
+# 연락처 3건: 트윗김씨/Guli/Korea, Anil).
+# 주의(실기기 확인, 데이터 의존성): 목록 첫 번째 연락처(index 0, "트윗김씨")의
+# 번호는 "010594373612"(12자리)로 이 필드가 기대하는 "010"+8자리 형식보다 한
+# 자리 많아 대시 포맷팅이 깨지고 "충전" 버튼이 비활성화됨 - 뒤이은 [04] 케이스가
+# 실제로 충전을 시도해야 하므로, 정상 8자리 형식으로 반영되는 "Korea, Anil"
+# (01077519519)을 이름으로 지정해 선택함. index 기반 선택은 이 데이터셋에서
+# 안전하지 않으므로 사용하지 말 것.
+- tapOn:
+    id: "contact"
+- waitForAnimationToEnd
+- assertVisible: "연락처 선택"
+- tapOn: "Korea, Anil"
+- waitForAnimationToEnd
+- assertVisible: "국내 선불폰 충전 서비스"
+- assertVisible:
+    id: "mobileno"
+
+# ----------------------------------------------------------------
+# 번호 초기화 ([03]에서 "Korea, Anil"(010-7751-9519, 실제 연락처)로 바뀐 번호를
+# [04]의 실제 충전 신청 전에 반드시 계정 소유 안전 번호(010-9038-1905)로 되돌림)
+# ----------------------------------------------------------------
+# 사용자 지시(2026-07-15): [04]가 실제로 Request를 진행시키는 단계이므로,
+# 실제 연락처(타인 번호)로 신청이 나가면 안 되고 반드시 010-9038-1905로
+# 신청되어야 함. [02]에서 검증한 것과 동일한 point 탭 + eraseText + inputText
+# 패턴을 재사용함(id 탭 시 커서 위치 문제 재발 방지).
+- tapOn:
+    point: "75%,14%"
+- eraseText: 15
+- inputText: "90381905"
+- hideKeyboard
+- assertVisible:
+    id: "mobileno"
+    text: "010-9038-1905"
+
+# ----------------------------------------------------------------
+# [04] [High] Wallet Charging (PPS) - PPS 번호 충전 동작 확인 (Simple PW)
+#            - 실패동작으로 확인가능
+# ----------------------------------------------------------------
+# 사용자 확인(2026-07-15): 이 화면에 입력된 번호(010-9038-1905, 계정 소유
+# 안전 번호)는 선불폰 충전이 불가능한 번호라 정상 PIN(1212)을
+# 입력해도 요청 자체가 서버에서 실패로 떨어짐 - 이 "실패"가 케이스 제목이
+# 의도한 검증 대상이므로 정상 PIN을 입력해 실제로 Request를 진행시킴.
+# 실기기 확인 결과 정상 PIN 입력 후 "계좌 선택" 화면에서 로딩 스피너가 돌다가
+# "실패 - (계좌번호) 인터넷 접속이 원활하지 않습니다. 다시 시도해 주세요."
+# 팝업이 뜨며 종료됨 - GME Wallet 잔액은 그대로 유지되어 실자금 이동은 없음
+# (안전한 실패 경로). 주의(실기기 확인, 2026-07-15): 이 실패 응답까지 걸리는
+# 시간이 매우 불규칙함(같은 조건에서도 수 초 내 뜨는 경우, 90초 넘게 걸리는
+# 경우, 그 이상도 관찰됨 - timeout 30000/90000 모두 실패로 확인됨) -
+# timeout을 180000(3분)으로 크게 늘려 안전 마진을 확보함.
+- tapOn:
+    id: "button_continue"
+- waitForAnimationToEnd
+- assertVisible: "선불 서비스(PPS)를 이용하고 계신가요?"
+- tapOn: "예"
+- waitForAnimationToEnd
+- assertVisible: "충전 세부 정보"
+- tapOn: "계속"
+- waitForAnimationToEnd
+- assertVisible: "계좌 선택"
+- tapOn:
+    id: "confirm_btn"
+- waitForAnimationToEnd
+- assertVisible: "간편 비밀번호를 입력하세요"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- extendedWaitUntil:
+    visible:
+      text: "인터넷 접속이 원활하지 않습니다. 다시 시도해 주세요."
+    timeout: 180000
+- tapOn: "OK"
+- waitForAnimationToEnd
+
+# ================================================================
+# 홈 복귀 ([01]~[04] 전체 완료 후 1회만 수행)
+# ================================================================
+- tapOn:
+    id: "back"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd

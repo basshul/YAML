@@ -1,0 +1,101 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: GME Wallet에 **1,000원 실충전** 1회 — 회귀 스위트 자동 충전용 (2026-09-03 작성)
+# ================================================================
+# 호출:
+#   - runFlow: "_suite_charge_old.yaml"
+#   실제로는 `run_suite.ps1`이 **부족액만큼 N번 반복 호출**한다(1회 = 1,000원).
+#
+# ⛔ **미검증 — 기본적으로 쓰이지 않는다** (2026-09-03)
+#   KFTC 계좌에서 자금을 끌어오려면 **OTP/생체인증**이 필요해서 자동화로는 입금이 완주되지 않는다
+#   (사용자 확인. `02_02` 헤더에도 "KFTC는 OTP/생체인증 필요로 실제 제출 불가"가 이미 적혀 있었다).
+#   이 파일은 그 사실을 알기 전에 만들었다. **완주를 한 번도 확인하지 못했다.**
+#   → `run_suite.ps1`은 `-AutoCharge`를 명시할 때만 부른다. 잔액은 **사람이 미리 채우는 게 정석**이다.
+#   살리려면: 실제로 어디서 막히는지(OTP 화면 id / 생체 프롬프트) 1회 실행으로 확인하고,
+#   막히는 지점을 명시적으로 실패시키거나 OTP가 불필요한 다른 충전 경로를 찾아야 한다.
+#
+# 🔴 **실계좌에서 실제로 돈이 빠진다.** 1회 = 1,000원.
+#   손으로 돌릴 때는 `charge_old.yaml`(수동 유틸)을 쓰고, 이 파일은 스위트가 부른다.
+#   둘로 나눈 이유: 수동본은 `times`를 손으로 올려 쓰는 물건이라 스위트가 재사용하면
+#   "몇 번 돌았는지"를 러너가 모른다. 여기서는 **1회로 고정**하고 횟수는 러너가 센다.
+#
+# 왜 필요한가 (2026-09-03):
+#   잔액이 모자라면 스위트가 해당 항목을 SKIP한다. 시작 전에 충전을 깜빡하면
+#   돈이 드는 케이스가 통째로 빠진 채 3시간이 지나간다.
+#   ⚠️ `14_01_Deposit`은 이 일을 **하지 못한다** — [27] 자동이체는 금액을 입력하고
+#     표시만 확인한 뒤 back으로 빠져나온다(확인·PIN을 누르지 않는다). 가상계좌([02][05])는
+#     계좌번호를 보여줄 뿐이고, 편의점 입금([28][29])은 10분 뒤 만료되는 요청이라
+#     실제로 스캔되기 전에는 자금이 움직이지 않는다. → 충전은 이 헬퍼가 맡는다.
+#
+# 사전 조건: seungsoo818(자동이체 계좌 연결됨) 로그인 상태. 화면 위치는 상관없다
+#   — 아래 ①이 홈으로 정규화한다.
+# ================================================================
+
+# ① 어느 화면에서 불려도 홈에서 시작하게 만든다
+- runFlow: "_suite_recover_old.yaml"
+
+# ② 잔액 카드 → 충전
+- tapOn:
+    id: "upArrow"
+- tapOn:
+    id: "recharge"
+- waitForAnimationToEnd
+
+# ③ 금액 입력
+# ⚠️ 수동본(`charge_old.yaml`)은 이 필드를 **좌표(21%,87%)로 탭**한다 — 해상도가 바뀌면 빗나간다.
+#   14_01 [27]에서 같은 성격의 자동이체 금액 필드가 `edtRechargeAmount`로 확인됐으므로
+#   **id를 먼저 시도하고**, 없을 때만 좌표로 떨어진다. id가 잡히면 좌표 의존이 사라진다.
+- runFlow:
+    when:
+      visible:
+        id: "edtRechargeAmount"
+    commands:
+      - tapOn:
+          id: "edtRechargeAmount"
+      - inputText: "1000"
+- runFlow:
+    when:
+      notVisible:
+        id: "edtRechargeAmount"
+    commands:
+      - tapOn:
+          point: 21%,87%
+      - inputText: "1000"
+- assertVisible: "1,000.*"
+
+# ④ 확정 → PIN
+- tapOn:
+    id: "btn_submit1"
+- tapOn:
+    id: "continueBtn"
+# PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 20000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn:
+    id: "btn_diaog_ok"
+- waitForAnimationToEnd
+
+# ⑤ 홈 복귀 — 여기까지 와야 "1회 충전 성공"이다.
+#   ⚠️ 조건부 처리만 두고 끝내면 **아무것도 안 일어나도 EXIT=0**이 된다 → 러너가
+#     충전됐다고 믿고 잔액을 올려 잡는다. 그래서 홈 도달을 **단언**으로 강제한다.
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 60000
+- assertVisible:
+    id: "bottom_item_home"

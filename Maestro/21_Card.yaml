@@ -1,0 +1,949 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 보안 키패드 주의 (2026-08-06)
+#   PIN/CVC 입력용 보안 키패드는 **숫자를 누를 때마다 배치가 다시 섞임**.
+#   각 tapOn 사이에 waitForAnimationToEnd가 없으면 maestro가 직전 스냅샷의
+#   stale 좌표를 눌러 엉뚱한 숫자가 입력됨 → 실제로 카드 PIN에서
+#   "PIN 코드가 유효하지 않습니다."가 재현됐음. 이 파일의 숫자 입력 블록에는
+#   전부 정착 대기가 들어가 있으니 새로 추가할 때도 같은 형태를 유지할 것.
+#
+# 카드 PIN 상태 주의
+#   [12]가 카드 PIN을 1212 → 2323 → 1212로 되돌림. 실행이 [12] 중간에 끊기면
+#   카드 PIN이 2323으로 남아 다음 실행의 [11]이 막힘 → [11]에 2323 폴백을 넣어둠.
+#   [12]는 이전 PIN이 아니라 CVC(435)로 인증하므로 현재 PIN 값과 무관하게 동작함.
+# ================================================================
+# ================================================================
+# 시나리오: Card (GME Card)
+# ================================================================
+
+# 앱 실행 및 홈 진입
+# 주의(2026-08-06): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘 → 잠금화면을 명시적으로 대기 후 PIN 입력.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|Home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - waitForAnimationToEnd
+# 홈 코치마크 balloon 닫기
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "카드"
+    timeout: 30000
+
+# 카드 탭 진입
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+
+# ================================================================
+# [Card Apply] - 카드 추가 신청 (Pay 카드, 지점 수령)
+# ================================================================
+
+# 카드 이미지 좌로 스와이프 후 "카드 추가 요청" 있을 때만 진행 (이미 신청된 경우 스킵)
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- swipe:
+    start: "70%, 45%"
+    end: "20%, 45%"
+    duration: 400
+- runFlow:
+    when:
+      visible:
+        text: "카드 추가 요청"
+    commands:
+      - tapOn: "카드 추가 요청"
+      # ----------------------------------------------------------------
+      # [01] [High] Card Apply - 카드선택페이지 정상 진입 확인 및 Apply 동작 확인
+      # ----------------------------------------------------------------
+      - assertVisible: "EasyGo 카드"
+      - assertVisible: "Pay 카드"
+      - tapOn: "카드 신청"
+      # 이미 진행 중인 신청 팝업 처리 → 배송지로 바로 이동
+      - runFlow:
+          when:
+            visible:
+              text: "이어서 신청하기"
+          commands:
+            - tapOn: "이어서 신청하기"
+            - waitForAnimationToEnd
+      # 처음 신청: 상품 상세 카드 신청 탭 → 이용약관 ~ PIN 전체 처리
+      - runFlow:
+          when:
+            visible:
+              text: "카드 신청"
+          commands:
+            - tapOn: "카드 신청"
+            - waitForAnimationToEnd
+            # 이용약관
+            - tapOn: "동의 & 다음"
+            - waitForAnimationToEnd
+            # 카드 디자인 선택
+            - tapOn: "신청"
+            - waitForAnimationToEnd
+            # ----------------------------------------------------------------
+            # [02] [Medium] Card Apply - Select Pay service 선택 동작 확인
+            # ----------------------------------------------------------------
+            - assertVisible: "None"
+            - assertVisible: "Paybooc"
+            - tapOn: "다음"
+            - waitForAnimationToEnd
+            # ----------------------------------------------------------------
+            # [03] [Medium] Card Apply - 영문이름 수정 및 입력 동작 확인
+            # ----------------------------------------------------------------
+            - assertVisible: "영문 이름 (전체)"
+            - tapOn: "다음"
+            - waitForAnimationToEnd
+            # ----------------------------------------------------------------
+            # [04] [Medium] Card Apply - 비밀번호 4자리 입력 동작 확인
+            # ----------------------------------------------------------------
+            - assertVisible: "PIN 코드"
+            - assertVisible: "PIN 코드 인증"
+            # 카드 PIN 입력 필드 포커스 → 보안 키패드 오픈.
+            #   (2026-08-06) 기존 `point: "50%, 25%"`는 S23(2340) 기준이라 Note 9(2220)에서
+            #   실제 필드 위치(50%, 29%)를 빗나가 키패드가 열리지 않았고, 이어지는 tapOn "1"이
+            #   "Element not found"로 실패했음 → 좌표 대신 resource-id 사용.
+            - tapOn:
+                id: "com.gmeremit.online.gmeremittance_native.livetest:id/pin_passedittext"
+            # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+            - tapOn: "1"
+            - waitForAnimationToEnd
+            - tapOn: "2"
+            - waitForAnimationToEnd
+            - tapOn: "1"
+            - waitForAnimationToEnd
+            - tapOn: "2"
+            - waitForAnimationToEnd
+            - tapOn: "1"
+            - waitForAnimationToEnd
+            - tapOn: "2"
+            - waitForAnimationToEnd
+            - tapOn: "1"
+            - waitForAnimationToEnd
+            - tapOn: "2"
+            - waitForAnimationToEnd
+            - tapOn: "다음"
+            - waitForAnimationToEnd
+      # ----------------------------------------------------------------
+      # [05] [Medium] Card Apply - 카드수령 동작 확인 (비대면/대면/브랜치)
+      # ----------------------------------------------------------------
+      - assertVisible: "카드 배송지"
+      - assertVisible: "비대면 배송 (택배)"
+      - assertVisible: "대면 배송 (특송)"
+      - assertVisible: "지점 선택"
+      - tapOn: "지점 선택"
+      - tapOn: "다음"
+      - assertVisible: "지점 수령"
+      - assertVisible: "모바일 지점"
+      # ----------------------------------------------------------------
+      # [06] [High] Card Apply - 카드신청완료 동작 확인
+      # ----------------------------------------------------------------
+      - tapOn: "다음"
+      - tapOn: "확인"
+      - assertVisible: "신청서 접수 완료"
+      - tapOn: "완료"
+
+# ================================================================
+# [Card Change]
+# ================================================================
+
+# 카드 탭 재진입 후 첫 번째 카드(EasyGo)로 초기화 → Pay 카드로 스와이프
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+# 좌→우 2번으로 페이지 1 강제 이동
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- waitForAnimationToEnd
+# 우→좌 1번으로 Pay 카드(페이지 2)로 이동
+- swipe:
+    start: "70%, 60%"
+    end: "20%, 60%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "신청 세부 정보 변경"
+    timeout: 10000
+
+# ----------------------------------------------------------------
+# [07] [High] Card Change - 카드 수령지 상세정보 노출 확인
+# ----------------------------------------------------------------
+- tapOn: "신청 세부 정보 변경"
+- waitForAnimationToEnd
+- assertVisible: "주소 변경"
+
+# ----------------------------------------------------------------
+# [08] [Medium] Card Change - 주소변경 시 카드수령지 정보 변경 동작 확인
+# ----------------------------------------------------------------
+- tapOn: "주소 변경"
+- waitForAnimationToEnd
+- assertVisible: "비대면 배송 (택배)"
+- assertVisible: "대면 배송 (특송)"
+- assertVisible: "지점 선택"
+
+# ----------------------------------------------------------------
+# [09] [High] Card Change - 카드 정보 변경동작 확인
+# ----------------------------------------------------------------
+- tapOn: "다음"
+- waitForAnimationToEnd
+- assertVisible: "모바일 지점"
+- tapOn:
+    point: "50%, 32%"
+- tapOn: "다음"
+- waitForAnimationToEnd
+- assertVisible: "입력한 정보를 확인해 주세요."
+- assertVisible: "카드 상품"
+- tapOn: "확인"
+- waitForAnimationToEnd
+# 신청 세부 정보 변경 화면에서 안산 선택 확인 후 확인 버튼 탭
+- assertVisible: "안산"
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# ================================================================
+# [Card Cancel]
+# ================================================================
+
+# 카드 탭 재진입 후 Pay 카드(페이지 2)로 이동
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- waitForAnimationToEnd
+- swipe:
+    start: "70%, 60%"
+    end: "20%, 60%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "카드 신청 취소하기"
+    timeout: 10000
+
+# ----------------------------------------------------------------
+# [10] [High] Card Cancel - 카드 취소시 정상취소 되는지 확인
+# ----------------------------------------------------------------
+- tapOn: "카드 신청 취소하기"
+- waitForAnimationToEnd
+- assertVisible: "카드 신청 취소"
+- assertVisible: "정말 취소하시겠습니까?"
+- tapOn: "예"
+- waitForAnimationToEnd
+- assertVisible: "성공"
+- assertVisible: "카드 신청이 정상적으로 취소되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# ================================================================
+# [Card Management]
+# ================================================================
+
+# 카드 탭 재진입 후 EasyGo 카드(정상 상태, 페이지 1)로 초기화
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- swipe:
+    start: "20%, 60%"
+    end: "70%, 60%"
+    duration: 400
+- waitForAnimationToEnd
+
+# 카드 관리 탭 진입
+- tapOn: "카드 관리"
+
+# ----------------------------------------------------------------
+# [11] [Low] Card Management - 카드 비밀번호 정상 입력시 카드 정보 페이지 노출 확인
+#            - 카드번호, CVC, 카드만료일 (Card Number Details)
+# ----------------------------------------------------------------
+- tapOn: "카드 정보"
+- assertVisible: "카드 PIN 코드를 입력하세요"
+- assertVisible: "4자리 숫자를 입력하세요"
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+# 자가복구(2026-08-06): [12]가 카드 PIN을 1212 → 2323 → 1212로 되돌리는데, 과거 실행이
+#   [12] 중간에 끊기면 카드 PIN이 **2323으로 남아** 이후 모든 실행이 여기서 막힘
+#   (실제로 발생 — 1212가 거부되고 "PIN 코드가 유효하지 않습니다."). 로그인 비밀번호의
+#   Gmetest1! → Gme12! 폴백과 같은 방식으로 2323 폴백을 둠.
+#   ※ 카드 PIN은 오입력이 누적되면 카드가 잠길 수 있으므로 폴백은 이 1회까지만.
+- runFlow:
+    when:
+      visible:
+        text: ".*PIN 코드가 유효하지 않습니다.*"
+    commands:
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "3"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "3"
+      - waitForAnimationToEnd
+      - waitForAnimationToEnd
+- assertVisible: "카드 번호:"
+- assertVisible: "CVC 번호"
+- assertVisible: "만료 날짜"
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [12] [High] Card Management - CVC 번호 입력 및 카드 비밀번호 변경 동작 확인
+#             (Change Card PIN) - PIN 1212 → 2323 → 1212 (원복)
+# ----------------------------------------------------------------
+- scroll
+- tapOn: "카드 PIN 코드 변경"
+- assertVisible: "카드 PIN 코드 변경"
+- assertVisible: "CVC 번호"
+- assertVisible: "새 PIN 코드 입력"
+# 1차 변경: 1212 → 2323
+- tapOn: "CVC 번호"
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "4"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- tapOn: "5"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "새 PIN 코드 입력"
+- waitForAnimationToEnd
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "PIN 코드 인증"
+- waitForAnimationToEnd
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "확인"
+- waitForAnimationToEnd
+- assertVisible: "성공"
+- assertVisible: "카드 PIN 코드가 정상적으로 변경되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+# 2차 변경: 2323 → 1212 (원복)
+- tapOn: "카드 PIN 코드 변경"
+- assertVisible: "카드 PIN 코드 변경"
+- tapOn: "CVC 번호"
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "4"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- tapOn: "5"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "새 PIN 코드 입력"
+- waitForAnimationToEnd
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "PIN 코드 인증"
+- waitForAnimationToEnd
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- tapOn: "확인"
+- waitForAnimationToEnd
+- assertVisible: "성공"
+- assertVisible: "카드 PIN 코드가 정상적으로 변경되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [13] [Medium] Card Management - Pause 버튼 선택 시 토글 스위치 ON/OFF 확인
+# ----------------------------------------------------------------
+# 일시 중지 OFF → 탭 → ON → 탭 → OFF 복구
+- tapOn: "일시 중지"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+- tapOn: "일시 중지"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [14] [Medium] Card Management - Automatic Recharge 버튼 선택 시 토글 스위치 ON/OFF 확인
+# ----------------------------------------------------------------
+# 자동 충전 ON → 탭 → OFF → 탭 → ON 복구
+- tapOn: "자동 충전"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+- tapOn: "자동 충전"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [15] [Low] Card Management - Overseas Use 버튼 선택 시 하위 메뉴 노출 확인
+#            - Disable Offline Usage / Disable Online Usage
+# ----------------------------------------------------------------
+# 해외 사용 ON → 탭 → OFF
+- tapOn: "해외 사용"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [16] [Medium] Card Management - 아래 버튼 체크 시 Overseas Use 버튼 OFF 상태 변경 확인
+# ----------------------------------------------------------------
+# 해외 사용 OFF → 탭 → ON 복구
+- tapOn: "해외 사용"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [17] [Low] Card Management - Domestic Use 버튼 선택 시 하위 메뉴 노출 확인
+#            - Disable Offline Usage / Disable Online Usage
+# ----------------------------------------------------------------
+# 국내 사용 ON → 탭 → OFF
+- tapOn: "국내 사용"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [18] [Medium] Card Management - 아래 버튼 체크 시 Domestic Use 버튼 OFF 상태 변경 확인
+# ----------------------------------------------------------------
+# 국내 사용 OFF → 탭 → ON 복구
+- tapOn: "국내 사용"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [19] [Medium] Card Management - Overseas Won Payment Restrictions 토글 ON/OFF 확인
+# ----------------------------------------------------------------
+# "해외 원화 결제 제한" 텍스트가 두 줄로 나뉘어 텍스트 매칭 불가 → 좌표 탭 사용
+- tapOn:
+    point: "50%, 48%"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+- tapOn:
+    point: "50%, 48%"
+- runFlow:
+    when:
+      visible:
+        text: "아니요"
+    commands:
+      - tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [20] [Medium] Card Management - 카드 분실신고 동작 확인 (Report Lost)
+#              - 분실신고 시 카드 사용 즉시 정지 안내 확인
+# ----------------------------------------------------------------
+- scroll
+- scroll
+- tapOn: "분실 신고"
+- assertVisible:
+    text: "분실 신고를 하시겠습니까?"
+- tapOn: "아니요"
+
+# ----------------------------------------------------------------
+# [21] [Low] Card Management - 카드 취소 선택 시 안내 바텀시트 발생 (Card Cancellation)
+# ----------------------------------------------------------------
+- tapOn: "카드 취소"
+- assertVisible:
+    text: "카드 취소"
+- assertVisible:
+    text: "재발급 신청 시 카드 사용이 즉시 중단됩니다."
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [22] [Low] Card Management - 카드 혜택페이지 이동 확인 (View Card Benefits)
+# ----------------------------------------------------------------
+# GME 카드 상세에서 나가서 카드 탭 재진입 후 카드 관리 탭 진입
+- pressKey: back
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- tapOn: "카드 관리"
+- tapOn: "카드 혜택 보기"
+- assertVisible:
+    text: "GME 카드 - EasyGo"
+- pressKey: back
+
+# ================================================================
+# [Global QR]
+# ================================================================
+
+# 정보 탭으로 전환
+- tapOn: "정보"
+
+# ----------------------------------------------------------------
+# [23] [Low] Global QR - Overseas QR Pay Guide 선택시 가이드 화면으로 이동 확인
+# ----------------------------------------------------------------
+- scroll
+- tapOn: "글로벌 QR"
+- assertVisible:
+    text: "국가 선택"
+- assertVisible:
+    text: "해외 QR Pay 가이드"
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [24] [High] Global QR - Wallet 지불 동작 확인
+# ----------------------------------------------------------------
+# 국가 선택 → Cambodia(KHR) → QR Pay 송금 화면(오늘의 환율 재사용) → 스캔 화면 진입까지 자동화
+- scroll
+- tapOn: "글로벌 QR"
+- assertVisible:
+    text: "국가 선택"
+- tapOn: "Cambodia(KHR)"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "송금 방법 선택"
+- assertVisible:
+    text: "계좌 입금"
+- assertVisible:
+    text: "QR Pay"
+- assertVisible:
+    text: "스캔하기"
+- tapOn: "스캔하기"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "스캔, 업로드 또는 QR로 결제하세요."
+
+# 갤러리 업로드로 실제 KHQR 이미지 인식 확인
+# run_test.ps1이 Global QR.jpg를 타임스탬프 최상단으로 갤러리에 배치해둠 (갤러리 1번째)
+- tapOn:
+    id: "galleryImagePick"
+- waitForAnimationToEnd
+- tapOn:
+    point: "20%, 41%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "결제"
+- assertVisible:
+    text: "CHANSOKOL MORK"
+- assertVisible:
+    text: "사용 가능한 잔액.*"
+- assertVisible:
+    text: "결제 금액"
+# 실제 해외 가맹점 대상 송금이 발생하므로 금액 입력/다음 진행은 하지 않고 화면 확인 후 이탈
+# TODO: 결제수단(Wallet/KFTC) 선택 및 결제 완료 동작은 실제 송금 발생 리스크로 수동 테스트 필요
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [25] [High] Global QR - KFTC 지불 동작 확인
+# ----------------------------------------------------------------
+# [24]와 선행 화면(국가 선택 ~ QR 스캔 화면)이 완전히 동일 - Wallet/KFTC 결제수단 선택은
+# 유효한 KHQR 코드를 실제로 스캔한 뒤에만 노출되는 화면이라 여기서 분기 재현 불가
+# TODO: 실제 KHQR 코드 스캔 후 KFTC 결제수단 선택 및 결제 완료 동작은 유효 QR 코드 필요 - 수동 테스트 필요
+
+# ================================================================
+# [Mobile Transportation]
+# ================================================================
+
+# ----------------------------------------------------------------
+# [26] [High] Mobile Transportation - 잔액과 교통카드 번호 표시 확인 (Android)
+# ----------------------------------------------------------------
+- scroll
+- tapOn:
+    text: ".*교통카드"
+- assertVisible:
+    text: "EasyGo 카드"
+- assertVisible:
+    text: "월 사용 내역"
+- assertVisible:
+    text: "최근 사용 내역"
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [27] [High] Mobile Transportation - 교통카드 삭제 동작 확인 (Android)
+#            - 재진입시, 삭제취소 동작 확인
+# ----------------------------------------------------------------
+# TODO: 자동화 제외 - 수동 테스트 필요
+
+# ----------------------------------------------------------------
+# [28] [Low] Mobile Transportation - 카드 태그시 카드내역 표시 확인 (Transportation Card)
+# ----------------------------------------------------------------
+# TODO: NFC 카드 태그 자동화 어려움 - 수동 테스트 필요
+
+# ----------------------------------------------------------------
+# [29] [Low] Mobile Transportation - [i]버튼 선택시 Easy Go Card Information 표시 확인
+# ----------------------------------------------------------------
+# TODO: 실물 카드 태깅(NFC) 필요 - 자동화 불가, 수동 테스트 필요
+
+# ================================================================
+# [GME Shop / Recharge / Refund / Balance]
+# ================================================================
+
+# ----------------------------------------------------------------
+# [30] [High] Balance - Balance 선택 시 GME PAY 잔액 정상 노출 확인
+# ----------------------------------------------------------------
+# 교통카드 back 후 스크롤 위치 초기화를 위해 카드 탭 재탭 + 스크롤 업
+- tapOn:
+    text: "카드"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 80%"
+- waitForAnimationToEnd
+# ">" 아이콘 element ID: imgvArrow
+- tapOn:
+    id: "imgvArrow"
+- assertVisible:
+    text: "GME Pay"
+- assertVisible:
+    text: "잔액"
+- pressKey: back
+
+# ----------------------------------------------------------------
+# [31] [High] Recharge (Wallet) - Simple PW 간편비밀번호 일치/불일치 확인
+# ----------------------------------------------------------------
+# 주의(2026-08-06): 충전 화면의 "출금 계좌 GME Wallet" 잔액은 **앱 시작 시점 값으로 캐시**됨.
+#   앱이 떠 있는 동안 지갑에 충전하면 홈 계좌 목록은 갱신되는데 이 화면은 옛 값을 계속 보여줌
+#   (실측: 홈 1,099 KRW / 충전 화면 0 원 → 1원 입력도 "충전 금액은 계좌 잔액보다 클 수 없습니다."로 거부).
+#   앱을 재시작하면 정상 표시됨(재시작 후 3,099 원 확인). maestro는 매 실행 launchApp으로 시작하므로
+#   **실행 전에 충전을 끝내 두면** 문제 없음. 실행 도중 충전하면 이 케이스가 막히니 주의.
+# ----------------------------------------------------------------
+# 카드 탭 재진입 후 ↓ 버튼 탭
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- tapOn:
+    id: "uparrow"
+- extendedWaitUntil:
+    visible:
+      text: "충전"
+    timeout: 5000
+- tapOn: "충전"
+- waitForAnimationToEnd
+- tapOn: "GME Wallet"
+- waitForAnimationToEnd
+- tapOn: "1"
+- tapOn: "완료"
+- waitForAnimationToEnd
+- tapOn: "다음"
+- waitForAnimationToEnd
+- tapOn: "확인"
+- waitForAnimationToEnd
+# 불일치: PIN 9876 입력
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "9"
+- waitForAnimationToEnd
+- tapOn: "8"
+- waitForAnimationToEnd
+- tapOn: "7"
+- waitForAnimationToEnd
+- tapOn: "6"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- assertVisible:
+    text: "비밀번호가 맞지 않습니다.*"
+# 일치: PIN 1212 입력
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Pay 충전이 완료되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+# 이전 케이스의 지연된 성공 팝업 처리 (최대 3개)
+- runFlow:
+    when:
+      visible:
+        text: "성공"
+    commands:
+      - tapOn: "확인"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "성공"
+    commands:
+      - tapOn: "확인"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "성공"
+    commands:
+      - tapOn: "확인"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [32] [High] Refund - 환불 정상적으로 진행되는지 확인
+# ----------------------------------------------------------------
+# 충전 완료 "확인" 탭 → 카드 탭으로 복귀, 바텀시트 닫혀있음 → uparrow 재탭
+- extendedWaitUntil:
+    visible:
+      text: "GME 카드"
+    timeout: 30000
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 80%"
+- waitForAnimationToEnd
+- tapOn:
+    id: "uparrow"
+- extendedWaitUntil:
+    visible:
+      text: "환불"
+    timeout: 5000
+- tapOn: "환불"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Pay 환불"
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [33] [High] GME Shop - GME Shop 화면 진입 확인
+# ----------------------------------------------------------------
+# [32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨
+- extendedWaitUntil:
+    visible:
+      text: "쇼핑"
+    timeout: 5000
+- tapOn: "쇼핑"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "GME Shop"
+
+# ----------------------------------------------------------------
+# [33-1] [High] GME Shop_Wallet - 간편비밀번호 일치/불일치 시 구매동작 확인
+# ----------------------------------------------------------------
+# 편의점 쿠폰(CU) 3,000원권 선택 → 결제 화면 진입
+- tapOn: "편의점 쿠폰"
+- waitForAnimationToEnd
+# "3,000" 텍스트가 커스텀 뷰라 텍스트 매칭 불가 → 좌표 탭 사용 (CU 3,000원 카드)
+- tapOn:
+    point: "27%, 41%"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "결제"
+- assertVisible:
+    text: "리워드 포인트 사용"
+# 결제 화면의 출금 계좌 영역 라벨이 앱 버전에 따라 오락가락함:
+#   2026-07-07 이전 "충전 계좌 / GME Wallet" → 07-07 "GME Pay 잔액"으로 바뀌어 수정했는데
+#   2026-08-06 실기기에서 다시 "충전 계좌 / GME Wallet / 잔액"으로 되돌아옴.
+#   어느 쪽이든 통과하도록 정규식으로 둘 다 허용.
+- assertVisible:
+    text: "충전 계좌|GME Pay 잔액.*"
+- scroll
+- assertVisible:
+    text: "총 결제 금액"
+# 참고: GME Wallet 잔액 부족 시 "잔액이 부족할 경우, 선택된 계좌에서 자동으로 충전됩니다" 안내와 함께
+# 실제로 연동된 카카오뱅크 계좌에서 GME Wallet으로 자동충전이 발생함 (부작용 주의).
+# "구매하기" 버튼은 GME Wallet 잔액이 상품 금액 이상일 때만 활성화(빨간색)됨.
+- tapOn: "구매하기"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "간편 비밀번호를 입력하세요"
+# 불일치: PIN 9876 입력
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "9"
+- waitForAnimationToEnd
+- tapOn: "8"
+- waitForAnimationToEnd
+- tapOn: "7"
+- waitForAnimationToEnd
+- tapOn: "6"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- assertVisible:
+    text: "비밀번호가 맞지 않습니다.*"
+# 일치: PIN 1212 입력
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- assertVisible: "성공"
+- assertVisible:
+    text: ".*CU 3,000 원.*"
+- tapOn: "확인"
+- waitForAnimationToEnd
+# 구매 완료 후 쿠폰 상세(바코드) 화면 노출 확인
+- assertVisible:
+    text: "만료 날짜"
+
+# ----------------------------------------------------------------
+# [사후 처리] 방금 구매한 쿠폰 취소 → GME Pay 잔액 환불 (반복 실행 시 잔액 소진 방지)
+# ----------------------------------------------------------------
+- tapOn: "취소"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "기프트 카드를 취소하시겠습니까?"
+- tapOn: "예"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "간편 비밀번호를 입력하세요"
+# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- assertVisible: "성공"
+- assertVisible:
+    text: "취소가 완료되었습니다."
+- tapOn: "확인"
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back

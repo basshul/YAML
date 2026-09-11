@@ -1,0 +1,293 @@
+appId: com.gmeremit.online.gmeremittance_native.stag
+---
+# ================================================================
+# 헬퍼: 홈 → Card → EasyCare Apply → EasyCare Benefits → Check coverage start date
+#        → "Check my coverage" 바텀시트 스크린샷 → 홈 복귀 (구 UI / stag 전용)
+# ================================================================
+# 호출:
+#   - runFlow:
+#       file: _easycare_coverage_stag_old.yaml
+#       env:
+#         SHOT: "01_English"
+#
+# ⚠️ **stag 전용이다.** EasyCare는 stag 7.20.0에만 있다.
+#   livetest 7.19.1 APK에는 easycare_* 리소스가 0건이라 그 빌드에서는 동작하지 않는다(2026-08-20 확인).
+#
+# ⚠️ **언어 변경 직후 호출되는 것을 전제**로 맨 앞에 재시작 복구 블록을 둔다.
+#   언어를 바꾸면 앱이 통째로 재시작된다(SplashScreen + Server Override).
+#   이미 홈이면 복구 블록은 전부 SKIP된다.
+#
+# ⚠️ **판정은 전부 언어 무관 셀렉터(id)로 한다.** 화면 문구가 언어마다 바뀌기 때문.
+#   이 경로는 전 구간 id가 존재한다(2026-08-20 S23 1080x2340 실측):
+#     하단nav  bottom_item_pay
+#     Apply    cardapplicationbutton  ← ⚠️ 카드 4종(EasyCare/EasyGo/Pay/UniQ)에 **중복**이라 index 필수
+#     More     easycare_benefits_see_more
+#     선택     easycare_coverage_start_row
+#     바텀시트  easycare_coverage_title / easycare_coverage_tab_activation
+#
+# ⚠️ 홈 인앱 배너(GME Global Cup 등)가 복귀할 때마다 재등장한다 → 진입/복귀 양쪽에서 닫는다.
+# ================================================================
+
+# ---------------- 재시작 복구: 스플래시 → PIN → 홈 ----------------
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd
+# ---------------- 지문인증 다이얼로그 (조건부) ----------------
+# 앱 설정에서 지문인증이 켜져 있으면 재시작 직후 잠금화면 위에 지문 다이얼로그가 덮인다.
+# 이때 input_dot_1 이 안 보여 PIN 블록이 통째로 SKIP되고 홈 대기에서 죽는다(2026-08-20 실측).
+# 문구는 언어별로 바뀌지만("Отменить"/"Cancel") **id button_negative 는 언어 무관**이다.
+- runFlow:
+    when:
+      visible:
+        id: "button_negative"
+    commands:
+      - tapOn:
+          id: "button_negative"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "check_customer"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      # ⚠️ stag의 보이스피싱 다이얼로그 OK 버튼에는 resource-id가 없다(2026-08-20 실측).
+      #   원본(livetest)의 btn_diaog_ok 를 먼저 시도하고, 없으면 체크박스 아래 버튼으로 폴백한다.
+      #   둘 다 optional 이라 다이얼로그가 이미 닫혔으면 그냥 통과한다.
+      - tapOn:
+          id: "btn_diaog_ok"
+          optional: true
+      - tapOn:
+          below:
+            id: "check_customer"
+          optional: true
+      - waitForAnimationToEnd
+# ⚠️ 인앱 배너가 홈보다 먼저 뜨면 배너가 별도 윈도우라 btnTransfer가 계층에서 가려진다.
+#   그냥 홈을 기다리면 타임아웃으로 죽는다(2026-08-20 실측, stag/S23).
+#   그래서 "배너 또는 홈" 중 먼저 뜨는 쪽을 기다린 뒤 배너를 닫고, 다시 홈을 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|btnTransfer"
+    timeout: 90000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 60000
+
+# ---------------- 인앱 배너 닫기 (조건부) ----------------
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+
+# ---------------- Card 탭 → EasyCare 카드 상세 ----------------
+# ⚠️ **계정의 카드 발급 여부에 따라 Card 탭 화면이 다르다**(2026-08-21 실측).
+#   미발급: 카드 신청 목록 → `cardapplicationbutton` index 0(=EasyCare)로 상세 진입.
+#   발급됨: `GMECardOwnerActivity`(카드 상세) → [Card Management] 탭 → [View Card Benefits]
+#           → `GMECardDetailActivity`. 신청 목록이 아예 없어 cardapplicationbutton도 없다.
+#   → 두 경로를 조건부로 모두 지원한다. 어느 쪽이든 도착지는 같은 화면(myApply)이다.
+- tapOn:
+    id: "bottom_item_pay"
+- waitForAnimationToEnd
+# 인앱 배너는 홈뿐 아니라 카드 상세/혜택 화면 위에도 뜬다(2026-08-20 실측).
+# 배너가 뜨면 대상 요소가 계층에서 가려지므로 "배너 또는 대상"을 기다린 뒤 배너를 닫는다.
+# tab_layout = 발급 화면(Features / Card Management 탭), cardapplicationbutton = 미발급 화면.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|tab_layout|cardapplicationbutton"
+    timeout: 30000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "tab_layout|cardapplicationbutton"
+    timeout: 30000
+
+# [경로 A] 미발급 — 신청 목록 첫 카드(EasyCare).
+# index 0 은 진입 직후 미스크롤 상태에서만 유효하므로 스크롤 금지.
+- runFlow:
+    when:
+      visible:
+        id: "cardapplicationbutton"
+    commands:
+      - tapOn:
+          id: "cardapplicationbutton"
+          index: 0
+      - waitForAnimationToEnd
+
+# [경로 B] 발급됨 — Card Management 탭의 [View Card Benefits].
+# ⚠️ 탭 라벨("Features" / "Card Management")에는 **resource-id가 없다.** 텍스트로 탭하면 언어마다
+#   문구가 바뀌고, 첫 탭 라벨 길이에 따라 두 번째 탭의 x좌표까지 밀리므로 고정 좌표도 못 쓴다.
+#   → 같은 ViewPager(gmeCardDescriptionPager)를 **왼쪽 스와이프**로 넘긴다(문구 무관).
+# ⚠️ `swipe: {from: {id: ...}, direction: LEFT}`는 **이동거리가 짧아 페이지가 안 넘어간다**
+#   (2026-08-21 실측: COMPLETED로 찍히지만 Features 탭 그대로). 화면 폭 전체를 쓰는
+#   start/end 좌표 스와이프여야 넘어간다. y 74%는 pager 영역 안이다.
+# ⚠️ 카드가 2장 이상이면 `gmeCardViewPager`의 **첫 카드가 EasyCare**여야 한다(현 계정은 그렇다).
+#   순서가 바뀌면 다른 카드의 혜택 화면으로 들어가니 toolbar_title("GME Card - EasyCare")로 확인할 것.
+# ⚠️ 조건을 `notVisible: cardapplicationbutton`으로 두면 **경로 A와 동시에 실행된다**
+#   (2026-08-21 실측 사고): A가 성공해 상세 화면으로 넘어간 뒤 이 조건을 평가하면
+#   그 화면에는 신청 버튼이 없으니 조건이 참이 되어 B까지 돌고 FAILED.
+#   → 두 경로를 **화면 정체성**으로 갈라야 한다. `tab_layout`은 발급 화면에만 있고
+#     경로 A의 도착지(GMECardDetailActivity)에는 없다. myApply 부재까지 함께 걸어 이중으로 막는다.
+- runFlow:
+    when:
+      visible:
+        id: "tab_layout"
+      notVisible:
+        id: "myApply"
+    commands:
+      - repeat:
+          times: 3
+          while:
+            notVisible:
+              id: "view_card_benefits_layout"
+          commands:
+            - swipe:
+                start: "88%, 74%"
+                end: "12%, 74%"
+            - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            id: "view_card_benefits_layout"
+          timeout: 20000
+      - tapOn:
+          id: "view_card_benefits_layout"
+      - waitForAnimationToEnd
+# ⚠️ 화면 판정에 easycare_benefits_title 을 쓰면 안 된다.
+# 문구가 긴 언어(몽골어 등)에서는 혜택 목록이 2줄로 늘어나 EasyCare Benefits 섹션이
+# 화면 밖으로 밀려 assert가 실패한다(2026-08-21 실측: 영어 45px/줄 -> 몽골어 90px/줄).
+# 항상 화면 하단에 고정되는 myApply(신청 버튼)로 판정한다.
+# 인앱 배너는 홈뿐 아니라 카드 상세/혜택 화면 위에도 뜬다(2026-08-20 실측).
+# 배너가 뜨면 대상 요소가 계층에서 가려지므로 "배너 또는 대상"을 기다린 뒤 배너를 닫는다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|myApply"
+    timeout: 30000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "myApply"
+    timeout: 30000
+# ⚠️ 카드 목록/탭 순서가 바뀌어 **다른 카드**(EasyGo 등) 상세로 들어가면 24장이 통째로 무의미해진다.
+#   "EasyCare"는 브랜드명이라 어느 언어에서도 라틴 문자 그대로 남는다(예: 佛 "Carte GME - EasyCare").
+#   ⚠️ id와 text를 같이 주면 실패하는 함정이 있어 text만으로 검사한다.
+- assertVisible:
+    text: ".*EasyCare.*"
+
+# ---------------- EasyCare Benefits 영역 → More(See more) ----------------
+# 최초 진입 시 Apply 버튼에 가려 화면 밖이라 스크롤이 반드시 필요하다.
+- scrollUntilVisible:
+    element:
+      id: "easycare_benefits_see_more"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "easycare_benefits_see_more"
+- waitForAnimationToEnd
+
+# ---------------- Check coverage start date ----------------
+# 인앱 배너는 홈뿐 아니라 카드 상세/혜택 화면 위에도 뜬다(2026-08-20 실측).
+# 배너가 뜨면 대상 요소가 계층에서 가려지므로 "배너 또는 대상"을 기다린 뒤 배너를 닫는다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|easycare_benefits_tab_insurance"
+    timeout: 30000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+# ⚠️ 여기서도 easycare_coverage_start_row 로 판정하면 안 된다.
+# 문구가 긴 언어에서는 이 행이 화면 밖으로 밀려 assert가 실패한다(2026-08-21 실측).
+# 화면 도달 판정은 항상 상단에 고정된 Insurance 탭으로 하고, 행 도달은 아래 스크롤에 맡긴다.
+- extendedWaitUntil:
+    visible:
+      id: "easycare_benefits_tab_insurance"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "easycare_coverage_start_row"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "easycare_coverage_start_row"
+- waitForAnimationToEnd
+
+# ---------------- "Check my coverage" 바텀시트 → 증적 촬영 ----------------
+# 인앱 배너는 홈뿐 아니라 카드 상세/혜택 화면 위에도 뜬다(2026-08-20 실측).
+# 배너가 뜨면 대상 요소가 계층에서 가려지므로 "배너 또는 대상"을 기다린 뒤 배너를 닫는다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|easycare_coverage_tab_activation"
+    timeout: 30000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "easycare_coverage_tab_activation"
+    timeout: 30000
+- assertVisible:
+    id: "easycare_coverage_title"
+- assertVisible:
+    id: "easycare_coverage_tab_monthly"
+- takeScreenshot: "shots_easycare_i18n/${SHOT}"
+
+# ---------------- 홈 복귀 ----------------
+- tapOn:
+    id: "easycare_coverage_close"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+- tapOn:
+    id: "bottom_item_home"
+- waitForAnimationToEnd
+# ⚠️ 인앱 배너가 홈보다 먼저 뜨면 배너가 별도 윈도우라 btnTransfer가 계층에서 가려진다.
+#   그냥 홈을 기다리면 타임아웃으로 죽는다(2026-08-20 실측, stag/S23).
+#   그래서 "배너 또는 홈" 중 먼저 뜨는 쪽을 기다린 뒤 배너를 닫고, 다시 홈을 확인한다.
+- extendedWaitUntil:
+    visible:
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|btnTransfer"
+    timeout: 60000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 60000
+# 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
+#   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml

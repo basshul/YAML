@@ -1,0 +1,13 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# 공통 헬퍼: livetest 빌드가 (재)실행 시 띄우는 "Server Override" 서버선택 스플래시 처리.
+# 앱이 콜드 재실행되는 모든 지점(launchApp, 언어변경 재시작 등)에서 호출:
+#   - runFlow: "_server_override.yaml"
+# 다이얼로그가 뜨면 CONTINUE(LIVETEST 유지), 안 뜨면 즉시 통과.
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn: "CONTINUE"
+      - waitForAnimationToEnd

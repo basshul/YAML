@@ -1,0 +1,323 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 13_ReceiveOverseas 분할 7/7 — Inbound Request Status
+# ================================================================
+# 2026-09-07 분할. 원본 `13_ReceiveOverseas_old.yaml`(20케이스 / 통짜 약 42분)은 실행이
+# **10분 포그라운드 한도**를 넘어 백그라운드로 전환되고, 그 뒤 외부에서 종료되는 일이
+# 반복됐다(9/7 실측: 백그라운드 전환 7건 중 6건 종료 / 10분 미만 실행은 전부 완주).
+# → 각 조각이 10분 안에 끝나도록 잘랐다. 합계는 약 48분으로 통짜보다 6분 늘지만
+#   (공통 진입이 1회→7회), 끊김이 사라지고 실패해도 손실이 조각 하나로 제한된다.
+#
+# ⚠️ **순서 의존 — 반드시 13_01 → 13_02 → … → 13_07 순으로 돈다.**
+#   데이터 사슬: 01~03이 송금인 3국을 등록 → 04가 **인도네시아**로 송금요청 신청 →
+#   05가 **베트남** 송금인 정보 수정 → 06이 등록된 송금인을 **전부 삭제** →
+#   07은 04가 만든 **요청**의 상태 화면을 본다(송금인과 무관해 06 뒤라도 성립).
+#
+# 이 파일: [15]~[20] — 요청 카드/디테일/이력/공유/결제 연결
+#   예상 약 5분 / 전제: **13_04 완료** — [12]가 만든 인바운드 Request(72시간 만료)가 있어야 카드 목록이 뜬다. 송금인과는 무관하므로 13_06 뒤여도 성립
+# ================================================================
+
+# ================================================================
+# 시나리오: Receive Overseas Funds (Inbound)
+# ================================================================
+# 2026-07-08 구조 변경: 케이스마다 Home으로 완전히 나갔다가 재진입하던 방식을 없애고,
+# 가능한 한 이전 케이스가 끝난 화면에서 바로 다음 케이스를 이어서 진행하도록 수정함.
+# 다만 [15]~[20](Inbound Request Status)은 "해외송금 받기"를 Home에서 새로 탭해야만
+# "받는 계좌" 카드 목록이 노출되는 구조라, [13]->[15] 전환과 [18]->[19]->[20] 사이는
+# 여전히 Home 경유가 필요함(안전을 위해 유지 - [20]은 실제 결제 페이지로 연결되므로
+# 내비게이션 스택을 확신할 수 없는 구간은 보수적으로 Home으로 리셋함).
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [15]~[20] Inbound Request Status - 진입 경로 재발견 (2026-07-08 실기기 확인)
+# ----------------------------------------------------------------
+# 계정에 완료된 인바운드 Request가 하나라도 있으면 "해외송금 받기" 메뉴 진입 시
+# [01]~[14]에서 봤던 환율계산/수취인목록 화면 대신 "받는 계좌" 카드 목록 화면([15])이
+# 먼저 노출되는 구조임을 확인함. [12]의 IBST0003는 매번 재현되는 게 아니라 간헐적
+# 실패였던 것으로 보이며(원인 미상, 백엔드 환율 캐시 타이밍 추정), 실제로 이전 세션 중
+# Confirm이 최소 2회 성공해 계정에 완료된 요청이 남아있었음 - 이를 이용해 [15]~[20] 검증.
+# 주의: 이 섹션은 "완료된 요청이 이미 존재해야" 카드 목록이 노출되는 상태 의존적 테스트임.
+#
+# ★ 2026-09-04 해소: **[12]가 매 실행마다 그 요청을 만든다.** 종전엔 Confirm을 누르지 않아
+#   이 섹션이 "예전에 우연히 성공한 요청"에 얹혀 있었고, 실제로 그 데이터는 **이미 만료돼
+#   사라진 상태였다**(2026-09-04 실측: "받는 계좌" 카드 화면이 뜨지 않음 = 완료된 요청 0건).
+#   요청 만료가 72시간이라 하루만 지나도 이 섹션이 통째로 깨지는 구조였다.
+#   → 이제 [12]가 선행하므로 [15]~[20]은 자기완결적이다.
+# [15]->[16]->[17]은 같은 화면 스택에서 바로 이어지므로 Home 재진입 불필요.
+# [17]->[18]은 "내역 조회"에서 뒤로가기 1번이면 디테일로 복귀 가능해 이어서 진행.
+# [18]에서 "다른 요청 진행"을 타면 [01]~[14]가 쓰는 화면으로 넘어가 버려 이후 내비게이션
+# 스택을 확신할 수 없으므로, [19]/[20]은 안전하게 Home부터 재진입함(특히 [20]은 실제
+# 결제 페이지로 연결되므로 상태가 꼬이면 위험함).
+
+# ----------------------------------------------------------------
+# [15] [Medium] Inbound Request Status - 송금요청 한 카드 노출 되는지 확인
+# ----------------------------------------------------------------
+
+- runFlow: "_enter_receive_overseas_old.yaml"
+# ⚠️ 진입 화면이 **활성 요청 건수로 갈린다**(2026-09-04 / 2026-09-08 재확인):
+#   2건 이상 = "받는 계좌" 카드 목록 / **1건 = 카드 목록을 건너뛰고 요청 상세로 직행**.
+#   13_04 가 만든 요청 1건만 있는 계정(test123)에서는 카드 목록이 아예 뜨지 않으므로
+#   `받는 계좌` 를 단정하면 실패한다 → 두 경로를 모두 받고, 카드 목록일 때만 목록을 검증한다.
+#   상세 도달은 [16]의 `tv_req_complete` 단언이 보증하므로 거짓 통과가 되지 않는다.
+- extendedWaitUntil:
+    visible: "받는 계좌|요청 완료"
+    timeout: 40000
+- runFlow:
+    when:
+      visible:
+        text: "받는 계좌"
+    commands:
+      - assertVisible:
+          id: "rvAccountList"
+
+# ----------------------------------------------------------------
+# [16] [Low] Inbound Request Status - 송금요청 디테일페이지 확인
+# ----------------------------------------------------------------
+# [15]가 끝난 화면(카드 목록)에서 바로 이어서 진행
+
+# 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
+- runFlow:
+    when:
+      visible:
+        text: "받는 계좌"
+    commands:
+      - tapOn:
+          id: "cardView"
+          index: 0
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "tv_req_complete"
+- assertVisible:
+    id: "tv_expirydate"
+
+# ----------------------------------------------------------------
+# [17] [Medium] Inbound Request Status - 송금요청 디테일 > Check History 버튼 선택 시 이력페이지 이동확인
+# ----------------------------------------------------------------
+# "내역 조회"(우측 상단) 탭 시 거래내역 > 송금 > 송금 받기 탭으로 이동, "요청 완료" 상태 배지 노출 확인
+# [16]이 끝난 화면(디테일)에서 바로 이어서 진행
+
+- tapOn:
+    id: "tv_request_history"
+- assertVisible:
+    text: "요청 완료"
+
+# 이력화면에서 뒤로가기 1번이면 디테일 화면으로 복귀
+- pressKey: back
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [18] [Medium] Inbound Request Status - Submit Another Request 선택 시 인바운드 메인화면 이동 확인
+# ----------------------------------------------------------------
+# "다른 요청 진행" 탭 시 [01]~[09]에서 사용한 환율계산+수취인목록 메인화면으로 이동 확인
+# [17]에서 뒤로가기로 복귀한 디테일 화면에서 바로 이어서 진행
+
+- assertVisible:
+    id: "tv_req_complete"
+- tapOn:
+    id: "tv_make_another_payment"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "송금 받을 때 환율 확인하기"
+
+# "다른 요청 진행" 이후 내비게이션 스택이 불확실해 안전하게 Home까지 복귀
+# ⚠️ **back 2회로는 모자랄 수 있다.** 2026-09-08 SM-S911N 실측: 홈에 못 닿은 채 [19]가
+#   진입 헬퍼를 불러 **카드 목록 대신 수취인 목록에 머물렀고** `tv_req_complete` 가 실패했다.
+#   → 홈(`bottom_item_home`)이 보일 때까지 최대 5회 되돌아간다.
+- repeat:
+    times: 5
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - pressKey: back
+            - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [19] [Low] Inbound Request Status - Share Detail With Sender 선택 시 공유동작 확인
+# ----------------------------------------------------------------
+# 버튼 라벨은 "송금인에게 내역 공유하기"이나 resource-id는 btn_cancel_request로 명명되어 있음
+# (id/라벨 불일치, 앱 버그로 추정 - 기능 자체는 정상 동작). 안드로이드 공유 시트가 노출되며
+# "Deposit Amount"/"Payment Link" 텍스트와 "복사" 버튼이 포함됨. 실제 앱 선택 없이 뒤로가기로 종료
+
+- runFlow: "_enter_receive_overseas_old.yaml"
+# 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
+#   ⚠️ 분기 전에 **도달을 먼저 기다린다** — 렌더 중에 조건을 보면 모든 갈래가 조용히 SKIP된다.
+- extendedWaitUntil:
+    visible: "받는 계좌|요청 완료"
+    timeout: 40000
+- runFlow:
+    when:
+      visible:
+        text: "받는 계좌"
+    commands:
+      - tapOn:
+          id: "cardView"
+          index: 0
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "tv_req_complete"
+- tapOn:
+    id: "btn_cancel_request"
+# ⚠️ 공유 시트 판정을 **"복사" 라벨로 하면 안 된다** (2026-09-08 SM-S911N / One UI 실측).
+#   이 기기에서는 복사가 **라벨 없는 아이콘**이라 텍스트가 아예 없다(시트는 정상 노출됨).
+#   → 시트 제목과 공유 본문으로 판정한다. 본문에는 개행이 섞여 있어 `[\s\S]*` 를 쓴다.
+- assertVisible:
+    text: '텍스트 공유|Share text|Deposit Amount[\s\S]*'
+- pressKey: back
+
+# [20]도 안전하게 Home부터 재진입하도록 복귀
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [20] [High] Inbound Request Status - Proceed to Payment 선택 시 인바운드 송금 상세 웹페이지 연결 확인
+# ----------------------------------------------------------------
+# 주의(실제 결제 리스크): "결제 진행" 탭 시 앱을 벗어나 외부 Chrome 브라우저로
+# checkout.doku.com(실제 PG사 결제 페이지)이 열림. 카드 [24] Global QR 케이스와 동일한 이유로
+# 여기서는 브라우저 진입 확인까지만 하고 즉시 이탈함 - 절대 결제 정보를 입력하거나 결제를
+# 완료하는 단계까지 진행하지 않음
+
+- runFlow: "_enter_receive_overseas_old.yaml"
+# 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
+#   ⚠️ 분기 전에 **도달을 먼저 기다린다** — 렌더 중에 조건을 보면 모든 갈래가 조용히 SKIP된다.
+- extendedWaitUntil:
+    visible: "받는 계좌|요청 완료"
+    timeout: 40000
+- runFlow:
+    when:
+      visible:
+        text: "받는 계좌"
+    commands:
+      - tapOn:
+          id: "cardView"
+          index: 0
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "tv_req_complete"
+- tapOn:
+    id: "btn_proceed"
+- waitForAnimationToEnd
+# Maestro의 text 셀렉터는 노드 전체 문자열과 일치해야 하므로(부분일치 아님) URL 일부만
+# 확인하려면 와일드카드 regex 필요 (2026-07-08 확인: "만료 날짜" 등 여러 partial text
+# assertVisible이 이 이유로 실패했었음 - id 기반 또는 .*wildcard.* 패턴으로 대체)
+- assertVisible:
+    text: ".*doku.*"
+# 결제 페이지 진입 확인만 하고 즉시 이탈 (실제 결제 진행 금지)
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+
+# 홈 복귀 (suite 종료)
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+

@@ -1,0 +1,729 @@
+appId: com.gmeremit.online.gmeremittance_native.livetest
+---
+# ================================================================
+# 시나리오: Overseas Transfer - 수취인 추가 / 수정 / 삭제
+# [01] [High] 수취인 추가 → 수정 → 삭제
+# [02] [High] 수취인 추가 후 GME Wallet 송금 (PIN 오류 2323 → 정상 1212)
+# [03] [Medium] 실시간 송금 탭 - 수취인 화면 필터(설정) 동작 확인
+# [04] [High]   실시간 송금 탭 - 수취인 추가 동작 확인 (Send Now)
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입
+# 주의(2026-08-03): 기존 가드 `"Server Override|4자리 숫자를 입력하세요|홈"`은 launchApp 직후
+#   잠깐 보이는 **캐시된 홈**에 먼저 매칭돼 PIN 입력 블록을 통째로 건너뛰었음 → 이후 실제
+#   잠금화면이 떠서 "해외송금" 탭이 실패. 04_Menu_History.yaml의 검증된 패턴대로 잠금화면을
+#   **명시적으로** 기다렸다가 PIN을 넣도록 변경. PIN 키패드는 매번 랜덤 배치라 좌표가 아닌
+#   text("1"/"2")로 탭. PIN 1212.
+- launchApp
+# Server Override(livetest 빌드 서버선택 스플래시)가 먼저 뜨면 처리
+- runFlow: "_server_override.yaml"
+# 간편비밀번호 잠금화면을 명시적으로 대기 후 PIN 1212
+- extendedWaitUntil:
+    visible:
+      text: "4자리 숫자를 입력하세요"
+    timeout: 30000
+# PIN 1212. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- runFlow: "_server_override.yaml"
+# 로그인 세션 만료 다이얼로그(토큰 만료 시)가 뜨거나 홈이 뜰 때까지 대기
+- extendedWaitUntil:
+    visible:
+      text: "로그인 세션이 만료|홈"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "로그인 세션이 만료"
+    commands:
+      - tapOn: "OK"
+      - extendedWaitUntil:
+          visible:
+            text: "홈"
+          timeout: 20000
+# 지문인증/팝업 처리
+- runFlow:
+    when:
+      visible:
+        text: "나중에"
+    commands:
+      - tapOn: "나중에"
+- runFlow:
+    when:
+      visible:
+        text: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+- runFlow:
+    when:
+      visible:
+        text: "닫기"
+    commands:
+      - tapOn: "닫기"
+- extendedWaitUntil:
+    visible:
+      text: "홈"
+    timeout: 30000
+- waitForAnimationToEnd
+# 홈 코치마크 balloon 처리
+- runFlow:
+    when:
+      visible:
+        id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+    commands:
+      - tapOn:
+          id: "com.gmeremit.online.gmeremittance_native.livetest:id/balloonClose"
+      - waitForAnimationToEnd
+
+# 해외송금 진입 (실시간 송금 탭)
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+
+# 사전 정리: GME TEST 삭제 (최대 6회)
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+
+# 사전 정리: TEST GME 삭제 (최대 3회)
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+
+# 사전 정리: TESTUPDATE GME 삭제 (최대 3회 - 이전 실행에서 편집된 TEST GME 정리)
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+
+# ================================================================
+# [01] 수취인 추가 → 수정
+# ================================================================
+
+# 수취인 추가하기
+- tapOn: "수취인 추가하기"
+
+# 국가: Sri Lanka
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Sri Lanka"
+- tapOn:
+    text: "Sri Lanka"
+    index: 1
+
+# 은행: COMMERCIAL BANK
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "COMMERCIAL"
+- tapOn: "COMMERCIAL BANK"
+
+# 계좌번호
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 이름 (First: TEST / Last: GME)
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "GME"
+- hideKeyboard
+
+# 핸드폰 번호
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 주소
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 구역
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 관계: 친구
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "친구"
+
+# 송금 사유: 급여 / 임금
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "급여 / 임금"
+
+# 제출
+- tapOn:
+    id: "btn_submit"
+
+# 중복 수취인 오류 처리 (TEST GME 이미 존재 시 팝업 닫고 뒤로)
+- runFlow:
+    when:
+      visible:
+        text: "오류"
+    commands:
+      - tapOn: "확인"
+      - pressKey: back
+
+# 저장 성공 바텀시트: 아니요 (목록 복귀)
+- runFlow:
+    when:
+      visible:
+        id: "btnContactSupport1"
+    commands:
+      - tapOn:
+          id: "btnContactSupport1"
+
+# 수취인 목록 복귀 확인
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+- assertVisible:
+    text: "TEST GME"
+
+# 수취인 수정: First Name TEST → TESTUPDATE 변경 시도
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "edit"
+    index: 0
+
+# First Name: TEST → TESTUPDATE (Last Name 탭 → First Name 재탭으로 커서 끝 이동)
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- eraseText: 4
+- inputText: "TESTUPDATE"
+- hideKeyboard
+
+# 스크롤 후 제출
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- tapOn:
+    id: "btn_submit"
+
+# 저장 성공 바텀시트: 아니요 → 이름 변경 취소(revert)되어 "TEST GME"로 복귀
+- tapOn:
+    id: "btnContactSupport1"
+
+
+
+# ================================================================
+# [02] 수취인 추가 후 GME Wallet 송금 (PIN 오류 → 정상)
+# ================================================================
+
+# 해외송금 진입 (실시간 송금 탭)
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+
+# 수취인 추가하기
+- tapOn: "수취인 추가하기"
+
+# 국가: Sri Lanka
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Sri Lanka"
+- tapOn:
+    text: "Sri Lanka"
+    index: 1
+
+# 은행: COMMERCIAL BANK
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "COMMERCIAL"
+- tapOn: "COMMERCIAL BANK"
+
+# 계좌번호
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- inputText: "1234567891"
+- hideKeyboard
+
+# 이름 (First: GME / Last: TEST)
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "GME"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 핸드폰 번호
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 주소
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 구역
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 관계: 친구
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "친구"
+
+# 송금 사유: 급여 / 임금
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "급여 / 임금"
+
+# 제출
+- tapOn:
+    id: "btn_submit"
+
+# 중복 수취인 오류 처리 (GME TEST 이미 존재 시 팝업 닫고 뒤로)
+- runFlow:
+    when:
+      visible:
+        text: "오류"
+    commands:
+      - tapOn: "확인"
+      - pressKey: back
+
+# 저장 성공 바텀시트: 예 (송금하기)
+- runFlow:
+    when:
+      visible:
+        text: "^예$"
+    commands:
+      - tapOn: "^예$"
+
+# 계좌 선택: GME Wallet
+- tapOn:
+    text: "GME Wallet"
+    index: 0
+
+# 송금액: 14,000원
+- inputText: "14000"
+- hideKeyboard
+
+# 계산하기
+- tapOn: "계산하기"
+
+# 잔액 부족 팝업 처리 (계산하기 단계에서 발생하는 경우)
+- runFlow:
+    when:
+      visible:
+        text: "잔액"
+    commands:
+      - tapOn: "확인"
+
+# 계속 (잔액 충분한 경우에만 진행)
+- runFlow:
+    when:
+      visible:
+        text: "계속"
+    commands:
+      - tapOn: "계속"
+
+# 수취인 정보 / 약관 동의 화면 - 스크롤 후 계속
+- swipe:
+    direction: UP
+    duration: 1000
+- runFlow:
+    when:
+      visible:
+        text: "계속"
+    commands:
+      - tapOn: "계속"
+
+# PIN 오류: 2323 입력 (PIN 화면에서만)
+- runFlow:
+    when:
+      visible:
+        text: "간편 비밀번호"
+    commands:
+      - tapOn: "2"
+      - tapOn: "3"
+      - tapOn: "2"
+      - tapOn: "3"
+
+# PIN 정상: 1212 입력 (PIN 화면에서만)
+- runFlow:
+    when:
+      visible:
+        text: "간편 비밀번호"
+    commands:
+      - tapOn: "1"
+      - tapOn: "2"
+      - tapOn: "1"
+      - tapOn: "2"
+
+# 잔액 부족 에러 팝업 처리 (PIN 이후 발생하는 경우)
+- runFlow:
+    when:
+      visible:
+        text: "잔액"
+    commands:
+      - tapOn: "확인"
+
+# 송금 성공 팝업 닫기 (잔액 충분하여 성공한 경우)
+- runFlow:
+    when:
+      visible:
+        text: "성공"
+    commands:
+      - tapOn: "다시 보내기"
+
+# 홈 복귀
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# ================================================================
+# [03] 실시간 송금 탭 - 수취인 화면 필터(설정) 동작 확인
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 30000
+- assertVisible:
+    text: "실시간 송금"
+- tapOn:
+    id: "imgvFilter"
+- assertVisible:
+    text: "설정"
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "et_searchText"
+- tapOn:
+    id: "et_searchText"
+- inputText: "TEST"
+- hideKeyboard
+# 필터 닫기
+- pressKey: back
+
+# ================================================================
+# [04] 실시간 송금 탭 - 수취인 목록 확인 (Send Now)
+# ================================================================
+- tapOn: "해외송금"
+- extendedWaitUntil:
+    visible:
+      text: "수취인을 선택하세요."
+    timeout: 10000
+
+# [04] 결과 확인: [02]에서 추가한 GME TEST가 수취인 목록에 있는지 확인
+- assertVisible:
+    text: "GME TEST"
+
+# ================================================================
+# 사후 정리: 테스트에서 생성된 수취인 삭제
+# ================================================================
+
+# 홈으로 복귀 (어느 화면에 있든 Home까지)
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "Home"
+    commands:
+      - pressKey: back
+
+# 해외송금 수취인 목록으로 진입
+- tapOn: "해외송금"
+
+# GME TEST 삭제 (최대 3회)
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "예"
+

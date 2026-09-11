@@ -1,0 +1,340 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 13_ReceiveOverseas 분할 5/7 — 기존 송금인 삭제·수정
+# ================================================================
+# 2026-09-07 분할. 원본 `13_ReceiveOverseas_old.yaml`(20케이스 / 통짜 약 42분)은 실행이
+# **10분 포그라운드 한도**를 넘어 백그라운드로 전환되고, 그 뒤 외부에서 종료되는 일이
+# 반복됐다(9/7 실측: 백그라운드 전환 7건 중 6건 종료 / 10분 미만 실행은 전부 완주).
+# → 각 조각이 10분 안에 끝나도록 잘랐다. 합계는 약 48분으로 통짜보다 6분 늘지만
+#   (공통 진입이 1회→7회), 끊김이 사라지고 실패해도 손실이 조각 하나로 제한된다.
+#
+# ⚠️ **순서 의존 — 반드시 13_01 → 13_02 → … → 13_07 순으로 돈다.**
+#   데이터 사슬: 01~03이 송금인 3국을 등록 → 04가 **인도네시아**로 송금요청 신청 →
+#   05가 **베트남** 송금인 정보 수정 → 06이 등록된 송금인을 **전부 삭제** →
+#   07은 04가 만든 **요청**의 상태 화면을 본다(송금인과 무관해 06 뒤라도 성립).
+#
+# 이 파일: [13] 삭제 동작 + [14] **베트남** 송금인 정보 수정
+#   예상 약 6분 / 전제: **13_03 완료** — [14]는 `edit` 아이콘이 **"승인 대기 중" 행에만** 뜨는 성질을 쓴다. 인도네시아는 등록 즉시 활성이라 이 조건을 못 만든다
+# ================================================================
+
+# ================================================================
+# 시나리오: Receive Overseas Funds (Inbound)
+# ================================================================
+# 2026-07-08 구조 변경: 케이스마다 Home으로 완전히 나갔다가 재진입하던 방식을 없애고,
+# 가능한 한 이전 케이스가 끝난 화면에서 바로 다음 케이스를 이어서 진행하도록 수정함.
+# 다만 [15]~[20](Inbound Request Status)은 "해외송금 받기"를 Home에서 새로 탭해야만
+# "받는 계좌" 카드 목록이 노출되는 구조라, [13]->[15] 전환과 [18]->[19]->[20] 사이는
+# 여전히 Home 경유가 필요함(안전을 위해 유지 - [20]은 실제 결제 페이지로 연결되므로
+# 내비게이션 스택을 확신할 수 없는 구간은 보수적으로 Home으로 리셋함).
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
+      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
+      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
+      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
+      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
+      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      - tapOn:
+          text: ".*LIVETEST.*"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            text: "4자리 숫자를 입력하세요|홈으로"
+          timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "4자리 숫자를 입력하세요"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "보이스 피싱 주의"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "나중에 하기"
+    commands:
+      - tapOn: "나중에 하기"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
+        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
+        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
+        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# Receive Overseas Funds 진입: Home > 해외송금 받기 (전체 [01]~[14] suite 진입 시 1회만)
+# 계정에 완료된 인바운드 Request가 있으면 [01]~[14]가 기대하는 수취인 목록 화면이 아니라
+# **요청 쪽 화면이 먼저 뜬다.** 2026-09-04 실측으로 경로가 둘인 것이 확인됐다:
+#   ① "받는 계좌" 카드 목록(rvAccountList) — 카드를 탭해야 상세로 들어간다
+#   ② 곧바로 **요청 상세**(ReceiveMoneyInboundDetailActivity, `tv_req_complete`) — 요청이
+#      1건일 때 카드 목록을 건너뛰고 직행했다. 종전 코드는 ①만 알아서 여기서 조용히 멈췄고,
+#      뒤따르는 [10]이 "송금인 등록하기"를 못 찾아 죽었다.
+# 두 경로 모두 상세의 **"다른 요청 진행"** 에서 만나므로 순서대로 처리한다.
+- runFlow: "_enter_receive_overseas_old.yaml"
+- runFlow: "_inbound_goto_sender_list_old.yaml"
+
+# ----------------------------------------------------------------
+# [13] [Medium] Existing Sender - 기존 송금인 삭제 동작 확인
+# ----------------------------------------------------------------
+# 수취인 목록 카드는 moreIcon(⋮) 탭 시 좌측에 delete(휴지통) 아이콘만 슬라이드로 노출됨
+# (edit 아이콘은 없음 - [14] 참고). 신규 등록된 송금인이 목록 최상단(index 0)에 추가되는
+# 것을 이용해, 기존 BUDI SANTOSO(다른 케이스에서 재사용 중)를 건드리지 않고
+# 매번 새로 등록한 더미 송금인을 그 자리에서 바로 삭제하는 방식으로 검증
+# (2026-07-08 실기기 end-to-end 확인: 등록 → moreIcon → delete → "예" → "Successfully Deleted" 토스트)
+# [12]가 끝난 화면(메인화면)에서 바로 이어서 진행
+
+- tapOn: "송금인 등록하기"
+- waitForAnimationToEnd
+- tapOn: "다음"
+- assertVisible:
+    text: "송금인 세부 정보 입력"
+- tapOn:
+    id: "input_edittext"
+    index: 0
+- inputText: "Delete Target"
+- tapOn:
+    id: "input_edittext"
+    index: 1
+- inputText: "089900011199"
+- tapOn:
+    id: "input_edittext"
+    index: 2
+- inputText: "deletetarget@example.com"
+# ⚠️ **이메일 입력 뒤 키보드를 반드시 닫는다.** 키보드가 Address·City 를 덮으면 두 필드가
+#   **접근성 트리에서 사라져** `input_edittext index: 3` 이 `Element not found` 로 죽는다.
+#   (2026-09-08 SM-S911N / 1080x2340 실측 — 구 기기 1080x2220 에서는 안 겪던 문제다.
+#    폼 자체는 **두 기기 모두 5필드**다: Full Name·Mobile Number·Email·Address·City — 계층 덤프로 확인.)
+#   ⛔ `hideKeyboard` 는 **키보드가 없을 때 뒤로가기로 동작한다**(같은 날 실측) → 입력 직후에만 쓸 것.
+- hideKeyboard
+- tapOn:
+    id: "input_edittext"
+    index: 3
+- inputText: "Delete Street 1"
+- hideKeyboard
+- tapOn:
+    id: "input_edittext"
+    index: 4
+- inputText: "Delete City"
+- hideKeyboard
+- tapOn: "다음"
+- waitForAnimationToEnd
+# 다이얼로그 헤더 텍스트에 실제 줄바꿈이 포함되어 있어("확인 후\n인증을") text 셀렉터로는
+# 매칭되지 않음(Maestro는 전체 문자열 매칭) - id로 매칭 (2026-07-08 실기기 확인)
+- assertVisible:
+    id: "header"
+- tapOn: "확인"
+- assertVisible:
+    text: "저장 성공"
+# "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 등록 완료 후 곧바로 목록
+# 화면으로 돌아가는 경우가 간헐적으로 갈림(2026-07-08 확인, [07] 참고) - 프롬프트가
+# 떠서 아직 목록이 안 보일 때만 취소로 닫음
+- runFlow:
+    when:
+      notVisible:
+        text: "Delete Target"
+    commands:
+      - tapOn: "취소"
+# 목록 렌더 범위 문제 — 위 주석 참고. 스크롤로 찾아서 확인한다.
+# ⚠️ **하단 플로팅 버튼("송금인 등록하기")이 slide-out 아이콘을 덮는다** (2026-08-20 구 UI 실측)
+#   목록 행이 화면 하단에 걸리면 `delete`/`edit` 아이콘 좌표가 버튼 뒤로 들어가고,
+#   탭이 **버튼에 먹혀 "송금인 등록하기" 화면으로 튄다**(앱 UI 겹침이지 셀렉터 문제가 아니다).
+#   → 대상 행을 **화면 중앙**에 놓고 연다.
+# ⛔ **고정 퍼센트 스와이프를 쓰지 말 것** — 같은 30%가 해상도마다 다른 행 수만큼 움직인다.
+#   `centerElement: true` 는 기기와 무관하게 대상 행을 중앙에 놓는다 (2026-09-09 기기 교체 대응).
+- scrollUntilVisible:
+    element:
+      text: "Delete Target"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+    visibilityPercentage: 100
+- assertVisible: "Delete Target"
+- waitForAnimationToEnd
+# ⚠️ `index: 0` 은 "그 순간 **화면 맨 위**의 moreIcon"이라 행이 아니라 화면 위치를 가리킨다
+#   (Filters.INDEX_COMPARATOR = bounds.y → bounds.x 정렬). 스크롤 위치가 조금만 달라져도 다른 행이 열린다
+#   → **대상 행 이름으로 앵커**한다. moreIcon 은 카드 안에 있어 childOf 가 성립한다
+#     (`delete` 는 형제 레이어라 성립하지 않는다 — 2026-09-08 실측).
+- tapOn:
+    id: "moreIcon"
+    childOf:
+      containsDescendants:
+        - "Delete Target"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "delete"
+    timeout: 15000
+- tapOn:
+    id: "delete"
+    index: 0
+- assertVisible:
+    text: "송금인 삭제"
+- tapOn: "예"
+# ⚠️ **토스트("Successfully Deleted")로 결과를 판정하지 말 것** (2026-08-20 실패)
+#   토스트는 순간 노출이라 maestro가 계층을 읽는 시점에 이미 사라져 있는 경우가 많다.
+#   삭제가 실제로 됐는지는 **목록에서 사라졌는지(상태)** 로 봐야 결정적이다.
+#   → 토스트가 잡히면 확인하고(있으면 좋고), 없어도 통과시킨다. 판정은 아래 목록 검증이 한다.
+- runFlow:
+    when:
+      visible: "Successfully Deleted"
+    commands:
+      - assertVisible: "Successfully Deleted"
+# 삭제 반영도 캐시된다 → 재진입 후 확인한다(위 주석 참고)
+- runFlow: "_reenter_inbound_list_old.yaml"
+- extendedWaitUntil:
+    notVisible:
+      text: "Delete Target"
+    timeout: 20000
+
+# [13]이 [01]~[14] suite의 마지막 케이스이고, [15]는 Home에서 새로 "해외송금 받기"를
+# 탭해야만 "받는 계좌" 카드 목록이 노출되는 별개 화면 구조라 여기서만 Home까지 복귀함
+- pressKey: back
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [14] [Medium] Existing Sender - 기존 송금인 수정 동작 확인 - 수정 변경 확인
+# ----------------------------------------------------------------
+# 2026-07-09 정정: "기능 없음" 결론은 오류였음. 승인 완료된 송금인(BUDI SANTOSO 등)은
+# moreIcon(⋮) 슬라이드에 delete만 노출되지만, "승인 대기 중" 상태인 송금인에는 edit(연필)
+# 아이콘이 함께 노출됨 - 베트남처럼 은행계좌 등록이 필요한 국가는 등록 즉시 이 상태가 되고,
+# edit 탭 시 기존 데이터로 미리 채워진 "송금인 등록하기" 폼이 열려 실제로 수정이 가능함을
+# 실기기로 확인함. 신규 베트남 sender 등록은 신분증 사진 4장(Alien ID Card / Sender
+# Citizenship 앞뒤 / Document Proof) 업로드가 필수라 실제 이미지 없이는 자동화가 어려워,
+# 이미 "승인 대기 중" 상태로 계정에 존재하는 베트남 sender(목록 최하단, 계좌 Ngan hang ANZ
+# chi nhanh Ho Chi Minh)를 재사용해 편집 동작만 검증함. Full Name을 매번 동일한 고정값으로
+# 덮어써서 이전 실행 결과와 무관하게 항상 idempotent하게 통과하도록 구성.
+# 주의(실기기 확인): moreIcon 탭 직후 edit 아이콘까지 상대 셀렉터(rightOf/below)로 찾으면
+# 리스트 재레이아웃 타이밍 때문에 엉뚱한(위쪽) 행이 대신 열리는 현상이 있었음 - index 기반
+# 셀렉터로 전환해 해결. 또한 edit 탭 후 기존 데이터를 서버에서 비동기로 불러오는 로딩
+# 스피너가 있어(약 2~5초) extendedWaitUntil로 대기 필요.
+# [13]이 끝난 Home에서 이어서 진행
+
+- runFlow: "_enter_receive_overseas_old.yaml"
+# 2026-09-04: 여기만 **옛 형태**(cardView 탭과 "다른 요청 진행" 탭이 한 commands 안)로 남아 있었다.
+#   활성 요청이 있을 때 조건이 SKIP되면 아래 `scrollUntilVisible`이 수취인 목록이 아닌 화면에서
+#   헛돌다 죽는다(2026-09-04 통짜 617스텝 지점). 다른 진입부와 같은 헬퍼로 통일한다.
+- runFlow: "_inbound_goto_sender_list_old.yaml"
+# ★ 대상 행(베트남 = "승인 대기 중")을 **이름으로 지목**한다.
+#   ⛔ `moreIcon index: 0`(맨 위 행) 가정을 쓰면 안 된다 — 목록에 다른 송금인이 하나라도
+#     남아 있으면 엉뚱한 행이 열리고 `edit` 이 없어 죽는다
+#     (2026-09-08 실측: 앞선 13_04 실행이 남긴 `Test Sender2` 가 맨 위에 있어 실패했다).
+#   `childOf: containsDescendants` 는 이 목록에서 **moreIcon 에 한해 동작이 확인됐다**(같은 날 실측).
+#   ※ 이름은 **수정 전/후 둘 다** 받는다 — [14]가 도중에 실패해 재실행하면 이미
+#     "VN EDIT TEST"로 바뀌어 있을 수 있다.
+- scrollUntilVisible:
+    element:
+      text: "TESTSENDERVN|VN EDIT TEST"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn:
+    id: "moreIcon"
+    childOf:
+      containsDescendants:
+        - "TESTSENDERVN|VN EDIT TEST"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "edit"
+    timeout: 15000
+- tapOn:
+    id: "edit"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "송금인 세부 정보 입력"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "input_edittext"
+    timeout: 15000
+- tapOn:
+    id: "input_edittext"
+    index: 0
+- eraseText: 30
+- inputText: "VN EDIT TEST"
+- hideKeyboard
+- tapOn:
+    id: "btn_next"
+- waitForAnimationToEnd
+# 문서 업로드 화면도 동일하게 로딩 스피너 후 표시되며, 기존 업로드 상태(체크됨)가 유지됨
+- extendedWaitUntil:
+    visible:
+      text: "유효한 신분증을 업로드해 주세요."
+    timeout: 15000
+- tapOn:
+    id: "btnSubmit"
+# 제출 후 목록으로 돌아와 변경된 이름이 반영되기까지도 약간의 지연이 있음
+- extendedWaitUntil:
+    visible:
+      text: "VN EDIT TEST"
+    timeout: 15000
+
+# ── 이름 원복(사후처리)은 **2026-09-07 제거했다** ──
+#   종전엔 이 sender 가 여러 실행이 공유하는 데이터라 Full Name 을 "GMETEST"로 되돌렸다.
+#   사양이 "모든 케이스 확인 후 등록된 모든 송금인 삭제"로 바뀌어 **매 실행 [07-2]가 새로 만들고
+#   아래에서 지우므로 되돌릴 이유가 없다.**
+#   ⛔ 게다가 원복 코드는 `moreIcon index: 0` 을 썼는데, 그건 "목록에 이 sender 뿐"이라는
+#     옛 전제였다. 3국을 모두 등록하는 지금은 index 0 이 다른 송금인을 가리켜
+#     `edit` 이 없어 죽는다(2026-09-07 실측 — `edit` 은 "승인 대기 중" 행에만 뜬다).
