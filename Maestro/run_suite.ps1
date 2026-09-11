@@ -160,8 +160,15 @@ $Suite = @(
      note="예약 등록/취소만, 실결제 없음. **02_01 직후여야 한다**" }
   @{ n="20_Booking";              g="G2"; acct="seungsoo818"; est=5;  f="Old\20_Booking_old.yaml"
      irreversible=$true; note="🔴 실결제 + 자동취소. 날짜는 최대한 먼 미래로(취소 수수료)" }
-  @{ n="21_Card";                 g="G2"; acct="seungsoo818"; est=8;  f="Old\21_Card_old.yaml"
-     irreversible=$true; note="🔴 잔액부족 시 **실계좌 자동충전**. GME Shop 구매하기 비활성 이슈 미해결" }
+  # ⚠️ est 8 → 30 (2026-09-11). 종전 8분은 **신청 블록이 조용히 SKIP되던 실행**을 잰 값이다
+  #   ([01]의 가드가 전체매칭으로 안 맞아 [01]~[10]이 통째로 건너뛰어졌다). 실기기 실측:
+  #   진입+[01]~[09] 약 7분 / [07]~[10] 약 4분 / [11][12] 약 4분 + [13]~[22]·[23]~[33-1].
+  # ⚠️ push=$true 신설 — [24] Global QR이 갤러리 픽스처에 의존하는데 빠져 있었다.
+  # ⚠️ needs.balance=3000 신설 — [33-1]이 CU 3,000원 쿠폰을 실제로 구매(후 취소)한다.
+  #   잔액이 모자라면 **실계좌 자동충전**이 일어나므로 SKIP으로 갈라내는 게 맞다.
+  @{ n="21_Card";                 g="G2"; acct="seungsoo818"; est=30; f="Old\21_Card_old.yaml"; push=$true
+     irreversible=$true; needs=@{ balance=3000 }
+     note="🔴 [01]~[06]이 **실제 카드 신청을 접수**하고 [10]이 취소해 원복한다 — 중간에 끊기면 신청이 남아 손으로 취소해야 한다. [12]는 카드 PIN을 바꿨다 되돌리므로 끊기면 대체 PIN으로 남는다([11]의 폴백이 1회 받아준다). 잔액부족 시 GME Shop 구매하기에서 **실계좌 자동충전**이 일어난다. [24]는 갤러리 픽스처(Global QR.jpg) 의존." }
   @{ n="11_IntlTopup";            g="G2"; acct="seungsoo818"; est=4;  f="Old\11_IntlTopup_old.yaml"
      irreversible=$true; note="🔴 실결제·**취소 불가** → 돌릴 때마다 금액이 누적된다" }
   @{ n="12_BillPayment";          g="G2"; acct="seungsoo818"; est=4;  f="Old\12_BillPayment_old.yaml"
