@@ -184,6 +184,6 @@ appId: ${APP_ID}
     visible:
       id: "btnTransfer"
     timeout: 90000
-- assertVisible: "GME Wallet 번호"
-- assertVisible: "GME 총 잔액"
+- assertVisible: "${DRAWER_USER_NUMBER}"
+- assertVisible: "${TOTAL_GME_BALANCE_TEXT}"
 - takeScreenshot: lang_restored_ko

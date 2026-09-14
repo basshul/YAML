@@ -128,9 +128,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -173,7 +173,7 @@ appId: ${APP_ID}
     visible:
       id: "txvDepositOrViewStatement"
     timeout: 15000
-- assertVisible: "받기"
+- assertVisible: "${RECEIVE}"
 - tapOn:
     id: "txvDepositOrViewStatement"
 - extendedWaitUntil:
@@ -298,13 +298,13 @@ appId: ${APP_ID}
     visible:
       id: "rvKftcList"
     timeout: 20000
-- assertVisible: "받는 계좌"
+- assertVisible: "${RECEIVING_ACCOUNT}"
 # ⚠️ **여기는 일부러 하드코딩을 유지한다.** `카카오뱅크`는 [05][06]의 실송금 조합이라
 #   동적 선택으로 집히면 그 분리가 깨진다(`14_01 [25]`와 상황이 다르다).
 #   대신 **전제를 명시적으로 단언**한다 — 이 줄이 없으면 목록이 바뀌었을 때
 #   아래 tapOn이 `Element not found`로 죽어 셀렉터 버그처럼 오진하게 된다.
-- assertVisible: "신한은행"
-- tapOn: "신한은행"
+- assertVisible: "${BANK_022}"
+- tapOn: "${BANK_022}"
 - extendedWaitUntil:
     visible:
       id: "qrimage"
@@ -484,7 +484,7 @@ appId: ${APP_ID}
     visible:
       id: "galleryImagePick"
     timeout: 20000
-- assertVisible: "QR 스캔"
+- assertVisible: "${GME_SCAN_QR_TEXT}"
 - assertVisible:
     id: "scanToPay"
 - takeScreenshot: "[05]_QR스캔_화면진입"
@@ -533,7 +533,7 @@ appId: ${APP_ID}
     visible:
       id: "btnConfirmFinal"
     timeout: 30000
-- assertVisible: "수취인 세부 정보 확인"
+- assertVisible: "${CONFIRM_RECEIVER_DETAILS_TEXT}"
 - assertVisible: ".*KAKAO Bank.*"
 - assertVisible: ".*3333276033972.*"
 - assertVisible: ".*1 KRW.*"
@@ -570,7 +570,7 @@ appId: ${APP_ID}
     visible:
       id: "txvStatusValue"
     timeout: 30000
-- assertVisible: "거래 상세 내역"
+- assertVisible: "${TRANSACTION_DETAIL_TEXT}"
 - assertVisible: "SUCCESS"
 - assertVisible: ".*3333276033972.*"
 - assertVisible: ".*1 KRW.*"
@@ -640,7 +640,7 @@ appId: ${APP_ID}
     visible:
       id: "txvDepositOrViewStatement"
     timeout: 15000
-- assertVisible: "받기"
+- assertVisible: "${RECEIVE}"
 - tapOn:
     id: "txvDepositOrViewStatement"
 - extendedWaitUntil:
@@ -748,7 +748,7 @@ appId: ${APP_ID}
 - assertVisible: ".*3333276033972.*"
 - assertVisible: ".*카카오뱅크.*"
 # 금액은 비어 있다 — `amount`에 플레이스홀더 "금액"이 그대로 보인다(값이 들어오면 "1 원"으로 바뀐다)
-- assertVisible: "금액"
+- assertVisible: "${AMOUNT}"
 - takeScreenshot: "[06-2]_QR스캔_금액미입력"
 
 # ---- 금액을 직접 입력하고 송금 완주 ----
@@ -769,7 +769,7 @@ appId: ${APP_ID}
     visible:
       id: "btnConfirmFinal"
     timeout: 30000
-- assertVisible: "수취인 세부 정보 확인"
+- assertVisible: "${CONFIRM_RECEIVER_DETAILS_TEXT}"
 - assertVisible: ".*1 KRW.*"
 - tapOn:
     id: "btnConfirmFinal"

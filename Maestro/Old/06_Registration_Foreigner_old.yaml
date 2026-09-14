@@ -58,7 +58,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - tapOn: "${REG_PASSWORD_CONFIRM}"
 - waitForAnimationToEnd
@@ -73,7 +73,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - tapOn: "${REG_PHONE}"
 - waitForAnimationToEnd
@@ -166,7 +166,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "0"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 
 # 발급 일자 선택 (기본값 그대로 확인)
@@ -255,7 +255,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "1"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 
 # 발급 일자 선택 (기본값 그대로 확인)
@@ -493,7 +493,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 # ⚠️ **보안 키패드의 "입력완료"가 로그인을 자동 제출한다** → `btn_submit`을 따로 탭하면
 #   이미 로그인이 끝나 화면이 넘어간 뒤라 `Element not found: btn_submit`으로 실패한다

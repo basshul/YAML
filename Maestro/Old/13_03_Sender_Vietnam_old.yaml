@@ -93,9 +93,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -133,12 +133,12 @@ appId: ${APP_ID}
 # **베트남만 신분증 사진 3종 업로드 단계가 있음**(Alien ID Card / Citizenship front / Citizenship Back).
 #   업로드는 OCRImageCaptureActivity(카메라) → 촬영 → NativeCropActivity(완료) → 프리뷰(완료) 순.
 #   등록 직후 삭제하는 테스트 데이터라 **사진 내용은 무관**(카메라로 아무거나 촬영).
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "tf_countryList"
 - assertVisible:
-    text: "국가를 선택해 주세요"
+    text: "${PLEASE_CHOOSE_COUNTRY}"
 - scrollUntilVisible:
     element:
       text: "Vietnam"
@@ -148,7 +148,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn: "Full Name"
 - inputText: "TESTSENDERVN"
 - hideKeyboard
@@ -169,10 +169,10 @@ appId: ${APP_ID}
 - tapOn: "Living Expenses"
 - waitForAnimationToEnd
 - tapOn: "Relationship With Receiver"
-- tapOn: "본인"
+- tapOn: "${SELF_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "Id Type"
-- tapOn: "현지 신분증"
+- tapOn: "${NATIONAL_ID_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "ID Number"
 - inputText: "123456789"
@@ -183,7 +183,7 @@ appId: ${APP_ID}
 # 신분증 사진 3종 업로드
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 20000
 - runFlow: "_inbound_upload_docs_old.yaml"
 - tapOn:
@@ -193,7 +193,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "송금 받기를 요청하시겠습니까?"
+        text: "${SAVE_SUCCESS_TEXT}"
     commands:
       - tapOn: "${TXT_CANCEL}"
       - waitForAnimationToEnd

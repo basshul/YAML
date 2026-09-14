@@ -134,9 +134,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 코치마크 balloon이 떠 있으면 닫는다(04_Menu_History에서 확인된 패턴)
 - runFlow:
@@ -185,7 +185,7 @@ appId: ${APP_ID}
     visible:
       id: "dp_country_selection"
     timeout: 30000
-- assertVisible: "해외 청구서 결제 서비스"
+- assertVisible: "${INTERNATIONAL_BILL_PAYMENT_SERVICE_TEXT}"
 - takeScreenshot: "shots_12_billpayment_old/00_진입"
 
 # ----------------------------------------------------------------
@@ -221,7 +221,7 @@ appId: ${APP_ID}
     id: "dp_biller_selection"
 - extendedWaitUntil:
     visible:
-      text: "청구 구분"
+      text: "${BILLER_CATEGORY_TEXT}"
     timeout: 15000
 - takeScreenshot: "shots_12_billpayment_old/03_청구구분"
 - tapOn: "모바일/전화"
@@ -259,22 +259,22 @@ appId: ${APP_ID}
     visible:
       text: "NTC PREPAID"
     timeout: 20000
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "20"
 - hideKeyboard
-- tapOn: "비고"
+- tapOn: "${REMARKS_TEXT}"
 - inputText: "TEST"
 - hideKeyboard
 - tapOn: "GME Wallet"
 # 모든 필드 충족 → 진행 활성화
 - extendedWaitUntil:
     visible:
-      text: "진행"
+      text: "${PROCEED_TEXT}"
       enabled: true
     timeout: 15000
 - takeScreenshot: "shots_12_billpayment_old/06_1_입력완료"
 - tapOn:
-    text: "진행"
+    text: "${PROCEED_TEXT}"
     enabled: true
 # 결제내역 확인 화면 → GME Wallet 결제
 - extendedWaitUntil:

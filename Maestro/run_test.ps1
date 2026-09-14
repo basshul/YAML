@@ -128,6 +128,38 @@ foreach ($pair in $ExtraEnv) {
     $envArgs += "--env"; $envArgs += ('{0}="{1}"' -f $k, $v)
 }
 
+# ── 그 플로우가 실제로 쓰는 변수만 넘긴다 ──────────────────────────
+# ⚠️ 2026-09-14: 다국어 적용으로 env 키가 138 → 373개가 되자 `--env` 인자가
+#   **Windows 명령행 한도(~8KB)를 넘겨 "The command line is too long." 으로 전 실행이 죽었다.**
+#   maestro 2.5.1 에는 --env-file 이 없다 → 플로우가 참조하는 ${VAR} 만 추려 넘긴다.
+#   `runFlow:` 로 부르는 헬퍼까지 **재귀로** 훑어야 한다(헬퍼가 쓰는 변수도 필요하다).
+function Get-FlowVars([string]$path, [hashtable]$seen) {
+    if (-not (Test-Path -LiteralPath $path)) { return @() }
+    $full = (Resolve-Path -LiteralPath $path).Path
+    if ($seen.ContainsKey($full)) { return @() }
+    $seen[$full] = $true
+    $text = [System.IO.File]::ReadAllText($full)
+    $vars = @([regex]::Matches($text, '\$\{([A-Za-z_][A-Za-z0-9_]*)\}') | ForEach-Object { $_.Groups[1].Value })
+    $dir  = Split-Path -Parent $full
+    foreach ($m in [regex]::Matches($text, '(?m)(?:runFlow:[ \t]*|file:[ \t]*)"?([^"
+]+\.yaml)"?')) {
+        $vars += Get-FlowVars (Join-Path $dir $m.Groups[1].Value.Trim()) $seen
+    }
+    return $vars
+}
+$needed = @{}
+foreach ($v in (Get-FlowVars $flow (@{}))) { $needed[$v] = $true }
+$needed["APP_ID"] = $true          # 헤더 appId 가 항상 쓴다
+if ($needed.Count -gt 1) {
+    $filtered = @()
+    for ($i = 0; $i -lt $envArgs.Count; $i += 2) {
+        $k = ($envArgs[$i + 1] -split '=', 2)[0]
+        if ($needed.ContainsKey($k)) { $filtered += $envArgs[$i]; $filtered += $envArgs[$i + 1] }
+    }
+    Write-Host ("env: {0}개 중 이 플로우가 쓰는 {1}개만 전달" -f ($envArgs.Count / 2), ($filtered.Count / 2)) -ForegroundColor DarkCyan
+    $envArgs = $filtered
+}
+
 $cmd = @("maestro", "--device", $device, "test", $flow) + $envArgs
 Write-Host "Running: $($cmd -join ' ')"
 & maestro --device $device test $flow @envArgs

@@ -77,7 +77,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
       - tapOn: "1"
       - tapOn: "특수문자변경"
       - tapOn: "느낌표"
-      - tapOn: "입력완료"
+      - tapOn: "${TRANSKEY_INPUT_COMPLETE}"
       - waitForAnimationToEnd
 
       # ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
@@ -87,7 +87,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
       #   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
 - runFlow:
     when:
-      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
     commands:
       - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd

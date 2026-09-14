@@ -90,9 +90,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -182,7 +182,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "송금 방법"
+      text: "${PAY_MODE_TEXT}"
     timeout: 15000
 - tapOn: "${TXT_RESEND}"
 # 재송금 뒤 나오는 화면이 **수취인 상태에 따라 갈린다** (2026-09-03 실측으로 확정).
@@ -275,7 +275,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
@@ -301,9 +301,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "송금 방법"
+      text: "${PAY_MODE_TEXT}"
     timeout: 15000
-- tapOn: "영수증"
+- tapOn: "${RECEIPT_TITLE_TEXT}"
 - waitForAnimationToEnd
 # ⚠️ **OS/기기에 따라 영수증 탭의 결과 화면이 다르다** (2026-09-09 SM-S911N / Android 16 실측).
 #   구 기기: PDF **"연결 프로그램"(앱 선택창)** / 이 기기: **파일 저장 대화상자**(다운로드 폴더 +
@@ -327,9 +327,9 @@ appId: ${APP_ID}
 # 예약 송금 내역 탭 (상단 탭 전환)
 # ================================================================
 - tapOn:
-    text: "예약 송금 내역"
+    text: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 - waitForAnimationToEnd
-- assertVisible: "예약 송금 내역"
+- assertVisible: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 
 # ----------------------------------------------------------------
 # [07] [Medium] History - Remittance - 스케줄송금 필터 동작 확인
@@ -337,13 +337,13 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "예약 송금 내역"
+- assertVisible: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 
 # ----------------------------------------------------------------
 # [08] [Medium] History - Remittance - 스케줄송금 상세페이지 확인
@@ -363,11 +363,11 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "예약 송금"
+      text: "${SCHEDULED_TEXT}"
     timeout: 15000
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "예약 송금 내역"
+- assertVisible: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 
 # ----------------------------------------------------------------
 # [09] [Low] History - Remittance - 스케줄송금 이력 다운로드 동작 확인 - BLOCKED
@@ -413,7 +413,7 @@ appId: ${APP_ID}
     visible:
       id: "noDataFoundTextView"
     timeout: 15000
-- assertVisible: "예약된 송금이 없습니다"
+- assertVisible: "${NO_SCHEDULE_HISTORY_TEXT}"
 # 검색어를 지우면 목록이 복원되는지
 - eraseText: 10
 - extendedWaitUntil:
@@ -514,7 +514,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "거래 상세 내역"
+      text: "${TRANSACTION_DETAIL_TEXT}"
     timeout: 15000
 - pressKey: back
 - waitForAnimationToEnd
@@ -537,9 +537,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "거래 상세 내역"
+      text: "${TRANSACTION_DETAIL_TEXT}"
     timeout: 15000
-- tapOn: "영수증"
+- tapOn: "${RECEIPT_TITLE_TEXT}"
 - waitForAnimationToEnd
 # ⚠️ 기기/OS에 따라 결과 화면이 다르다 — 상세는 [05] 주석 참고(구 기기=앱 선택창 / 이 기기=저장 대화상자).
 - assertVisible: '연결 프로그램|DomesticReceipt[\s\S]*'
@@ -563,7 +563,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
@@ -607,7 +607,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
@@ -725,7 +725,7 @@ appId: ${APP_ID}
 # 즉시 assert를 쓰지 않는다(서버 조회 응답 대기).
 - extendedWaitUntil:
     visible:
-      text: "조회된 거래가 없습니다"
+      text: "${NO_TRANSACTION_FOUND_TEXT}"
     timeout: 60000
 # 필터링이 실제로 걸렸는지 — 방금 남아 있던 행이 사라져야 한다
 - assertNotVisible:
@@ -756,7 +756,7 @@ appId: ${APP_ID}
 # [20] [Medium] History - Account - Wallet Statement 잔액 확인
 #   진입 시 "Wallet 거래내역" 탭 기본. 데이터/잔액 로딩이 최대 약 2분 소요(실기기) → 넉넉히 대기.
 # ----------------------------------------------------------------
-- assertVisible: "Wallet 거래내역"
+- assertVisible: "${WALLET_STATEMENT_TITLE_TEXT}"
 - extendedWaitUntil:
     visible:
       text: "${TXT_BALANCE}"
@@ -808,13 +808,13 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "Wallet 거래내역"
+- assertVisible: "${WALLET_STATEMENT_TITLE_TEXT}"
 
 # ----------------------------------------------------------------
 # [22] [Low] History - Account - Wallet Statement 이력 다운로드 동작 확인 - BLOCKED
@@ -836,12 +836,12 @@ appId: ${APP_ID}
 #   ※ 조회 결과(명세서 목록)는 **무료 조회 횟수/사용권에 좌우돼 환경 의존**이라 여기서는
 #     "검색 실행까지"만 확인한다. 실결제가 걸리는 사용권 구매는 절대 진행하지 않는다. (TODO)
 - tapOn:
-    text: "은행 명세서"
+    text: "${BANK_STATEMENT_TITLE_TEXT}"
 - extendedWaitUntil:
     visible:
       id: "txvAutoDebitAccNumber"
     timeout: 30000
-- assertVisible: "은행을 선택하세요"
+- assertVisible: "${BANK_EMPTY_ERROR}"
 - assertVisible:
     id: "searchBtn"
 # 계좌 선택
@@ -851,7 +851,7 @@ appId: ${APP_ID}
     visible:
       id: "textListRv"
     timeout: 20000
-- assertVisible: "계좌 선택"
+- assertVisible: "${ACCOUNT_SELECTION}"
 - assertVisible:
     id: "txvAccountNumber"
 - copyTextFrom:
@@ -887,7 +887,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "btnCancel"
 - waitForAnimationToEnd
-- assertVisible: "은행 명세서"
+- assertVisible: "${BANK_STATEMENT_TITLE_TEXT}"
 
 # ----------------------------------------------------------------
 # [25] [Medium] History - Account - Bank Statement 검색 동작 확인 - BLOCKED
@@ -913,7 +913,7 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [26] [Medium] History - GMEPAY - All(모든 거래) 탭 잔액 확인
 # ----------------------------------------------------------------
-- assertVisible: "모든 거래"
+- assertVisible: "${ALL_TEXT}"
 - extendedWaitUntil:
     visible:
       text: "${TXT_BALANCE}"
@@ -953,9 +953,9 @@ appId: ${APP_ID}
 # [28] [Low] History - GMEPAY - Card Expenses(사용 내역) 이력 및 검색동작 확인
 # ----------------------------------------------------------------
 - tapOn:
-    text: "사용 내역"
+    text: "${CARD_EXPENSES_TEXT}"
 - waitForAnimationToEnd
-- assertVisible: "사용 내역"
+- assertVisible: "${CARD_EXPENSES_TEXT}"
 - tapOn:
     id: "imgvSearchIcon"
 - waitForAnimationToEnd
@@ -986,9 +986,9 @@ appId: ${APP_ID}
 # [29] [Low] History - GMEPAY - Purchase History(결제 내역) 이력 및 검색동작 확인
 # ----------------------------------------------------------------
 - tapOn:
-    text: "결제 내역"
+    text: "${PAYMENT_DETAIL_TEXT}"
 - waitForAnimationToEnd
-- assertVisible: "결제 내역"
+- assertVisible: "${PAYMENT_DETAIL_TEXT}"
 - tapOn:
     id: "imgvSearchIcon"
 - waitForAnimationToEnd
@@ -1024,9 +1024,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
-- assertVisible: "선불폰 충전"
+- assertVisible: "${MOBLIE_TOP_UP_TEXT}"
 - tapOn:
-    text: "선불폰 충전"
+    text: "${MOBLIE_TOP_UP_TEXT}"
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -1044,7 +1044,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
@@ -1077,7 +1077,7 @@ appId: ${APP_ID}
 - inputText: "ZZZZZ"
 - extendedWaitUntil:
     visible:
-      text: "조회된 거래가 없습니다"
+      text: "${NO_TRANSACTION_FOUND_TEXT}"
     timeout: 30000
 - eraseText: 5
 - waitForAnimationToEnd
@@ -1089,7 +1089,7 @@ appId: ${APP_ID}
 # [33] [Medium] History - Top-up - International(해외) Topup 리스트 노출 확인
 # ----------------------------------------------------------------
 - tapOn:
-    text: "해외"
+    text: "${INTERNATIONAL_TEXT}"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -1102,13 +1102,13 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "해외"
+- assertVisible: "${INTERNATIONAL_TEXT}"
 
 # ----------------------------------------------------------------
 # [35] [Medium] History - Top-up - International Topup 검색 동작 확인
@@ -1135,7 +1135,7 @@ appId: ${APP_ID}
 - inputText: "ZZZZZ"
 - extendedWaitUntil:
     visible:
-      text: "조회된 거래가 없습니다"
+      text: "${NO_TRANSACTION_FOUND_TEXT}"
     timeout: 30000
 - eraseText: 5
 - waitForAnimationToEnd
@@ -1194,7 +1194,7 @@ appId: ${APP_ID}
 # 4회를 다 쓰고도 오류가 남아 있으면 여기서 실패한다(조건부만 두면 거짓 통과가 된다).
 - assertNotVisible:
     id: "btn_diaog_ok"
-- assertVisible: "청구서 내역"
+- assertVisible: "${BILL_PAYMENT_HISTORY_TEXT}"
 
 # ----------------------------------------------------------------
 # [36] Coupon Box - N/A: 쿠폰박스는 내역(History) 탭에서 접근 불가(별도 메뉴) → 본 파일 범위 밖.
@@ -1209,7 +1209,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "imgvFilter"
 - waitForAnimationToEnd
-- assertVisible: "설정"
+- assertVisible: "${CH_COMMON_SETTINGS}"
 - tapOn:
     id: "one_month"
 - tapOn:
@@ -1232,7 +1232,7 @@ appId: ${APP_ID}
 #     (오전에 6건 있을 때만 오류). 데이터가 있는 상태에서 다시 확인할 것.
 - assertNotVisible:
     id: "btn_diaog_ok"
-- assertVisible: "청구서 내역"
+- assertVisible: "${BILL_PAYMENT_HISTORY_TEXT}"
 
 # ----------------------------------------------------------------
 # [40] [Medium] History - Bill Payment - Bill Payment History 검색 동작 확인
@@ -1275,11 +1275,11 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
-- assertVisible: "사용 내역"
+- assertVisible: "${CARD_EXPENSES_TEXT}"
 - tapOn:
-    text: "사용 내역"
+    text: "${CARD_EXPENSES_TEXT}"
 - waitForAnimationToEnd
-- assertVisible: "총 지출"
+- assertVisible: "${TOTAL_SPENT}"
 
 # ----------------------------------------------------------------
 # [41] [Medium] History - My Usage - [←],[→] 버튼 선택 시 날짜(월) 변경 확인

@@ -139,9 +139,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -191,8 +191,8 @@ appId: ${APP_ID}
       id: "serviceProviderRv"
     timeout: 30000
 # ⚠️ id `titleTxt`는 헤더·각 행에 중복되므로 텍스트로 본다(id+text 동시 지정도 금지).
-- assertVisible: "ATM에서 출금하는 방법"
-- assertVisible: "현금을 인출할 편의점을 선택하세요."
+- assertVisible: "${HOW_TO_USE_ATM_WITHDRAWAL_TEXT}"
+- assertVisible: "${WITHDRAW_CONVENIENCE_STORE}"
 # 편의점 목록이 실제로 채워졌는지 — 첫 항목과 마지막 항목으로 확인
 - assertVisible: "GS25"
 - assertVisible: "Ministop"
@@ -230,7 +230,7 @@ appId: ${APP_ID}
           visible:
             id: "rvAtmWithdrawalSP"
           timeout: 30000
-      - assertVisible: "현금을 인출할 편의점을 선택하세요."
+      - assertVisible: "${WITHDRAW_CONVENIENCE_STORE}"
       - takeScreenshot: "[02-1]_ATM선택_바텀시트"
       - tapOn:
           id: "close"

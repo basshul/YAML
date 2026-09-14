@@ -48,6 +48,6 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - takeScreenshot: "_probe_${STAG_ID}"

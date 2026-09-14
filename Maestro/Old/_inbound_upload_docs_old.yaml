@@ -38,7 +38,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 20000
 
 # --- 2번째 문서: Sender Citizenship front Image ---
@@ -63,7 +63,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 20000
 
 # --- 3번째 문서: Sender Citizenship Back Image ---
@@ -88,5 +88,5 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 20000

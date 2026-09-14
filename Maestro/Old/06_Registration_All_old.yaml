@@ -176,7 +176,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - takeScreenshot: "[07]_비밀번호_규칙_체크"
 
@@ -198,7 +198,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - takeScreenshot: "[08]_비밀번호_확인_일치"
 
@@ -381,7 +381,7 @@ appId: ${APP_ID}
 - tapOn: "3"
 - tapOn: "4"
 - tapOn: "5"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 # 발급 일자 선택 (기본값 그대로 확인)
 - tapOn: "${REG_ISSUE_DATE}"
@@ -676,7 +676,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - tapOn: "${REG_PASSWORD_CONFIRM}"
 - waitForAnimationToEnd
@@ -691,7 +691,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - tapOn: "${REG_PHONE}"
 - waitForAnimationToEnd
@@ -824,7 +824,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "0"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 
 # 발급 일자 선택 (기본값 그대로 확인)
@@ -953,7 +953,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "1"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 
 # 발급 일자 선택 (기본값 그대로 확인)

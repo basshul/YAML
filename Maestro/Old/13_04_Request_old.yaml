@@ -93,9 +93,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -134,11 +134,11 @@ appId: ${APP_ID}
 # [07]과 동일 입력 흐름이므로 확인 바텀시트 노출까지만 검증 후 취소로 종료 (중복 등록 방지)
 # [07]이 끝난 화면(메인화면)에서 바로 이어서 진행
 
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
     id: "input_edittext"
     index: 0
@@ -177,21 +177,21 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
@@ -205,7 +205,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
       #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다
@@ -224,11 +224,11 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [08]이 끝난 화면(메인화면)에서 바로 이어서 진행
 
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
     id: "input_edittext"
     index: 0
@@ -272,7 +272,7 @@ appId: ${APP_ID}
     id: "header"
 - tapOn: "확인"
 - assertVisible:
-    text: "저장 성공"
+    text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트 간헐성 - [07] 참고
 - runFlow:
     when:
@@ -304,7 +304,7 @@ appId: ${APP_ID}
     commands:
       - runFlow:
           when:
-            notVisible: "송금인 삭제"
+            notVisible: "${DELETE_INBOUND_RECIPIENT}"
           commands:
             - tapOn:
                 id: "moreIcon"
@@ -312,14 +312,14 @@ appId: ${APP_ID}
             - waitForAnimationToEnd
       - runFlow:
           when:
-            notVisible: "송금인 삭제"
+            notVisible: "${DELETE_INBOUND_RECIPIENT}"
           commands:
             - tapOn:
                 id: "delete"
                 index: 0
             - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "송금인 삭제"
+    visible: "${DELETE_INBOUND_RECIPIENT}"
     timeout: 15000
 - tapOn: "예"
 # ⚠️ **토스트("Successfully Deleted")로 결과를 판정하지 말 것** (2026-08-20 실패)
@@ -336,21 +336,21 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
@@ -364,7 +364,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
       #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다
@@ -405,7 +405,7 @@ appId: ${APP_ID}
 - tapOn: "BUDI SANTOSO|Budi Santoso"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "보내는 금액"
+    text: "${SENDER_SENDS_TEXT}"
 - assertVisible:
     text: "IDR"
 
@@ -429,21 +429,21 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "계좌 선택"
+        text: "${ACCOUNT_SELECTION}"
     commands:
       - tapOn:
           id: "close"
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
@@ -487,7 +487,7 @@ appId: ${APP_ID}
 #   → `extendedWaitUntil` 로 도달을 먼저 강제하고 판정한다(CLAUDE.md "거짓 통과" 항목).
 - extendedWaitUntil:
     visible:
-      text: "계좌 선택"
+      text: "${ACCOUNT_SELECTION}"
     timeout: 30000
 - tapOn: "GME Wallet"
 - scroll
@@ -497,7 +497,7 @@ appId: ${APP_ID}
     id: "btnContinue"
 - extendedWaitUntil:
     visible:
-      text: "입금 계좌 확인"
+      text: "${CONFRIM_RECEIVING_ACCOUNT}"
     timeout: 30000
 # Edit(변경) 선택 시 계좌 선택 화면으로 재진입 확인
 #   시트 버튼 id는 **btn_edit("변경") / btn_confirm("확인")** (2026-09-04 실기기 덤프).
@@ -506,7 +506,7 @@ appId: ${APP_ID}
     id: "btn_edit"
 - extendedWaitUntil:
     visible:
-      text: "계좌 선택"
+      text: "${ACCOUNT_SELECTION}"
     timeout: 30000
 # 재선택해서 "입금 계좌 확인"으로 돌아온다 — 종전처럼 close 로 빠져나가지 않는다
 - tapOn: "GME Wallet"
@@ -515,7 +515,7 @@ appId: ${APP_ID}
     id: "btnContinue"
 - extendedWaitUntil:
     visible:
-      text: "입금 계좌 확인"
+      text: "${CONFRIM_RECEIVING_ACCOUNT}"
     timeout: 30000
 # ★ Confirm — 여기서 인바운드 Request 가 실제로 등록된다(04 인바운드 구간의 전제 데이터).
 - tapOn:
@@ -546,7 +546,7 @@ appId: ${APP_ID}
       id: "tv_req_complete"
     timeout: 30000
 - assertVisible:
-    text: "요청 완료"
+    text: "${REQUEST_COMPLETED_TEXT}"
 # 요청 완료 화면에서 "다른 요청 진행"으로 수취인 목록에 복귀한다([13]이 그 화면을 이어받는다)
 - tapOn:
     id: "tv_make_another_payment"
@@ -558,14 +558,14 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd

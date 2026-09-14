@@ -34,7 +34,7 @@ appId: ${APP_ID}
       - runFlow:
           when:
             visible:
-              text: "받는 계좌"
+              text: "${RECEIVING_ACCOUNT}"
           commands:
             - tapOn:
                 id: "cardView"
@@ -55,5 +55,5 @@ appId: ${APP_ID}
 # ⚠️ 이건 **정적 헤더라 목록 행보다 먼저 뜬다** — 행까지 필요한 호출부는
 #   `tv_detail1` 렌더를 따로 기다려야 한다(`_reenter_inbound_list_old.yaml` 참고).
 - extendedWaitUntil:
-    visible: "수취 방법"
+    visible: "${HOW_TO_RECEIVE}"
     timeout: 40000

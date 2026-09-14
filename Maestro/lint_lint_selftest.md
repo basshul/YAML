@@ -1,4 +1,4 @@
-# lint_flows 결과 — 2026-09-11 11:27
+# lint_flows 결과 — 2026-09-14 11:23
 
 - 대상: `lint_selftest` / 22개 파일
 - **ERROR 9** / **WARN 13**

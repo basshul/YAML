@@ -133,9 +133,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -279,19 +279,19 @@ appId: ${APP_ID}
 - assertVisible:
     text: "${SCR_DOMESTIC_REMIT}"
 - assertVisible:
-    text: "오늘의 환율"
+    text: "${RATE_SCR_TITLE}"
 - assertVisible:
-    text: "모바일 충전.*청구서 결제"
+    text: "${HOME_TOPUP_BILL}"
 - assertVisible:
-    text: "해외송금.*받기"
+    text: "${HOME_RECEIVE_OVERSEAS}"
 - assertVisible:
     text: "${TXT_DEPOSIT}"
 - assertVisible:
     text: "${TXT_ATM}"
 - assertVisible:
-    text: "GME Wallet.*거래내역"
+    text: "${HOME_WALLET_STATEMENT}"
 - assertVisible:
-    text: "통신 서비스"
+    text: "${HOME_TELECOM}"
 - assertVisible:
     text: "${TXT_CERTIFICATE}"
 - assertVisible:
@@ -391,13 +391,13 @@ appId: ${APP_ID}
     id: "qrScan"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "QR을 사용하여 보내기 또는 받기"
+    text: "${DOMESTIC_SEND_RECEIVE_QR}"
 - assertVisible:
     id: "btnTransfer"
     text: "${RATE_SEND_BTN}"
 - assertVisible:
     id: "txvDepositOrViewStatement"
-    text: "받기"
+    text: "${RECEIVE}"
 # 지갑 아이콘으로 GME Wallet 페이지 복귀
 - tapOn:
     id: "imgWallteIcon"
@@ -406,7 +406,7 @@ appId: ${APP_ID}
     id: "txvWalletNumberTitle"
 - assertVisible:
     id: "btnTransfer"
-    text: "${SCR_HISTORY}"
+    text: "${WALLET_TRANSFER_BTN}"
 
 # ----------------------------------------------------------------
 # [05] [High] 알림 아이콘 탭 → 공지사항/알림 화면 이동 확인
@@ -421,9 +421,9 @@ appId: ${APP_ID}
       text: "${SCR_NOTIFICATION}"
     timeout: 15000
 - assertVisible:
-    text: "알림"
+    text: "${NOTIFICATION_TEXT}"
 - assertVisible:
-    text: "검색어를 입력해 주세요."
+    text: "${NOTICE_SEARCH_HINT}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -438,12 +438,12 @@ appId: ${APP_ID}
     id: "llRewardPoints"
 - extendedWaitUntil:
     visible:
-      text: "보유 포인트"
+      text: "${MY_REWARD_POINTS}"
     timeout: 15000
 - assertVisible:
-    text: "리워드 포인트"
+    text: "${DEBUG_MENU_DEEPLINK_REWARD_POINT}"
 - assertVisible:
-    text: "포인트 사용하기"
+    text: "${GO_TO_GME_SHOP}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -461,11 +461,11 @@ appId: ${APP_ID}
     id: "llBalanceSection"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "총 잔액"
+    text: "${CARD_TOTAL_BALANCE_TEXT}"
 - assertVisible:
     text: "GME Wallet"
 - assertVisible:
-    text: "GME Pay"
+    text: "${GMEPAY_TITLE}"
 # 닫기: 바텀시트로 뜨면 시트 밖 탭, 그래도 홈이 아니면 back
 - runFlow:
     when:
@@ -495,7 +495,7 @@ appId: ${APP_ID}
     id: "llBankLogo"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "거래내역 확인"
+    text: "${CHECK_STATEMENT_TEXT}"
 - assertVisible:
     id: "txvBalanceType"
 # 지갑 아이콘으로 GME Wallet 카드 복귀
@@ -539,7 +539,7 @@ appId: ${APP_ID}
     id: "txvDepositOrViewStatement"
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 15000
 - assertVisible:
     id: "cardGmeWalletDeposit"
@@ -550,7 +550,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "cardAutoDebitDeposit"
 - assertVisible:
-    text: "현장 입금"
+    text: "${CONVENIENCE_STORE_TEXT}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -565,7 +565,7 @@ appId: ${APP_ID}
     id: "rlExchangeRateView"
 - extendedWaitUntil:
     visible:
-      text: "오늘의 환율"
+      text: "${RATE_SCR_TITLE}"
     timeout: 15000
 - assertVisible:
     text: "${RATE_PAYMENT_METHOD}"
@@ -625,17 +625,17 @@ appId: ${APP_ID}
 - assertVisible:
     id: "txt_user_email"
 - assertVisible:
-    text: "은행 계좌 연결"
+    text: "${AUTO_DEBIT_ACCOUNT_TEXT}"
 - assertVisible:
-    text: "송금 받을 계좌"
+    text: "${COMMON_INBOUND_ACCOUNT_LABEL}"
 - assertVisible:
     text: "${INIT_BRANCH_TITLE}"
 - assertVisible:
-    text: "GME 소개"
+    text: "${ABOUT_GME_TEXT}"
 - assertVisible:
-    text: "설정"
+    text: "${CH_COMMON_SETTINGS}"
 - assertVisible:
-    text: "개인정보 처리 방침"
+    text: "${COMMON_PRIVACY_POLICY_LABEL}"
 - assertVisible:
     text: "${REG_TERMS_TITLE}"
 - assertVisible:
@@ -674,7 +674,7 @@ appId: ${APP_ID}
 #     홈의 책임 범위를 넘으므로 여기서는 복사 동작(토스트)까지만 확인한다.
 - tapOn:
     id: "txvCopyToClipBoard"
-- assertVisible: ".*복사.*"
+- assertVisible: "${TOAST_COPIED}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "txvWalletNumber"

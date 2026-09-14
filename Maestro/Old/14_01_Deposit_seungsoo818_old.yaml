@@ -118,9 +118,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -244,7 +244,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 # ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
 #   성공 가능성이 0인 재시도로 로그인 5회 제한을 깎는 건 순손실이다 —
@@ -253,7 +253,7 @@ appId: ${APP_ID}
 #   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
 - runFlow:
     when:
-      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
     commands:
       - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
@@ -297,9 +297,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 - runFlow:
     # ⚠️ 원래는 범용 `visible: "닫기"` → `tapOn: "닫기"`였다. 이 화면 저 화면의 아무 "닫기"에
@@ -339,15 +339,15 @@ appId: ${APP_ID}
     id: "txvDepositOrViewStatement"
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- assertVisible: "GME Wallet 입금"
+- assertVisible: "${GME_WALLET_DEPOSIT_TITLE}"
 # 라벨이 개행을 포함한다("GMEPay" + 개행 + "입금") → 개행 매칭은 [\s\S]를 쓴다
 #   ⚠️ YAML 이중인용(")에서는 \s가 escape 오류다 → **단일인용(')**을 써서 정규식을 그대로 넘긴다
 - assertVisible: 'GMEPay[\s\S]*입금'
-- assertVisible: "ATM 입금"
+- assertVisible: "${ATM_DEPOSIT}"
 - assertVisible: "자동이체 입금"
-- assertVisible: "현장 입금"
+- assertVisible: "${CONVENIENCE_STORE_TEXT}"
 - takeScreenshot: "shots_14_deposit_old/01_입금서비스_진입"
 - pressKey: back
 - waitForAnimationToEnd
@@ -431,14 +431,14 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "GME Wallet 입금"
+- tapOn: "${GME_WALLET_DEPOSIT_TITLE}"
 - waitForAnimationToEnd
-- assertVisible: "GME Wallet 입금"
+- assertVisible: "${GME_WALLET_DEPOSIT_TITLE}"
 - assertVisible:
     id: "txvReceivingBankName"
-- assertVisible: "계좌번호 복사"
+- assertVisible: "${COPY_ACCOUNT_NUMBER}"
 
 # 홈 복귀 (이 화면도 앱바 back button만 있고 pressKey: back은 무반응 - id 기반 탭)
 - tapOn:
@@ -510,7 +510,7 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
 - tapOn: "자동이체 입금"
 - waitForAnimationToEnd
@@ -582,11 +582,11 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
 - tapOn: "자동이체 입금"
 - waitForAnimationToEnd
-- tapOn: "계좌 잔액 보기"
+- tapOn: "${ACCOUNT_BALANCE_BUTTON_TEXT}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "tv_balance"
@@ -631,7 +631,7 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
 - tapOn: "자동이체 입금"
 - waitForAnimationToEnd
@@ -714,15 +714,15 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "현장 입금"
+- tapOn: "${CONVENIENCE_STORE_TEXT}"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능 편의점"
+- assertVisible: "${POSSIBLE_STORE}"
 - tapOn:
     id: "amountFormInputField"
 - eraseText: 10
-- assertVisible: "수취 금액을 입력하세요"
+- assertVisible: "${RECEIVING_AMOUNT_ERROR}"
 # ⚠️ **숫자 키패드가 금액 퀵칩("10,000 KRW")을 덮는다** — 2026-09-09 SM-S911N(2340px) 실측:
 #   칩이 계층에 안 잡혀 `Element not found` 로 죽었다(구 기기에서는 키패드 위로 보였다).
 #   → 입력 직후라 키패드가 확실히 올라와 있으므로 여기서 닫는 건 안전하다
@@ -730,7 +730,7 @@ appId: ${APP_ID}
 - hideKeyboard
 - waitForAnimationToEnd
 - tapOn: "10,000 KRW"
-- assertNotVisible: "수취 금액을 입력하세요"
+- assertNotVisible: "${RECEIVING_AMOUNT_ERROR}"
 # 정정(2026-07-16): 금액 입력 필드를 탭하면 뜬 숫자 키패드가 [30]의
 # how_to_deposit("?" 도움말, 좌하단 [39,1564] 위치) 버튼을 가려 [30]에서
 # "Element not found: how_to_deposit" 실패가 발생함(실기기 재현). "10,000
@@ -765,16 +765,16 @@ appId: ${APP_ID}
 - tapOn:
     id: "how_to_deposit"
 - waitForAnimationToEnd
-- assertVisible: "현장 입급 방법"
+- assertVisible: "${HOW_TO_DEPOSIT2}"
 # ⚠️ 하단 버튼("매장에서 입금하기")은 안내 6단계 아래라 **첫 화면에 안 들어온다**
 #   (2026-09-09 SM-S911N/2340px 실측: 하드 단언이 실패했다) → 스크롤해서 렌더까지 확인한다.
 - scrollUntilVisible:
     element:
-      text: "매장에서 입금하기"
+      text: "${START_STORE_DEPOSIT}"
     direction: DOWN
     timeout: 20000
     visibilityPercentage: 30
-- assertVisible: "매장에서 입금하기"
+- assertVisible: "${START_STORE_DEPOSIT}"
 
 # ----------------------------------------------------------------
 # [31] [Low] Store Deposit - Request - Quick Guide 진입후 각 편의점 가이드 표시 확인
@@ -791,17 +791,17 @@ appId: ${APP_ID}
 #   `Element not found` 다(2026-09-09 실측). 위로 되돌린 뒤 누른다.
 - scrollUntilVisible:
     element:
-      text: "빠른 안내"
+      text: "${HOW_TO_DEPOSIT_QUICK_GUIDE}"
     direction: UP
     timeout: 20000
     visibilityPercentage: 30
-- tapOn: "빠른 안내"
+- tapOn: "${HOW_TO_DEPOSIT_QUICK_GUIDE}"
 - waitForAnimationToEnd
-- assertVisible: "ATM 카드 입금 가이드"
+- assertVisible: "${ATM_CARD_DEPOSIT_GUIDE}"
 - assertVisible: "CU"
 - assertVisible: "GS25"
-- assertVisible: "세븐일레븐"
-- assertVisible: "이마트24"
+- assertVisible: "${SEVENELEVEN}"
+- assertVisible: "${EMART}"
 - tapOn: "CU"
 - waitForAnimationToEnd
 - assertVisible: "NICE ATM"
@@ -818,7 +818,7 @@ appId: ${APP_ID}
 - repeat:
     while:
       notVisible:
-        text: "현장 입급 방법"
+        text: "${HOW_TO_DEPOSIT2}"
     commands:
       - tapOn:
           id: "iv_back"
@@ -834,16 +834,16 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_ok"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능 편의점"
+- assertVisible: "${POSSIBLE_STORE}"
 
 # ----------------------------------------------------------------
 # [33] [Medium] Store Deposit - History - History 탭 Deposit 이력 확인
 # ----------------------------------------------------------------
 # [32]에서 이미 "이용 가능 편의점"(레벨1 신청 화면)에 있으므로 그대로 이어서
 # 검증(불필요한 홈 복귀 생략).
-- tapOn: "거래 내역"
+- tapOn: "${COMMON_TRANSACTION_HISTORY_BTN}"
 - waitForAnimationToEnd
-- assertVisible: "거래번호로 찾기"
+- assertVisible: "${SEARCH_WITH_CONTROLNO_TEXT}"
 - assertVisible:
     id: "iv_calendar"
 
@@ -892,12 +892,12 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_calendar"
 - waitForAnimationToEnd
-- assertVisible: "기간 선택"
+- assertVisible: "${FILTER_BY_DATE_TEXT}"
 - assertVisible: "시작 :"
 - assertVisible: "종료 :"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
-- assertVisible: "거래번호로 찾기"
+- assertVisible: "${SEARCH_WITH_CONTROLNO_TEXT}"
 
 # 홈 복귀
 # ⚠️ 개편UI판은 `iv_back` 2탭으로 홈까지 나왔지만 구 UI에서는 실패한다 —

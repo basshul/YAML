@@ -138,9 +138,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -186,7 +186,7 @@ appId: ${APP_ID}
     visible:
       id: "mobileno"
     timeout: 30000
-- assertVisible: "국내 선불폰 충전 서비스"
+- assertVisible: "${DOMESTIC_TOP_UP_SERVICE_TEXT}"
 
 # ----------------------------------------------------------------
 # [01] [High] Phone Number - 자동입력된 핸드폰 번호 노출 확인
@@ -243,7 +243,7 @@ appId: ${APP_ID}
     visible:
       id: "mobileno"
     timeout: 30000
-- assertVisible: "국내 선불폰 충전 서비스"
+- assertVisible: "${DOMESTIC_TOP_UP_SERVICE_TEXT}"
 - takeScreenshot: "shots_10_domestictopup_old/03_주소록_반영"
 
 # ----------------------------------------------------------------
@@ -273,14 +273,14 @@ appId: ${APP_ID}
     visible:
       id: "txvDialogDescription"
     timeout: 60000
-- assertVisible: "선불 서비스(PPS)를 이용하고 계신가요?"
+- assertVisible: "${ARE_YOU_USING_PPS_SERVICE}"
 - tapOn:
     id: "btnOk"
 - extendedWaitUntil:
     visible:
       id: "continueBtn"
     timeout: 60000
-- assertVisible: "충전 세부 정보"
+- assertVisible: "${RECHARGE_DETAILS_TEXT}"
 - assertVisible:
     id: "paymentamount"
 - takeScreenshot: "shots_10_domestictopup_old/04_1_충전세부정보"
@@ -290,7 +290,7 @@ appId: ${APP_ID}
     visible:
       id: "confirm_btn"
     timeout: 60000
-- assertVisible: "계좌 선택"
+- assertVisible: "${ACCOUNT_SELECTION}"
 - takeScreenshot: "shots_10_domestictopup_old/04_2_계좌선택"
 - tapOn:
     id: "confirm_btn"

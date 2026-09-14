@@ -66,9 +66,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "나중에 하기"
+        text: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 홈 팝업은 **큐**다(배너·증빙서류 안내 등) → 헬퍼 한 곳에서 처리한다.
 - runFlow:
@@ -99,8 +99,8 @@ appId: ${APP_ID}
 - tapOn: "${TXT_RESERVATION}"
 - waitForAnimationToEnd
 - assertVisible: "${SCR_TRAIN_TICKET}"
-- assertVisible: "예매 내역 조회"
-- tapOn: "예매 내역 조회"
+- assertVisible: "${VIEW_BOOKING_HISTORY}"
+- tapOn: "${VIEW_BOOKING_HISTORY}"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -227,15 +227,15 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - scrollUntilVisible:
     element:
-      text: "수원"
+      text: "${TXT_SUWON}"
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 100
-- tapOn: "수원"
+- tapOn: "${TXT_SUWON}"
 - waitForAnimationToEnd
 # 선택 결과를 반드시 확인한다 — 잘못된 역으로 진행하면 **엉뚱한 승차권을 실제 결제**하게 된다.
 - assertVisible: "서울"
-- assertVisible: "수원"
+- assertVisible: "${TXT_SUWON}"
 
 # 날짜 선택 — **취소 수수료를 피하려고 선택 가능한 가장 먼 날짜를 고른다.**
 # ⚠️ 종전 코드는 `point: "81%,36%"`로 "다음 달"을 눌렀는데 **2픽셀 빗나가 실패**했다
@@ -355,7 +355,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 
 # 간편 비밀번호(PIN) 입력 - 키패드 배열이 매번 랜덤이므로 content-desc(숫자) 기반으로 탭
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
@@ -369,7 +369,7 @@ appId: ${APP_ID}
 - assertVisible: "티겟 구매가 정상적으로 완료되었습니다."
 - tapOn: "주문 내역 목록"
 - waitForAnimationToEnd
-- assertVisible: "주문 완료"
+- assertVisible: "${ORDERED_TEXT}"
 
 # 방금 결제한 주문 상세로 진입 (목록 맨 위 = 최신 주문)
 - tapOn:

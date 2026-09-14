@@ -93,9 +93,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -136,11 +136,11 @@ appId: ${APP_ID}
 # (2026-07-08 실기기 end-to-end 확인: 등록 → moreIcon → delete → "예" → "Successfully Deleted" 토스트)
 # [12]가 끝난 화면(메인화면)에서 바로 이어서 진행
 
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
     id: "input_edittext"
     index: 0
@@ -177,7 +177,7 @@ appId: ${APP_ID}
     id: "header"
 - tapOn: "확인"
 - assertVisible:
-    text: "저장 성공"
+    text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 등록 완료 후 곧바로 목록
 # 화면으로 돌아가는 경우가 간헐적으로 갈림(2026-07-08 확인, [07] 참고) - 프롬프트가
 # 떠서 아직 목록이 안 보일 때만 취소로 닫음
@@ -221,7 +221,7 @@ appId: ${APP_ID}
     id: "delete"
     index: 0
 - assertVisible:
-    text: "송금인 삭제"
+    text: "${DELETE_INBOUND_RECIPIENT}"
 - tapOn: "예"
 # ⚠️ **토스트("Successfully Deleted")로 결과를 판정하지 말 것** (2026-08-20 실패)
 #   토스트는 순간 노출이라 maestro가 계층을 읽는 시점에 이미 사라져 있는 경우가 많다.
@@ -303,7 +303,7 @@ appId: ${APP_ID}
     index: 0
 - extendedWaitUntil:
     visible:
-      text: "송금인 세부 정보 입력"
+      text: "${ENTER_SENDER_DETAILS_TEXT}"
     timeout: 15000
 - extendedWaitUntil:
     visible:
@@ -321,7 +321,7 @@ appId: ${APP_ID}
 # 문서 업로드 화면도 동일하게 로딩 스피너 후 표시되며, 기존 업로드 상태(체크됨)가 유지됨
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 15000
 - tapOn:
     id: "btnSubmit"

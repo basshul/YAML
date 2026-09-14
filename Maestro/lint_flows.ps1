@@ -91,11 +91,39 @@ $files = Get-ChildItem -Path $scanDir -Filter "*.yaml" -File | Where-Object {
 } | Sort-Object Name
 if ($files.Count -eq 0) { Write-Error "검사할 yaml이 없습니다: $scanDir"; exit 2 }
 
+# env 값 사전 — ${VAR} 를 **원문으로 되돌린 확장본**을 만들기 위해 필요하다.
+#   ⚠️ 2026-09-14: 다국어 적용으로 문구가 ${VAR} 로 바뀌자 **한국어 문구로 판정하던 규칙이
+#      조용히 무력화**됐다(W08 PIN 가드가 24건 오탐, W10 은행명 탭도 매칭 불가).
+#      규칙은 확장본(Expanded)으로 보게 해서 변수화 전/후가 같게 판정한다.
+$envValues = @{}
+$envDirPre = Join-Path $root "env"
+if (Test-Path $envDirPre) {
+    # ⚠️ ko.env 를 **나중에** 읽어 덮어쓴다. 알파벳 순으로 돌리면 en.env 가 먼저라
+    #   한국어 문구 판정 규칙이 영문 값으로 확장돼 오탐이 난다(2026-09-14 실측 11건).
+    $envFilesPre = @(Get-ChildItem $envDirPre -Filter "*.env" -File | Sort-Object { $_.Name -eq "ko.env" })
+    foreach ($ef in $envFilesPre) {
+        foreach ($l in (Read-Lines $ef.FullName)) {
+            if ($l -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$') {
+                $envValues[$Matches[1]] = $Matches[2]      # 뒤에 읽은 ko.env 가 이긴다
+            }
+        }
+    }
+}
+function Expand-EnvVars([string]$line) {
+    if ($line -notmatch '\$\{') { return $line }
+    return [regex]::Replace($line, '\$\{([A-Za-z_][A-Za-z0-9_]*)\}', {
+        param($m)
+        $k = $m.Groups[1].Value
+        if ($envValues.ContainsKey($k)) { return $envValues[$k] } else { return $m.Value }
+    })
+}
+
 $docs = @{}
 foreach ($f in $files) {
     $raw  = Read-Lines $f.FullName
     $code = @($raw | ForEach-Object { Remove-YamlComment $_ })
-    $docs[$f.Name] = @{ Raw = $raw; Code = $code }
+    $exp  = @($code | ForEach-Object { Expand-EnvVars $_ })
+    $docs[$f.Name] = @{ Raw = $raw; Code = $code; Expanded = $exp }
 }
 
 $findings = New-Object System.Collections.Generic.List[object]
@@ -208,6 +236,7 @@ foreach ($f in $files) {
     $name = $f.Name
     $raw  = $docs[$name].Raw
     $code = $docs[$name].Code
+    $codeX = $docs[$name].Expanded   # ${VAR} 를 원문으로 되돌린 것(문구 판정용)
 
     $lastSecureMarker = -999      # W03
     $stmt = 0                     # 비어있지 않은 코드줄 순번
@@ -324,11 +353,11 @@ foreach ($f in $files) {
                 # 보안 키보드(로그인 비밀번호)는 숫자·문자·특수문자를 섞어 누르고 `입력완료`로 끝난다.
                 #   그 사이에 `특수문자변경`·`느낌표` 같은 탭이 끼어 `입력완료`가 멀어지므로 창을 넓게 본다.
                 $tailTo = [Math]::Min($code.Count - 1, $i + 8)
-                $tail   = ($code[$i..$tailTo] -join "`n")
+                $tail   = ($codeX[$i..$tailTo] -join "`n")
                 # 런 시작 앞 12줄에 PIN 화면 도달 판정이 있는가
                 #   (`when: visible: ".*간편 비밀번호를 생성.*"` 같은 가드도 도달 판정으로 친다)
                 $gFrom = [Math]::Max(0, $runStartIdx - 12)
-                $guard = ($code[$gFrom..([Math]::Max(0, $runStartIdx - 1))] -join "`n")
+                $guard = ($codeX[$gFrom..([Math]::Max(0, $runStartIdx - 1))] -join "`n")
                 $hasWait = $guard -match 'input_dot_1|keypadContainer|4자리 숫자를 입력하세요|간편 비밀번호를 입력하세요|간편 비밀번호를 생성|간편 비밀번호를 다시 입력'
                 if ($tail -notmatch '입력완료' -and -not $hasWait) {
                     Add-Finding "W08_PIN_NO_SCREEN_WAIT" "WARN" $name $runStart `
@@ -446,10 +475,10 @@ foreach ($f in $files) {
             if ($c -match [regex]::Escape($mk)) { $lastAcctList = $ln }
         }
         if ($lastAcctList -gt 0 -and ($ln - $lastAcctList) -le 15 -and $ln -gt $lastAcctList) {
-            if ($c -match '^\s*-?\s*tapOn:\s*"([^"]*(은행|뱅크))"\s*$') {
+            if ($codeX[$i] -match '^\s*-?\s*tapOn:\s*"([^"]*(은행|뱅크))"\s*$') {
                 $bank = $Matches[1]
                 $from = [Math]::Max(0, $i - 6)
-                $win  = ($code[$from..($i-1)] -join "`n")
+                $win  = ($codeX[$from..($i-1)] -join "`n")
                 if ($win -notmatch ('assertVisible[^\r\n]*' + [regex]::Escape($bank))) {
                     Add-Finding "W10_ACCT_HARDCODED" "WARN" $name $ln `
                         ('연동 계좌 목록(' + $lastAcctList + '행)에서 "' + $bank + '"을 전제 단언 없이 탭한다. 목록은 계정 상태에 따라 바뀐다 → 앞에 assertVisible을 두거나(특정 계좌가 케이스의 일부일 때), 목록에서 골라 쓸 것(어느 계좌든 무관할 때)')
@@ -537,7 +566,7 @@ foreach ($f in $files) {
     #   자기검사 픽스처가 정확히 그 모양이라 FAIL로 드러났다(2026-09-01).
     if ($runLen -ge 2) {
         $gFrom = [Math]::Max(0, $runStartIdx - 12)
-        $guard = ($code[$gFrom..([Math]::Max(0, $runStartIdx - 1))] -join "`n")
+        $guard = ($codeX[$gFrom..([Math]::Max(0, $runStartIdx - 1))] -join "`n")
         if ($guard -notmatch 'input_dot_1|keypadContainer|4자리 숫자를 입력하세요|간편 비밀번호를 입력하세요|간편 비밀번호를 생성|간편 비밀번호를 다시 입력') {
             Add-Finding "W08_PIN_NO_SCREEN_WAIT" "WARN" $name $runStart `
                 ("PIN 숫자 " + $runLen + "연타(" + $runStart + "행~파일 끝) 앞에 **PIN 화면 도달 판정이 없다**. 화면이 아직 안 떴는데 누르면 같은 글자를 가진 다른 요소를 집는다 → 런 앞에 `input_dot_1`(또는 keypadContainer) 대기를 둘 것")

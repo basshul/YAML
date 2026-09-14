@@ -119,9 +119,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -214,11 +214,11 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
     commands:
       - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
@@ -277,9 +277,9 @@ appId: ${APP_ID}
           commands:
             - runFlow:
                 when:
-                  visible: "나중에 하기"
+                  visible: "${ASK_ME_LATER_TEXT}"
                 commands:
-                  - tapOn: "나중에 하기"
+                  - tapOn: "${ASK_ME_LATER_TEXT}"
                   - waitForAnimationToEnd
             - runFlow:
                 when:
@@ -347,7 +347,7 @@ appId: ${APP_ID}
     id: "tv_easywallet_account_title"
 - assertVisible:
     id: "tv_easywallet_account_limit"
-    text: "지금 가상계좌 신청하기"
+    text: "${BANNER_GMEPAYVA_MSG}"
 
 # ----------------------------------------------------------------
 # [07] [Low] GMEPay Deposit - "GMEPay 가상 계좌" 배너 선택 확인
@@ -439,30 +439,30 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "ATM 입금"
+- tapOn: "${ATM_DEPOSIT}"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 - tapOn: "카드를 사용하여\nATM 입금"
 - waitForAnimationToEnd
-- assertVisible: "편의점을 선택하세요"
+- assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 - tapOn: "카드 없이\nATM 입금"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [15] [Low] ATM Deposit - ATM 이용 안내 선택 시 가이드 페이지 노출 확인
 # ----------------------------------------------------------------
 # [14]에서 이미 "이용 가능한 ATM을 선택하세요"(레벨1 목록) 화면에 있으므로
 # 홈 복귀 후 재진입하지 않고 그대로 이어서 검증(불필요한 홈 복귀 생략).
-- tapOn: "ATM 입금 신청 방법"
+- tapOn: "${HOW_TO_REQUEST_ATM_DEPOSIT}"
 - waitForAnimationToEnd
-- assertVisible: "ATM 입금 신청 방법"
+- assertVisible: "${HOW_TO_REQUEST_ATM_DEPOSIT}"
 - assertVisible: "1\\) 선호하는 ATM을 선택하세요."
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [16] [Low] ATM Deposit - Request deposit 선택시 ATM Deposit 화면 이동 확인
@@ -470,13 +470,13 @@ appId: ${APP_ID}
 # [15]에서 이미 레벨1 목록 화면에 있으므로 그대로 이어서 검증.
 - tapOn: "NICE ATM"
 - waitForAnimationToEnd
-- assertVisible: "입금 금액"
+- assertVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
 - assertVisible:
     id: "findAtmButton"
 - tapOn:
     id: "backBtn"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [17] [Low] ATM Deposit - NICE - Deposit 금액 입력동작 확인 및 Apply 동작 확인 (국내이용자 이용불가)
@@ -511,11 +511,11 @@ appId: ${APP_ID}
 - tapOn:
     id: "submitBtn"
 - waitForAnimationToEnd
-- assertVisible: "입금을 신청하시겠습니까?"
+- assertVisible: "${APPLY_ATM}"
 - tapOn:
     id: "apply_btn"
 - waitForAnimationToEnd
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
@@ -524,19 +524,19 @@ appId: ${APP_ID}
 - assertVisible: "ATM 입금 신청이 완료되었습니다."
 - tapOn: "완료"
 - waitForAnimationToEnd
-- assertVisible: "입금 요청"
+- assertVisible: "${DEPOSIT_REQUEST_TEXT}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - tapOn: "예"
 - waitForAnimationToEnd
 # 취소 확인도 간편 비밀번호 입력을 요구함(신청 때와 동일한 PIN 화면).
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "2"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [18] [Low] ATM Deposit - NICE - Find nearest ATM 선택 시 근처 NICE ATM 위치 확인
@@ -555,15 +555,15 @@ appId: ${APP_ID}
 # 앱 화면("입금 금액")이 보일 때까지 반복적으로 뒤로가기.
 - repeat:
     while:
-      notVisible: "입금 금액"
+      notVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
-- assertVisible: "입금 금액"
+- assertVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
 - tapOn:
     id: "backBtn"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [19] [Medium] ATM Deposit - HYOSUNG - Deposit 금액 입력동작 확인 및 Apply 동작 확인 (국내이용자 이용불가)
@@ -587,11 +587,11 @@ appId: ${APP_ID}
 - tapOn:
     id: "submitBtn"
 - waitForAnimationToEnd
-- assertVisible: "입금을 신청하시겠습니까?"
+- assertVisible: "${APPLY_ATM}"
 - tapOn:
     id: "apply_btn"
 - waitForAnimationToEnd
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
@@ -600,19 +600,19 @@ appId: ${APP_ID}
 - assertVisible: "ATM 입금 신청이 완료되었습니다."
 - tapOn: "완료"
 - waitForAnimationToEnd
-- assertVisible: "입금 요청"
+- assertVisible: "${DEPOSIT_REQUEST_TEXT}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - tapOn: "예"
 - waitForAnimationToEnd
 # 취소 확인도 간편 비밀번호 입력을 요구함(신청 때와 동일한 PIN 화면).
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "2"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [20] [Medium] ATM Deposit - HYOSUNG - Find nearest ATM 선택 시 근처 HYOSUNG ATM 위치 확인
@@ -628,15 +628,15 @@ appId: ${APP_ID}
 # 있어 "입금 금액" 화면이 보일 때까지 반복.
 - repeat:
     while:
-      notVisible: "입금 금액"
+      notVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
-- assertVisible: "입금 금액"
+- assertVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
 - tapOn:
     id: "backBtn"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능한 ATM을 선택하세요"
+- assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
 # [21] [Low] ATM Deposit - Card - 이용 가능한 편의점 리스트 노출 확인
@@ -644,7 +644,7 @@ appId: ${APP_ID}
 # [20]에서 이미 레벨1 목록 화면에 있으므로 그대로 이어서 검증.
 - tapOn: "카드를 사용하여\nATM 입금"
 - waitForAnimationToEnd
-- assertVisible: "편의점을 선택하세요"
+- assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 - assertVisible: "GS25"
 - assertVisible: "CU"
 - assertVisible: "7-Eleven"
@@ -656,10 +656,10 @@ appId: ${APP_ID}
 # [21]에서 이미 "편의점을 선택하세요" 화면에 있으므로 그대로 이어서 검증.
 - tapOn: "CU"
 - waitForAnimationToEnd
-- assertVisible: "ATM 카드 입금 가이드"
+- assertVisible: "${ATM_CARD_DEPOSIT_GUIDE}"
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "편의점을 선택하세요"
+- assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 
 # ----------------------------------------------------------------
 # [23] [High] ATM Deposit - History - History 선택시 ATM Deposit 내역 노출 확인
@@ -673,13 +673,13 @@ appId: ${APP_ID}
 # 있으므로 추가 뒤로가기 없이 곧바로 "거래 내역"을 탭함. 또한 거래 내역에서
 # 뒤로가기 시 탭 전환 없이 원래 탭("편의점을 선택하세요")으로 복귀함을
 # 실기기로 확인함.
-- tapOn: "거래 내역"
+- tapOn: "${COMMON_TRANSACTION_HISTORY_BTN}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "iv_calendar"
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "편의점을 선택하세요"
+- assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 
 # ----------------------------------------------------------------
 # [24] [Medium] ATM Deposit - History - Date Filter 동작 확인 - [x]선택시 필터 해제됨
@@ -690,12 +690,12 @@ appId: ${APP_ID}
 # 정정(2026-07-16): [23]과 동일한 이유로 마지막 뒤로가기 후 복귀 화면은
 # "이용 가능한 ATM을 선택하세요"(카드 없이 탭)가 아니라 "편의점을 선택하세요"
 # (카드 탭, 탭 상태 유지됨) - 실기기 재확인.
-- tapOn: "거래 내역"
+- tapOn: "${COMMON_TRANSACTION_HISTORY_BTN}"
 - waitForAnimationToEnd
 - tapOn:
     id: "iv_calendar"
 - waitForAnimationToEnd
-- assertVisible: "기간 선택"
+- assertVisible: "${FILTER_BY_DATE_TEXT}"
 - assertVisible: "시작 :"
 - assertVisible: "종료 :"
 - tapOn: "${TXT_CANCEL}"
@@ -704,7 +704,7 @@ appId: ${APP_ID}
     id: "iv_calendar"
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "편의점을 선택하세요"
+- assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 
 # 홈 복귀
 - pressKey: back
@@ -779,26 +779,26 @@ appId: ${APP_ID}
 #     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
 - extendedWaitUntil:
     visible:
-      text: "입금 서비스"
+      text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "현장 입금"
+- tapOn: "${CONVENIENCE_STORE_TEXT}"
 - waitForAnimationToEnd
-- assertVisible: "이용 가능 편의점"
+- assertVisible: "${POSSIBLE_STORE}"
 - tapOn: "확인"
 - waitForAnimationToEnd
-- assertVisible: "입금을 신청하시겠습니까?"
+- assertVisible: "${APPLY_ATM}"
 - tapOn:
     id: "apply_btn"
 - waitForAnimationToEnd
-- assertVisible: "간편 비밀번호를 입력하세요"
+- assertVisible: "${ENTER_THE_LOCK}"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "1"
 - tapOn: "2"
 - waitForAnimationToEnd
-- assertVisible: "편의점 직원에게 요청하여 입금해 주세요."
-- assertVisible: "입금 금액"
-- assertVisible: "남은 시간"
+- assertVisible: "${PLEASE_MAKE_DEPOSIT}"
+- assertVisible: "${APPLY_ATM_DEPOSIT_AMOUNT}"
+- assertVisible: "${TIME_LIMIT_TEXT}"
 
 # 홈 복귀
 # ⚠️ 개편UI판은 `iv_back` 2탭으로 홈까지 나왔지만 구 UI에서는 실패한다 —

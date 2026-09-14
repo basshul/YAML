@@ -74,9 +74,9 @@ env:
 - runFlow:
     when:
       visible:
-        text: "나중에 하기"
+        text: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
 # ⛔ **범용 `tapOn: "닫기"`를 걷어냈다**(2026-08-28). 엉뚱한 X를 눌러 앱이 런처로 빠져나간
 #   사고가 있었다(CLAUDE.md 참고). 인앱 배너는 id로 닫는다 — 7.19.x `btnTwo` / 7.20.0 `btnClose`.
 - runFlow:
@@ -264,7 +264,7 @@ env:
 # ================================================================
 
 # 수취인 추가하기
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 
 # 국가: Sri Lanka
 - tapOn:
@@ -321,7 +321,7 @@ env:
 # 관계: 친구
 - tapOn:
     id: "recieverRelationSelectionFormInputField"
-- tapOn: "친구"
+- tapOn: "${FRIEND_TEXT}"
 
 # 송금 사유: 급여 / 임금
 - swipe:
@@ -335,7 +335,7 @@ env:
     timeout: 10000
 - tapOn:
     id: "recieverTransferReasonSelectionFormInputField"
-- tapOn: "급여 / 임금"
+- tapOn: "${SALARY_WAGES_TEXT}"
 
 # 제출
 - tapOn:
@@ -345,7 +345,7 @@ env:
 - runFlow:
     when:
       visible:
-        text: "오류"
+        text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
     commands:
       - tapOn: "확인"
       - pressKey: back
@@ -416,7 +416,7 @@ env:
     timeout: 10000
 
 # 수취인 추가하기
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 
 # 국가: Sri Lanka
 - tapOn:
@@ -473,7 +473,7 @@ env:
 # 관계: 친구
 - tapOn:
     id: "recieverRelationSelectionFormInputField"
-- tapOn: "친구"
+- tapOn: "${FRIEND_TEXT}"
 
 # 송금 사유: 급여 / 임금
 - swipe:
@@ -487,7 +487,7 @@ env:
     timeout: 10000
 - tapOn:
     id: "recieverTransferReasonSelectionFormInputField"
-- tapOn: "급여 / 임금"
+- tapOn: "${SALARY_WAGES_TEXT}"
 
 # 제출
 - tapOn:
@@ -497,7 +497,7 @@ env:
 - runFlow:
     when:
       visible:
-        text: "오류"
+        text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
     commands:
       - tapOn: "확인"
       - pressKey: back
@@ -520,7 +520,7 @@ env:
 - hideKeyboard
 
 # 계산하기
-- tapOn: "계산하기"
+- tapOn: "${CALCULATE_TEXT}"
 
 # ---- 1단계: 금액 세부 정보 (2026-08-31 운영 실측) ----
 #   성공 시 `transferFeeTxtView`(수수료) + `gmeCouponAppliedAmountValueTxt`(쿠폰 적용가) + `agreeButton`("계속")
@@ -687,11 +687,11 @@ env:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 30000
 - assertVisible:
-    text: "실시간 송금"
+    text: "${SEND_NOW_TEXT}"
 - tapOn:
     id: "imgvFilter"
 - assertVisible:
-    text: "설정"
+    text: "${CH_COMMON_SETTINGS}"
 - assertVisible:
     id: "tv_period"
 - assertVisible:

@@ -121,9 +121,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -263,7 +263,7 @@ appId: ${APP_ID}
     id: "select_product_btn"
 - extendedWaitUntil:
     visible:
-      text: "상품 선택"
+      text: "${SELECT_PRODUCT_TEXT}"
     timeout: 15000
 - scrollUntilVisible:
     element:
@@ -284,7 +284,7 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - extendedWaitUntil:
     visible:
-      text: "총 지급액"
+      text: "${PAYING_AMOUNT_TEXT}"
     timeout: 15000
 - assertVisible:
     text: "[0-9]+ KRW"
@@ -309,10 +309,10 @@ appId: ${APP_ID}
 # 결제확인 바텀시트 → GME Wallet로 결제
 - extendedWaitUntil:
     visible:
-      text: "GME Wallet로 결제"
+      text: "${PAY_USING_GME_WALLET_TEXT}"
     timeout: 20000
 - takeScreenshot: "shots_11_intltopup_old/06_결제확인"
-- tapOn: "GME Wallet로 결제"
+- tapOn: "${PAY_USING_GME_WALLET_TEXT}"
 # 간편비밀번호 화면 도달 확인 — **여기서 정지. PIN 입력 안 함.**
 - extendedWaitUntil:
     visible:

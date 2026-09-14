@@ -138,7 +138,7 @@ env:
 - tapOn: "1"
 - tapOn: "특수문자변경"
 - tapOn: "${PW_CUR_LAST}"
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -146,7 +146,7 @@ env:
 # ----------------------------------------------------------------
 - runFlow:
     when:
-      visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
     commands:
       - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
@@ -198,9 +198,9 @@ env:
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 
 # ⚠️ **홈 팝업은 하나가 아니라 큐로 연달아 뜬다.** 단발 조건부로는 못 잡는다.

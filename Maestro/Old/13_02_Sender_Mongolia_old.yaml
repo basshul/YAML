@@ -93,9 +93,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -134,12 +134,12 @@ appId: ${APP_ID}
 #   Id Type=현지 신분증/여권/주민등록증, Customer Type=개인고객/온라인 고객/간편 송금,
 #   Source Of Fund=급여 / 임금 · 사업 · 저축(검색창 있음)
 #   날짜 피커는 바텀시트("일자") + id confirmBtn → 기본값 그대로 확인(테스트 데이터라 값 무관)
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "tf_countryList"
 - assertVisible:
-    text: "국가를 선택해 주세요"
+    text: "${PLEASE_CHOOSE_COUNTRY}"
 - scrollUntilVisible:
     element:
       text: "Mongolia"
@@ -149,7 +149,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 # 주의: 목록에는 First Name + Last Name이 공백으로 결합된 "TESTMN SENDER"로 표시됨.
 #   maestro text assert는 전체매칭이라 "TESTMN"만으로는 매칭되지 않음.
 - tapOn: "First Name"
@@ -189,7 +189,7 @@ appId: ${APP_ID}
     direction: DOWN
     timeout: 15000
 - tapOn: "Id Type"
-- tapOn: "현지 신분증"
+- tapOn: "${NATIONAL_ID_TEXT}"
 - waitForAnimationToEnd
 - scrollUntilVisible:
     element:
@@ -239,7 +239,7 @@ appId: ${APP_ID}
     direction: DOWN
     timeout: 15000
 - tapOn: "Customer Type"
-- tapOn: "개인고객"
+- tapOn: "${PERSONAL_TITLE_TEXT}"
 - waitForAnimationToEnd
 - scrollUntilVisible:
     element:
@@ -247,7 +247,7 @@ appId: ${APP_ID}
     direction: DOWN
     timeout: 15000
 - tapOn: "Source Of Fund"
-- tapOn: "급여 / 임금"
+- tapOn: "${SALARY_WAGES_TEXT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "btn_next"
@@ -258,7 +258,7 @@ appId: ${APP_ID}
 #   헬퍼는 종류와 무관하게 captureImage index 0/1/2를 순서대로 처리하므로 그대로 재사용 가능.
 - extendedWaitUntil:
     visible:
-      text: "유효한 신분증을 업로드해 주세요."
+      text: "${UPLOAD_DOCUMENTS_TEXT}"
     timeout: 20000
 - runFlow: "_inbound_upload_docs_old.yaml"
 - tapOn:
@@ -269,7 +269,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "송금 받기를 요청하시겠습니까?"
+        text: "${SAVE_SUCCESS_TEXT}"
     commands:
       - tapOn: "${TXT_CANCEL}"
       - waitForAnimationToEnd

@@ -100,25 +100,17 @@ appId: ${APP_ID}
 - tapOn:
     id: "bottom_item_history"
 - tapOn: "${SCR_HISTORY}"
-- tapOn: "예약 송금 내역"
+- tapOn: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 - runFlow:
     when:
       visible:
-        text: "활성화"
+        text: "${ACTIVE_TEXT}"
     commands:
-      - tapOn: "활성화"
+      - tapOn: "${ACTIVE_TEXT}"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
-    commands:
-      - scroll
-      - tapOn: "${TXT_CANCEL}"
-      - tapOn: "예"
-- runFlow:
-    when:
-      visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
@@ -126,7 +118,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
@@ -134,7 +126,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
@@ -142,7 +134,15 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "예"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
@@ -188,7 +188,7 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 - runFlow:
     when:
       visible:
@@ -215,7 +215,7 @@ appId: ${APP_ID}
       - tapOn: "예"
 
 # [01] 바텀시트 및 새 수취인 추가 폼 진입 확인
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 - assertVisible:
     id: "tv_addRecipient"
 - assertVisible:
@@ -233,11 +233,11 @@ appId: ${APP_ID}
       - pressKey: back
 
 # [03] 기존 수취인 목록 노출 확인
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 - tapOn:
     id: "tv_addExistingRecipient"
 - assertVisible:
-    text: "기존 수취인 추가"
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
 - tapOn:
     id: "tv_close"
 
@@ -245,11 +245,11 @@ appId: ${APP_ID}
 #      GME TEST(스리랑카·미예약)를 예약 목록에 추가
 # ※ 바텀시트가 열리면 **뒤쪽 예약 목록은 접근성 트리에서 사라지므로**(실측)
 #   시트 안의 "GME TEST"는 동명이인과 충돌하지 않는다.
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 - tapOn:
     id: "tv_addExistingRecipient"
 - assertVisible:
-    text: "기존 수취인 추가"
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
 - tapOn: "GME TEST"
 # 추가 결과는 **동명이인과 구분되는 `COMMERCIAL BANK`로 검증**한다.
 #   ("GME TEST"로 assert하면 기존 몽골 수취인 때문에 **추가에 실패해도 통과**한다)
@@ -258,16 +258,16 @@ appId: ${APP_ID}
 
 # [05] 이미 예약된 수취인 추가 시 중복 팝업 확인
 #      GME TEST ([04]에서 추가된 상태)
-- tapOn: "수취인 추가하기"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 - tapOn:
     id: "tv_addExistingRecipient"
 - assertVisible:
-    text: "기존 수취인 추가"
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
 - tapOn: "GME TEST"
 - assertVisible:
     id: "txt_dialog_message"
 - assertVisible:
-    text: "중복된 수취인"
+    text: "${SCHEDULE_030}"
 - tapOn:
     id: "btn_diaog_ok"
 
@@ -304,7 +304,7 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 - runFlow:
     when:
       visible:
@@ -339,7 +339,7 @@ appId: ${APP_ID}
       notVisible:
         text: "SCHEDULE TRANSFER TEST"
     commands:
-      - tapOn: "수취인 추가하기"
+      - tapOn: "${ADD_RECIPIENT_TEXT}"
       - tapOn:
           id: "tv_addRecipient"
       # 국가: Kazakhstan
@@ -352,7 +352,7 @@ appId: ${APP_ID}
           text: "Kazakhstan"
           index: 1
       # 송금방법: 현금 지급
-      - tapOn: "송금 방법을 선택하세요"
+      - tapOn: "${PAYMENT_MODE_PLACEHOLDER_TEXT}"
       - tapOn: "${INIT_TAB_CASH}"
       # 은행/에이전트: MoneyGram
       - tapOn:
@@ -393,7 +393,7 @@ appId: ${APP_ID}
       # 관계: 본인
       - tapOn:
           id: "recieverRelationSelectionFormInputField"
-      - tapOn: "본인"
+      - tapOn: "${SELF_TEXT}"
       # 송금 사유: 급여 / 임금 (스크롤 후)
       - swipe:
           direction: UP
@@ -406,7 +406,7 @@ appId: ${APP_ID}
           timeout: 10000
       - tapOn:
           id: "recieverTransferReasonSelectionFormInputField"
-      - tapOn: "급여 / 임금"
+      - tapOn: "${SALARY_WAGES_TEXT}"
       # 제출
       - tapOn:
           id: "btn_submit"
@@ -414,7 +414,7 @@ appId: ${APP_ID}
       - runFlow:
           when:
             visible:
-              text: "오류"
+              text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
           commands:
             - tapOn: "확인"
             - pressKey: back
@@ -443,11 +443,11 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 - tapOn:
     id: "imgvFilter"
 - assertVisible:
-    text: "설정"
+    text: "${CH_COMMON_SETTINGS}"
 - assertVisible:
     id: "tv_period"
 - assertVisible:
@@ -480,12 +480,12 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 - tapOn:
     id: "foreground"
     index: 0
 - assertVisible:
-    text: "예약 송금"
+    text: "${SCHEDULED_TEXT}"
 - tapOn: "${KFTC_BANK}"
 
 # --- 매달 설정 (Step 1) ---
@@ -494,22 +494,22 @@ appId: ${APP_ID}
 - tapOn:
     id: "et_daySelection"
 - assertVisible:
-    text: "일"
+    text: "${CH_DAY}"
 - tapOn:
     id: "confirmBtn"
 - tapOn:
     id: "time_selection"
 - assertVisible:
-    text: "시간대"
+    text: "${TIME_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - scroll
 - assertVisible:
-    text: "종료일"
+    text: "${END_DATE_TEXT}"
 - tapOn:
     id: "et_endDateSelection"
 - assertVisible:
-    text: "종료일"
+    text: "${END_DATE_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - assertVisible:
@@ -527,10 +527,10 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_continue"
 - assertVisible:
-    text: "인증 처리 중"
+    text: "${VERIFICATION_DETAIL_TEXT}"
 - scroll
 - assertVisible:
-    text: "동의 및 저장"
+    text: "${AGREE_AND_SAVE_TEXT}"
 
 # --- Step 3 → Step 1으로 이동 ---
 - pressKey: back
@@ -542,13 +542,13 @@ appId: ${APP_ID}
 - tapOn:
     id: "et_dateSelection"
 - assertVisible:
-    text: "일자"
+    text: "${DATE_ONLY_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - tapOn:
     id: "time_selection"
 - assertVisible:
-    text: "시간대"
+    text: "${TIME_TEXT}"
 - tapOn:
     id: "confirmBtn"
 
@@ -564,10 +564,10 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_continue"
 - assertVisible:
-    text: "인증 처리 중"
+    text: "${VERIFICATION_DETAIL_TEXT}"
 - scroll
 - assertVisible:
-    text: "동의 및 저장"
+    text: "${AGREE_AND_SAVE_TEXT}"
 
 # --- 홈 복귀 ---
 - pressKey: back
@@ -593,12 +593,12 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 - tapOn:
     id: "foreground"
     index: 0
 - assertVisible:
-    text: "예약 송금"
+    text: "${SCHEDULED_TEXT}"
 - assertVisible:
     text: "GME Wallet"
 
@@ -608,7 +608,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "time_selection"
 - assertVisible:
-    text: "시간대"
+    text: "${TIME_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - tapOn:
@@ -620,15 +620,15 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_continue"
 - assertVisible:
-    text: "인증 처리 중"
+    text: "${VERIFICATION_DETAIL_TEXT}"
 - scroll
-- tapOn: "동의 및 저장"
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
 - runFlow:
     when:
       visible:
         text: "${INIT_SERVICE_GUIDE}"
     commands:
-      - tapOn: "동의"
+      - tapOn: "${AGREE_TEXT}"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
 - extendedWaitUntil:
     visible:
@@ -651,7 +651,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "et_dateSelection"
 - assertVisible:
-    text: "일자"
+    text: "${DATE_ONLY_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - tapOn:
@@ -663,15 +663,15 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_continue"
 - assertVisible:
-    text: "인증 처리 중"
+    text: "${VERIFICATION_DETAIL_TEXT}"
 - scroll
-- tapOn: "동의 및 저장"
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
 - runFlow:
     when:
       visible:
         text: "${INIT_SERVICE_GUIDE}"
     commands:
-      - tapOn: "동의"
+      - tapOn: "${AGREE_TEXT}"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
 - extendedWaitUntil:
     visible:
@@ -688,7 +688,7 @@ appId: ${APP_ID}
     text: ".*첫 번째 예약 송금.*"
 
 # 성공 팝업 닫기 (back으로 닫히지 않으므로 "다시 보내기" 탭)
-- tapOn: "다시 보내기"
+- tapOn: "${SEND_AGAIN_TEXT}"
 
 # --- 홈 복귀 ---
 - runFlow:
@@ -731,8 +731,8 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
-- tapOn: "수취인 추가하기"
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
 - tapOn:
     id: "tv_addExistingRecipient"
 - tapOn: "GME TEST"
@@ -748,7 +748,7 @@ appId: ${APP_ID}
     id: "foreground"
     index: 0
 - assertVisible:
-    text: "예약 송금"
+    text: "${SCHEDULED_TEXT}"
 - assertVisible:
     text: "GME Wallet"
 
@@ -758,23 +758,23 @@ appId: ${APP_ID}
 - tapOn:
     id: "et_daySelection"
 - assertVisible:
-    text: "일"
+    text: "${CH_DAY}"
 - tapOn:
     id: "confirmBtn"
 - tapOn:
     id: "time_selection"
 - assertVisible:
-    text: "시간대"
+    text: "${TIME_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - scroll
 - assertVisible:
-    text: "종료일"
+    text: "${END_DATE_TEXT}"
 # 종료일 picker: 과거 날짜 선택 시 최솟값(오늘)으로 자동 보정
 - tapOn:
     id: "et_endDateSelection"
 - assertVisible:
-    text: "종료일"
+    text: "${END_DATE_TEXT}"
 - tapOn:
     id: "confirmBtn"
 - assertVisible:
@@ -792,15 +792,15 @@ appId: ${APP_ID}
 - tapOn:
     id: "btn_continue"
 - assertVisible:
-    text: "인증 처리 중"
+    text: "${VERIFICATION_DETAIL_TEXT}"
 - scroll
-- tapOn: "동의 및 저장"
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
 - runFlow:
     when:
       visible:
         text: "${INIT_SERVICE_GUIDE}"
     commands:
-      - tapOn: "동의"
+      - tapOn: "${AGREE_TEXT}"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
 - extendedWaitUntil:
     visible:
@@ -819,99 +819,99 @@ appId: ${APP_ID}
 # --- 사후 정리: 활성 예약 모두 취소 ([시나리오 2] + [시나리오 3]) ---
 - tapOn: "${MYQR_VIEW_RECEIPT}"
 - assertVisible:
-    text: "예약 송금 내역"
+    text: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
 - runFlow:
     when:
       visible:
-        text: "활성화"
+        text: "${ACTIVE_TEXT}"
     commands:
-      - tapOn: "활성화"
+      - tapOn: "${ACTIVE_TEXT}"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 # 취소 후 활성화 탭 재진입 → 남은 예약 추가 취소
 - runFlow:
     when:
       visible:
-        text: "활성화"
+        text: "${ACTIVE_TEXT}"
     commands:
-      - tapOn: "활성화"
+      - tapOn: "${ACTIVE_TEXT}"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 - runFlow:
     when:
       visible:
-        text: "송금이 예약되었습니다."
+        text: "${ACTIVE_TITLE_TEXT}"
     commands:
       - scroll
       - tapOn: "${TXT_CANCEL}"
       - assertVisible:
-          text: "송금 예약을 취소하시겠습니까?"
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
       - tapOn: "예"
 
 # --- 홈 복귀 ---
@@ -941,7 +941,7 @@ appId: ${APP_ID}
     visible:
       text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
-- tapOn: "예약"
+- tapOn: "${COMMON_BOOKING_LABEL}"
 # GME TEST(스리랑카) 먼저 삭제 (index 0). 판정은 유일한 `COMMERCIAL BANK`로 한다.
 - runFlow:
     when:

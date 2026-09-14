@@ -126,9 +126,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -158,35 +158,35 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "${SCR_ONGOING_EVENT}"
     timeout: 30000
-- assertVisible: "지난 이벤트"
+- assertVisible: "${PAST_EVENTS_TEXT}"
 - takeScreenshot: "[01-1]_이벤트_진행중목록"
 
 # 진행 중인 이벤트에서 Spin & Win(룰렛 돌리기) 배너 진입
 - scrollUntilVisible:
     element:
-      text: "룰렛 돌리기 이벤트"
+      text: "${SPIN_AND_WHEEL_TEXT}"
     direction: DOWN
     timeout: 20000
     visibilityPercentage: 20
-- tapOn: "룰렛 돌리기 이벤트"
+- tapOn: "${SPIN_AND_WHEEL_TEXT}"
 - extendedWaitUntil:
-    visible: "룰렛 돌리기"
+    visible: "${SPIN_THE_WHEEL_TEXT}"
     timeout: 30000
 # 🚫 PLAY!는 누르지 않는다(실제 룰렛 회전·포인트 지급). 노출만 확인한다.
 - assertVisible: "PLAY!"
-- assertVisible: "공유"
+- assertVisible: "${COMMON_SHARE_BTN}"
 - takeScreenshot: "[01-2]_룰렛돌리기_진입"
 
 # 공유 탭 = Share With my Friends
-- tapOn: "공유"
+- tapOn: "${COMMON_SHARE_BTN}"
 - extendedWaitUntil:
-    visible: "친구 초대하기"
+    visible: "${INVITE_A_FRIEND_TEXT}"
     timeout: 20000
-- assertVisible: "이런 혜택을 드려요!"
+- assertVisible: "${HOW_TO_SPIN_EARN_TEXT}"
 - takeScreenshot: "[01-3]_공유탭_ShareWithMyFriends"
 
 # 친구 초대하기 → Send Link / Share QR 바텀시트
-- tapOn: "친구 초대하기"
+- tapOn: "${INVITE_A_FRIEND_TEXT}"
 - extendedWaitUntil:
     visible:
       id: "btn_send_link"
@@ -219,9 +219,9 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "친구 초대하기"
+    visible: "${INVITE_A_FRIEND_TEXT}"
     timeout: 20000
-- tapOn: "친구 초대하기"
+- tapOn: "${INVITE_A_FRIEND_TEXT}"
 - extendedWaitUntil:
     visible:
       id: "btn_share_qr"
@@ -246,7 +246,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 # 위와 같은 이유 — back 한 번이면 공유 탭으로 돌아온다(바텀시트는 닫힌 상태)
 - extendedWaitUntil:
-    visible: "친구 초대하기"
+    visible: "${INVITE_A_FRIEND_TEXT}"
     timeout: 20000
 
 # ---------------- 홈 복귀 ----------------

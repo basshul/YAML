@@ -93,9 +93,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
 - runFlow:
@@ -134,7 +134,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "tv_countryCode"
 - assertVisible:
-    text: "국가를 선택해 주세요"
+    text: "${PLEASE_CHOOSE_COUNTRY}"
 - tapOn: "Indonesia"
 - waitForAnimationToEnd
 
@@ -164,11 +164,11 @@ appId: ${APP_ID}
 - tapOn: "Vietnam"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "보내는 금액"
+    text: "${SENDER_SENDS_TEXT}"
 - assertVisible:
-    text: "받는 금액"
+    text: "${YOU_GET_TEXT}"
 - assertVisible:
-    text: "계산하기"
+    text: "${CALCULATE_TEXT}"
 
 # ----------------------------------------------------------------
 # [04] [High] Exchange Rate - 국가 별 환율계산 확인 - 인도네시아, 몽골, 베트남
@@ -238,12 +238,12 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "계좌 선택"
+        text: "${ACCOUNT_SELECTION}"
     commands:
       - tapOn:
           id: "close"
 - assertVisible:
-    text: "받는 금액"
+    text: "${YOU_GET_TEXT}"
 
 # ----------------------------------------------------------------
 # [06] [High] Add Inbound Sender - 국가리스트 발생 확인
@@ -260,18 +260,18 @@ appId: ${APP_ID}
 # 아니라 adb의 순수 텍스트 입력으로도 동일하게 재현되어 테스트 코드 문제가 아니라 검색
 # 기능 자체의 결함으로 보임. 검색 없이 전체 목록(rvCountryList)에서 직접 탭하는 방식으로 우회
 
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "tf_countryList"
 - assertVisible:
-    text: "국가를 선택해 주세요"
+    text: "${PLEASE_CHOOSE_COUNTRY}"
 - assertVisible:
     id: "rvCountryList"
 - tapOn: "Mongolia"
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 
 # [07]에서 등록 폼을 처음부터 새로 시작해야 하므로(기본값 Indonesia로 리셋 필요)
 # 메인화면까지만 복귀 (Home까지 나가지 않음). 등록/취소 완료 후 앱이 자동으로 몇 단계를
@@ -281,21 +281,21 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
@@ -311,7 +311,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
       #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다
@@ -345,11 +345,11 @@ appId: ${APP_ID}
 # [06]이 끝난 화면(메인화면)에서 바로 이어서 진행. "송금인 등록하기" 재진입 시
 # 국가는 항상 기본값 Indonesia로 리셋되므로 별도 국가 선택 불필요
 
-- tapOn: "송금인 등록하기"
+- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
-    text: "송금인 세부 정보 입력"
+    text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
     id: "input_edittext"
     index: 0
@@ -386,7 +386,7 @@ appId: ${APP_ID}
     id: "header"
 - tapOn: "확인"
 - assertVisible:
-    text: "저장 성공"
+    text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 곧바로 목록으로 돌아가는 경우가
 # 간헐적으로 갈림([13] 참고) - 프롬프트가 떠서 아직 목록이 안 보일 때만 취소로 닫음
 - runFlow:
@@ -407,21 +407,21 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
@@ -435,7 +435,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취 방법"
+        text: "${HOW_TO_RECEIVE}"
     commands:
       # ⚠️ 2026-09-04 수정 — 여기서 직접 탭하면 안 된다. 두 가지가 빠져 있었다:
       #   ① 홈 그리드 라벨에 **실제 개행**이 들어 있어 공백 문자열("해외송금 받기")로는 못 잡는다

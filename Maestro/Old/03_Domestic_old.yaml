@@ -90,9 +90,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "나중에 하기"
+        text: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너는 범용 "닫기"가 아니라 id로만 닫는다
 - runFlow:
@@ -136,7 +136,7 @@ appId: ${APP_ID}
 # 카카오뱅크 선택
 - tapOn: "${KFTC_BANK_CHIP}"
 # 금액 1 입력
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "2"
 - hideKeyboard
 - tapOn: "${MYQR_CONTINUE}"
@@ -161,7 +161,7 @@ appId: ${APP_ID}
       visible: "Similar transaction found. Please perform the transaction after 1 minutes."
     commands:
       - tapOn: "확인"
-      - tapOn: "금액"
+      - tapOn: "${AMOUNT}"
       - eraseText: 20
       - inputText: "2"
       - hideKeyboard
@@ -198,7 +198,7 @@ appId: ${APP_ID}
 # LEE SEUNGSOO 선택 → 동일 계좌 에러 확인
 - tapOn: "LEE SEUNGSOO"
 - assertVisible:
-    text: "동일한 계좌번호로 거래할 수 없습니다"
+    text: "${ACCOUNT_NUMBER_SAME_ERROR}"
 # PARK DOYOUNG 선택
 - tapOn: "PARK DOYOUNG"
 # 금액 입력 전 계속 버튼 비활성화 확인
@@ -208,7 +208,7 @@ appId: ${APP_ID}
     id: "btn_ok2"
     enabled: false
 # 금액 1 입력 → 계속 버튼 활성화 확인
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "2"
 - hideKeyboard
 - assertVisible:
@@ -232,7 +232,7 @@ appId: ${APP_ID}
       visible: "Similar transaction found. Please perform the transaction after 1 minutes."
     commands:
       - tapOn: "확인"
-      - tapOn: "금액"
+      - tapOn: "${AMOUNT}"
       - eraseText: 20
       - inputText: "1"
       - hideKeyboard
@@ -281,11 +281,11 @@ appId: ${APP_ID}
 - inputText: "64700065401013"
 - hideKeyboard
 - assertVisible:
-    text: "IBK기업은행"
+    text: "${BANK_002_SHORTNAME}"
 # 신한은행 선택
-- tapOn: "IBK기업은행"
+- tapOn: "${BANK_002_SHORTNAME}"
 # 금액 1 입력
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "3"
 - hideKeyboard
 - tapOn: "${MYQR_CONTINUE}"
@@ -302,7 +302,7 @@ appId: ${APP_ID}
     id: "transferfee"
     text: "[1-9][0-9,]* KRW"
 - assertVisible:
-    text: "총액"
+    text: "${TOTAL_AMOUNT}"
 - assertVisible:
     id: "totalamount"
     text: "[1-9][0-9,]* KRW"
@@ -342,7 +342,7 @@ appId: ${APP_ID}
 # 카카오뱅크 선택
 - tapOn: "${KFTC_BANK}"
 # 금액 1 입력
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "2"
 - hideKeyboard
 - tapOn: "${MYQR_CONTINUE}"
@@ -384,7 +384,7 @@ appId: ${APP_ID}
 - tapOn: "${MYQR_CONTINUE}"
 # PARK DOYOUNG 선택 및 금액 입력
 - tapOn: "PARK DOYOUNG"
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "1"
 - hideKeyboard
 - tapOn: "${MYQR_CONTINUE}"
@@ -419,7 +419,7 @@ appId: ${APP_ID}
 - tapOn: "${MYQR_CONTINUE}"
 # LEE SEUNGSOO 선택 및 금액 입력
 - tapOn: "LEE SEUNGSOO"
-- tapOn: "금액"
+- tapOn: "${AMOUNT}"
 - inputText: "1"
 - hideKeyboard
 - tapOn: "${MYQR_CONTINUE}"
@@ -440,11 +440,11 @@ appId: ${APP_ID}
 - tapOn:
     text: "1"
     retryTapIfNoChange: false
-- tapOn: "입력완료"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
 # OTP 불일치 → 에러 팝업 "실패 - 비밀번호 확인 중 오류가 발생했습니다." 확인
 - extendedWaitUntil:
     visible:
-      text: "고객센터 연결하기"
+      text: "${CONTACT_SUPPORT_TEXT}"
     timeout: 10000
 - takeScreenshot: otp_fail_confirmed
 - tapOn: "OK"

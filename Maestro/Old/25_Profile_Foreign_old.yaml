@@ -142,9 +142,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 인앱 배너 팝업 → "닫기"(id로 정확히 지정 — 범용 문자열 탭은 오탭 위험)
 - runFlow:
@@ -180,7 +180,7 @@ appId: ${APP_ID}
     id: "editProfileLayout"
 - extendedWaitUntil:
     visible:
-      text: "정보 수정"
+      text: "${EDIT_INFO_TEXT}"
     timeout: 20000
 - assertVisible:
     id: "arcLayout"
@@ -208,7 +208,7 @@ appId: ${APP_ID}
     id: "arcLayout"
 - extendedWaitUntil:
     visible:
-      text: "외국인 등록증 변경"
+      text: "${CHANGE_ALIEN_REGISTRATION_CARD}"
     timeout: 20000
 - assertVisible:
     id: "frontArcTitle"
@@ -309,7 +309,7 @@ appId: ${APP_ID}
     id: "btn_okay"
 - extendedWaitUntil:
     visible:
-      text: "정보 수정"
+      text: "${EDIT_INFO_TEXT}"
     timeout: 30000
 - assertVisible:
     id: "arcNo"
@@ -327,7 +327,7 @@ appId: ${APP_ID}
     id: "passportLayout"
 - extendedWaitUntil:
     visible:
-      text: "여권 변경"
+      text: "${CHANGE_PASSPORT}"
     timeout: 20000
 - assertVisible:
     id: "passportTitle"
@@ -390,7 +390,7 @@ appId: ${APP_ID}
     id: "btn_okay"
 - extendedWaitUntil:
     visible:
-      text: "정보 수정"
+      text: "${EDIT_INFO_TEXT}"
     timeout: 30000
 - assertVisible:
     id: "passportNo"

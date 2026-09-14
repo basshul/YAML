@@ -104,9 +104,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -145,13 +145,13 @@ appId: ${APP_ID}
     visible:
       id: "txt_user_email"
     timeout: 15000
-- tapOn: "은행 계좌 연결"
+- tapOn: "${AUTO_DEBIT_ACCOUNT_TEXT}"
 - extendedWaitUntil:
     visible:
-      text: "은행 계좌 연결 관리"
+      text: "${AUTO_DEBIT_TITLE_TEXT}"
     timeout: 20000
 - assertVisible:
-    text: "기본 계좌"
+    text: "${MAIN_ACCOUNT_TEXT}"
 
 # ----------------------------------------------------------------
 # [01-1] [Low] 은행 계좌 연결 → [?](csButton) → 고객센터 팝업 발생 확인
@@ -206,7 +206,7 @@ appId: ${APP_ID}
       id: "txt_user_email"
     timeout: 15000
 - tapOn:
-    text: "거래 내역"
+    text: "${COMMON_TRANSACTION_HISTORY_BTN}"
     above:
       id: "bottom_item_home"
 - extendedWaitUntil:
@@ -214,7 +214,7 @@ appId: ${APP_ID}
       id: "rvMainHistory"
     timeout: 20000
 - assertVisible:
-    text: "사용 내역"
+    text: "${CARD_EXPENSES_TEXT}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -373,9 +373,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "나중에 하기"
+      visible: "${ASK_ME_LATER_TEXT}"
     commands:
-      - tapOn: "나중에 하기"
+      - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
 # 재실행 시 지점 화면이 복원될 수 있으므로 홈까지 back으로 정리한다.
 # ⚠️ "앱을 종료하시겠습니까?" 처리는 반드시 `btnTransfer 미노출` 가드 **바깥**에 둘 것.
@@ -425,10 +425,10 @@ appId: ${APP_ID}
     visible:
       id: "txt_user_email"
     timeout: 15000
-- tapOn: "GME 소개"
+- tapOn: "${ABOUT_GME_TEXT}"
 - extendedWaitUntil:
     visible:
-      text: "업데이트 확인"
+      text: "${CHECK_FOR_UPDATE_TEXT}"
     timeout: 20000
 # 앱 버전 노출 확인 — `txvAppversion` = "7.19.1-livetest (719010) livetest" 형태.
 # 버전 문자열은 빌드마다 바뀌므로 id 노출만 검증한다(2026-08-13 구 UI 실측).
@@ -479,10 +479,10 @@ appId: ${APP_ID}
     visible:
       id: "txt_user_email"
     timeout: 15000
-- tapOn: "개인정보 처리 방침"
+- tapOn: "${COMMON_PRIVACY_POLICY_LABEL}"
 - extendedWaitUntil:
     visible:
-      text: "개인정보 처리방침"
+      text: "${PERSONAL_INFO_TREATMENT_POLICY}"
     timeout: 20000
 - pressKey: back
 - waitForAnimationToEnd
@@ -515,7 +515,7 @@ appId: ${APP_ID}
 - tapOn: "${REG_TERMS_TITLE}"
 - extendedWaitUntil:
     visible:
-      text: "전자금융거래 이용약관"
+      text: "${ELECTRONIC_FINANCE_TRANSATION_TERM}"
     timeout: 20000
 # ※ 이 화면은 back 1회로 홈까지 오지 않는다(2026-08-12 실측) → 조건부 back 반복으로 복귀.
 - repeat:
@@ -568,7 +568,7 @@ appId: ${APP_ID}
       id: "txt_user_email"
     timeout: 15000
 - tapOn:
-    text: "송금 받을 계좌"
+    text: "${COMMON_INBOUND_ACCOUNT_LABEL}"
     above:
       id: "bottom_item_home"
 - extendedWaitUntil:
@@ -618,7 +618,7 @@ appId: ${APP_ID}
       id: "txt_user_email"
     timeout: 15000
 - tapOn:
-    text: "설정"
+    text: "${CH_COMMON_SETTINGS}"
     above:
       id: "bottom_item_home"
 - waitForAnimationToEnd
@@ -626,7 +626,7 @@ appId: ${APP_ID}
     id: "txt_user_email"
 - extendedWaitUntil:
     visible:
-      text: "설정"
+      text: "${CH_COMMON_SETTINGS}"
     timeout: 20000
 # 설정 화면 구성(2026-08-13 구 UI 실측 — 개편 UI와 id 체계가 동일하다):
 #   view_change_password / view_change_pin_code / view_marketing(Switch) /
@@ -659,7 +659,7 @@ appId: ${APP_ID}
       id: "continueBtn"
     timeout: 20000
 - assertVisible:
-    text: "GME 회원 탈퇴"
+    text: "${DELETE_GME_ACCOUNT}"
 - assertVisible:
     id: "continueBtn"
     enabled: false
@@ -684,7 +684,7 @@ appId: ${APP_ID}
     id: "deleteBtn"
     enabled: false
 # 사유 선택 → 삭제 버튼 활성화 (사유 항목은 전부 id가 `checkbox`로 같아 텍스트로 지정한다)
-- tapOn: "보안 상의 우려"
+- tapOn: "${WITHDRAWAL_REASON6}"
 - assertVisible:
     id: "deleteBtn"
     enabled: true
@@ -754,7 +754,7 @@ appId: ${APP_ID}
     visible:
       id: "btn_diaog_ok"
     timeout: 20000
-- assertVisible: "'마케팅 푸시 알림 수신 동의'가 비활성화되었습니다."
+- assertVisible: "${MARKETING_DIS_AGREED}"
 - tapOn:
     id: "btn_diaog_ok"
 - waitForAnimationToEnd
@@ -768,7 +768,7 @@ appId: ${APP_ID}
     visible:
       id: "btn_diaog_ok"
     timeout: 20000
-- assertVisible: "'마케팅 푸시 알림 수신 동의'가 활성화되었습니다."
+- assertVisible: "${MARKETING_AGREED}"
 - tapOn:
     id: "btn_diaog_ok"
 - waitForAnimationToEnd
@@ -790,12 +790,12 @@ appId: ${APP_ID}
     visible:
       text: "${PIN_ENTER_4DIGIT}"
     timeout: 20000
-- assertVisible: "기존 간편 비밀번호"
+- assertVisible: "${CURRENT_ENTER_THE_LOCK}"
 # [X] → 취소 팝업 → 아니요: 팝업만 닫히고 키패드 화면 유지
 - tapOn: "${BTN_CLOSE}"
 - extendedWaitUntil:
     visible:
-      text: "간편 비밀번호 재설정을 그만하시겠습니까?"
+      text: "${CHANGE_LOCK_CODE_CANCEL}"
     timeout: 20000
 - tapOn:
     id: "btnCancel"
