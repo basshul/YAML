@@ -1078,18 +1078,51 @@ appId: ${APP_ID}
           id: "hintText"
       - tapOn:
           id: "galleryBtnImageView"
+      # ⚠️ 2026-09-14: 여기도 **OS 사진 피커가 갈린다** — 프로필 사진 경로(위)에 2026-09-09 에
+      #   넣은 분기가 이 신분증 경로에는 빠져 있었다(그날은 삼성 갤러리로 떠서 드러나지 않았다).
+      #   · 삼성 갤러리  → 썸네일 id `icon_thumbnail` + index
+      #   · Android 16 시스템 피커 → **id 없음 · 접근성 라벨도 매칭 불가** → 좌표뿐이다
+      #     (1080x2340 실측: index 0=16%,48% / 1=50%,48% / **2=83%,48%** / 3=16%,64%)
+      #   index 2 = 갤러리 3번째 = ID Card(`push_test_images.ps1` 배치 순서에 의존한다)
       - extendedWaitUntil:
-          visible:
-            id: "icon_thumbnail"
+          visible: "사진|Photos|icon_thumbnail"
           timeout: 20000
-      - tapOn:
-          id: "icon_thumbnail"
-          index: 2
+      - runFlow:
+          when:
+            visible:
+              id: "icon_thumbnail"
+          commands:
+            - tapOn:
+                id: "icon_thumbnail"
+                index: 2
+      - runFlow:
+          when:
+            notVisible:
+              id: "icon_thumbnail"
+          commands:
+            - tapOn:
+                point: "83%, 48%"
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible: "${REG_DONE_GALLERY}"
           timeout: 20000
       - tapOn: "${REG_DONE_GALLERY}"
+      # Android 16 피커 경로에서는 크롭 "완료"가 한 번에 안 먹는 경우가 있다(프로필 사진 쪽과 동일)
+      #   → OCR 결과 화면(`uploadPhoto`)에 도달할 때까지 완료를 다시 누른다.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "uploadPhoto"
+                commands:
+                  - runFlow:
+                      when:
+                        visible: "${REG_DONE_GALLERY}"
+                      commands:
+                        - tapOn: "${REG_DONE_GALLERY}"
+                        - waitForAnimationToEnd
       # OCR 결과 — 주민등록번호·이름이 등록 정보와 일치하는지
       - extendedWaitUntil:
           visible:
