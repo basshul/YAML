@@ -159,7 +159,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -171,7 +171,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -218,7 +218,7 @@ appId: ${APP_ID}
     visible:
       id: "contactus"
     timeout: 60000
-- assertVisible: "GME 텔레콤"
+- assertVisible: "${SCR_GME_TELECOM}"
 - assertVisible:
     id: "homebutton"
 - takeScreenshot: "[01-1]_텔레콤홈_진입"
@@ -269,7 +269,7 @@ appId: ${APP_ID}
 - assertVisible: ".*궁금한 점이 있으신가요.*"
 - assertVisible:
     id: "chatView"
-- assertVisible: "실시간 채팅"
+- assertVisible: "${SCR_LIVE_CHAT}"
 - takeScreenshot: "[02-1]_CS팝업_노출"
 # 🚫 `chatView`(실시간 채팅)는 누르지 않는다 — 실제 상담 채널이 열린다. 취소로 닫는다.
 - tapOn:
@@ -410,7 +410,7 @@ appId: ${APP_ID}
       visible:
         id: "agreeAllContainer"
     commands:
-      - assertVisible: "모두 동의합니다"
+      - assertVisible: "${REG_AGREE_ALL}"
       - tapOn:
           id: "agreeAllContainer"
       - waitForAnimationToEnd

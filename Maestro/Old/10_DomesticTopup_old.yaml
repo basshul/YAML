@@ -117,7 +117,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -129,7 +129,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"

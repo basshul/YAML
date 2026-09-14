@@ -137,7 +137,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -149,7 +149,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -164,14 +164,14 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "닫기"
+      visible: "${BTN_CLOSE}"
       # ⚠️ 맹목적 팝업 닫기 — 상세 사유는 07_TodaysRate_old.yaml 의 같은 블록 주석 참고.
       #   요약: 런처 이탈 사고 이력이 있으나, id로 안 닫히는 팝업이 남아 진입이 막힐 수 있어
       #   지우지 않고 **이미 홈에 도달했으면 누르지 않도록** 가드만 좁혔다.
       notVisible:
         id: "btnTransfer"
     commands:
-      - tapOn: "닫기"
+      - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -206,7 +206,7 @@ appId: ${APP_ID}
     timeout: 20000
 - assertVisible:
     id: "fullname"
-- assertVisible: "사용자 ID"
+- assertVisible: "${REG_USER_ID}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -302,7 +302,7 @@ appId: ${APP_ID}
     commands:
       - assertVisible:
           id: "passportNo"
-      - assertVisible: "신분증"
+      - assertVisible: "${REG_PASSPORT}"
       - assertVisible:
           id: "arcLayout"
       - assertVisible:

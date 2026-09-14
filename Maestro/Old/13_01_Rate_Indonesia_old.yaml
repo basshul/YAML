@@ -72,7 +72,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -84,7 +84,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -152,7 +152,7 @@ appId: ${APP_ID}
     text: "Indonesia"
 - assertNotVisible:
     text: "Mongolia"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 
 # ----------------------------------------------------------------
 # [03] [Low] Exchange Rate - 임의 국가 선택 시 국가 환율 계산페이지 노출 확인
@@ -303,9 +303,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 # 자동 복구: 그래도 메인화면이 아니면(Home이든 어디든) "해외송금 받기"로 재진입
 - runFlow:
@@ -394,7 +394,7 @@ appId: ${APP_ID}
       notVisible:
         text: "Budi Santoso"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
 # ── 2026-09-07 사양 변경(사용자 지시): **여기서 지우지 않고 남긴다** ──
 #   "송금인은 인도네시아·몽골·베트남 모두 등록하고, 베트남 송금인으로 정보 수정 케이스를,
 #    인도네시아 송금인으로 송금요청 신청 케이스를 확인. 모든 케이스 확인 후 등록된 모든 송금인 삭제."
@@ -428,9 +428,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:

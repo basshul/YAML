@@ -29,7 +29,7 @@ appId: ${APP_ID}
             - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "앱을 종료하시겠습니까?"
+      visible: "${HOME_EXIT_CONFIRM}"
     commands:
       - tapOn: "아니요|취소"
       - waitForAnimationToEnd

@@ -33,7 +33,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "재시도"
+      text: "${REG_RETRY}"
     timeout: 20000
 - tapOn: "완료"
 - extendedWaitUntil:
@@ -58,7 +58,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "재시도"
+      text: "${REG_RETRY}"
     timeout: 20000
 - tapOn: "완료"
 - extendedWaitUntil:
@@ -83,7 +83,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - extendedWaitUntil:
     visible:
-      text: "재시도"
+      text: "${REG_RETRY}"
     timeout: 20000
 - tapOn: "완료"
 - extendedWaitUntil:

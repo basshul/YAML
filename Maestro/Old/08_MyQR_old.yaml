@@ -107,7 +107,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -119,7 +119,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -418,8 +418,8 @@ appId: ${APP_ID}
     timeout: 20000
 # ⚠️ 실송금 조합이라 계좌를 **의도적으로 고정**한다 → 동적 선택 금지.
 #   대신 전제를 단언한다(연동 계좌 목록은 계정 상태에 따라 바뀐다).
-- assertVisible: "카카오뱅크"
-- tapOn: "카카오뱅크"
+- assertVisible: "${KFTC_BANK}"
+- tapOn: "${KFTC_BANK}"
 - extendedWaitUntil:
     visible:
       id: "qrimage"
@@ -475,7 +475,7 @@ appId: ${APP_ID}
     visible:
       id: "paymentSourceListRv"
     timeout: 20000
-- assertVisible: "출금 계좌를 선택하세요"
+- assertVisible: "${SCR_SELECT_WITHDRAW}"
 - assertVisible:
     id: "btn_ok"
 - tapOn:
@@ -500,7 +500,7 @@ appId: ${APP_ID}
     visible:
       id: "recipientAccountNoFormInputField"
     timeout: 30000
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 # QR에 담긴 값이 그대로 채워졌는지 — 은행 / 금액
 - assertVisible: ".*카카오뱅크.*"
 - assertVisible:
@@ -559,7 +559,7 @@ appId: ${APP_ID}
     visible:
       id: "txvDialogTitle"
     timeout: 60000
-- assertVisible: "성공"
+- assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible: ".*successfully send 1 KRW.*"
 - takeScreenshot: "[05-3]_송금성공"
 # ⚠️ 이 시트는 **id와 라벨이 어긋난다**(2026-08-20 실측):
@@ -660,8 +660,8 @@ appId: ${APP_ID}
             id: "rvKftcList"
           timeout: 20000
       # ⚠️ 실송금 조합이라 계좌 고정. 동적 선택 금지 — 전제만 단언한다.
-      - assertVisible: "카카오뱅크"
-      - tapOn: "카카오뱅크"
+      - assertVisible: "${KFTC_BANK}"
+      - tapOn: "${KFTC_BANK}"
       - extendedWaitUntil:
           visible:
             id: "qrimage"
@@ -673,7 +673,7 @@ appId: ${APP_ID}
 # 직전 케이스가 금액을 남겼을 수 있으므로 남아 있으면 지운다.
 - runFlow:
     when:
-      notVisible: "금액 입력"
+      notVisible: "${MYQR_ENTER_AMOUNT}"
     commands:
       - tapOn:
           id: "enteramount"
@@ -692,7 +692,7 @@ appId: ${APP_ID}
           visible:
             id: "qrimage"
           timeout: 20000
-- assertVisible: "금액 입력"
+- assertVisible: "${MYQR_ENTER_AMOUNT}"
 - takeScreenshot: "[06-1]_내QR_금액미입력_카카오뱅크"
 
 # ---- 금액 없는 QR 저장 ----
@@ -743,7 +743,7 @@ appId: ${APP_ID}
     visible:
       id: "recipientAccountNoFormInputField"
     timeout: 30000
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 # 계좌·은행은 자동으로 채워진다
 - assertVisible: ".*3333276033972.*"
 - assertVisible: ".*카카오뱅크.*"
@@ -790,7 +790,7 @@ appId: ${APP_ID}
     visible:
       id: "txvDialogTitle"
     timeout: 60000
-- assertVisible: "성공"
+- assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible: ".*successfully send 1 KRW.*"
 - takeScreenshot: "[06-4]_송금성공_금액직접입력"
 # `btnOk` = "영수증 보기"(라벨과 id가 어긋난다 — [05] 주석 참고)

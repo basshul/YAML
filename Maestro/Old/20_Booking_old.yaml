@@ -53,7 +53,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -91,14 +91,14 @@ appId: ${APP_ID}
 #                     ATM 출금 / 통신 서비스 / 증명서 발급 / 예약하기
 - scrollUntilVisible:
     element:
-      text: "예약하기"
+      text: "${TXT_RESERVATION}"
     direction: DOWN
     speed: 40
     visibilityPercentage: 100
     timeout: 15000
-- tapOn: "예약하기"
+- tapOn: "${TXT_RESERVATION}"
 - waitForAnimationToEnd
-- assertVisible: "기차표 예매"
+- assertVisible: "${SCR_TRAIN_TICKET}"
 - assertVisible: "예매 내역 조회"
 - tapOn: "예매 내역 조회"
 - waitForAnimationToEnd
@@ -124,14 +124,14 @@ appId: ${APP_ID}
 
 - scrollUntilVisible:
     element:
-      text: "예약하기"
+      text: "${TXT_RESERVATION}"
     direction: DOWN
     speed: 40
     visibilityPercentage: 100
     timeout: 15000
-- tapOn: "예약하기"
+- tapOn: "${TXT_RESERVATION}"
 - waitForAnimationToEnd
-- tapOn: "기차표 예매"
+- tapOn: "${SCR_TRAIN_TICKET}"
 - waitForAnimationToEnd
 # ⚠️ 2026-09-03: 예매 화면이 **백지로 뜨는 경우**가 있다(외부 WebView 로딩 실패).
 #   15초 대기로는 `"KTX"`를 못 잡고 죽었다 — 스크린샷이 완전히 빈 흰 화면이었다.
@@ -151,9 +151,9 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible:
-            text: "기차표 예매"
+            text: "${SCR_TRAIN_TICKET}"
           timeout: 20000
-      - tapOn: "기차표 예매"
+      - tapOn: "${SCR_TRAIN_TICKET}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -442,7 +442,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd

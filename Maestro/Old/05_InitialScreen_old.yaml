@@ -61,7 +61,7 @@ appId: ${APP_ID}
 # 서비스 이용 안내 화면 (앱 최초 실행 / clearState 후 조건부 노출)
 - runFlow:
     when:
-      visible: "서비스 이용 안내"
+      visible: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn:
           id: "btnConfirm"

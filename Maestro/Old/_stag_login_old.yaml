@@ -37,7 +37,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 - runFlow:
     when:
       notVisible:
-        text: "신규 회원"
+        text: "${REG_NEW_MEMBER}"
     commands:
       # 잠금화면 도달 확정
       - extendedWaitUntil:
@@ -54,7 +54,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 - runFlow:
     when:
       visible:
-        text: "신규 회원"
+        text: "${REG_NEW_MEMBER}"
     commands:
       - tapOn:
           id: "btn_lgn"
@@ -89,7 +89,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
     when:
       visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
     commands:
-      - tapOn: "나중에"
+      - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
 
 # 간편비밀번호 설정 (조건부)
@@ -122,7 +122,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 # 보이스 피싱 바텀시트 (조건부)
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"

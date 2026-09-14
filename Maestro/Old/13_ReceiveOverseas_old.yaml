@@ -68,7 +68,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -80,7 +80,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -148,7 +148,7 @@ appId: ${APP_ID}
     text: "Indonesia"
 - assertNotVisible:
     text: "Mongolia"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 
 # ----------------------------------------------------------------
 # [03] [Low] Exchange Rate - 임의 국가 선택 시 국가 환율 계산페이지 노출 확인
@@ -299,9 +299,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 # 자동 복구: 그래도 메인화면이 아니면(Home이든 어디든) "해외송금 받기"로 재진입
 - runFlow:
@@ -384,7 +384,7 @@ appId: ${APP_ID}
       notVisible:
         text: "Budi Santoso"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
 # ── 2026-09-07 사양 변경(사용자 지시): **여기서 지우지 않고 남긴다** ──
 #   "송금인은 인도네시아·몽골·베트남 모두 등록하고, 베트남 송금인으로 정보 수정 케이스를,
 #    인도네시아 송금인으로 송금요청 신청 케이스를 확인. 모든 케이스 확인 후 등록된 모든 송금인 삭제."
@@ -418,9 +418,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -470,7 +470,7 @@ appId: ${APP_ID}
 - inputText: "SENDER"
 - hideKeyboard
 - tapOn: "Gender"
-- tapOn: "남성"
+- tapOn: "${REG_MALE}"
 - waitForAnimationToEnd
 - tapOn: "DateOfBirth"
 - extendedWaitUntil:
@@ -582,7 +582,7 @@ appId: ${APP_ID}
       visible:
         text: "송금 받기를 요청하시겠습니까?"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - waitForAnimationToEnd
 # ⚠️⚠️ **수취인 목록은 길어서 화면에 렌더된 부분만 접근성 트리에 들어온다** (2026-08-20 실측)
 #   등록 직후 목록으로 돌아왔을 때 스크롤 위치가 상단이 아니면 **새로 등록된 행이 트리에 없어**
@@ -676,7 +676,7 @@ appId: ${APP_ID}
       visible:
         text: "송금 받기를 요청하시겠습니까?"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - waitForAnimationToEnd
 # ⚠️⚠️ **수취인 목록은 길어서 화면에 렌더된 부분만 접근성 트리에 들어온다** (2026-08-20 실측)
 #   등록 직후 목록으로 돌아왔을 때 스크롤 위치가 상단이 아니면 **새로 등록된 행이 트리에 없어**
@@ -742,7 +742,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 
 # 메인화면까지만 복귀 (자동 복구 포함 - [07] 참고)
 - runFlow:
@@ -769,9 +769,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -827,7 +827,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "header"
 # 취소 버튼 동작 확인 - 바텀시트 닫힘
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 - assertNotVisible:
     id: "header"
 # 다시 진입 후 확인(OK) 버튼 동작 확인 - 저장성공
@@ -844,7 +844,7 @@ appId: ${APP_ID}
       notVisible:
         text: "Test Sender2"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
 # 이 케이스에서 등록한 "Test Sender2"를 정리(삭제) - [07]과 동일한 이유
 # (목록 최상단을 차지해 이후 BUDI SANTOSO 탭을 방해하지 않도록)
 # ⚠️ **하단 플로팅 버튼("송금인 등록하기")이 slide-out 아이콘을 덮는다** (2026-08-20 구 UI 실측)
@@ -904,9 +904,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -1172,7 +1172,7 @@ appId: ${APP_ID}
       notVisible:
         text: "Delete Target"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
 # 목록 렌더 범위 문제 — 위 주석 참고. 스크롤로 찾아서 확인한다.
 - scrollUntilVisible:
     element:

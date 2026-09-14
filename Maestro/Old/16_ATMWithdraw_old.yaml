@@ -118,7 +118,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -130,7 +130,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -165,16 +165,16 @@ appId: ${APP_ID}
 # 홈 서비스 그리드는 비동기 로딩이다 → 항목이 실제로 그려질 때까지 기다린다.
 - scrollUntilVisible:
     element:
-      text: "ATM 출금"
+      text: "${TXT_ATM}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
-- tapOn: "ATM 출금"
+- tapOn: "${TXT_ATM}"
 - extendedWaitUntil:
     visible:
       id: "atmWithdrawalFirstTimeGuide"
     timeout: 40000
-- assertVisible: "출금 금액"
+- assertVisible: "${SCR_ATM_AMOUNT}"
 - assertVisible:
     id: "walletBalance"
 - takeScreenshot: "[00]_ATM출금_진입"
@@ -204,7 +204,7 @@ appId: ${APP_ID}
     visible:
       id: "atmWithdrawalFirstTimeGuide"
     timeout: 20000
-- assertVisible: "출금 금액"
+- assertVisible: "${SCR_ATM_AMOUNT}"
 - takeScreenshot: "[01-2]_ATM출금_복귀"
 
 # ================================================================
@@ -374,11 +374,11 @@ appId: ${APP_ID}
           commands:
             - scrollUntilVisible:
                 element:
-                  text: "ATM 출금"
+                  text: "${TXT_ATM}"
                 direction: DOWN
                 timeout: 25000
                 visibilityPercentage: 20
-            - tapOn: "ATM 출금"
+            - tapOn: "${TXT_ATM}"
             - extendedWaitUntil:
                 visible:
                   id: "historyLayout"

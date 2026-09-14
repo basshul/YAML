@@ -24,7 +24,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 
 - extendedWaitUntil:
     visible:
-      text: "신규 회원"
+      text: "${REG_NEW_MEMBER}"
     timeout: 40000
 
 - tapOn:

@@ -97,7 +97,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -109,7 +109,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -155,7 +155,7 @@ appId: ${APP_ID}
     visible:
       id: "toolbar_title"
     timeout: 20000
-- assertVisible: "계좌"
+- assertVisible: "${TXT_ACCOUNT}"
 - assertVisible:
     id: "transactionTabLayout"
 - assertVisible: "Wallet 거래내역"
@@ -167,7 +167,7 @@ appId: ${APP_ID}
     visible:
       id: "txvBalance"
     timeout: 90000
-- assertVisible: "잔액"
+- assertVisible: "${TXT_BALANCE}"
 - assertVisible:
     id: "txvTranAmount"
 - assertVisible:

@@ -30,7 +30,7 @@ appId: ${APP_ID}
     when:
       visible: "${LANG_SWITCH_TRIGGER}"
     commands:
-      - tapOn: "언어 선택"
+      - tapOn: "${INIT_SELECT_LANGUAGE}"
       - waitForAnimationToEnd
       - tapOn: "${LANG_SWITCH_TARGET}"
       - waitForAnimationToEnd

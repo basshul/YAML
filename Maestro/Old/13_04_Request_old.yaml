@@ -72,7 +72,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -84,7 +84,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -171,7 +171,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 
 # 메인화면까지만 복귀 (자동 복구 포함 - [07] 참고)
 - runFlow:
@@ -198,9 +198,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -262,7 +262,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "header"
 # 취소 버튼 동작 확인 - 바텀시트 닫힘
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 - assertNotVisible:
     id: "header"
 # 다시 진입 후 확인(OK) 버튼 동작 확인 - 저장성공
@@ -279,7 +279,7 @@ appId: ${APP_ID}
       notVisible:
         text: "Test Sender2"
     commands:
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
 # 이 케이스에서 등록한 "Test Sender2"를 정리(삭제) - [07]과 동일한 이유
 # (목록 최상단을 차지해 이후 BUDI SANTOSO 탭을 방해하지 않도록)
 # ⚠️ **하단 플로팅 버튼("송금인 등록하기")이 slide-out 아이콘을 덮는다** (2026-08-20 구 UI 실측)
@@ -357,9 +357,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "앱을 종료하시겠습니까?"
+        text: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:

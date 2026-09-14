@@ -100,7 +100,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -112,7 +112,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -209,7 +209,7 @@ appId: ${APP_ID}
 - assertVisible:
     text: "6자 이상으로 입력해 주세요"
 - assertVisible:
-    text: "계속"
+    text: "${MYQR_CONTINUE}"
     enabled: false
 - takeScreenshot: "shots_11_intltopup_old/02_번호오류"
 - tapOn:
@@ -232,11 +232,11 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - extendedWaitUntil:
     visible:
-      text: "계속"
+      text: "${MYQR_CONTINUE}"
       enabled: true
     timeout: 90000
 - tapOn:
-    text: "계속"
+    text: "${MYQR_CONTINUE}"
     enabled: true
 - extendedWaitUntil:
     visible:
@@ -300,11 +300,11 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - extendedWaitUntil:
     visible:
-      text: "계속"
+      text: "${MYQR_CONTINUE}"
       enabled: true
     timeout: 90000
 - tapOn:
-    text: "계속"
+    text: "${MYQR_CONTINUE}"
     enabled: true
 # 결제확인 바텀시트 → GME Wallet로 결제
 - extendedWaitUntil:

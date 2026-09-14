@@ -97,7 +97,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -109,7 +109,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -162,12 +162,12 @@ appId: ${APP_ID}
 #   → **그리드 마지막 항목("예약하기")이 보일 때까지** 스크롤해야 전체가 로드·표시된 것이다.
 - scrollUntilVisible:
     element:
-      text: "예약하기"
+      text: "${TXT_RESERVATION}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
 # 그리드가 끝까지 로드됐다는 근거
-- assertVisible: "예약하기"
+- assertVisible: "${TXT_RESERVATION}"
 - takeScreenshot: "[01-1]_홈_서비스그리드_최하단"
 # 핵심 검증: 개인 금융 미노출
 # ⚠️ **이 파일의 유일한 케이스가 `assertNotVisible` 하나다** → 문구가 틀리면 아무것도 검증하지

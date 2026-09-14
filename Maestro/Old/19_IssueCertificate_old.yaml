@@ -67,7 +67,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -79,7 +79,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -126,12 +126,12 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "증명서 발급"
+      text: "${TXT_CERTIFICATE}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
     centerElement: true
-- tapOn: "증명서 발급"
+- tapOn: "${TXT_CERTIFICATE}"
 - extendedWaitUntil:
     visible:
       text: "외국인등록사실증명"
@@ -186,12 +186,12 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "증명서 발급"
+      text: "${TXT_CERTIFICATE}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
     centerElement: true
-- tapOn: "증명서 발급"
+- tapOn: "${TXT_CERTIFICATE}"
 - extendedWaitUntil:
     visible:
       text: "소득금액증명"
@@ -258,12 +258,12 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "증명서 발급"
+      text: "${TXT_CERTIFICATE}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
     centerElement: true
-- tapOn: "증명서 발급"
+- tapOn: "${TXT_CERTIFICATE}"
 - extendedWaitUntil:
     visible:
       text: "주민등록초본"
@@ -328,12 +328,12 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "증명서 발급"
+      text: "${TXT_CERTIFICATE}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
     centerElement: true
-- tapOn: "증명서 발급"
+- tapOn: "${TXT_CERTIFICATE}"
 - extendedWaitUntil:
     visible:
       text: "주민등록등본"

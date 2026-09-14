@@ -44,7 +44,7 @@ appId: ${APP_ID}
 # 서비스 이용 안내 팝업 (조건부)
 - runFlow:
     when:
-      visible: "서비스 이용 안내"
+      visible: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn:
           id: "btnConfirm"

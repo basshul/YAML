@@ -44,7 +44,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -73,9 +73,9 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "나중에"
+        text: "${REG_LATER}"
     commands:
-      - tapOn: "나중에"
+      - tapOn: "${REG_LATER}"
 # 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
 - runFlow:
     when:
@@ -99,7 +99,7 @@ appId: ${APP_ID}
 #   (Maestro 텍스트는 전체매칭) → **id로 판정**. 홈 타일에도 "거래 내역"이 있어 텍스트는 모호하다.
 - tapOn:
     id: "bottom_item_history"
-- tapOn: "송금"
+- tapOn: "${SCR_HISTORY}"
 - tapOn: "예약 송금 내역"
 - runFlow:
     when:
@@ -113,7 +113,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - tapOn: "예"
 - runFlow:
     when:
@@ -121,7 +121,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - tapOn: "예"
 - runFlow:
     when:
@@ -129,7 +129,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - tapOn: "예"
 - runFlow:
     when:
@@ -137,7 +137,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - tapOn: "예"
 - runFlow:
     when:
@@ -145,7 +145,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - tapOn: "예"
 
 # 홈 복귀: launchApp으로 확실한 홈 진입 (back 횟수가 예약 상태에 따라 달라짐)
@@ -183,10 +183,10 @@ appId: ${APP_ID}
 # ⚠️ 예약 탭에는 **이름이 같은 다른 수취인 `GME TEST`(몽골 / Moru / 모바일 월렛)** 가 이미 있다.
 #   이름으로는 구분이 안 되므로 잔류 판정·검증은 **`COMMERCIAL BANK`(유일)** 로 한다.
 # ⚠️ 예약 목록은 **최근 추가가 맨 위**라 방금 추가분은 항상 index 0이다(실측). 잔류분도 마찬가지.
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - runFlow:
@@ -228,7 +228,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취인을 선택하세요."
+        text: "${SCR_SELECT_RECIPIENT}"
     commands:
       - pressKey: back
 
@@ -287,7 +287,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       notVisible:
-        text: "수취인을 선택하세요."
+        text: "${SCR_SELECT_RECIPIENT}"
     commands:
       - pressKey: back
       
@@ -299,10 +299,10 @@ appId: ${APP_ID}
 # 사전 정리: SCHEDULE TRANSFER TEST 수취인이 있으면 삭제 시도
 # - 예약 없음: btn_yes(예) → 삭제 완료
 # - 예약 있음: btn_diaog_ok(확인) → 삭제 불가 팝업 닫기 → 기존 수취인 유지
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - runFlow:
@@ -353,7 +353,7 @@ appId: ${APP_ID}
           index: 1
       # 송금방법: 현금 지급
       - tapOn: "송금 방법을 선택하세요"
-      - tapOn: "현금 지급"
+      - tapOn: "${INIT_TAB_CASH}"
       # 은행/에이전트: MoneyGram
       - tapOn:
           id: "recieverBankSelectionFormInputField"
@@ -430,7 +430,7 @@ appId: ${APP_ID}
 # 예약 수취인 목록 확인
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - assertVisible:
     text: "SCHEDULE TRANSFER TEST"
@@ -438,10 +438,10 @@ appId: ${APP_ID}
 # ================================================================
 # [06] 예약 탭 - 수취인 화면 필터(설정) 동작 확인
 # ================================================================
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - tapOn:
@@ -468,17 +468,17 @@ appId: ${APP_ID}
 - pressKey: back
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 
 
 # ================================================================
 # [시나리오 1] KFTC 예약 - 매달 Step 1~3 확인 후 1회 Step 1~3 확인
 # ================================================================
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - tapOn:
@@ -588,10 +588,10 @@ appId: ${APP_ID}
 # ================================================================
 # [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 성공
 # ================================================================
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - tapOn:
@@ -626,7 +626,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "서비스 이용 안내"
+        text: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn: "동의"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
@@ -669,7 +669,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "서비스 이용 안내"
+        text: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn: "동의"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
@@ -683,7 +683,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 # 예약 성공 확인
 - assertVisible:
-    text: "성공"
+    text: "${LOGIN_SUCCESS}"
 - assertVisible:
     text: ".*첫 번째 예약 송금.*"
 
@@ -726,10 +726,10 @@ appId: ${APP_ID}
 # [시나리오 3] 준비 - 기존 수취인(GME TEST / 스리랑카)을 예약 탭에 추가
 #   ⚠️ 종전 `TESTUPDATE GME`은 존재하지 않는 수취인이었다 — 사전 정리 Step 2 주석 참고.
 # ================================================================
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 - tapOn: "수취인 추가하기"
@@ -798,7 +798,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "서비스 이용 안내"
+        text: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn: "동의"
 # PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
@@ -812,12 +812,12 @@ appId: ${APP_ID}
 - tapOn: "2"
 # 예약 성공 확인
 - assertVisible:
-    text: "성공"
+    text: "${LOGIN_SUCCESS}"
 - assertVisible:
     text: ".*첫 번째 예약 송금.*"
 
 # --- 사후 정리: 활성 예약 모두 취소 ([시나리오 2] + [시나리오 3]) ---
-- tapOn: "영수증 보기"
+- tapOn: "${MYQR_VIEW_RECEIPT}"
 - assertVisible:
     text: "예약 송금 내역"
 - runFlow:
@@ -832,7 +832,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -842,7 +842,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -852,7 +852,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -862,7 +862,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -872,7 +872,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -889,7 +889,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -899,7 +899,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -909,7 +909,7 @@ appId: ${APP_ID}
         text: "송금이 예약되었습니다."
     commands:
       - scroll
-      - tapOn: "취소"
+      - tapOn: "${TXT_CANCEL}"
       - assertVisible:
           text: "송금 예약을 취소하시겠습니까?"
       - tapOn: "예"
@@ -936,10 +936,10 @@ appId: ${APP_ID}
 
 # 사후 정리: 예약 수취인 목록에서 삭제
 # (GME TEST(스리랑카)가 index 0 = 최신, SCHEDULE TRANSFER TEST가 index 1)
-- tapOn: "해외송금"
+- tapOn: "${TXT_OVERSEAS_REMIT}"
 - extendedWaitUntil:
     visible:
-      text: "수취인을 선택하세요."
+      text: "${SCR_SELECT_RECIPIENT}"
     timeout: 10000
 - tapOn: "예약"
 # GME TEST(스리랑카) 먼저 삭제 (index 0). 판정은 유일한 `COMMERCIAL BANK`로 한다.

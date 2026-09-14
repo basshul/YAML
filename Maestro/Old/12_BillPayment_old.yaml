@@ -113,7 +113,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -125,7 +125,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -235,14 +235,14 @@ appId: ${APP_ID}
 - assertVisible:
     id: "searchEditText"
 - takeScreenshot: "shots_12_billpayment_old/04_청구인리스트"
-- tapOn: "모바일 충전"
+- tapOn: "${TXT_MOBILE_CHARGE}"
 
 # ----------------------------------------------------------------
 # [05] Biller별 입력 필드 노출 확인 (모바일 충전 → "휴대폰 번호")
 # ----------------------------------------------------------------
 - extendedWaitUntil:
     visible:
-      text: "휴대폰 번호"
+      text: "${REG_PHONE}"
     timeout: 15000
 - takeScreenshot: "shots_12_billpayment_old/05_입력필드"
 
@@ -251,7 +251,7 @@ appId: ${APP_ID}
 #   ★ 실제 결제 방지: 간편비번 화면 도달만 확인하고 **PIN을 입력하지 않는다**.
 #   비고(필수) 미입력 시 "진행" 비활성 → "TEST" 입력.
 # ----------------------------------------------------------------
-- tapOn: "휴대폰 번호"
+- tapOn: "${REG_PHONE}"
 - inputText: "9847266238"
 - hideKeyboard
 # 번호 검증 → NTC PREPAID 인식

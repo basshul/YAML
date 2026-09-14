@@ -83,7 +83,7 @@ env:
 # 서비스 이용 안내(최초 실행/clearState 후) → 확인 → OS 권한 허용
 - runFlow:
     when:
-      visible: "서비스 이용 안내"
+      visible: "${INIT_SERVICE_GUIDE}"
     commands:
       - tapOn:
           id: "btnConfirm"
@@ -148,7 +148,7 @@ env:
     when:
       visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
     commands:
-      - tapOn: "나중에"
+      - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -189,7 +189,7 @@ env:
 # ----------------------------------------------------------------
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"

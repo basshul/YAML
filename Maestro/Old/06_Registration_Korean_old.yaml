@@ -57,7 +57,7 @@ appId: ${APP_ID}
     when:
       visible: "${LANG_SWITCH_TRIGGER}"
     commands:
-      - tapOn: "언어 선택"
+      - tapOn: "${INIT_SELECT_LANGUAGE}"
       - waitForAnimationToEnd
       - tapOn: "${LANG_SWITCH_TARGET}"
       - waitForAnimationToEnd
@@ -476,7 +476,7 @@ appId: ${APP_ID}
 - inputText: "kakao"
 - waitForAnimationToEnd
 - takeScreenshot: "[25-1b]_kakao검색결과"
-- tapOn: "카카오뱅크"
+- tapOn: "${KFTC_BANK}"
 - waitForAnimationToEnd
 - takeScreenshot: "[25-2]_KakaoBank_선택"
 

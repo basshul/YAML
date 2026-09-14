@@ -111,7 +111,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -124,7 +124,7 @@ appId: ${APP_ID}
 # 로그인 직후 팝업들(순서 무관, 조건부)
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -139,14 +139,14 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "닫기"
+      visible: "${BTN_CLOSE}"
       # ⚠️ 맹목적 팝업 닫기 — 상세 사유는 07_TodaysRate_old.yaml 의 같은 블록 주석 참고.
       #   요약: 런처 이탈 사고 이력이 있으나, id로 안 닫히는 팝업이 남아 진입이 막힐 수 있어
       #   지우지 않고 **이미 홈에 도달했으면 누르지 않도록** 가드만 좁혔다.
       notVisible:
         id: "btnTransfer"
     commands:
-      - tapOn: "닫기"
+      - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 # 홈 진입 확인
 # ⚠️ 종전엔 `btnTransfer`만 30초 기다렸다. 2026-09-02 스위트 실행에서 이게 **20스텝에서 FAILED**로 죽었다
@@ -271,13 +271,13 @@ appId: ${APP_ID}
 #     줄바꿈을 포함해 정규식 ".*"로 이어준다.
 - scrollUntilVisible:
     element:
-      text: "예약하기"
+      text: "${TXT_RESERVATION}"
     direction: DOWN
     timeout: 10000
 - assertVisible:
-    text: "해외송금"
+    text: "${TXT_OVERSEAS_REMIT}"
 - assertVisible:
-    text: "국내 송금"
+    text: "${SCR_DOMESTIC_REMIT}"
 - assertVisible:
     text: "오늘의 환율"
 - assertVisible:
@@ -285,17 +285,17 @@ appId: ${APP_ID}
 - assertVisible:
     text: "해외송금.*받기"
 - assertVisible:
-    text: "입금"
+    text: "${TXT_DEPOSIT}"
 - assertVisible:
-    text: "ATM 출금"
+    text: "${TXT_ATM}"
 - assertVisible:
     text: "GME Wallet.*거래내역"
 - assertVisible:
     text: "통신 서비스"
 - assertVisible:
-    text: "증명서 발급"
+    text: "${TXT_CERTIFICATE}"
 - assertVisible:
-    text: "예약하기"
+    text: "${TXT_RESERVATION}"
 # ⚠️ test123(외국인)에서도 "개인 금융" **미노출** — 조건 불명 (2026-08-13 실측)
 #   "외국인 계정에서만 추가된다"(2026-08-12 기록)는 test123에서 재현되지 않았다.
 #   홈 최하단까지 스크롤한 uiautomator 덤프 기준 그리드는 위 11종뿐이고 "금융"/"대출" 텍스트가 없다.
@@ -305,10 +305,10 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "개인 금융"
+        text: "${TXT_PERSONAL_FINANCE}"
     commands:
       - assertVisible:
-          text: "개인 금융"
+          text: "${TXT_PERSONAL_FINANCE}"
 
 # 최상단 복귀
 - scrollUntilVisible:
@@ -394,7 +394,7 @@ appId: ${APP_ID}
     text: "QR을 사용하여 보내기 또는 받기"
 - assertVisible:
     id: "btnTransfer"
-    text: "지금 송금하기"
+    text: "${RATE_SEND_BTN}"
 - assertVisible:
     id: "txvDepositOrViewStatement"
     text: "받기"
@@ -406,7 +406,7 @@ appId: ${APP_ID}
     id: "txvWalletNumberTitle"
 - assertVisible:
     id: "btnTransfer"
-    text: "송금"
+    text: "${SCR_HISTORY}"
 
 # ----------------------------------------------------------------
 # [05] [High] 알림 아이콘 탭 → 공지사항/알림 화면 이동 확인
@@ -418,7 +418,7 @@ appId: ${APP_ID}
     id: "noticeView"
 - extendedWaitUntil:
     visible:
-      text: "공지사항"
+      text: "${SCR_NOTIFICATION}"
     timeout: 15000
 - assertVisible:
     text: "알림"
@@ -517,9 +517,9 @@ appId: ${APP_ID}
     id: "btnTransfer"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "해외송금"
+    text: "${TXT_OVERSEAS_REMIT}"
 - assertVisible:
-    text: "국내 송금"
+    text: "${SCR_DOMESTIC_REMIT}"
 - assertVisible:
     id: "llLocalTransfer"
 # 시트 밖 탭으로 닫기(back보다 안전 — 시트가 back을 소비하지 않는 화면이 섞여 있음)
@@ -568,11 +568,11 @@ appId: ${APP_ID}
       text: "오늘의 환율"
     timeout: 15000
 - assertVisible:
-    text: "송금 방법 선택"
+    text: "${RATE_PAYMENT_METHOD}"
 - assertVisible:
-    text: "송금할 금액"
+    text: "${RATE_SEND_AMOUNT}"
 - assertVisible:
-    text: "현재 환율"
+    text: "${RATE_CURRENT}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
@@ -587,11 +587,11 @@ appId: ${APP_ID}
     id: "llChatCardView"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "사용 중 궁금한 점이 있으신가요?"
+    text: "${SCR_SUPPORT_Q}"
 - assertVisible:
     id: "chatView"
 - assertVisible:
-    text: "실시간 채팅"
+    text: "${SCR_LIVE_CHAT}"
 # ⚠️ **채널 구성과 대표번호를 문자열로 박지 말 것** — 서버가 바꾼다(2026-09-03 실측).
 #   `"Kakao"`로 기다리고 있었으나 실제 목록은 Facebook / Instagram / **Telegram** 이고 Kakao는 없다.
 #   대표번호도 1811-2961 → 1811-2904 → **1811-2927** 로 두 번 바뀌었다
@@ -629,7 +629,7 @@ appId: ${APP_ID}
 - assertVisible:
     text: "송금 받을 계좌"
 - assertVisible:
-    text: "지점"
+    text: "${INIT_BRANCH_TITLE}"
 - assertVisible:
     text: "GME 소개"
 - assertVisible:
@@ -637,9 +637,9 @@ appId: ${APP_ID}
 - assertVisible:
     text: "개인정보 처리 방침"
 - assertVisible:
-    text: "이용약관"
+    text: "${REG_TERMS_TITLE}"
 - assertVisible:
-    text: "로그아웃"
+    text: "${REG_LOGOUT}"
 # 드로어 닫기
 #   ⚠️ back은 드로어를 닫으면서 액티비티까지 전파돼 "앱을 종료하시겠습니까?"가 뜬다.
 #   드로어 위에서 왼쪽 스와이프도 닫히지 않았다(둘 다 2026-08-11 실측).
@@ -650,9 +650,9 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "앱을 종료하시겠습니까?"
+      visible: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - assertNotVisible:
     id: "txt_user_email"
@@ -705,9 +705,9 @@ appId: ${APP_ID}
           commands:
             - runFlow:
                 when:
-                  visible: "앱을 종료하시겠습니까?"
+                  visible: "${HOME_EXIT_CONFIRM}"
                 commands:
-                  - tapOn: "아니요"
+                  - tapOn: "${REG_NO}"
                   - waitForAnimationToEnd
             - runFlow:
                 when:

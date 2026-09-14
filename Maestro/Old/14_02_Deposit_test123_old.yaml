@@ -67,7 +67,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -110,7 +110,7 @@ appId: ${APP_ID}
             - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -148,16 +148,16 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - scrollUntilVisible:
     element:
-      text: "로그아웃"
+      text: "${REG_LOGOUT}"
     direction: DOWN
     timeout: 15000
-- tapOn: "로그아웃"
+- tapOn: "${REG_LOGOUT}"
 - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "예"
+      visible: "${REG_LOGOUT_CONFIRM}"
     commands:
-      - tapOn: "예"
+      - tapOn: "${REG_LOGOUT_CONFIRM}"
       - waitForAnimationToEnd
 # ⚠️ **구 UI는 로그아웃 후 ID/비밀번호 폼이 아니라 PIN 잠금화면(`ActivityLockScreen`)으로 떨어진다**
 #   (2026-08-25 실측. 개편UI판은 곧바로 `usernameId` 폼을 전제해 여기서 FAILED로 죽었다).
@@ -220,7 +220,7 @@ appId: ${APP_ID}
     when:
       visible: "비밀번호 대신 지문인증을 사용하시겠습니까?"
     commands:
-      - tapOn: "나중에"
+      - tapOn: "${REG_LATER}"
       - waitForAnimationToEnd
 - runFlow:
     when:
@@ -253,7 +253,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -368,7 +368,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "tv_easywallet_account_title"
 - waitForAnimationToEnd
-- assertVisible: "은행 선택"
+- assertVisible: "${REG_SELECT_BANK}"
 - tapOn:
     id: "btnBackImage"
 - waitForAnimationToEnd
@@ -525,7 +525,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - waitForAnimationToEnd
 - assertVisible: "입금 요청"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - tapOn: "예"
 - waitForAnimationToEnd
@@ -601,7 +601,7 @@ appId: ${APP_ID}
 - tapOn: "완료"
 - waitForAnimationToEnd
 - assertVisible: "입금 요청"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - tapOn: "예"
 - waitForAnimationToEnd
@@ -698,7 +698,7 @@ appId: ${APP_ID}
 - assertVisible: "기간 선택"
 - assertVisible: "시작 :"
 - assertVisible: "종료 :"
-- tapOn: "취소"
+- tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "iv_calendar"

@@ -69,7 +69,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -81,7 +81,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -161,7 +161,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - tapOn: "^송금$"
 - waitForAnimationToEnd
-- assertVisible: "해외송금"
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
 # [01] [High] History - Remittance - 해외송금 상세페이지 재송금(Send Money) 동작 확인
@@ -184,7 +184,7 @@ appId: ${APP_ID}
     visible:
       text: "송금 방법"
     timeout: 15000
-- tapOn: "재송금"
+- tapOn: "${TXT_RESEND}"
 # 재송금 뒤 나오는 화면이 **수취인 상태에 따라 갈린다** (2026-09-03 실측으로 확정).
 #   ① 수취인이 비활성이면 "수취인 활성화" 확인 다이얼로그(예/아니요)가 뜬다 — 종전 코드가 가정한 경로.
 #   ② 수취인이 활성이면 그 단계가 없고 **`출금 계좌를 선택하세요` 바텀시트로 직행**한다.
@@ -196,23 +196,23 @@ appId: ${APP_ID}
     timeout: 30000
 - runFlow:
     when:
-      visible: "아니요"
+      visible: "${REG_NO}"
     commands:
-      - tapOn: "아니요"
+      - tapOn: "${REG_NO}"
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "출금 계좌를 선택하세요"
+      visible: "${SCR_SELECT_WITHDRAW}"
     commands:
       # ⛔ 계좌를 고르면 **실제 재송금 절차로 들어간다** → 무조건 닫기만 한다.
       - pressKey: back
       - waitForAnimationToEnd
 # 어느 갈래였든 시트/다이얼로그가 닫혔는지 확인한 뒤 목록으로 나간다
-- assertNotVisible: "출금 계좌를 선택하세요"
+- assertNotVisible: "${SCR_SELECT_WITHDRAW}"
 - waitForAnimationToEnd
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "해외송금"
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
 # [02] [Medium] History - Remittance - 해외송금 Wallet 송금내역 재송금 - BLOCKED
@@ -281,7 +281,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "해외송금"
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
 # [05] [Low] History - Remittance - 해외송금 영수증 다운로드 동작 확인
@@ -315,7 +315,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "해외송금"
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
 # [06] [Low] History - Remittance - 해외송금 이력 다운로드 동작 확인 - BLOCKED
@@ -430,7 +430,7 @@ appId: ${APP_ID}
 # 상태배지("성공") index:0 로 상세 진입. 검색도 첫 행 수취인명을 런타임에 읽어 쓴다.
 # ================================================================
 - tapOn:
-    text: "국내 송금"
+    text: "${SCR_DOMESTIC_REMIT}"
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -501,7 +501,7 @@ appId: ${APP_ID}
 # [12] [Medium] History - Remittance - 국내송금 상세페이지 확인
 # ----------------------------------------------------------------
 - tapOn:
-    text: "성공"
+    text: "${LOGIN_SUCCESS}"
     index: 0
 - waitForAnimationToEnd
 - runFlow:
@@ -524,7 +524,7 @@ appId: ${APP_ID}
 #            - 상세 진입 > 영수증 > PDF 연결 프로그램(앱 선택창) 노출 확인
 # ----------------------------------------------------------------
 - tapOn:
-    text: "성공"
+    text: "${LOGIN_SUCCESS}"
     index: 0
 - waitForAnimationToEnd
 - runFlow:
@@ -547,7 +547,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - pressKey: back
 - waitForAnimationToEnd
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 
 # ----------------------------------------------------------------
 # [14] [Low] History - Remittance - 국내송금 이력 다운로드 동작 확인 - BLOCKED
@@ -569,7 +569,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 
 # ================================================================
 # 송금 받기(인바운드) 탭 (상단 탭 전환)
@@ -591,9 +591,9 @@ appId: ${APP_ID}
 #   ⚠️ 요청은 **72시간 만료**다(실측: 09-04 10:31 등록 → 만료 09-07 10:31). 사흘 넘게 방치한
 #      계정으로 04만 다시 돌리면 데이터가 사라져 있다 → 13을 다시 돌려 만든다.
 - tapOn:
-    text: "송금 받기"
+    text: "${SCR_RECEIVE_REMIT}"
 - waitForAnimationToEnd
-- assertVisible: "송금 받기"
+- assertVisible: "${SCR_RECEIVE_REMIT}"
 # 전제 데이터 도달을 먼저 강제한다(서버 조회 응답 대기). 여기서 죽으면 13 선행이 빠진 것이다.
 - extendedWaitUntil:
     visible:
@@ -613,7 +613,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "송금 받기"
+- assertVisible: "${SCR_RECEIVE_REMIT}"
 # 13이 방금 만든 요청은 1개월 안에 있으므로 필터를 좁혀도 남아 있어야 한다.
 #   ⚠️ 탭 제목("송금 받기")만 보던 종전 assert 는 필터가 아무 일도 안 해도 통과했다.
 - extendedWaitUntil:
@@ -747,9 +747,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
-- assertVisible: "계좌"
+- assertVisible: "${TXT_ACCOUNT}"
 - tapOn:
-    text: "계좌"
+    text: "${TXT_ACCOUNT}"
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -759,7 +759,7 @@ appId: ${APP_ID}
 - assertVisible: "Wallet 거래내역"
 - extendedWaitUntil:
     visible:
-      text: "잔액"
+      text: "${TXT_BALANCE}"
     timeout: 150000
 
 # ----------------------------------------------------------------
@@ -916,7 +916,7 @@ appId: ${APP_ID}
 - assertVisible: "모든 거래"
 - extendedWaitUntil:
     visible:
-      text: "잔액"
+      text: "${TXT_BALANCE}"
     timeout: 60000
 
 # ----------------------------------------------------------------
@@ -1032,7 +1032,7 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [30] [Medium] History - Top-up - Domestic(국내 송금) Topup 리스트 노출 확인
 # ----------------------------------------------------------------
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 - extendedWaitUntil:
     visible:
       id: "tv_amount"
@@ -1050,7 +1050,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "search"
 - waitForAnimationToEnd
-- assertVisible: "국내 송금"
+- assertVisible: "${SCR_DOMESTIC_REMIT}"
 
 # ----------------------------------------------------------------
 # [32] [Medium] History - Top-up - Domestic Topup 검색 동작 확인
@@ -1152,9 +1152,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
-- assertVisible: "청구서"
+- assertVisible: "${SCR_BILL}"
 - tapOn:
-    text: "청구서"
+    text: "${SCR_BILL}"
 - waitForAnimationToEnd
 # ⚠️ **진입 시 서버 오류 다이얼로그가 뜰 때가 있다 (2026-08-19 실측, 간헐적)**
 #   txt_dialog_title "오류 - (06640154622502)" / txt_dialog_message
@@ -1187,7 +1187,7 @@ appId: ${APP_ID}
       - tapOn:
           id: "iv_back"
       - waitForAnimationToEnd
-      - tapOn: "청구서"
+      - tapOn: "${SCR_BILL}"
       - waitForAnimationToEnd:
           timeout: 30000
 

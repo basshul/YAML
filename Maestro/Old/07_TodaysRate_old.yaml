@@ -96,7 +96,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        text: "4자리 숫자를 입력하세요"
+        text: "${PIN_ENTER_4DIGIT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -108,7 +108,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "보이스 피싱 주의"
+      visible: "${REG_VOICE_PHISHING}"
     commands:
       - tapOn:
           id: "check_customer"
@@ -136,7 +136,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "닫기"
+      visible: "${BTN_CLOSE}"
       # ⚠️ 맹목적 팝업 닫기다 — 무엇이 떠 있는지 모른 채 아무 X나 누른다.
       #   2026-08-25에 엉뚱한 X를 눌러 **앱이 런처로 빠져나간** 사고가 있었다.
       #   지우지 않는 이유: 앞의 id 기반 핸들러(`btnTwo|btnClose` 등)로 닫히지 않는 팝업이
@@ -145,7 +145,7 @@ appId: ${APP_ID}
       notVisible:
         id: "btnTransfer"
     commands:
-      - tapOn: "닫기"
+      - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
