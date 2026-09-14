@@ -1349,7 +1349,7 @@ appId: ${APP_ID}
     when:
       visible: "${BOK_OVERSEAS_REMITTANCE_ERROR}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:

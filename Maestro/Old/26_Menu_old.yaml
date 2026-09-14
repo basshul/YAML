@@ -864,7 +864,7 @@ appId: ${APP_ID}
     when:
       visible: "${REG_LOGOUT_CONFIRM}"
     commands:
-      - tapOn: "예"
+      - tapOn: "${REG_LOGOUT_CONFIRM}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:

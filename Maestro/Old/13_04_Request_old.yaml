@@ -177,7 +177,7 @@ appId: ${APP_ID}
           timeout: 15000
       - tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
@@ -208,7 +208,7 @@ appId: ${APP_ID}
     index: 4
 - inputText: "Bali"
 - hideKeyboard
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
@@ -303,7 +303,7 @@ appId: ${APP_ID}
           timeout: 15000
       - tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
@@ -334,7 +334,7 @@ appId: ${APP_ID}
     index: 4
 - inputText: "Bali"
 - hideKeyboard
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
@@ -343,11 +343,11 @@ appId: ${APP_ID}
 - assertNotVisible:
     id: "header"
 # 다시 진입 후 확인(OK) 버튼 동작 확인 - 저장성공
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - assertVisible:
     text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트 간헐성 - [07] 참고
@@ -398,7 +398,7 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: "${DELETE_INBOUND_RECIPIENT}"
     timeout: 15000
-- tapOn: "예"
+- tapOn: "${BTN_YES}"
 # ⚠️ **토스트("Successfully Deleted")로 결과를 판정하지 말 것** (2026-08-20 실패)
 #   토스트는 순간 노출이라 maestro가 계층을 읽는 시점에 이미 사라져 있는 경우가 많다.
 #   삭제가 실제로 됐는지는 **목록에서 사라졌는지(상태)** 로 봐야 결정적이다.
@@ -494,7 +494,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 - tapOn:
@@ -554,7 +554,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 - tapOn:

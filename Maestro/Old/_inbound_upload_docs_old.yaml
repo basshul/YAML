@@ -28,14 +28,14 @@ appId: ${APP_ID}
     id: "captureBtnImageView"
 - extendedWaitUntil:
     visible:
-      text: "완료"
+      text: "${BTN_DONE}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${REG_RETRY}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${UPLOAD_DOCUMENTS_TEXT}"
@@ -53,14 +53,14 @@ appId: ${APP_ID}
     id: "captureBtnImageView"
 - extendedWaitUntil:
     visible:
-      text: "완료"
+      text: "${BTN_DONE}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${REG_RETRY}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${UPLOAD_DOCUMENTS_TEXT}"
@@ -78,14 +78,14 @@ appId: ${APP_ID}
     id: "captureBtnImageView"
 - extendedWaitUntil:
     visible:
-      text: "완료"
+      text: "${BTN_DONE}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${REG_RETRY}"
     timeout: 20000
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - extendedWaitUntil:
     visible:
       text: "${UPLOAD_DOCUMENTS_TEXT}"

@@ -209,7 +209,7 @@ appId: ${APP_ID}
             - extendedWaitUntil:
                 visible: "${DELETE_INBOUND_RECIPIENT}"
                 timeout: 15000
-            - tapOn: "예"
+            - tapOn: "${BTN_YES}"
             - waitForAnimationToEnd
             # (3) 목록 갱신 대기 — 약 8초(사용자 실측). Maestro 에 sleep 이 없어
             #     화면 좌측 끝에서 **이동 없는 스와이프**(빈 영역 롱프레스)로 대신한다.

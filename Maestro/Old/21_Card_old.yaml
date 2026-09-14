@@ -181,13 +181,13 @@ appId: ${APP_ID}
             # ----------------------------------------------------------------
             - assertVisible: "None"
             - assertVisible: "Paybooc"
-            - tapOn: "다음"
+            - tapOn: "${BTN_NEXT}"
             - waitForAnimationToEnd
             # ----------------------------------------------------------------
             # [03] [Medium] Card Apply - 영문이름 수정 및 입력 동작 확인
             # ----------------------------------------------------------------
             - assertVisible: "${ENG_FULL_NAME_TEXT}"
-            - tapOn: "다음"
+            - tapOn: "${BTN_NEXT}"
             - waitForAnimationToEnd
             # ----------------------------------------------------------------
             # [04] [Medium] Card Apply - 비밀번호 4자리 입력 동작 확인
@@ -217,7 +217,7 @@ appId: ${APP_ID}
             - waitForAnimationToEnd
             - tapOn: "2"
             - waitForAnimationToEnd
-            - tapOn: "다음"
+            - tapOn: "${BTN_NEXT}"
             - waitForAnimationToEnd
       # ----------------------------------------------------------------
       # [05] [Medium] Card Apply - 카드수령 동작 확인 (비대면/대면/브랜치)
@@ -232,16 +232,16 @@ appId: ${APP_ID}
       - assertVisible: "${FACE_TO_FACE_DELIVERY_TEXT}"
       - assertVisible: "${SELECT_BRANCH_TEXT}"
       - tapOn: "${SELECT_BRANCH_TEXT}"
-      - tapOn: "다음"
+      - tapOn: "${BTN_NEXT}"
       - assertVisible: "${BRANCH_PICK_UP_TEXT}"
       - assertVisible: "${TXT_MOBILE}"
       # ----------------------------------------------------------------
       # [06] [High] Card Apply - 카드신청완료 동작 확인
       # ----------------------------------------------------------------
-      - tapOn: "다음"
-      - tapOn: "확인"
+      - tapOn: "${BTN_NEXT}"
+      - tapOn: "${BTN_CONFIRM}"
       - assertVisible: "${APPLICATION_RECEIVED_TEXT}"
-      - tapOn: "완료"
+      - tapOn: "${BTN_DONE}"
 
 # ================================================================
 # [Card Change]
@@ -307,7 +307,7 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [09] [High] Card Change - 카드 정보 변경동작 확인
 # ----------------------------------------------------------------
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 - assertVisible: "${TXT_MOBILE}"
 # 지점 선택 — 함정이 세 겹이다(전부 2026-09-11 실측).
@@ -565,11 +565,11 @@ appId: ${APP_ID}
 - tapOn: "3"
 - waitForAnimationToEnd
 - waitForAnimationToEnd
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible: "${ISSU0004_00}"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 2차 변경: 2323 → 1212 (원복)
 - tapOn: "${CARD_PASSWORD_CHANGE_TEXT}"
@@ -608,11 +608,11 @@ appId: ${APP_ID}
 - tapOn: "2"
 - waitForAnimationToEnd
 - waitForAnimationToEnd
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible: "${ISSU0004_00}"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 
 # ================================================================
@@ -968,7 +968,7 @@ appId: ${APP_ID}
     visible: '[\s\S]*원화\(KRW\) 결제[\s\S]*'
     timeout: 20000
 - assertVisible: "${REG_NO}"
-- assertVisible: "확인"
+- assertVisible: "${BTN_CONFIRM}"
 - tapOn: "${REG_NO}"
 - waitForAnimationToEnd
 # 취소했으므로 상태는 그대로여야 한다 — 이걸 단언하지 않으면 "취소가 먹혔는지"를 못 본다.
@@ -1229,11 +1229,11 @@ appId: ${APP_ID}
 - tapOn: "GME Wallet"
 - waitForAnimationToEnd
 - tapOn: "1"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 불일치: PIN 9876 입력
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
@@ -1261,7 +1261,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible:
     text: "${GME_PAY_SUCESSFULLY_RECHARGED}"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 이전 케이스의 지연된 성공 팝업 처리 (최대 3개)
 - runFlow:
@@ -1269,21 +1269,21 @@ appId: ${APP_ID}
       visible:
         text: "${LOGIN_SUCCESS}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - waitForAnimationToEnd
 - runFlow:
     when:
       visible:
         text: "${LOGIN_SUCCESS}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - waitForAnimationToEnd
 - runFlow:
     when:
       visible:
         text: "${LOGIN_SUCCESS}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
@@ -1381,7 +1381,7 @@ appId: ${APP_ID}
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible:
     text: ".*CU 3,000 원.*"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 구매 완료 후 쿠폰 상세(바코드) 화면 노출 확인
 - assertVisible:
@@ -1394,7 +1394,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible:
     text: "기프트 카드를 취소하시겠습니까?"
-- tapOn: "예"
+- tapOn: "${BTN_YES}"
 - waitForAnimationToEnd
 - assertVisible:
     text: "${ENTER_THE_LOCK}"
@@ -1411,7 +1411,7 @@ appId: ${APP_ID}
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible:
     text: "${SUCCESSFULLY_CANCELLED_SMARTWITHDRAW_TEXT}"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 - pressKey: back
 - waitForAnimationToEnd

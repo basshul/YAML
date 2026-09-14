@@ -194,7 +194,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 # Mongolia
@@ -204,7 +204,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 # Vietnam
@@ -214,7 +214,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 
@@ -231,7 +231,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "sendAmountEdTxt"
 - inputText: "1000000"
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - assertVisible:
     text: ".*수수료 포함된 금액.*"
 - tapOn:
@@ -310,7 +310,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "rvCountryList"
 - tapOn: "Mongolia"
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 
@@ -424,7 +424,7 @@ appId: ${APP_ID}
           timeout: 15000
       - tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
@@ -457,11 +457,11 @@ appId: ${APP_ID}
     index: 4
 - inputText: "Jakarta"
 - hideKeyboard
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 - assertVisible:
     id: "header"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - assertVisible:
     text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 곧바로 목록으로 돌아가는 경우가

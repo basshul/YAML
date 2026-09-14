@@ -112,7 +112,7 @@ appId: ${APP_ID}
     when:
       visible: "${REG_LOGOUT_CONFIRM}"
     commands:
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
       - waitForAnimationToEnd
 
 # ---- 잠금화면 → 아이디/비밀번호 로그인 ----

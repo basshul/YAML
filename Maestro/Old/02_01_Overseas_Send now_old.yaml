@@ -126,7 +126,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -138,7 +138,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -150,7 +150,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -162,7 +162,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -174,7 +174,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -186,7 +186,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 
 # 사전 정리: TEST GME 삭제 (최대 3회)
 - runFlow:
@@ -200,7 +200,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -212,7 +212,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -224,7 +224,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 
 # 사전 정리: TESTUPDATE GME 삭제 (최대 3회 - 이전 실행에서 편집된 TEST GME 정리)
 - runFlow:
@@ -238,7 +238,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -250,7 +250,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 - runFlow:
     when:
       visible:
@@ -262,7 +262,7 @@ env:
       - tapOn:
           id: "delete"
           index: 0
-      - tapOn: "예"
+      - tapOn: "${BTN_YES}"
 
 # ================================================================
 # [01] 수취인 추가 → 수정
@@ -352,7 +352,7 @@ env:
       visible:
         text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - pressKey: back
 
 # 저장 성공 바텀시트: 아니요 (목록 복귀)
@@ -504,7 +504,7 @@ env:
       visible:
         text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
     commands:
-      - tapOn: "확인"
+      - tapOn: "${BTN_CONFIRM}"
       - pressKey: back
 
 # 저장 성공 바텀시트: 예 (송금하기)

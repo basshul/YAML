@@ -407,9 +407,9 @@ appId: ${APP_ID}
 - tapOn:
     point: "540,1652"
 - assertVisible: "정말로 주문을 취소하시겠습니까?"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - assertVisible: "주문 취소가 완료되었습니다."
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 
 # 홈 복귀 (WebView 자체 종료 후 앱 재시작으로 확실하게 복귀)
 # ⚠️ **재시작하면 Server Override 스플래시가 다시 뜬다** — 이걸 처리하지 않고 바로 PIN을

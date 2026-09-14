@@ -188,7 +188,7 @@ appId: ${APP_ID}
     timeout: 20000
 - tapOn: "Mongolia"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 # 주의: 목록에는 First Name + Last Name이 공백으로 결합된 "TESTMN SENDER"로 표시됨.

@@ -179,7 +179,7 @@ appId: ${APP_ID}
           timeout: 15000
       - tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - assertVisible:
     text: "${ENTER_SENDER_DETAILS_TEXT}"
 - tapOn:
@@ -210,13 +210,13 @@ appId: ${APP_ID}
     index: 4
 - inputText: "Delete City"
 - hideKeyboard
-- tapOn: "다음"
+- tapOn: "${BTN_NEXT}"
 - waitForAnimationToEnd
 # 다이얼로그 헤더 텍스트에 실제 줄바꿈이 포함되어 있어("확인 후\n인증을") text 셀렉터로는
 # 매칭되지 않음(Maestro는 전체 문자열 매칭) - id로 매칭 (2026-07-08 실기기 확인)
 - assertVisible:
     id: "header"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - assertVisible:
     text: "${SAVED_SUCCESSFULLY}"
 # "송금 받기를 요청하시겠습니까?" 프롬프트가 뜨는 경우와 등록 완료 후 곧바로 목록
@@ -263,7 +263,7 @@ appId: ${APP_ID}
     index: 0
 - assertVisible:
     text: "${DELETE_INBOUND_RECIPIENT}"
-- tapOn: "예"
+- tapOn: "${BTN_YES}"
 # ⚠️ **토스트("Successfully Deleted")로 결과를 판정하지 말 것** (2026-08-20 실패)
 #   토스트는 순간 노출이라 maestro가 계층을 읽는 시점에 이미 사라져 있는 경우가 많다.
 #   삭제가 실제로 됐는지는 **목록에서 사라졌는지(상태)** 로 봐야 결정적이다.

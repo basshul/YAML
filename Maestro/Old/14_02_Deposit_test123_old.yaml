@@ -527,12 +527,12 @@ appId: ${APP_ID}
 - tapOn: "2"
 - waitForAnimationToEnd
 - assertVisible: "ATM 입금 신청이 완료되었습니다."
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - waitForAnimationToEnd
 - assertVisible: "${DEPOSIT_REQUEST_TEXT}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
-- tapOn: "예"
+- tapOn: "${BTN_YES}"
 - waitForAnimationToEnd
 # 취소 확인도 간편 비밀번호 입력을 요구함(신청 때와 동일한 PIN 화면).
 - assertVisible: "${ENTER_THE_LOCK}"
@@ -603,12 +603,12 @@ appId: ${APP_ID}
 - tapOn: "2"
 - waitForAnimationToEnd
 - assertVisible: "ATM 입금 신청이 완료되었습니다."
-- tapOn: "완료"
+- tapOn: "${BTN_DONE}"
 - waitForAnimationToEnd
 - assertVisible: "${DEPOSIT_REQUEST_TEXT}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
-- tapOn: "예"
+- tapOn: "${BTN_YES}"
 - waitForAnimationToEnd
 # 취소 확인도 간편 비밀번호 입력을 요구함(신청 때와 동일한 PIN 화면).
 - assertVisible: "${ENTER_THE_LOCK}"
@@ -789,7 +789,7 @@ appId: ${APP_ID}
 - tapOn: "${CONVENIENCE_STORE_TEXT}"
 - waitForAnimationToEnd
 - assertVisible: "${POSSIBLE_STORE}"
-- tapOn: "확인"
+- tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 - assertVisible: "${APPLY_ATM}"
 - tapOn:
