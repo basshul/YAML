@@ -136,7 +136,43 @@ appId: ${APP_ID}
 # (2026-07-08 실기기 end-to-end 확인: 등록 → moreIcon → delete → "예" → "Successfully Deleted" 토스트)
 # [12]가 끝난 화면(메인화면)에서 바로 이어서 진행
 
-- tapOn: "${ADD_INBOUND_SENDER_TEXT}"
+# ⚠️ 2026-09-14: 이 버튼이 **화면 밖으로 잘렸다.** 파트너 배너(`iv_partner_banner`, 약 300px)가
+#   추가되면서 `btn_add_inbound_sender` 가 `[86,2177][994,2196]`(높이 19px)로 밀려 **자식 TextView 가
+#   렌더되지 않는다** → `tapOn: "${ADD_INBOUND_SENDER_TEXT}"`(텍스트)가 Element not found 로 죽었다.
+#   화면에는 `ScrollView`([0,271][1080,2196])가 있으므로 **id 로 스크롤해 올린 뒤 id 로 탭**한다.
+#   ⛔ 텍스트 탭으로 되돌리지 말 것 — 잘린 상태에서는 문구가 트리에 없어 원리적으로 못 찾는다.
+# ★ 이 화면은 **송금인 목록 상태로 갈린다**(2026-09-14 실측):
+#   · 목록이 비어 있으면 → 프로모 화면. 추가 버튼은 `btn_add_inbound_sender` 인데
+#     신규 배너(`iv_partner_banner`, 약 300px)에 밀려 `[86,2177][994,2196]`(높이 19px)로 **잘린다**
+#     → 자식 TextView 가 렌더되지 않아 **텍스트로는 못 찾는다**. id 로 스크롤해 올린 뒤 탭한다.
+#   · 송금인이 하나라도 있으면 → 목록 화면. 여기엔 **그 id 가 아예 없고** 텍스트 버튼만 있다.
+#   ⛔ 한쪽만 처리하면 다른 상태에서 죽는다 — `13_01`(빈 목록, 통과) 직후 `13_02`(목록 있음)가
+#     그렇게 실패했다. 두 갈래를 모두 둔다.
+- runFlow:
+    when:
+      visible:
+        id: "btn_add_inbound_sender"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "btn_add_inbound_sender"
+          direction: DOWN
+          centerElement: true
+          timeout: 15000
+      - tapOn:
+          id: "btn_add_inbound_sender"
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_add_inbound_sender"
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "${ADD_INBOUND_SENDER_TEXT}"
+          direction: DOWN
+          centerElement: true
+          timeout: 15000
+      - tapOn: "${ADD_INBOUND_SENDER_TEXT}"
 - waitForAnimationToEnd
 - tapOn: "다음"
 - assertVisible:
