@@ -5,6 +5,11 @@ appId: ${APP_ID}
 env:
   SENDNOW_AMOUNT: "14000"
 ---
+# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
+#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
+#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
+#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
+#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Overseas Transfer - 수취인 추가 / 수정 / 삭제
 # [01] [High] 수취인 추가 → 수정 → 삭제
@@ -28,7 +33,7 @@ env:
 # 간편비밀번호 잠금화면을 명시적으로 대기 후 PIN <정상 PIN>
 - extendedWaitUntil:
     visible:
-      text: "4자리 숫자를 입력하세요|홈으로"
+      id: "input_dot_1|bottom_item_home"
     timeout: 60000
 # PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
 #   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음

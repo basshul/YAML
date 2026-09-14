@@ -146,11 +146,11 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "[\\s\\S]*거래내역[\\s\\S]*"
+      text: "${HOME_WALLET_STATEMENT}"
     direction: DOWN
     timeout: 20000
 - tapOn:
-    text: "[\\s\\S]*거래내역[\\s\\S]*"
+    text: "${HOME_WALLET_STATEMENT}"
 - extendedWaitUntil:
     visible:
       id: "toolbar_title"

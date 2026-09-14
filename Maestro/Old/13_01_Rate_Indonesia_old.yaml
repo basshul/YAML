@@ -1,5 +1,10 @@
 appId: ${APP_ID}
 ---
+# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
+#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
+#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
+#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
+#   / Server Override=`button1`.
 # ================================================================
 # 13_ReceiveOverseas 분할 1/7 — Exchange Rate + 인도네시아 송금인 등록
 # ================================================================
@@ -32,7 +37,7 @@ appId: ${APP_ID}
 - launchApp
 - extendedWaitUntil:
     visible:
-      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+      id: "input_dot_1|bottom_item_home|button1"
     timeout: 60000
 - runFlow:
     when:
@@ -66,7 +71,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible:
-            text: "4자리 숫자를 입력하세요|홈으로"
+            id: "input_dot_1|bottom_item_home"
           timeout: 60000
 # PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
 - runFlow:

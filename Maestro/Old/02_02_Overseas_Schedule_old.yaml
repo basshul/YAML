@@ -1,5 +1,10 @@
 appId: ${APP_ID}
 ---
+# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
+#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
+#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
+#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
+#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Overseas Transfer - 예약 송금 / 필터 / 수취인 추가
 # 실행: .\run_test.ps1 -lang ko -flow 02_02_Overseas_Schedule.yaml
@@ -29,12 +34,12 @@ appId: ${APP_ID}
 #   Maestro가 `checked:`를 무시해 판별이 불가하므로 **항등 시퀀스**로 처리한다.
 - extendedWaitUntil:
     visible:
-      text: "Server Override|4자리 숫자를 입력하세요|홈으로|.*간편 비밀번호를 생성.*"
+      id: "input_dot_1|bottom_item_home|button1"
     timeout: 60000
 - runFlow: "_server_override_old.yaml"
 - extendedWaitUntil:
     visible:
-      text: "4자리 숫자를 입력하세요|홈으로"
+      id: "input_dot_1|bottom_item_home"
     timeout: 60000
 # PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
 #   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
@@ -154,12 +159,12 @@ appId: ${APP_ID}
 #   이걸 처리하지 않으면 스플래시 위에서 PIN "1"을 눌러 엉뚱한 항목을 탭한다.
 - extendedWaitUntil:
     visible:
-      text: "Server Override|4자리 숫자를 입력하세요|홈으로"
+      id: "input_dot_1|bottom_item_home|button1"
     timeout: 60000
 - runFlow: "_server_override_old.yaml"
 - extendedWaitUntil:
     visible:
-      text: "4자리 숫자를 입력하세요|홈으로"
+      id: "input_dot_1|bottom_item_home"
     timeout: 60000
 - runFlow:
     when:
