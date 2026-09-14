@@ -192,7 +192,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 # Mongolia
 - tapOn:
     id: "countrySelectionSpinner"
@@ -202,7 +202,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 # Vietnam
 - tapOn:
     id: "countrySelectionSpinner"
@@ -212,7 +212,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 
 # ----------------------------------------------------------------
 # [05] [Medium] Exchange Rate - 환율계산 완료 > Request 동작 시 인바운드 메인화면 이동확인
@@ -229,7 +229,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 - tapOn:
     id: "btn_continue"
 # 알려진 간헐적 버그(btn_continue가 "계좌 선택" 대신 위젯을 리셋시킴, 앱 자체 문제로 추정,
@@ -1187,7 +1187,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 - tapOn:
     id: "btn_continue"
 # 알려진 간헐적 버그([05] 참고) - 정상 동작했을 때만 X(close)로 닫음(back으로는 한 번에
@@ -1247,7 +1247,7 @@ appId: ${APP_ID}
 - inputText: "1000000"
 - tapOn: "${BTN_DONE}"
 - assertVisible:
-    text: ".*수수료 포함된 금액.*"
+    text: "${INBOUND_SERVICE_FEE}"
 - tapOn:
     id: "btn_continue"
 # ⚠️ 종전엔 이 구간 전체가 `runFlow: when: visible: "계좌 선택"` 으로 감싸여 있었다.
@@ -1298,7 +1298,7 @@ appId: ${APP_ID}
 #      추측으로 재시도 분기를 넣으면 검증되지 않은 경로가 생긴다.
 - extendedWaitUntil:
     visible:
-      text: "요청 완료|받는 계좌"
+      text: "${INBOUND_LIST_ANY}"
     timeout: 60000
 - runFlow:
     when:

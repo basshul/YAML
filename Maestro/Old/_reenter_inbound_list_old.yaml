@@ -31,7 +31,7 @@ appId: ${APP_ID}
     when:
       visible: "${HOME_EXIT_CONFIRM}"
     commands:
-      - tapOn: "아니요|취소"
+      - tapOn: "${BTN_NO_OR_CANCEL}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:

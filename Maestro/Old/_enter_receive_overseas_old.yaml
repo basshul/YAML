@@ -29,11 +29,11 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - scrollUntilVisible:
     element:
-      text: "해외송금[\\s\\S]*받기"
+      text: "${HOME_RECEIVE_OVERSEAS}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
-- tapOn: "해외송금[\\s\\S]*받기"
+- tapOn: "${HOME_RECEIVE_OVERSEAS}"
 - waitForAnimationToEnd
 
 # ★ **구 UI에는 개편UI에 없던 "수취 방법 선택" 바텀시트가 한 단계 더 있다** (2026-08-20 실측)
@@ -45,7 +45,7 @@ appId: ${APP_ID}
 #   ⚠️ 시트가 없는 경로(이미 목적 화면인 경우)도 있을 수 있어 **조건부**로 처리한다.
 - extendedWaitUntil:
     visible:
-      text: "수취 방법 선택|송금 받기|받는 계좌"
+      text: "${INBOUND_ENTRY_ANY}"
     timeout: 30000
 - runFlow:
     when:
@@ -64,5 +64,5 @@ appId: ${APP_ID}
 #     수취인 목록 = "수취 방법"(`tv_htr`) / 카드 목록 = "받는 계좌" / 요청 상세 = "요청 완료"
 - extendedWaitUntil:
     visible:
-      text: "수취 방법|받는 계좌|요청 완료"
+      text: "${INBOUND_STEP_ANY}"
     timeout: 40000

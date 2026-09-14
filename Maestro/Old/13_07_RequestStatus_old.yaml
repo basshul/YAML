@@ -152,7 +152,7 @@ appId: ${APP_ID}
 #   `받는 계좌` 를 단정하면 실패한다 → 두 경로를 모두 받고, 카드 목록일 때만 목록을 검증한다.
 #   상세 도달은 [16]의 `tv_req_complete` 단언이 보증하므로 거짓 통과가 되지 않는다.
 - extendedWaitUntil:
-    visible: "받는 계좌|요청 완료"
+    visible: "${INBOUND_LIST_ANY}"
     timeout: 40000
 - runFlow:
     when:
@@ -237,7 +237,7 @@ appId: ${APP_ID}
 # 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
 #   ⚠️ 분기 전에 **도달을 먼저 기다린다** — 렌더 중에 조건을 보면 모든 갈래가 조용히 SKIP된다.
 - extendedWaitUntil:
-    visible: "받는 계좌|요청 완료"
+    visible: "${INBOUND_LIST_ANY}"
     timeout: 40000
 - runFlow:
     when:
@@ -283,7 +283,7 @@ appId: ${APP_ID}
 # 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
 #   ⚠️ 분기 전에 **도달을 먼저 기다린다** — 렌더 중에 조건을 보면 모든 갈래가 조용히 SKIP된다.
 - extendedWaitUntil:
-    visible: "받는 계좌|요청 완료"
+    visible: "${INBOUND_LIST_ANY}"
     timeout: 40000
 - runFlow:
     when:

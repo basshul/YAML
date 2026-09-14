@@ -21,7 +21,7 @@ appId: ${APP_ID}
 # ---------------------------------------------------------------
 # 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-19 실측)
 # ---------------------------------------------------------------
-#   진입 그리드 항목  "GME 모바일" → **"통신 서비스"**
+#   진입 그리드 항목  "GME 모바일" → **"${HOME_TELECOM}"**
 #                     (구 UI 홈 서비스 그리드 11종 중 9번째. 스크롤 필요)
 #   텔레콤 홈 카드    "GME Mobile" → **"Mobile SIM"**
 #                     (`leftlayout`(clickable) + `lefttextview`. 개편UI엔 id가 없어 텍스트로
@@ -42,7 +42,7 @@ appId: ${APP_ID}
 #   CS 팝업 — "사용 중 궁금한 점이 있으신가요?"(앱 오타 그대로) / `chatView`("실시간 채팅")
 #     / `btnCancel`("취소")   ※ 개편UI와 동일
 #   요금제 선택 페이지 `telecom.view.GmeTelecomPostPaidActivity`, `screenTitle` "Mobile SIM"
-#     `btnBack` / "원하는 요금제를 선택해 주세요."
+#     `btnBack` / "${TELECOM_SELECT_PACKAGE}"
 #     `applylinesimlayout`("Line SIM 요금제") / `applyprepaidsimlayout`("선불 SIM 신청")
 #     / `chedkmynumerlayout`("GME Mobile 사용량 확인")
 #   요금제 목록 페이지 — 같은 액티비티, `screenTitle` **"LG U+ 패키지"**
@@ -213,11 +213,11 @@ appId: ${APP_ID}
 # 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
 - scrollUntilVisible:
     element:
-      text: "통신 서비스"
+      text: "${HOME_TELECOM}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
-- tapOn: "통신 서비스"
+- tapOn: "${HOME_TELECOM}"
 # 세션이 살아 있어야 로드된다(헤더의 무한 로딩 주석 참고). 넉넉히 기다린다.
 - extendedWaitUntil:
     visible:
@@ -254,11 +254,11 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 - scrollUntilVisible:
     element:
-      text: "통신 서비스"
+      text: "${HOME_TELECOM}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
-- tapOn: "통신 서비스"
+- tapOn: "${HOME_TELECOM}"
 - extendedWaitUntil:
     visible:
       id: "contactus"
@@ -271,7 +271,8 @@ appId: ${APP_ID}
     timeout: 20000
 # 앱 문구의 "궁금한"은 오타지만 실제 텍스트다 — 고쳐 쓰면 매칭이 깨진다.
 # 텍스트는 전체매칭이므로 부분 확인엔 .* 를 붙인다([[feedback_maestro_regex_yaml]]).
-- assertVisible: ".*궁금한 점이 있으신가요.*"
+# ⚠️ 2026-09-14: 하드코딩 한국어 패턴이라 en 에서 실패했다 → 기존 키로 교체(en=`How may I help you?`).
+- assertVisible: "${SCR_SUPPORT_Q}"
 - assertVisible:
     id: "chatView"
 - assertVisible: "${SCR_LIVE_CHAT}"
@@ -297,7 +298,7 @@ appId: ${APP_ID}
     visible:
       id: "applylinesimlayout"
     timeout: 30000
-- assertVisible: "원하는 요금제를 선택해 주세요."
+- assertVisible: "${TELECOM_SELECT_PACKAGE}"
 - assertVisible:
     id: "applyprepaidsimlayout"
 - assertVisible:
@@ -324,8 +325,8 @@ appId: ${APP_ID}
     visible:
       id: "packagelistRv"
     timeout: 30000
-- assertVisible: "LG U\\+ 패키지"
-- assertVisible: "원하는 요금제를 선택해 주세요."
+- assertVisible: "${TELECOM_LGU_PACKAGES}"
+- assertVisible: "${TELECOM_SELECT_PACKAGE}"
 # 최소 1개 상품이 있어야 성립한다(빈 목록이면 여기서 실패한다)
 - assertVisible:
     id: "item_monthlypayment"
@@ -357,7 +358,7 @@ appId: ${APP_ID}
     visible:
       id: "noDataAvailable|packagelistRv"
     timeout: 30000
-- assertVisible: "LG U\\+ 패키지"
+- assertVisible: "${TELECOM_LGU_PACKAGES}"
 # 갈래 A - 상품 없음(현재 상태): 빈 상태 문구가 정상 렌더링되는지 확인한다.
 - runFlow:
     when:
@@ -372,7 +373,7 @@ appId: ${APP_ID}
       notVisible:
         id: "noDataAvailable"
     commands:
-      - assertVisible: "원하는 요금제를 선택해 주세요."
+      - assertVisible: "${TELECOM_SELECT_PACKAGE}"
       - assertVisible:
           id: "item_monthlypayment"
       - assertVisible:
@@ -483,7 +484,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "status_titleTxt"
 - assertVisible: ".*Applied date.*"
-- assertVisible: "등록 취소|처리중"
+- assertVisible: "${TELECOM_STATUS_ANY}"
 # 🚫 FLAG_SECURE 화면 — 스크린샷 대신 어서션으로 남긴다.
 
 # ---------------- 홈 복귀 ----------------
