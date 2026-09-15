@@ -1150,7 +1150,7 @@ appId: ${APP_ID}
     timeout: 30000
 - assertVisible:
     id: "completeText"
-- assertVisible: ".*서류가 정상적으로 접수되었습니다.*담당자의 확인 후 승인이 완료됩니다.*"
+- assertVisible: "${DOC_UPLOADED_PENDING}"
 - tapOn:
     id: "btn_okay"
 - extendedWaitUntil:
@@ -1377,9 +1377,9 @@ appId: ${APP_ID}
     id: "btnOK"
 - extendedWaitUntil:
     visible:
-      text: "개인\\(신용\\)정보 제3자 제공 동의서"
+      text: "${CONSENT_THIRD_PARTY_TITLE}"
     timeout: 30000
-- assertVisible: "1. 제공받는 자"
+- assertVisible: "${CONSENT_SECTION_RECIPIENTS}"
 - takeScreenshot: profile_third_party_consent
 # 복귀: 동의서 → 연간 송금 한도 → 프로필
 - tapOn:

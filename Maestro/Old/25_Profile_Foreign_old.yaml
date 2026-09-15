@@ -304,7 +304,7 @@ appId: ${APP_ID}
     timeout: 30000
 - assertVisible:
     id: "completeText"
-- assertVisible: ".*서류가 정상적으로 접수되었습니다.*담당자의 확인 후 승인이 완료됩니다.*"
+- assertVisible: "${DOC_UPLOADED_PENDING}"
 - tapOn:
     id: "btn_okay"
 - extendedWaitUntil:
@@ -385,7 +385,7 @@ appId: ${APP_ID}
     timeout: 30000
 - assertVisible:
     id: "completeText"
-- assertVisible: ".*서류가 정상적으로 접수되었습니다.*담당자의 확인 후 승인이 완료됩니다.*"
+- assertVisible: "${DOC_UPLOADED_PENDING}"
 - tapOn:
     id: "btn_okay"
 - extendedWaitUntil:
