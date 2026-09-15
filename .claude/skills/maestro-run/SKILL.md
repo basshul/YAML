@@ -64,6 +64,9 @@ adb shell dumpsys activity activities | grep -i mResumedActivity   # ② 앱 상
    - `HomeActivityV2` → 정상, 바로 실행
    - `ActivityLockScreen` → PIN 잠금(플로우가 처리)
    - `AutoLogoutActivity` / 런처 → **자동 로그아웃**. 유휴 ~10분이면 걸린다 → 재로그인 필요
+     ★ 이 화면은 **접근성 트리에 안 잡히고 덤프는 직전 화면을 돌려준다** → 플로우가 오진해
+     보안 키패드를 블라인드로 누른다. `run_test.ps1` 이 **exit 3 으로 끊고**(2026-09-15),
+     복구는 `Old\01_01_Login_Success_old.yaml`(`clearState`)뿐이다. 진단은 `maestro-debug` ②-1.
    - `LoginV2Activity` → 로그아웃 상태 → `Old\01_01_Login_Success_old.yaml` 먼저
 3. **수정 반영 확인** — 파일을 고치고 돌릴 때는 실행 명령 앞에 카운트를 찍는다.
    편집한 수정이 파일에서 되돌아간 사고가 실제로 있었다(같은 실패를 두 번 겪음).

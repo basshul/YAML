@@ -80,9 +80,12 @@ appId: ${APP_ID}
       - tapOn:
           id: "btn_diaog_ok"
       - waitForAnimationToEnd
+# ⚠️ 2026-09-15: 홈 도달을 **`btnTransfer` 로 판정하면 안 된다** — 구 UI 홈은 스크롤 위치를
+#   유지해서 상단 카드(=btnTransfer)가 화면 밖일 수 있다. 이 헬퍼가 로그인 직후에도 여기서
+#   실패해 en 검증 전체가 막혔다(실측). 판정은 하단 내비 `bottom_item_home` 으로 한다.
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 90000
 
 # ---------------- 드로어 → 설정 → 언어 → ${LANG_LABEL} ----------------

@@ -27,11 +27,33 @@ tr -d '\r' < "$D/<이름>.log" | grep -vE "^\s+at |^Caused by" | grep -B10 "FAIL
 |---|---|---|
 | `device '...' not found` / `UNAVAILABLE` | **USB 연결 끊김** | `adb devices -l` 확인. 비면 사용자에게 알린다(소프트웨어로 복구 불가) |
 | 진입부에서 홈·잠금화면 둘 다 못 찾음 | **자동 로그아웃**(유휴 ~10분) | `mResumedActivity`가 `AutoLogoutActivity`/런처인지 확인 → 재로그인 후 **곧바로** 실행 |
+| 덤프에는 **직전 화면**이 보이는데 탭이 전부 헛돎 | 같은 자동 로그아웃 — ★**그 창은 접근성 트리에 안 나온다** | 아래 ②-1 |
 | `로그인 세션이 만료...` | 하루 경과 | `01_01_Login_Success_old.yaml`. **PIN만으로는 복구 안 된다** |
 | 상태가 `killed` | 외부 종료(사용자 중단 등) | 플로우 실패가 아니다. 어디까지 갔는지 로그로 확인 |
 | `Unable to launch app` | Server Override의 `APPLY & QUIT` 후 재실행 실패 | 앱 상태 확인 후 재시도 |
 
 환경 문제면 **코드를 고치지 않는다.** 조건을 회복하고 다시 돌린다.
+
+### ②-1 자동 로그아웃 잠금 화면은 **볼 수 없다** (2026-09-15 실측)
+
+유휴 ~10분이면 `autologout.AutoLogoutActivity` 가 뜬다 — **"Enter password to unlock" + 보안
+키패드(transkey)** 이고, 요구하는 건 PIN이 아니라 **로그인 비밀번호**다.
+
+★ 이 창은 접근성 트리에 **노출되지 않는다.** `uiautomator dump` 와 Maestro 둘 다 **직전 화면의
+트리를 그대로 반환**한다 → "카드 화면이 복원됐다" 식으로 **오진**하고, 그 좌표의 탭·`back` 이
+**보안 키패드 위에 떨어진다.** 판정 수단은 하나뿐이다:
+
+```bash
+adb shell dumpsys activity activities | grep topResumedActivity   # autologout 이면 트리는 전부 거짓
+```
+
+- ⚠️ 입력칸의 `********` 는 **힌트**다. 입력값으로 착각해 "글자가 들어갔다"고 오판하지 말 것.
+- **자동화로 풀 수 없다** → `01_01_Login_Success_old.yaml`(`clearState: true`)로 **로그인
+  화면부터** 복구한다(그 화면의 transkey 는 트리에 정상 노출된다). PIN 은 계정(서버) 상태라 유효하다.
+  `clearState` 는 앱 언어를 한국어로 되돌리므로, en 검증 중이면 `_set_lang_en_old.yaml` 을 다시 돌린다.
+- `run_test.ps1` 이 실행 전에 이걸 보고 **exit 3 으로 끊는다**(2026-09-15 신설).
+  `clearState` 플로우는 예외 — 안 그러면 복구 수단 자체가 막힌다.
+- **실행 사이에 공백을 두지 말 것.** 진단·편집하는 몇 분 사이에 걸린다(하루에 2회 실측).
 
 ## ③ 실패 시점 화면을 본다
 

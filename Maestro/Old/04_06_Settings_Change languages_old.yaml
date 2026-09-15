@@ -30,6 +30,10 @@ appId: ${APP_ID}
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\04_06_Settings_Change languages_old.yaml"
+#
+# ★ **이 파일은 `-lang ko` 고정이다.** 24개 언어 라벨은 어느 UI 언어에서도 원어로 표시되고
+#   드로어 "설정"은 헬퍼가 25개 로케일 정규식으로 받는다 → 본문은 이미 언어 무관이다.
+#   반면 끝의 복귀 검증은 **한국어여야** 성립하므로 `-lang en` 으로 돌릴 이유가 없다.
 # ================================================================
 
 - launchApp
@@ -180,10 +184,15 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - tapOn: "2"
       - waitForAnimationToEnd
+# 홈 도달 판정은 `bottom_item_home` — 구 UI 홈은 스크롤 위치를 유지해 상단 카드(`btnTransfer`)가
+#   화면 밖일 수 있다(프로젝트 규칙).
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 90000
-- assertVisible: "${DRAWER_USER_NUMBER}"
-- assertVisible: "${TOTAL_GME_BALANCE_TEXT}"
+# ⚠️ **이 두 단언은 변수화하지 말 것.** 이 파일은 마지막에 **한국어로 복귀**하는 케이스라
+#   한국어 문구 자체가 **기대 결과(케이스의 일부)** 다. `${VAR}` 로 두면 `-lang en` 실행에서
+#   영문 값으로 치환돼 **거짓 실패**한다(2026-09-15 정정).
+- assertVisible: "GME Wallet 번호"
+- assertVisible: "GME 총 잔액"
 - takeScreenshot: lang_restored_ko

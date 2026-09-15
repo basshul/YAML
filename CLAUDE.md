@@ -252,6 +252,13 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
 - ⛔ **자격정보(로그인 비밀번호·PIN)를 이 저장소의 문서에 적지 않는다.** 이 두 md는 커밋되는 파일이다.
   실제 값은 메모리(`project_01_login`)에만 두고, 문서에서는 "정상 PIN" / "정상 비밀번호"로 부른다.
   ⚠️ 값이 바뀌는데 문서가 안 따라오면 **폐기된 값으로 실계정에 시도하는 사고**가 난다(실제로 있었다).
+- **유휴 ~10분이면 자동 로그아웃**된다. 그 잠금 화면(`autologout.AutoLogoutActivity`,
+  "Enter password to unlock" + 보안 키패드)은 ★**접근성 트리에 노출되지 않고 덤프는 직전 화면을
+  돌려준다** → 플로우가 엉뚱한 화면으로 오진해 **보안 키패드를 블라인드로 누른다**(2026-09-15 사고).
+  판정은 `adb shell dumpsys activity activities | grep topResumedActivity` 뿐이고,
+  `run_test.ps1` 이 실행 전에 보고 **exit 3 으로 끊는다**(`clearState` 플로우는 예외).
+  복구는 `Old\01_01_Login_Success_old.yaml` 하나뿐이다 — 앱 언어가 한국어로 돌아가므로 en 검증
+  중이면 `_set_lang_en_old.yaml` 을 다시 돌린다. **실행 사이에 공백을 두지 말 것.**
 - 하루가 지나면 세션이 만료된다. 진입부터 실패하면 이걸 먼저 의심하고
   `01_01_Login_First_old.yaml`로 재로그인한다(PIN만으로는 복구되지 않는다).
   ⚠️ 만료 다이얼로그를 **닫고 진행하지 말 것** — 구 UI는 PIN으로 복구되지 않으므로 의미가 없다.

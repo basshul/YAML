@@ -50,6 +50,31 @@ if (-not $device) {
     $device = $connected[0]
 }
 
+# ----------------------------------------------------------------
+# 자동 로그아웃 잠금 화면 선검사 (2026-09-15 신설)
+#
+# 유휴 ~10분이면 `autologout.AutoLogoutActivity` 가 뜬다 — "Enter password to unlock" +
+# 보안 키패드(transkey) 화면이다. ★ 이 창은 **접근성 트리에 노출되지 않는다**:
+# `uiautomator dump` 와 Maestro 둘 다 **직전 화면의 트리를 그대로 반환**한다.
+#   → 플로우가 엉뚱한 화면으로 오진하고, 그 좌표의 탭·back 이 **보안 키패드 위에 떨어진다.**
+#     (2026-09-15 실제로 04_02 진입부가 카드 화면으로 오진하고 키패드를 눌렀다)
+# 자동화로는 풀 수 없는 화면이므로 **여기서 끊고** 사람이 복구 순서를 밟게 한다.
+# ⚠️ 예외: `clearState: true` 플로우(`01_01_Login_Success_old` 등)는 앱 데이터를 지우고
+#   로그인 화면부터 시작하므로 이 화면과 무관하다 → 막으면 **복구 수단 자체가 막힌다.**
+$isClearState = (Test-Path $flow) -and
+                (Select-String -LiteralPath $flow -Pattern 'clearState:\s*true' -Quiet)
+$fg = (adb -s $device shell dumpsys activity activities 2>$null |
+       Select-String 'topResumedActivity' | Select-Object -First 1).ToString()
+if ((-not $isClearState) -and $fg -match 'autologout') {
+    Write-Host ""
+    Write-Host "  ⛔ 앱이 자동 로그아웃 잠금 화면(AutoLogoutActivity)에 있습니다." -ForegroundColor Red
+    Write-Host "     이 화면은 접근성 트리에 안 잡혀 Maestro 가 인식하지 못하고," -ForegroundColor Red
+    Write-Host "     엉뚱한 탭이 보안 키패드에 떨어집니다 → 실행을 중단합니다." -ForegroundColor Red
+    Write-Host "     복구: .\run_test.ps1 -lang ko -flow `"Old\01_01_Login_Success_old.yaml`"" -ForegroundColor Yellow
+    Write-Host "           (clearState 로 로그인 화면부터 복구한다. 앱 언어는 한국어로 돌아간다)" -ForegroundColor DarkGray
+    exit 3
+}
+
 $envFile = "env\$lang.env"
 if (-not (Test-Path $envFile)) {
     Write-Error "env file not found: $envFile"
