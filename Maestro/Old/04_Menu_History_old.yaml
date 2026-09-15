@@ -164,7 +164,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "bottom_item_history"
 - waitForAnimationToEnd
-- tapOn: "^송금$"
+- tapOn: "${TAB_REMITTANCE}"
 - waitForAnimationToEnd
 - assertVisible: "${TXT_OVERSEAS_REMIT}"
 
@@ -197,7 +197,7 @@ appId: ${APP_ID}
 #     이 케이스가 보는 건 "재송금 버튼이 동작하는가"이므로 **둘 중 어느 화면이든 도달로 인정**하고 닫는다.
 - extendedWaitUntil:
     visible:
-      text: "아니요|출금 계좌를 선택하세요"
+      text: "${NO_OR_SELECT_WITHDRAW}"
     timeout: 30000
 - runFlow:
     when:
@@ -859,9 +859,12 @@ appId: ${APP_ID}
 - assertVisible: "${ACCOUNT_SELECTION}"
 - assertVisible:
     id: "txvAccountNumber"
+# ⚠️ 2026-09-15(en 검증): **은행명으로 판정하면 안 된다.** 영문 UI 에서 계좌 선택 목록은
+#   `Kakao Bank` 로 번역되는데 **명세서 화면은 `카카오뱅크`(서버 데이터)** 라 표기가 갈린다.
+#   → 언어와 무관한 **계좌번호**로 판정한다. 마스킹 `*` 는 정규식과 충돌하므로 `.` 으로 바꾼다.
 - copyTextFrom:
-    id: "txvAccountTitle"
-- evalScript: ${output.bankName = maestro.copiedText}
+    id: "txvAccountNumber"
+- evalScript: ${output.accNo = maestro.copiedText.replace(/[*]/g, '.')}
 - tapOn:
     id: "txvAccountTitle"
 - waitForAnimationToEnd
@@ -869,7 +872,7 @@ appId: ${APP_ID}
 # ⚠️ 반영된 값은 **은행명 + 계좌번호**다: "카카오뱅크(333327****972)".
 #   Maestro 텍스트 매칭은 전체매칭이라 은행명만으로는 안 걸린다 → 앞뒤 `.*` 필수.
 - extendedWaitUntil:
-    visible: ".*${output.bankName}.*"
+    visible: ".*${output.accNo}.*"
     timeout: 20000
 - takeScreenshot: "[24]_은행명세서_계좌선택"
 # 검색 실행 → 무료 조회 횟수 소진 상태라 **사용권 충전 유도 다이얼로그**가 뜬다(2026-08-18 실측):
@@ -885,7 +888,7 @@ appId: ${APP_ID}
     visible:
       id: "btnCancel"
     timeout: 20000
-- assertVisible: "[\\s\\S]*무료 조회 횟수를 모두 소진했습니다[\\s\\S]*"
+- assertVisible: "${FREE_QUERY_EXHAUSTED}"
 - assertVisible:
     id: "btnOk"
 - takeScreenshot: "[24]_사용권충전_유도"
@@ -910,9 +913,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
-- assertVisible: "GME Pay"
+- assertVisible: "${GMEPAY_TITLE}"
 - tapOn:
-    text: "GME Pay"
+    text: "${GMEPAY_TITLE}"
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------

@@ -228,6 +228,16 @@ appId: ${APP_ID}
         text: "Delete Target"
     commands:
       - tapOn: "${TXT_CANCEL}"
+# ⚠️ 2026-09-15: 등록 직후 화면의 목록은 **제자리에서 갱신되지 않는다**(SwipeRefreshLayout 없음 —
+#   13_06 에서 실측한 것과 같은 동작). 그래서 방금 만든 송금인이 안 보인다.
+#   ko 실행은 프롬프트 경로가 갈려 우연히 새로 로드된 목록을 받아 통과했지만, en 실행에서 드러났다.
+#   → 아직 안 보이면 **홈까지 왕복해 재진입**한 뒤 찾는다(아래 스크롤은 그대로 둔다).
+- runFlow:
+    when:
+      notVisible:
+        text: "Delete Target"
+    commands:
+      - runFlow: "_reenter_inbound_list_old.yaml"
 # 목록 렌더 범위 문제 — 위 주석 참고. 스크롤로 찾아서 확인한다.
 # ⚠️ **하단 플로팅 버튼("송금인 등록하기")이 slide-out 아이콘을 덮는다** (2026-08-20 구 UI 실측)
 #   목록 행이 화면 하단에 걸리면 `delete`/`edit` 아이콘 좌표가 버튼 뒤로 들어가고,
