@@ -227,9 +227,17 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
 
 ## 편집 시 주의
 
-- yaml은 **UTF-8(BOM 없음) + CRLF**, 한글 주석이 대량으로 들어 있다.
+- yaml은 **UTF-8**이고 한글 주석이 대량으로 들어 있다.
   **PowerShell `Get-Content`/`Set-Content`로 편집하지 말 것** — 파일 전체가 깨진다.
   Edit/Write 도구나 bash(`sed`, heredoc)를 쓴다.
+- ⚠️ **개행은 파일마다 다르다 — "CRLF"로 단정하지 말 것**(2026-09-15 전수 실측으로 정정).
+  `Maestro\` 전체 114개 중 **LF 86 / CRLF 25 / 한 파일 안에 섞인 것 3**
+  (`13_01_Rate_Indonesia` · `13_04_Request` · `13_05_ExistingSender`).
+  `env\ko.env`는 LF인데 `en.env`는 CRLF다. BOM도 `Old\`엔 없지만 루트 개편 UI 사본
+  `04_01_Change_SimplePassword.yaml` · `04_06_Settings_Change languages.yaml` **2개에는 있다.**
+  → 스크립트로 파일을 다시 쓸 때는 **읽은 바이트 그대로 보존**한다(`newline=""`로 읽고 감지한
+  개행으로 join). 일괄 변환하면 내용은 그대로인데 **전 줄이 변경으로 잡히고**, `.gitattributes`가
+  `* -text`라 저장소에도 그대로 올라간다. 쓴 뒤 `\r\n` 개수를 원본과 대조해 검산할 것.
 - 대형 파일(1000줄+)은 처음부터 **섹션 분리 → 개별 검증 → 전체 1회 확인** 순서로 간다.
   통짜로 반복 실행하면 한 번에 반나절이 날아간다.
 - 실행 중에는 **기기를 만지지 말 것.** 알림 패널을 내리면 "Element not found"로 실패해

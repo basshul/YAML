@@ -282,3 +282,11 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 | 가
 - **PIN 키패드는 탭마다 재배치**된다 → 탭 사이 `waitForAnimationToEnd`(오입력 누적 = 계정 잠금).
 - **`inputText`는 한글을 입력하지 못한다** → 검색어는 ASCII 부분문자열을 쓴다.
 - **yaml 편집에 PowerShell `Get-Content`/`Set-Content`를 쓰지 말 것** — 파일 전체가 깨진다.
+- **개행을 "CRLF"로 단정하지 말 것.** 파일마다 다르다(2026-09-15 전수 실측:
+  `Maestro\` 114개 중 **LF 86 / CRLF 25 / 한 파일 안에 섞인 것 3** —
+  `13_01_Rate_Indonesia` · `13_04_Request` · `13_05_ExistingSender`).
+  `env\ko.env`는 LF인데 `en.env`는 CRLF다. BOM도 `Old\`엔 없지만 루트 개편 UI 사본 2개
+  (`04_01_Change_SimplePassword` · `04_06_Settings_Change languages`)에는 있다.
+  → 스크립트로 다시 쓸 때는 **읽은 바이트 그대로 보존**하고(`newline=""`로 읽고 감지한 개행으로 join),
+  쓴 뒤 `\r\n` 개수를 원본과 대조해 검산한다. 일괄 변환하면 내용은 그대로인데 **전 줄이 변경으로 잡히고**,
+  `.gitattributes`가 `* -text`라 저장소에도 그대로 올라간다.
