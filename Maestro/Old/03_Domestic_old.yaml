@@ -118,7 +118,7 @@ appId: ${APP_ID}
 #   PIN은 정상 입력됐는데도(dot 4개 채워짐) 서버가 거부한 것이라 **PIN 문제로 오진하기 쉽다.**
 #   ⛔ 이 팝업을 닫고 진행하지 말 것 — 구 UI는 PIN으로 복구되지 않는다.
 #      `01_01_Login_Success_old.yaml`로 재로그인해야 한다.
-- assertNotVisible: '로그인 세션이 만료[\s\S]*'
+- assertNotVisible: "${SESSION_EXPIRED}"
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"

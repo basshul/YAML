@@ -50,7 +50,7 @@ appId: ${APP_ID}
 #   구 UI에서 세션이 만료되면 **PIN으로 복구되지 않으므로**(ID/비밀번호 재로그인 필요)
 #   닫고 진행하지 않고 **여기서 실패시킨다** → `01_01_Login_Success_old.yaml`로 복구 후 재실행.
 - assertNotVisible:
-    text: '로그인 세션이 만료[\s\S]*'
+    text: "${SESSION_EXPIRED}"
 # 홈 코치마크 balloon 닫기
 - runFlow:
     when:

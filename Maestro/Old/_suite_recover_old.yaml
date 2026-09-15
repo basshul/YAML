@@ -63,7 +63,7 @@ appId: ${APP_ID}
 # ---------------------------------------------------------------
 - runFlow:
     when:
-      visible: '로그인 세션이 만료[\s\S]*'
+      visible: "${SESSION_EXPIRED}"
     commands:
       - tapOn:
           text: "OK|확인"

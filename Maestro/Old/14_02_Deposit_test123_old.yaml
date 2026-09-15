@@ -87,7 +87,7 @@ appId: ${APP_ID}
 #   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -234,7 +234,7 @@ appId: ${APP_ID}
       #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
       #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
       #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
       - tapOn: "1"
@@ -451,10 +451,10 @@ appId: ${APP_ID}
 - tapOn: "${ATM_DEPOSIT}"
 - waitForAnimationToEnd
 - assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
-- tapOn: "카드를 사용하여\nATM 입금"
+- tapOn: "${ATM_DEPOSIT_TAB_USING_CARD}"
 - waitForAnimationToEnd
 - assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
-- tapOn: "카드 없이\nATM 입금"
+- tapOn: "${ATM_DEPOSIT_TAB_WITHOUT_CARD}"
 - waitForAnimationToEnd
 - assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
@@ -467,7 +467,7 @@ appId: ${APP_ID}
 - tapOn: "${HOW_TO_REQUEST_ATM_DEPOSIT}"
 - waitForAnimationToEnd
 - assertVisible: "${HOW_TO_REQUEST_ATM_DEPOSIT}"
-- assertVisible: "1\\) 선호하는 ATM을 선택하세요."
+- assertVisible: "${ATM_GUIDE_CHOOSE_PREFERRED}"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
@@ -531,7 +531,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "2"
 - waitForAnimationToEnd
-- assertVisible: "ATM 입금 신청이 완료되었습니다."
+- assertVisible: "${ATM_DEPOSIT_REQUEST_DONE}"
 - tapOn: "${BTN_DONE}"
 - waitForAnimationToEnd
 - assertVisible: "${DEPOSIT_REQUEST_TEXT}"
@@ -609,7 +609,7 @@ appId: ${APP_ID}
 - tapOn: "1"
 - tapOn: "2"
 - waitForAnimationToEnd
-- assertVisible: "ATM 입금 신청이 완료되었습니다."
+- assertVisible: "${ATM_DEPOSIT_REQUEST_DONE}"
 - tapOn: "${BTN_DONE}"
 - waitForAnimationToEnd
 - assertVisible: "${DEPOSIT_REQUEST_TEXT}"
@@ -656,7 +656,7 @@ appId: ${APP_ID}
 # CLICKUP: z8nfn6mac4
 # ----------------------------------------------------------------
 # [20]에서 이미 레벨1 목록 화면에 있으므로 그대로 이어서 검증.
-- tapOn: "카드를 사용하여\nATM 입금"
+- tapOn: "${ATM_DEPOSIT_TAB_USING_CARD}"
 - waitForAnimationToEnd
 - assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 - assertVisible: "GS25"
@@ -713,8 +713,8 @@ appId: ${APP_ID}
     id: "iv_calendar"
 - waitForAnimationToEnd
 - assertVisible: "${FILTER_BY_DATE_TEXT}"
-- assertVisible: "시작 :"
-- assertVisible: "종료 :"
+- assertVisible: "${FILTER_DATE_FROM}"
+- assertVisible: "${FILTER_DATE_TO}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - assertVisible:

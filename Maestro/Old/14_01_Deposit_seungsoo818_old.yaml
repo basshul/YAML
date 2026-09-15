@@ -86,7 +86,7 @@ appId: ${APP_ID}
 #   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -269,7 +269,7 @@ appId: ${APP_ID}
       #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
       #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
       #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
       - tapOn: "1"
@@ -349,9 +349,9 @@ appId: ${APP_ID}
 - assertVisible: "${GME_WALLET_DEPOSIT_TITLE}"
 # 라벨이 개행을 포함한다("GMEPay" + 개행 + "입금") → 개행 매칭은 [\s\S]를 쓴다
 #   ⚠️ YAML 이중인용(")에서는 \s가 escape 오류다 → **단일인용(')**을 써서 정규식을 그대로 넘긴다
-- assertVisible: 'GMEPay[\s\S]*입금'
+- assertVisible: "${DEPOSIT_TILE_GMEPAY}"
 - assertVisible: "${ATM_DEPOSIT}"
-- assertVisible: "자동이체 입금"
+- assertVisible: "${DEPOSIT_TILE_AUTO_DEBIT}"
 - assertVisible: "${CONVENIENCE_STORE_TEXT}"
 - takeScreenshot: "shots_14_deposit_old/01_입금서비스_진입"
 - pressKey: back
@@ -520,7 +520,7 @@ appId: ${APP_ID}
     visible:
       text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "자동이체 입금"
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "edtBankAccListView"
@@ -536,15 +536,15 @@ appId: ${APP_ID}
 #   ⛔ 실송금·실결제 케이스에는 이 방식을 쓰지 말 것 — 어느 계좌로 돈이 갔는지가 재현 가능해야 한다.
 # ① 선택 가능한 은행이 최소 1개 있는지 먼저 단언한다(빈 목록에서 조용히 통과하는 것을 막는다)
 - assertVisible:
-    text: ".*(은행|뱅크)"
+    text: "${BANK_NAME_ANY}"
     index: 0
 # ② 고른 값을 기억한다
 - copyTextFrom:
-    text: ".*(은행|뱅크)"
+    text: "${BANK_NAME_ANY}"
     index: 0
 - evalScript: ${output.kftcBank = maestro.copiedText}
 - tapOn:
-    text: ".*(은행|뱅크)"
+    text: "${BANK_NAME_ANY}"
     index: 0
 - waitForAnimationToEnd
 # ③ 고른 값으로 검증한다. 선택 후 필드는 "<은행명>(계좌번호 마스킹)" 형태라 앞뒤를 감싼다
@@ -593,7 +593,7 @@ appId: ${APP_ID}
     visible:
       text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "자동이체 입금"
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
 - waitForAnimationToEnd
 - tapOn: "${ACCOUNT_BALANCE_BUTTON_TEXT}"
 - waitForAnimationToEnd
@@ -643,7 +643,7 @@ appId: ${APP_ID}
     visible:
       text: "${DEPOSIT_SERVICE}"
     timeout: 30000
-- tapOn: "자동이체 입금"
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
 - waitForAnimationToEnd
 - tapOn:
     id: "edtRechargeAmount"
@@ -911,8 +911,8 @@ appId: ${APP_ID}
     id: "iv_calendar"
 - waitForAnimationToEnd
 - assertVisible: "${FILTER_BY_DATE_TEXT}"
-- assertVisible: "시작 :"
-- assertVisible: "종료 :"
+- assertVisible: "${FILTER_DATE_FROM}"
+- assertVisible: "${FILTER_DATE_TO}"
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - assertVisible: "${SEARCH_WITH_CONTROLNO_TEXT}"

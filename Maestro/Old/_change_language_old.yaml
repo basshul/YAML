@@ -83,6 +83,10 @@ appId: ${APP_ID}
 # ⚠️ 2026-09-15: 홈 도달을 **`btnTransfer` 로 판정하면 안 된다** — 구 UI 홈은 스크롤 위치를
 #   유지해서 상단 카드(=btnTransfer)가 화면 밖일 수 있다. 이 헬퍼가 로그인 직후에도 여기서
 #   실패해 en 검증 전체가 막혔다(실측). 판정은 하단 내비 `bottom_item_home` 으로 한다.
+# ⚠️ 2026-09-15 추가: 홈 팝업 큐를 **먼저 비운다.** 다이얼로그가 뜨면 **뒤 화면이 접근성
+#   트리에서 사라지므로** `bottom_item_home` 조차 보이지 않아 이 대기가 90초 만에 죽는다
+#   (test123 로그인 직후 실제 발생 — 팝업 2개가 떠 있었다: `btnDontShowToday`·`remindLaterBtn`).
+- runFlow: "_dismiss_popups_stag_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
