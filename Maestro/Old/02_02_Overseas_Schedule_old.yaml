@@ -645,7 +645,7 @@ appId: ${APP_ID}
 - tapOn: "2"
 # 당일+지난시간 예약 불가 에러 팝업 확인
 - assertVisible:
-    text: ".*오류.*"
+    text: "${DIALOG_ERROR_TITLE}"
 - tapOn: "${BTN_CONFIRM}"
 
 # --- Step 3 → Step 1으로 이동 ---
@@ -690,7 +690,7 @@ appId: ${APP_ID}
 - assertVisible:
     text: "${LOGIN_SUCCESS}"
 - assertVisible:
-    text: ".*첫 번째 예약 송금.*"
+    text: "${SCHEDULE_SUCCESS_DIALOG}"
 
 # 성공 팝업 닫기 (back으로 닫히지 않으므로 "다시 보내기" 탭)
 - tapOn: "${SEND_AGAIN_TEXT}"
@@ -819,7 +819,7 @@ appId: ${APP_ID}
 - assertVisible:
     text: "${LOGIN_SUCCESS}"
 - assertVisible:
-    text: ".*첫 번째 예약 송금.*"
+    text: "${SCHEDULE_SUCCESS_DIALOG}"
 
 # --- 사후 정리: 활성 예약 모두 취소 ([시나리오 2] + [시나리오 3]) ---
 - tapOn: "${MYQR_VIEW_RECEIPT}"

@@ -220,9 +220,13 @@ appId: ${APP_ID}
     appId: "com.microsoft.teams"
 - tapOn:
     id: "share"
+# ⚠️ **`sem_resolver_recyclerview` 는 삼성 구버전 전용 id 다** — Android 16 에서는 시트가 정상적으로
+#   뜨는데 그 id 가 없어 실패한다(2026-09-18 실측: 패키지 `com.android.intentresolver`,
+#   행 id 는 **`sem_chooser_row_recycler_view`**). `25_Profile` 과 같이 **시트 제목으로 판정**한다.
+#   ⚠️ 시스템 공유 시트는 **앱 언어를 따르지 않고 기기 언어**를 쓴다(en 실행에서도 `이미지 1개`)
+#     → 양쪽을 함께 받는다.
 - extendedWaitUntil:
-    visible:
-      id: "sem_resolver_recyclerview"
+    visible: "이미지 [0-9]+개|[0-9]+ image[s]?|텍스트 공유|Share text"
     timeout: 20000
 - takeScreenshot: "[01]_QR공유_시트"
 # ⚠️⚠️ **"Teams"라는 이름이 시트에 두 종류로 존재한다 — 잘못 누르면 그룹 채팅으로 보낸다**
@@ -233,21 +237,23 @@ appId: ${APP_ID}
 #   `scrollUntilVisible`/`tapOn`의 텍스트 매칭은 content-desc도 잡으므로, 스크롤 없이 그냥
 #   `tapOn: "Teams"` 하면 **①의 배지에 먼저 걸려 그룹 채팅 작성 화면으로 들어간다**
 #   (2026-08-19 실제로 "In App Message" 그룹이 수신자로 박힌 화면이 떴다).
-#   → **시트를 먼저 펼쳐 직접공유 행을 화면 밖으로 밀어낸 뒤** 앱 목록의 Teams를 누른다.
-- repeat:
-    times: 3
-    commands:
-      - swipe:
-          start: "50%, 88%"
-          end: "50%, 38%"
-      - waitForAnimationToEnd
+#   ★ 2026-09-18 개정 — **스와이프로 밀어내는 방식을 버렸다.**
+#     ① 직접공유 행의 **대상은 수시로 바뀐다**(사용자 지시) → 무엇이 올지 전제할 수 없다.
+#     ② Android 16 시트(`com.android.intentresolver`)에서는 그 스와이프가 먹지 않아
+#        `tapOn: "Teams"` 가 배지에 걸렸고, **엉뚱한 상대(Santosh)가 수신자로 박힌** 공유 화면까지
+#        갔다(2026-09-18 실측. 전송 직전에 중단했다).
+#   → **앱 목록 행의 라벨(id `text1`)만 집는다.** 직접공유 아이콘의 `text1` 은 *사람 이름*이라
+#     id+text 조합에는 걸리지 않는다. 시트 구조가 바뀌어도 이 조합은 버틴다.
 - scrollUntilVisible:
     element:
+      id: "text1"
       text: "Teams"
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 20
-- tapOn: "Teams"
+- tapOn:
+    id: "text1"
+    text: "Teams"
 - waitForAnimationToEnd
 # Teams 공유 화면 = `ShareToSkypeTeamsActivity`
 #   `share_search_bar`+`editTextView`("채팅 및 채널 검색") / `people_picker_list`(최근 채팅 목록)
@@ -314,7 +320,7 @@ appId: ${APP_ID}
     visible:
       id: "qrimage"
     timeout: 20000
-- assertVisible: ".*신한은행.*"
+- assertVisible: ".*${BANK_022}.*"
 - takeScreenshot: "[02]_받는계좌_신한은행"
 # 원복
 - tapOn:
@@ -353,7 +359,7 @@ appId: ${APP_ID}
     visible:
       id: "qrimage"
     timeout: 20000
-- assertVisible: ".*1 원.*"
+- assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
 - takeScreenshot: "[03]_금액입력_1원"
 # 원복 — 금액을 지워 "금액 입력" 상태로 되돌린다
 - tapOn:
@@ -445,8 +451,8 @@ appId: ${APP_ID}
     visible:
       id: "qrimage"
     timeout: 20000
-- assertVisible: ".*1 원.*"
-- assertVisible: ".*카카오뱅크.*"
+- assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
+- assertVisible: ".*${KFTC_BANK}.*"
 # 이 상태(카카오뱅크 + 1원)로 QR 저장
 - tapOn:
     id: "download"
@@ -495,22 +501,48 @@ appId: ${APP_ID}
 - takeScreenshot: "[05]_QR스캔_화면진입"
 - tapOn:
     id: "galleryImagePick"
+# ⚠️ **OS 버전에 따라 사진 선택 도구가 다르다** — Android 16 시스템 피커는 Compose 라
+#   **파일명이 접근성 트리에 없어** `gmeqr.*` 로 찾지 못한다(`06_Registration` 과 같은 문제,
+#   2026-09-18 실측). → 그 경로에서만 **좌표 탭**. 방금 저장한 QR 이 최신이므로
+#   **index 0 = 1080x2340 기준 (16%, 48%)**. 해상도가 바뀌면 여기부터 깨진다.
+#   탭 결과는 바로 아래 `recipientAccountNoFormInputField` 도달로 확인된다(빗나가면 거기서 죽는다).
 - extendedWaitUntil:
-    visible: "gmeqr.*"
+    visible: "gmeqr.*|사진|Photos"
     timeout: 30000
-- tapOn:
-    text: "gmeqr.*"
-    index: 0
+- runFlow:
+    when:
+      visible: "gmeqr.*"
+    commands:
+      - tapOn:
+          text: "gmeqr.*"
+          index: 0
+- runFlow:
+    when:
+      notVisible: "gmeqr.*"
+    commands:
+      - tapOn:
+          point: "16%, 48%"
+      - waitForAnimationToEnd
+      # ⚠️ Android 16 피커는 **고른 뒤 "완료" 를 눌러야 닫힌다**(2026-09-18 실측: 항목은
+      #   `선택됨` 이 됐는데 피커가 그대로 남아 다음 단언이 죽었다).
+      #   시스템 피커는 **기기 언어**를 쓰므로 한국어·영문을 함께 받는다.
+      - runFlow:
+          when:
+            visible: "완료|Done|DONE|COMPLETED"
+          commands:
+            - tapOn: "완료|Done|DONE|COMPLETED"
+            - waitForAnimationToEnd
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "recipientAccountNoFormInputField"
     timeout: 30000
 - assertVisible: "${SCR_DOMESTIC_REMIT}"
 # QR에 담긴 값이 그대로 채워졌는지 — 은행 / 금액
-- assertVisible: ".*카카오뱅크.*"
+- assertVisible: ".*${KFTC_BANK}.*"
 - assertVisible:
     id: "amount"
-- assertVisible: ".*1 원.*"
+- assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
 - assertVisible:
     id: "btn_ok2"
 - takeScreenshot: "[05-1]_QR스캔_금액자동입력"
@@ -656,7 +688,7 @@ appId: ${APP_ID}
 # ---- 받는 계좌 = 카카오뱅크 (이미 그 상태면 건너뛴다) ----
 - runFlow:
     when:
-      notVisible: ".*카카오뱅크.*"
+      notVisible: ".*${KFTC_BANK}.*"
     commands:
       - tapOn:
           id: "accountinfo"
@@ -671,7 +703,7 @@ appId: ${APP_ID}
           visible:
             id: "qrimage"
           timeout: 20000
-- assertVisible: ".*카카오뱅크.*"
+- assertVisible: ".*${KFTC_BANK}.*"
 
 # ---- 금액 **미입력** 상태를 보장한다 ----
 # `enteramount` 라벨이 "금액 입력"이면 비어 있다는 뜻이고, 값이 있으면 "1 원"처럼 바뀐다.
@@ -738,12 +770,38 @@ appId: ${APP_ID}
     timeout: 20000
 - tapOn:
     id: "galleryImagePick"
+# ⚠️ **OS 버전에 따라 사진 선택 도구가 다르다** — Android 16 시스템 피커는 Compose 라
+#   **파일명이 접근성 트리에 없어** `gmeqr.*` 로 찾지 못한다(`06_Registration` 과 같은 문제,
+#   2026-09-18 실측). → 그 경로에서만 **좌표 탭**. 방금 저장한 QR 이 최신이므로
+#   **index 0 = 1080x2340 기준 (16%, 48%)**. 해상도가 바뀌면 여기부터 깨진다.
+#   탭 결과는 바로 아래 `recipientAccountNoFormInputField` 도달로 확인된다(빗나가면 거기서 죽는다).
 - extendedWaitUntil:
-    visible: "gmeqr.*"
+    visible: "gmeqr.*|사진|Photos"
     timeout: 30000
-- tapOn:
-    text: "gmeqr.*"
-    index: 0
+- runFlow:
+    when:
+      visible: "gmeqr.*"
+    commands:
+      - tapOn:
+          text: "gmeqr.*"
+          index: 0
+- runFlow:
+    when:
+      notVisible: "gmeqr.*"
+    commands:
+      - tapOn:
+          point: "16%, 48%"
+      - waitForAnimationToEnd
+      # ⚠️ Android 16 피커는 **고른 뒤 "완료" 를 눌러야 닫힌다**(2026-09-18 실측: 항목은
+      #   `선택됨` 이 됐는데 피커가 그대로 남아 다음 단언이 죽었다).
+      #   시스템 피커는 **기기 언어**를 쓰므로 한국어·영문을 함께 받는다.
+      - runFlow:
+          when:
+            visible: "완료|Done|DONE|COMPLETED"
+          commands:
+            - tapOn: "완료|Done|DONE|COMPLETED"
+            - waitForAnimationToEnd
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "recipientAccountNoFormInputField"
@@ -751,7 +809,7 @@ appId: ${APP_ID}
 - assertVisible: "${SCR_DOMESTIC_REMIT}"
 # 계좌·은행은 자동으로 채워진다
 - assertVisible: ".*3333276033972.*"
-- assertVisible: ".*카카오뱅크.*"
+- assertVisible: ".*${KFTC_BANK}.*"
 # 금액은 비어 있다 — `amount`에 플레이스홀더 "금액"이 그대로 보인다(값이 들어오면 "1 원"으로 바뀐다)
 - assertVisible: "${AMOUNT}"
 - takeScreenshot: "[06-2]_QR스캔_금액미입력"
@@ -762,7 +820,7 @@ appId: ${APP_ID}
 - inputText: "1"
 - hideKeyboard
 - waitForAnimationToEnd
-- assertVisible: ".*1 원.*"
+- assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
 - extendedWaitUntil:
     visible:
       id: "btn_ok2"

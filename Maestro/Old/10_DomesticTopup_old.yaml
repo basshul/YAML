@@ -169,12 +169,12 @@ appId: ${APP_ID}
 # 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
 - scrollUntilVisible:
     element:
-      text: ".*모바일 충전.*"
+      text: "${HOME_TOPUP_BILL}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
 - tapOn:
-    text: ".*모바일 충전.*"
+    text: "${HOME_TOPUP_BILL}"
 - extendedWaitUntil:
     visible:
       id: "domestic_topUp"
@@ -326,7 +326,7 @@ appId: ${APP_ID}
 #     서버가 거부하는 것이 정상 동작이고, 실자금 이동은 없다.
 - extendedWaitUntil:
     visible:
-      text: ".*(인터넷 접속이 원활하지 않습니다|실패).*"
+      text: "${TOPUP_FAIL_ANY}"
     timeout: 180000
 - takeScreenshot: "shots_10_domestictopup_old/04_3_충전실패"
 # 7.20.0의 실패 화면은 바텀시트이고 확인 버튼에 id가 있다(`btnOk`) → id 우선, 텍스트는 예비.

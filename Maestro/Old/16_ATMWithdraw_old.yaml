@@ -175,6 +175,53 @@ appId: ${APP_ID}
     timeout: 25000
     visibilityPercentage: 20
 - tapOn: "${TXT_ATM}"
+# ⚠️⚠️ **이전 실행이 남긴 신청이 있으면 진입 화면이 다르다**(2026-09-18 실측).
+#   금액 입력 화면 대신 **"신청 완료" 화면**(`withdrawalNumber` / `timelimit` / `btnCancel` /
+#   `btnDone`)이 떠서 아래 `atmWithdrawalFirstTimeGuide` 를 못 찾고 죽는다.
+#   신청은 5분 뒤 `OTP Number has expired` 로 만료되지만 **기다릴 필요 없이 바로 취소**할 수 있다
+#   (2026-09-18 사용자 확인) → 남아 있으면 먼저 치우고 정상 진입으로 되돌린다.
+#   ⛔ **`btnDone` 은 출금 완료 처리다** — 취소는 반드시 `btnCancel`.
+#   ⚠️ 취소 확정에는 **PIN 입력**이 필요하다. 확인 버튼은 `btn_no`/`btn_yes`(id 라 언어 무관).
+- runFlow:
+    when:
+      visible:
+        id: "btnCancel"
+    commands:
+      - tapOn:
+          id: "btnCancel"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn_yes"
+          commands:
+            - tapOn:
+                id: "btn_yes"
+            - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "input_dot_1"
+          commands:
+            - tapOn: "1"
+            - tapOn: "2"
+            - tapOn: "1"
+            - tapOn: "2"
+            - waitForAnimationToEnd
+      - waitForAnimationToEnd
+      # 취소 후 홈으로 빠지는 경우가 있다 → ATM 화면으로 다시 들어간다.
+      - runFlow:
+          when:
+            visible:
+              id: "bottom_item_home"
+          commands:
+            - scrollUntilVisible:
+                element:
+                  text: "${TXT_ATM}"
+                direction: DOWN
+                visibilityPercentage: 20
+            - tapOn: "${TXT_ATM}"
+            - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "atmWithdrawalFirstTimeGuide"
@@ -281,7 +328,7 @@ appId: ${APP_ID}
           timeout: 30000
       - tapOn: "GS25"
       - extendedWaitUntil:
-          visible: ".*신청하시겠습니까.*"
+          visible: "${ATM_WITHDRAW_CONFIRM}"
           timeout: 20000
       - takeScreenshot: "[04-1]_신청확인_팝업"
       - tapOn:
@@ -340,7 +387,7 @@ appId: ${APP_ID}
                   # 확인 팝업이 떴을 때만 진행한다(안 뜨면 다음 회차에서 다시 시도)
                   - runFlow:
                       when:
-                        visible: ".*취소하시겠습니까.*"
+                        visible: "${ATM_CANCEL_CONFIRM}"
                       commands:
                         - tapOn:
                             id: "btn_yes"
@@ -400,10 +447,10 @@ appId: ${APP_ID}
       #   ⚠️ 두 문구 다 **부분매칭 정규식**으로 쓴다. 텍스트가 전체매칭이라 리터럴로 두면
       #     `취소완료`(공백 없음) 같은 변형에서 긍정은 **깨지고** 부정은 **조용히 통과한다**
       #     — `"국내송금"` vs 실측 `"국내 송금"`으로 실제로 물린 것과 같은 부류다.
-      - assertVisible: ".*취소.*완료.*"
+      - assertVisible: "${ATM_STATUS_CANCELLED}"
       # 대기 중인 신청이 하나도 남아 있지 않아야 한다 — 이게 이 케이스의 사후 안전장치다
       #   (위 assertVisible이 통과했으므로 이 화면의 상태 문자열을 실제로 읽고 있다는 게 보장된다)
-      - assertNotVisible: ".*입금.*대기.*"
+      - assertNotVisible: "${ATM_STATUS_WAITING}"
       - takeScreenshot: "[04-4]_출금내역_대기건없음"
       - tapOn:
           id: "backView"

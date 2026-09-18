@@ -156,9 +156,9 @@ $Suite = @(
 
   # ── 여기부터 돈이 움직인다 ──
   @{ n="08_MyQR";                 g="G2"; acct="seungsoo818"; est=10; f="Old\08_MyQR_old.yaml"; push=$true
-     needs=@{ balance=2000 }; note="1원 송금 완주 포함. 카카오뱅크는 [05][06] 실송금 조합이라 고정" }
+     needs=@{ balance=100 };  note="1원 송금 완주 포함(실측 1원×3=3원 — 2026-09-18 2000→100 정정). 카카오뱅크는 [05][06] 실송금 조합이라 고정" }
   @{ n="10_DomesticTopup";        g="G2"; acct="seungsoo818"; est=4;  f="Old\10_DomesticTopup_old.yaml"
-     needs=@{ balance=1000 }
+     needs=@{ balance=0 }     # 실제로 잔액이 차감되지 않는다(2026-09-18 사용자 확인 — 1000→0)
      note="[04]는 **거부 동작이 케이스 정의**(테스트 번호가 선불폰 아님) → 실자금 이동 없음. 실패응답 최대 3분" }
   @{ n="03_Domestic";             g="G2"; acct="seungsoo818"; est=12; f="Old\03_Domestic_old.yaml"
      needs=@{ balance=3000 }
