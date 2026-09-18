@@ -3,9 +3,13 @@ appId: ${APP_ID}
 # ================================================================
 # 시나리오 1 + 2: 한국인 + 외국인 회원가입 통합 플로우
 # 실행:
-#   한국어: .\run_test.ps1 -lang ko -flow 06_Registration_All.yaml
-#   영어:   .\run_test.ps1 -lang en -flow 06_Registration_All.yaml
+#   한국어: .\run_test.ps1 -lang ko -flow "Old\06_Registration_old.yaml"
+#   영어:   .\run_test.ps1 -lang en -flow "Old\06_Registration_old.yaml"
 #
+# ★ 2026-09-17: 분리본 `06_Registration_Korean_old.yaml` · `06_Registration_Foreigner_old.yaml` 을
+#   **삭제하고 이 파일로 일원화**했다(사용자 지시). 분리본은 이 파일의 부분집합이었고
+#   (41케이스 = 한국인 32 + 외국인 9), 같은 수정을 세 곳에 이식하느라 드리프트가 반복됐다.
+#   파일명에서도 `_All` 을 뗐다.
 # S1: ID: test007 / PW: <정상 비밀번호> / 국적: 한국인
 # S2: ID: test006 / PW: <정상 비밀번호> / 국적: 외국인
 # S2 완료 후: test006 로그아웃 → seungsoo818 로그인 → 홈 화면 확인
@@ -233,6 +237,28 @@ appId: ${APP_ID}
 - tapOn: "${REG_SAVE_AND_NEXT}"
 - waitForAnimationToEnd
 - takeScreenshot: "[11]_다음_선택_화면이동"
+
+# ★ 재개 분기 — **이미 만들어진 계정이면 로그인해서 이어간다** (2026-09-16 신설)
+#   이 파일은 비멱등이다: 바로 위 '다음' 을 넘기는 순간 서버에 계정이 생기고,
+#   그 뒤 단계에서 끊기면 **계정만 있고 KYC 는 미완료**인 상태로 남는다.
+#   재실행하면 여기서 "이미 등록된 …" 으로 막히는데, 그때 이 분기가
+#   test007 로 로그인해 **[12] 신분증 타입 선택** 부터 이어받게 한다.
+#   ⚠️ 정상(신규 가입)일 때는 조건이 거짓이라 **통째로 SKIP** 된다 — 평소 동작은 그대로다.
+- runFlow:
+    when:
+      visible: "${REG_ACCOUNT_EXISTS}"
+    commands:
+      - runFlow:
+          file: _reg_resume_login_old.yaml
+          env:
+            RESUME_ID: "test007"
+      # ★ 재개의 목적은 케이스 검증이 아니라 **어중간한 계정을 정리하는 복구**다(2026-09-17 사용자 확인).
+      #   끊긴 지점을 맞추려 하지 않고 남은 단계를 눌러 **가입을 끝까지 끝낸다** → 계정이 "완주"
+      #   상태가 되어 admin 에서 지우고 06 을 다시 돌릴 수 있다. 헬퍼는 내국인/외국인 공용이다.
+      - runFlow:
+          file: _reg_complete_signup_old.yaml
+          env:
+            SIGNUP_EMAIL: "anfrhrl002@gmail.com"
 
 # ================================================================
 # [ID Information Verification - 내국인]
@@ -490,7 +516,7 @@ appId: ${APP_ID}
 #     사용자 ID(test007/test006) · 이메일 · 신분증 번호(여권/ARC) · 휴대폰 번호
 #   → **재실행 전에 생성된 계정을 admin에서 지우거나, 위 값들을 모두 새 값으로 바꿔야 한다.**
 #     지우지 않고 돌리면 ID 중복 → 이메일 중복 → 신분증번호 중복 순으로 계속 막힌다.
-- inputText: "test007@test.com"
+- inputText: "anfrhrl002@gmail.com"
 - waitForAnimationToEnd
 - takeScreenshot: "[23]_Email_입력"
 
@@ -705,6 +731,28 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - tapOn: "${REG_SAVE_AND_NEXT}"
 - waitForAnimationToEnd
+
+# ★ 재개 분기 — **이미 만들어진 계정이면 로그인해서 이어간다** (2026-09-16 신설)
+#   이 파일은 비멱등이다: 바로 위 '다음' 을 넘기는 순간 서버에 계정이 생기고,
+#   그 뒤 단계에서 끊기면 **계정만 있고 KYC 는 미완료**인 상태로 남는다.
+#   재실행하면 여기서 "이미 등록된 …" 으로 막히는데, 그때 이 분기가
+#   test006 로 로그인해 **[14] 여권/ARC 선택** 부터 이어받게 한다.
+#   ⚠️ 정상(신규 가입)일 때는 조건이 거짓이라 **통째로 SKIP** 된다 — 평소 동작은 그대로다.
+- runFlow:
+    when:
+      visible: "${REG_ACCOUNT_EXISTS}"
+    commands:
+      - runFlow:
+          file: _reg_resume_login_old.yaml
+          env:
+            RESUME_ID: "test006"
+      # ★ 재개의 목적은 케이스 검증이 아니라 **어중간한 계정을 정리하는 복구**다(2026-09-17 사용자 확인).
+      #   끊긴 지점을 맞추려 하지 않고 남은 단계를 눌러 **가입을 끝까지 끝낸다** → 계정이 "완주"
+      #   상태가 되어 admin 에서 지우고 06 을 다시 돌릴 수 있다. 헬퍼는 내국인/외국인 공용이다.
+      - runFlow:
+          file: _reg_complete_signup_old.yaml
+          env:
+            SIGNUP_EMAIL: "anfrhrl001@gmail.com"
 
 # ----------------------------------------------------------------
 # [14] [High] ID Information Verification - Passport(신분증) 항목 노출 확인 (Foreigner)
@@ -1044,7 +1092,7 @@ appId: ${APP_ID}
     id: "emailInputField"
 - waitForAnimationToEnd
 - eraseText: 40
-- inputText: "test006@test.com"
+- inputText: "anfrhrl001@gmail.com"
 - waitForAnimationToEnd
 - takeScreenshot: "[S2-23]_Email_입력"
 

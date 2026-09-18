@@ -27,4 +27,4 @@
   어떤 `.env`에도 없다(그래서 정적 검사 `E04`가 잡았고, 이관으로 해소됐다).
 - `appId`가 `.stag`로 하드코딩돼 있다.
 
-**관련:** `06_Registration_All_old.yaml`, PROGRESS.md의 `06_Registration` 절
+**관련:** `06_Registration_All_old.yaml`, docs\PROGRESS.md 의 `06_Registration` 절

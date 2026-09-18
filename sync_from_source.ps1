@@ -18,7 +18,7 @@
 # ================================================================
 param(
     [switch]$Apply,
-    [ValidateSet("all", "Maestro", "Checklist", "Root")][string]$Area = "all",
+    [ValidateSet("all", "Maestro", "Checklist", "Root", "docs")][string]$Area = "all",
     [string]$Source = "C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation",
     [switch]$Quiet
 )
@@ -40,9 +40,7 @@ function Test-IgnoredDir([string]$name) {
     return ($name -like "shots_*") -or ($name -in @(".maestro", "artifacts", ".git", "suite_logs"))
 }
 function Test-IgnoredFile([string]$name, [string[]]$extra) {
-    # secrets.env: 개인정보(실 이메일 등)를 담아 **정본에만** 두는 파일이다 → 미러링하지 않는다.
-    if ($name -eq "secrets.env") { return $true }
-    if ($name -like "*.png" -or $name -like "*.zip") { return $true }
+        if ($name -like "*.png" -or $name -like "*.zip") { return $true }
     foreach ($p in $extra) { if ($name -like $p) { return $true } }
     return $false
 }
@@ -51,10 +49,22 @@ function Test-IgnoredFile([string]$name, [string[]]$extra) {
 #   Root      = 개별 파일만(정본 루트에는 Maestro\·Checklist\ 도 있어 통째로 훑으면 안 된다)
 #   Checklist = xlsx 는 **의도적으로 추적하지 않는다**(정본 결과 파일, 바이너리) → 백업본까지 제외
 #   Maestro   = 통째로. 제외는 .gitignore 와 동일
+#   docs      = 사람이 읽는 문서(2026-09-16 신설). 흩어져 있던 md 를 한곳에 모았다.
+#               ⚠️ `PROGRESS.md`·`SUITE.md`·`README*.md` 는 **저장소에만 있는 파일**이라 제외한다 —
+#                  빼지 않으면 정본에 없다는 이유로 매번 '삭제' 로 잡힌다.
+#               ⚠️ `CLAUDE.md`(저장소 루트)와 `.claude\skills\*\SKILL.md` 는 **경로가 고정**이라
+#                  여기로 옮기지 않았다. 옮기면 지침·스킬이 로드되지 않는다.
+#               ⚠️ 린터 산출물 `lint_*.md` 는 문서가 아니라 **재생성되는 산출물**이라
+#                  저장소에서는 `artifacts\lint\` 로 보냈다(=`.gitignore` 의 `artifacts/`).
 $areas = @(
     @{ Name = "Root";      Dir = "";          Files = @("run_test.ps1", "Automation Report.bat", "Automation Report.txt") }
     @{ Name = "Checklist"; Dir = "Checklist"; Exclude = @("*.xlsx", "*.xlsx.bak_*") }
-    @{ Name = "Maestro";   Dir = "Maestro";   Exclude = @() }
+    #   lint_*.md = 린터가 **돌릴 때마다 다시 만드는 산출물**이다(문서가 아니다) → 미러하지 않는다.
+    #               2026-09-16 정리 전까지 `Maestro\` 에 문서와 섞여 있어 md 를 찾기 어려웠다.
+    @{ Name = "Maestro";   Dir = "Maestro";   Exclude = @("lint_*.md") }
+    #   README_*.md = `gme_excel.py` 안내(win/mac). 스크립트와 함께 **저장소에만** 둔다.
+    #               와일드카드로 둔다 — 이름이 바뀌어도(README.md → README_mac.md) 안 지워지게.
+    @{ Name = "docs";      Dir = "docs";      Exclude = @("PROGRESS.md", "SUITE.md", "README_*.md") }
 )
 if ($Area -ne "all") { $areas = @($areas | Where-Object { $_.Name -eq $Area }) }
 

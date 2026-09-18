@@ -9,13 +9,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 에뮬레이터는 사용하지 않는다(생체인증·실계좌 연동 때문).
 
 이 문서는 **지침만** 다룬다. 나머지는 따로 있다:
-- [PROGRESS.md](PROGRESS.md) — 파일별 진행 현황(완료/잔여/BLOCKED/보류)
-- **`.claude/skills/` — 작업별 상세 절차(skill)**. 해당 작업을 할 때 자동으로 불려 온다:
+
+### 📁 `docs\` — 사람이 읽는 문서는 전부 여기 (2026-09-16 정리)
+
+흩어져 있던 md 를 한곳에 모았다. **문서를 새로 쓰면 여기에 둔다.**
+
+- [docs/PROGRESS.md](docs/PROGRESS.md) — 파일별 진행 현황(완료/잔여/BLOCKED/보류)
+- [docs/GUIDE.md](docs/GUIDE.md) — 넘겨받은 사람이 처음 돌리기까지
+- [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) — 사전조건(계정·잔액·픽스처·되돌릴 수 없는 실행)과 하드코딩 인벤토리
+- [docs/SUITE.md](docs/SUITE.md) — 스위트 문서였으나 **내용은 `maestro-suite` skill로 옮겼다**(포인터만 남음)
+
+⚠️ **`docs\` 로 옮기면 안 되는 md 가 있다** — 경로가 고정이라 옮기면 조용히 로드되지 않는다:
+**이 파일(`CLAUDE.md`, 저장소 루트)** 과 **`.claude\skills\*\SKILL.md`**.
+린터 산출물 `lint_*.md` 는 문서가 아니라 **돌릴 때마다 다시 만들어지는 산출물**이라
+`artifacts\lint\` 로 보냈다(`.gitignore` 의 `artifacts/`, 미러도 `lint_*.md` 를 제외한다).
+
+### `.claude/skills/` — 작업별 상세 절차(skill)
+
+해당 작업을 할 때 자동으로 불려 온다:
   - `maestro-run` — 플로우/스위트 실행, 실행 전 점검, 빌드 전환, 백그라운드 판단
   - `maestro-debug` — 실패 진단. **환경 문제(기기 끊김·자동 로그아웃·세션 만료)와 코드 결함을 구분**
   - `maestro-yaml` — yaml 작성. 셀렉터 함정, 거짓 통과를 막는 assert 구조, 임시본 재추출
   - `maestro-suite` — 회귀 스위트. 태그·순서 제약·제외 파일·재작성 계획
-- [SUITE.md](SUITE.md) — 스위트 문서였으나 **내용은 `maestro-suite` skill로 옮겼다**(포인터만 남음)
 
 ⚠️ **작업 파일은 이 디렉터리(`C:\GME\qa-automation`)에 없다.** 실제 경로:
 
@@ -39,7 +54,7 @@ C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro\
 ```
 
 - 제외는 `.gitignore` 와 맞춰 뒀다(`shots_*/`·`*.png`·`*.zip`, `Checklist\*.xlsx`).
-  **2026-09-11 추가**: `Maestro\suite_logs\`(실행 로그)와 `Maestro\env\secrets.env` 도 제외한다.
+  **2026-09-11 추가**: `Maestro\suite_logs\`(실행 로그)도 제외한다.
   제외는 `.gitignore` 와 `sync_from_source.ps1` **양쪽**에 넣어야 한다 — 한쪽만 하면 미러가 계속
   다시 채우거나 매번 "차이 있음"으로 뜬다.
 
@@ -47,20 +62,28 @@ C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro\
 - 스크립트는 **저장소 루트**에 둔다. `Maestro\` 안에 두면 정본에 없는 파일이라 스스로를 지운다.
 
 
-### 저장소에 올리면 안 되는 값 — `env\secrets.env`
+### 저장소에 올라가는 값 — `secrets.env` 는 2026-09-18 폐지했다
 
 ⚠️ **이 저장소는 2026-09-11부터 GitHub(`basshul/YAML`, 비공개)에 푸시된다.**
-개인정보·자격정보는 `Maestro\env\secrets.env` 에 두고, 플로우에서는 `${VAR}` 로 참조한다.
-이 파일은 **정본에만 존재**하며 `run_test.ps1` 이 `env\<lang>.env` 다음에 읽어 `--env` 로 넘긴다
-(없으면 경고를 찍고, 그 값을 쓰는 플로우는 미치환으로 실패한다 — 조용히 넘어가지 않는다).
+
+종전에는 개인정보를 `Maestro\env\secrets.env` 에 분리해 두었으나, **전부 테스트 전용 계정·이메일이라
+공개돼도 무방하다는 사용자 판단(2026-09-18)** 으로 파일을 없애고 값을 `env\ko.env`·`en.env` 로 옮겼다
+(`PROFILE_EMAIL` · `PROFILE_EMAIL_TEST`). `.gitignore` · `sync_from_source.ps1` · `run_test.ps1` 의
+관련 처리도 함께 제거했다.
+
+→ 이제 **저장소만 받아도 실행에 필요한 파일이 전부 있다.**
+
+⛔ 단 기준은 남는다: **실제 사람·실계정에 닿는 값은 애초에 넣지 않는다.** 그런 값이 필요해지면
+그때 다시 분리 파일을 만든다.
 
 - 실행 로그(`suite_logs\`)에는 **계정 ID·잔액·거래 내역·실 이메일**이 그대로 남는다 → 추적하지 않는다.
   증적은 정본(OneDrive)에 그대로 있다.
 - 앱이 화면에 보여주는 값이면 **주입보다 런타임 판독이 낫다**: `21_Card [12]` 의 카드 CVC 는
   `[11]` 이 `copyTextFrom: cvcnumbertext` + `evalScript` 로 읽어 `output.cvc1~3` 으로 넘긴다.
   로그에는 치환 전 원문만 찍혀 값이 남지 않는다.
-- ⛔ **아직 남은 것**: 로그인 비밀번호(10개 파일)·PIN(65곳)이 평문이다.
-  비공개 저장소라는 전제로 올렸다 — **공개로 바꾸기 전에 반드시 `secrets.env` 로 옮길 것.**
+- **로그인 비밀번호·PIN 은 평문으로 둔다**(2026-09-18 결정). 테스트 계정이라 공개돼도 무방하고,
+  로그인은 **보안 키패드를 글자별 접근성 라벨로 탭**하는 구조라 변수로 빼도 탭 시퀀스에 그대로 드러난다.
+  오히려 디버깅만 어려워지고, 저장소 단독 실행이 깨진다. 공개 전환 시에는 **계정 자체를 교체**하는 쪽이 맞다.
 - ⛔ 이전 히스토리(로그·실 이메일 포함)는 로컬 `backup-pre-squash-20260911` 브랜치에만 있다 →
   **`git push --all` / `--mirror` 금지.** `main` 만 명시해 푸시한다.
 
@@ -273,58 +296,62 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
 `Automation Report.bat`은 `qa_report.json`을 읽어 데일리 리포트를 ClickUp 문서로 올리는 별도 배치다.
 ⚠️ 배치 파일에 한글을 직접 넣으면 cmd 파서가 밀려 깨진다 → ASCII 런처 + `.ps1` 분리가 원칙이다.
 
-### QA 체크리스트 결과 기입 (2026-08-27 추가 / **2026-09-02 정본·오프셋 확정**)
+### QA 체크리스트 결과 기입 (2026-09-16 **전면 교체**)
 
-같은 이름의 파일이 여러 개인데 **성격이 다르다.** 결과를 적는 건 `_WORK` 하나뿐이다.
-
-```
-개인용 - Automation\
-├── Checklist\GME QA Checklist V2.1_WORK.xlsx  ★★ 정본 = 결과 기입 대상 (2026-09-02 사용자 확정)
-│      45파트 / 9시트 / `Checklist(Livetest)` = xl/worksheets/sheet4.xml
-│      라운드별 iOS·Android Result 열을 가진 유일한 파일
-├── Checklist\GME QA Checklist V2.1.xlsx       = 자동화 매핑 사본 (사용자가 불필요한 부분을 덜어낸 것)
-├── GME QA Checklist V2.1.xlsx (루트)          = 자동화 매핑 사본 · **데일리 자동화가 매일 덮어씀**
-├── Checklist\_bb_mapping.json                 yaml 케이스 ↔ 체크리스트 행 매핑 (315건)
-└── Checklist\write_bb.py                      기입 스크립트
-```
-
-- 매핑 사본은 **결과 열이 아예 없다**(`G`=커버 상태 `H`=YAML 파일 `I`=YAML 케이스 `J`=완료일
-  `K`=커버 상태(Old) `L`=검토 필요). 시트·열을 덜어낸 것은 **사용자가 의도적으로 정리한 것이며
-  손상이 아니다.** 용도가 다른 산출물이니 "축약됐다"고 이상하게 보지 말 것.
-  → 결과(`Pass`/`Fail`)는 여기에 적을 수 없다. **`_WORK`에만 적는다.**
-
-#### ★ `_bb_mapping.json`의 행 번호는 정본 기준이 아니다 — **+1** 해야 한다
-
-매핑은 **매핑 사본 기준**으로 만들어졌고, 정본은 헤더가 한 줄 더 있어 **한 행 밀려 있다.**
+★ **기입 대상은 SharePoint 마스터다.** 로컬 `_WORK` 사본에 적고 사람이 손으로 옮기던 구조는 폐기했다.
 
 ```
-정본 행 = _bb_mapping.json 의 row + 1
+GME-IT-Korea > Shared Documents > General > QA Report > Final Checklist
+└── GME QA Checklist V2.1.xlsx      ★ 여기에 직접 쓴다
 ```
 
-2026-09-02 F열 텍스트 전수 대조로 확인: 오프셋 0이면 **315건 전부 불일치**, +1이면 **315건 전부 일치**.
-⚠️ 그대로 쓰면 **315건이 모두 한 행 위에 기입된다.** 기입 전 F열 대조로 오프셋을 매번 재확인할 것
-(대조할 때 정본 F열의 **`&gt;`를 `>`로 디코딩**해야 한다 — 안 하면 9건이 거짓 불일치로 뜬다).
+정본 `Checklist\` 에는 이 파일을 가리키는 **`.url` 바로가기**와 참고 사본만 둔다.
 
-#### 결과 열 위치 (2026-09-02 실측)
+#### 도구 — `gme_excel.py` (저장소 루트)
 
-- **9행 = 라운드 라벨(병합), 10행 = `iOS Result` / `Android Result` 쌍**이 `AM`부터 두 칸씩 반복
-- 최신 라운드 = **`BA`/`BB` = `2026.08.28 / GME App 7.20.0 (NewApp)`** (`BA`=iOS, `BB`=Android)
-- **`BC` = 비고(메모)**
-- **결과 열은 라운드마다 이동한다.** 열을 고정하지 말고 헤더를 읽어 확인한다.
-- 현재 기입 상태: `BB` **21행**(Pass 20 / Fail 1), `BA`(iOS)는 0행.
-  기입된 행은 위 **+1 규칙과 일관**되므로 올바른 행에 들어가 있다.
+Graph Excel API 의 `range(address=...)` **PATCH** 라 **셀 단위**로 쓴다. 파일을 통째로 교체하지
+않으므로 **다른 시트·서식·수식이 보존되고, 다른 사람이 동시에 편집 중이어도 안전**하다.
+설치·사용 안내는 **[docs/README_win.md](docs/README_win.md)**(Windows 기준, 이 팀 환경) —
+macOS 원본은 [docs/README_mac.md](docs/README_mac.md).
 
-#### 기입 방법
+```powershell
+$env:GME_CLIENT_ID="0ba0c638-c539-4584-b803-8af3ae62ddd1"
+$env:GME_TENANT_ID="b19514d1-d63d-4dda-b580-d80917436738"
+$env:PYTHONIOENCODING="utf-8"      # ★ 없으면 셀은 써지고 마지막 print 에서 cp949 오류로 죽는다
+$LINK='<SharePoint 공유 링크>'      # `&nav=...` 는 빼도 된다(실측 확인)
+python gme_excel.py -f $LINK sheets
+python gme_excel.py -f $LINK get '시트명' D39:I57
+python gme_excel.py -f $LINK set '시트명' H39 'Pass'
+```
 
-- **`write_bb.py`로 한다.** 인자는 `<xlsx> <sheet_part> <col> <json>` — 파일 경로가 스크립트에
-  박혀 있지 않으니 **정본 경로를 매번 넘긴다.** xlsx(zip)에서 해당 시트 XML만 바꾸고 나머지 파트는
-  원본 바이트로 복사한다. 셀 스타일(`s=`)은 유지하고 값은 기존 기입과 같은 `inlineStr`로 쓴다.
-  ⛔ **openpyxl 금지**(스레드댓글·customXml·조건부서식 24파트 파괴 실측).
-  ⛔ **Excel COM도 쓰지 말 것** — 동기화 폴더 파일은 ReadOnly로 열려 `Save()`가 조용히 무시된다.
+- 로그인은 최초 1회 `python gme_excel.py login`(브라우저 인증). 토큰 `~/.gme_excel_token.json`,
+  scope **`Files.ReadWrite.All`**, refresh 자동.
+  ⚠️ **`login` 은 자동모드가 막는다** → 사용자가 `!` 를 붙여 직접 실행해야 한다.
+  ⚠️ login 이 성공해도 `✅` 출력에서 UnicodeEncodeError 가 난다 — **토큰은 이미 저장됐으니 무시**.
+- ⛔ 스크립트가 저장소 밖(`D:\다운로드\` 등)에 있으면 자동모드가 `Code from External` 로 막는다.
+
+#### 기입 전에 — 행을 **매번** 대조한다
+
+```powershell
+python gme_excel.py -f $LINK get 'Checklist(Livetest) (Basshu)' D39:I57
+```
+
+- ★ **F열(Checklist)만 보고 행을 정하지 말 것.** 같은 문구가 여러 행에 있다 —
+  "이용약관 동의 화면 노출 확인" 은 Initial Screen 과 로그인화면 `Register Here` 양쪽에 있다.
+  **D열(2Depth)까지 봐야 귀속이 갈린다**(2026-09-16 실제로 이걸로 2건의 귀속이 바뀌었다).
+- **결과 열은 라운드마다 이동한다.** 9행 = 라운드 라벨, 10행 = `iOS Result`/`Android Result` 쌍.
+  열을 고정하지 말고 헤더를 읽어 확인한다.
+- ⚠️ **검증하지 않은 행은 비워둔다.** 통과로 적으면 과대 보고다. 자주 비는 것:
+  생체인식(기기 생체인증 OFF) / OTP 제출 / 영수증 **다운로드**(보기까지만) / 문자·이메일 **수신**.
 - **행/열을 추가하지 않는다.** 값만 쓴다.
-- ⚠️ **검증하지 않은 행은 비워둔다.** 통과로 적으면 과대 보고다. 실제로 자주 비게 되는 것:
-  생체인식(기기 생체인증 OFF) / KFTC OTP 제출(OTP·생체 필요) / 영수증 **다운로드**(보기까지만 함).
-- 파일을 읽어 확인할 때는 `inlineStr`도 함께 봐야 한다 — `<v>`만 읽으면 기입된 값을 놓친다.
-- ⚠️ **셀을 정규식으로 읽을 때 자기닫힘 태그(`<c r="BB65" s="5"/>`)를 빠뜨리지 말 것.**
-  `<c r="BB65"[^>]*>(.*?)</c>` 식으로 짜면 빈 BB를 건너뛰고 **다음 셀(BC=비고)의 값을 BB로 읽는다**
-  → 2026-09-02에 기입 21행을 50행으로 오집계했다. 자기닫힘과 `</c>` 종료를 **둘 다** 받아야 한다.
+
+#### 폐기된 경로 (2026-09-16)
+
+| 폐기된 것 | 이유 |
+|---|---|
+| `write_bb.py` · `fill_result.ps1` · `apply_*.ps1` · `_bb_mapping.json` | 전부 **"마스터에 직접 못 쓰니 작업본에 적고 손으로 옮긴다"는 우회 구조**였다. 정본에서 삭제됨 — 필요하면 **git 히스토리에서 복원**한다(`Checklist/` 8개 파일 모두 추적돼 있었다) |
+| MCP 커넥터 직접 쓰기 | 부여 스코프가 **읽기 전용**(`Files.Read.All`·`Sites.Read.All`만) → 쓰기 도구가 전부 `This tool is not available` 로 잘린다. 문서 권한과 무관하다 |
+| OneDrive 동기화 폴더 경유 | **UPLOAD FAILED**. 로컬만 바뀌고 OneDrive 가 타임스탬프를 서버값으로 되돌린다. ⚠️ **트레이 아이콘에는 오류가 안 뜬다** |
+
+⛔ **openpyxl 금지**(스레드댓글·customXml·조건부서식 24파트 파괴 실측) /
+⛔ **Excel COM 금지**(동기화 폴더 파일은 ReadOnly 로 열려 `Save()` 가 조용히 무시된다).

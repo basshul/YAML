@@ -11,4 +11,3 @@ shots_*/
 Maestro/suite_logs/
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
-Maestro/env/secrets.env

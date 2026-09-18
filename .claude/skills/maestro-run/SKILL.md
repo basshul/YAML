@@ -52,12 +52,38 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
 
 ## 실행 전 점검 — 매번 한다
 
-이 셋을 건너뛰면 코드 결함으로 오진한다. 실제로 9회 실행 중 4회가 이 문제였다.
+이 넷을 건너뛰면 코드 결함으로 오진한다. 실제로 9회 실행 중 4회가 이 문제였다.
 
 ```bash
 adb devices -l                                                    # ① 기기 연결
 adb shell dumpsys activity activities | grep -i mResumedActivity   # ② 앱 상태
 ```
+
+### ⛔ ⓪ 기기를 다른 세션이 쓰고 있지 않은가 — **가장 먼저**
+
+**`adb devices` 는 다른 세션이 쓰는 중인지 알려주지 않는다.** 목록에 기기가 보인다고
+비어 있는 게 아니다. 기기는 하나뿐이고 **여러 세션이 동시에 작업한다**.
+
+2026-09-16 실제 사고: 다른 세션이 i18n 작업으로 기기를 쓰는 중에 플로우를 돌려
+**`seungsoo818` 로그인 실패 1회를 소모**했다(5회면 계정 잠금). 그때 나온 증상을 전부 오진했다 —
+
+| 증상 | 내가 내린 오진 | 진짜 원인 |
+|---|---|---|
+| 앱이 로그아웃 + 영어 UI | 세션 만료 | 다른 세션의 `clearState`·`_set_lang_en_old` 상태 |
+| Server Override 가 항등 시퀀스 뒤에도 남음 | 진입 블록 결함 | 양쪽 실행이 서로의 앱을 재시작 |
+| `Command failed (tcp:7001): closed` / gRPC UNAVAILABLE | 환경 일시 오류 | Maestro 드라이버 충돌 |
+| 로그인 실패 팝업 | **비밀번호 변경** | transkey 입력에 다른 실행이 끼어듦 |
+
+→ **판단이 안 서면 사용자에게 묻는다.** 최소한 아래를 보고, 앱이 이미 조작되고 있으면 돌리지 않는다.
+
+```bash
+adb shell dumpsys window | grep mCurrentFocus   # 몇 초 간격으로 두 번 — 바뀌면 누가 쓰는 중이다
+tasklist | findstr /i maestro                    # maestro 프로세스가 떠 있는가
+```
+
+⚠️ **`01_01_Login_Success_old.yaml` 은 `clearState` 라 남의 작업 상태를 날린다.**
+로그인 실패는 **5회 제한**이므로, 원인을 모른 채 재시도하지 말고 **비밀번호를 고치지도 말 것**
+(근거 없이 `PW_CUR_LAST` 를 바꾸면 남은 횟수를 태우고 계정이 잠긴다 → `maestro-debug`).
 
 1. **기기 연결** — 목록이 비면 USB 문제다. `adb kill-server`로 복구되지 않으면 사용자에게 알린다.
 2. **앱 상태** —

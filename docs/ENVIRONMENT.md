@@ -122,12 +122,18 @@ UI 라벨을 `${VAR}`로 참조하는 사전이다. **빌드가 올라가 문구
 형식 `RULE 파일명:줄` 또는 `RULE 파일명`. **"확인해서 의도된 것임을 확정한 것"만** 넣는다.
 넣을 때 왜 안전한지 한 줄 주석을 반드시 붙인다.
 
-### 2.4 `..\Checklist\_bb_mapping.json` — yaml 케이스 ↔ 체크리스트 행 매핑
-`write_bb.py`가 결과를 xlsx에 기입할 때 쓴다.
+### 2.4 QA 체크리스트 기입 — `gme_excel.py` (2026-09-16 교체)
+기입 대상은 **SharePoint 마스터**(GME-IT-Korea > … > Final Checklist)다. 저장소 루트의
+`gme_excel.py` 가 Graph Excel API 로 **셀 단위**로 쓴다(다른 시트·서식 보존, 동시 편집 안전).
+절차는 [CLAUDE.md](../CLAUDE.md) 의 "QA 체크리스트 결과 기입",
+도구 안내는 **[README_win.md](README_win.md)**(Windows) / [README_mac.md](README_mac.md)(macOS 원본).
+- ⚠️ **`PYTHONIOENCODING=utf-8` 필수** — 없으면 셀은 써지고 마지막 출력에서 cp949 오류로 죽는다.
 - ⚠️ **결과 열은 라운드마다 이동한다.** 열을 고정하지 말고 헤더(9·10행)를 읽어 확인한다.
+- ★ **행은 `get` 으로 매번 대조한다.** F열은 같은 문구가 여러 행에 있어 **D열(2Depth)까지** 봐야 한다.
 - ⛔ **openpyxl로 저장 금지**(스레드댓글·customXml·조건부서식 24파트 파괴 실측).
 - ⛔ **Excel COM도 쓰지 말 것** — 동기화 폴더 파일은 ReadOnly로 열려 저장이 조용히 무시된다.
 - ⚠️ **검증하지 않은 행은 비워둔다.** 통과로 적으면 과대 보고다.
+- 폐기: `_bb_mapping.json`·`write_bb.py`·`fill_result.ps1`(정본에서 삭제, git 히스토리에 있음).
 
 ### 2.5 `flows_index.json` — ⚠️ 낡았다
 2026-06-25 생성, 37개 플로우, **개편 UI(루트) 파일 기준**이다. 구 UI 트랙과 맞지 않는다.

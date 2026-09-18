@@ -1,0 +1,220 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 회원가입이 **중간에 끊긴 뒤 재실행**했을 때 이어서 진행하게 한다 (2026-09-16 신설)
+# ================================================================
+# 왜 필요한가:
+#   `06_Registration_*` 은 **비멱등**이다. 가입 1단계(ID/PW/전화번호 → 다음)를 넘기는 순간
+#   서버에 계정이 만들어지고, 그 뒤 신분증·개인정보 단계에서 끊기면
+#   **계정은 있는데 KYC 는 미완료**인 상태로 남는다.
+#   그 상태에서 파일을 다시 돌리면 1단계에서 "이미 등록된 …" 으로 막혀 **처음부터 다시 할 수 없다.**
+#   → 이 헬퍼가 그때 **해당 계정으로 로그인해서 가입 절차를 이어받는다.**
+#
+# 호출 (06 의 1단계 '다음' 직후, 중복 안내가 보일 때만):
+#   - runFlow:
+#       when:
+#         visible: "${REG_ACCOUNT_EXISTS}"
+#       file: _reg_resume_login_old.yaml
+#       env:
+#         RESUME_ID: "test007"
+#
+# 입력: RESUME_ID = 그 시나리오가 만들려던 계정(test007=내국인 / test006=외국인)
+# 결과: **신분증 타입 선택 화면**에 도달한 상태로 돌려준다 → 호출자의 `[12]`(또는 `[14]`)가 이어받는다.
+#
+# ⚠️ 비밀번호는 가입 때 넣는 값과 **같은 키 시퀀스**다(보안 키패드 transkey).
+#   06 의 `[07][08]` 과 01_01 의 로그인 블록이 쓰는 것과 동일하다 — 한쪽을 바꾸면 여기도 바꿀 것.
+#
+# ⚠️⚠️ **실측 전이다.** 이 헬퍼가 기대는 두 가지는 아직 실기기로 확인되지 않았다:
+#   (a) 1단계에서 중복일 때 뜨는 **실제 문구** — `REG_ACCOUNT_EXISTS` 를 넓은 대안 매칭으로 뒀다
+#       (APK 실측값 `이미 등록된 전화번호입니다`·`이미 사용된 전화번호입니다`·`이미 사용된 이메일입니다` 포괄).
+#   (b) KYC 미완료 계정으로 로그인했을 때의 **착지 화면**. APK 에 `이어서 신청하기`
+#       (`continue_application_text`)와 `가입 절차를 모두 완료하고…`(`complete_your_registration_text`)가
+#       있어 둘 다 받도록 했지만, 앱이 곧장 신분증 화면으로 보낼 수도 있다 → 그 경우도 통과하도록
+#       **마지막 단언만 강제**한다.
+#   → 실행해서 문구가 확정되면 값을 좁힐 것. 지금 구조는 **못 찾으면 조용히 넘어가지 않고 죽는다**
+#     (끝의 `extendedWaitUntil` 이 그 역할이다) — 거짓 통과보다 실패가 낫다.
+# ================================================================
+
+# ----------------------------------------------------------------
+# 1) 중복 안내 팝업을 닫는다
+# ----------------------------------------------------------------
+# 안내가 다이얼로그면 뒤 화면이 접근성 트리에서 사라진다 → 먼저 닫아야 다음 판정이 선다.
+- runFlow:
+    when:
+      visible:
+        id: "btnConfirm|btn_diaog_ok|btn_ok|btnOk"
+    commands:
+      - tapOn:
+          id: "btnConfirm|btn_diaog_ok|btn_ok|btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${BTN_CONFIRM}"
+    commands:
+      - tapOn: "${BTN_CONFIRM}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# 2) 로그인 화면으로 나간다
+# ----------------------------------------------------------------
+# ⛔ `back` 을 조건 없이 반복하면 앱을 벗어난다(런처로 빠져나간 전례) →
+#   **로그인 화면이 보일 때까지만**, 그리고 횟수를 묶어서 누른다.
+# 가입 화면에 "이미 계정이 있습니까?" 링크가 있으면 그게 가장 짧은 길이다.
+- runFlow:
+    when:
+      visible: "${REG_ALREADY_HAVE_ACCOUNT}"
+    commands:
+      - tapOn: "${REG_ALREADY_HAVE_ACCOUNT}"
+      - waitForAnimationToEnd
+#   ⚠️ 횟수 상한은 `maxRuns` 가 아니라 **`times`** 다 — `maxRuns` 는 Maestro 2.5.1 이
+#     `Unknown Property` 로 거부한다(2026-09-16 실행에서 확인). yaml 파싱과 린터는 통과하므로
+#     **실행해야만 잡히는 오류**다. 프로젝트 관용도 `times:` + `while:` 조합이다.
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "btn_lgn|usernameId"
+    commands:
+      - back
+      - waitForAnimationToEnd
+# 초기 화면(로그인 버튼)에서 로그인 폼으로 들어간다. 이미 폼이면 이 블록은 SKIP 된다.
+- runFlow:
+    when:
+      visible:
+        id: "btn_lgn"
+    commands:
+      - tapOn:
+          id: "btn_lgn"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# 3) 로그인 — ID 는 호출자가 준 값, 비밀번호는 가입 때와 같은 시퀀스
+# ----------------------------------------------------------------
+- tapOn:
+    id: "usernameId"
+- inputText: "${RESUME_ID}"
+# ⚠️ `securityKeyboardEditText` 탭 직후 `transKeypad_row4` 를 누르지 말 것(문자 오입력) — 01_01 주석 참조.
+- tapOn:
+    id: "securityKeyboardEditText"
+- waitForAnimationToEnd
+# 보안 키패드는 **앱 언어를 따르지 않는다**(라벨이 한국어 고정) → 변수화 대상이 아니다.
+- runFlow:
+    when:
+      visible: "대문자 키보드 변경"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+
+# 로그인 실패는 **팝업으로만** 드러난다(로그는 전부 COMPLETED 로 찍힌다) → 여기서 명시적으로 끊는다.
+# ⛔ 실패한 채 진행하면 뒤 스텝이 엉뚱한 화면을 두드리고, 시도 횟수만 5회 한도를 향해 줄어든다.
+- assertNotVisible: "${REG_ACCOUNT_EXISTS}"
+- assertNotVisible:
+    text: "[\\s\\S]*(Login Failed|Attempts Left|Too many wrong attempts)[\\s\\S]*"
+
+# ----------------------------------------------------------------
+# 4) 로그인 직후의 갈래를 정리한다
+# ----------------------------------------------------------------
+# 가입 미완료 계정은 **간편비밀번호가 아직 없다** → PIN 생성 안내가 뜰 수 있다. 뜨면 나중으로 미룬다.
+- runFlow:
+    when:
+      visible: "${REG_LATER}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# 인앱 배너는 범용 "닫기" 가 아니라 id 로만 닫는다(엉뚱한 X 를 눌러 런처로 빠진 전례).
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# ⚠️⚠️ **보이스 피싱 주의 바텀시트가 로그인 뒤 늦게 올라온다**(2026-09-16 실측).
+#   바텀시트가 뜨면 **뒤 화면이 접근성 트리에서 통째로 사라져** 아래 착지 판정이 어느 쪽도
+#   보이지 않는다 → 도달했는데도 실패로 찍힌다. 반드시 **판정 전에** 닫는다.
+- repeat:
+    times: 3
+    while:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "${REG_VOICE_PHISHING_OK}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# 5) 가입 이어하기로 진입한다
+# ----------------------------------------------------------------
+# "이어서 신청하기" 버튼이 있으면 그것, 없으면 "가입 절차를 모두 완료하고…" 안내를 탭한다.
+# 앱이 이미 신분증 화면으로 보냈다면 둘 다 SKIP 되고 아래 단언이 바로 통과한다.
+- runFlow:
+    when:
+      visible: "${REG_CONTINUE_APPLICATION}"
+    commands:
+      - tapOn: "${REG_CONTINUE_APPLICATION}"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_COMPLETE_REGISTRATION}"
+    commands:
+      - tapOn: "${REG_COMPLETE_REGISTRATION}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# 6) 착지 확인 — 여기서 못 서면 **실패로 끝낸다**
+# ----------------------------------------------------------------
+# ⚠️ 조건부만 늘어놓으면 아무 일도 안 일어나도 EXIT=0 이 된다(거짓 통과). 그래서 도달을 강제한다.
+#   ⚠️ REG_ARC 라는 키는 **없다** — 참조하면 미치환된 문자열이 정규식에 그대로 섞여 대안 매칭이
+#     통째로 어긋난다. 외국인 경로는 REG_PASSPORT(ko `신분증` / en `Passport`)로 받는다.
+#
+# ★★ 착지는 **두 갈래**다 (2026-09-16 실측으로 갈라졌다):
+#   (A) **가입이 이미 완주된 계정** → 로그인하면 곧장 **홈**(`bottom_item_home`)이다.
+#       이어갈 가입 단계가 없다 → 호출자의 `[12]` 이후는 성립하지 않는다.
+#       이 헬퍼는 "로그인까지는 정상"임을 확인하고 끝낸다. **06 을 계속 돌리려면 그 계정을
+#       admin 에서 지우는 수밖에 없다** — 같은 ID 로는 가입을 다시 못 한다.
+#   (B) **가입이 중간에 끊긴 계정**(KYC 미완료) → 신분증 타입 선택 화면으로 이어진다.
+#       호출자의 `[12]`(내국인) · `[14]`(외국인)가 그 화면에서 이어받는다.
+#   → 둘 중 **어느 쪽에도 못 서면 실패**시킨다. 거짓 통과보다 실패가 낫다.
+#   ⛔ 여기를 `optional: true` 로 느슨하게 두지 말 것 — 그러면 아무 데도 도달하지 못해도
+#     EXIT=0 이 되어 **재개가 된 척** 지나간다. 이 파일이 막으려는 바로 그 실패 방식이다.
+#
+# ★★ 2026-09-17 (B) 실측 — **앱이 중단 지점으로 자동 복귀한다.**
+#   KYC 미완료 계정(test007, 신분증 제출 후 개인정보 3/4 에서 끊김)으로 로그인하니
+#   **`PersonalInfo1Activity` "개인 정보 3/4"** 로 곧장 들어갔다. 즉:
+#   · "이어서 신청하기" 버튼을 **누를 필요가 없다** — 위의 두 조건부는 실제로 늘 SKIP 된다.
+#   · **입력값은 저장되지 않는다**(도시·직업·상세주소가 전부 placeholder 상태였다).
+#   · **재개 지점은 고정이 아니라 "어디서 끊겼는지"에 달렸다** → 호출자가 `[12]` 신분증부터
+#     이어받는다는 전제는 성립하지 않는다. 이 헬퍼는 **로그인과 착지까지만** 책임진다.
+#   가입 각 단계 화면은 `screenTitle`(+`btnSubmit`)을 공통으로 갖는다 → 홈과 함께 받는다.
+#   (C) **PIN 미등록 계정** → 로그인 직후 `ActivityLockScreen` 의 **간편비밀번호 "생성"** 화면이다
+#       ("앱에서 사용할 간편 비밀번호를 생성해 주세요" + `input_dot_1`). 2026-09-17 실측:
+#       가입 마지막 PIN 등록이 `Connection reset` 으로 실패하면 이 상태로 남는다.
+#       → 여기서 멈추지 말고 **복구 헬퍼가 PIN 을 만들어 마저 끝내도록** 착지로 인정한다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home|screenTitle|input_dot_1"
+    timeout: 60000
+- takeScreenshot: "[resume]_로그인후_착지"

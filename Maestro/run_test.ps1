@@ -105,15 +105,6 @@ function Add-EnvFile([string]$path) {
 }
 Add-EnvFile $envFile
 
-# 저장소에 올릴 수 없는 값(실 이메일 등 개인정보)은 `env\secrets.env` 에 둔다.
-#   이 파일은 `.gitignore` 와 `sync_from_source.ps1` 에서 제외돼 **정본에만 존재**한다.
-#   없으면 그 값을 쓰는 플로우가 `${VAR}` 미치환으로 **실패**한다 — 조용히 넘어가지 않는다.
-$secretFile = "env\secrets.env"
-if (Test-Path $secretFile) {
-    Add-EnvFile $secretFile
-} else {
-    Write-Host "주의: env\secrets.env 가 없습니다. 이 파일의 값을 쓰는 플로우(25_Profile 등)는 실패합니다." -ForegroundColor Yellow
-}
 
 # -AppId 로 빌드를 바꿀 때는 env 파일의 APP_ID 항목을 **교체**한다.
 #   ⚠️ 뒤에 --env 를 하나 더 붙이는 방식은 maestro가 어느 쪽을 쓸지 보장되지 않으므로 쓰지 않는다.
@@ -138,6 +129,7 @@ if ($AppId -eq $BuildMap.live) {
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runStart = Get-Date
 # -ExtraEnv: env 파일 뒤에 덧붙인다(값 인용은 위와 같은 이유로 필수).
+$extraKeys = @{}
 foreach ($pair in $ExtraEnv) {
     if ($pair -notmatch '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$') {
         Write-Error "-ExtraEnv 형식이 잘못됐습니다: '$pair' -> KEY=VALUE 로 주세요."
@@ -151,6 +143,7 @@ foreach ($pair in $ExtraEnv) {
         }
     }
     $envArgs += "--env"; $envArgs += ('{0}="{1}"' -f $k, $v)
+    $extraKeys[$k] = $true
 }
 
 # ── 그 플로우가 실제로 쓰는 변수만 넘긴다 ──────────────────────────
@@ -164,7 +157,15 @@ function Get-FlowVars([string]$path, [hashtable]$seen) {
     if ($seen.ContainsKey($full)) { return @() }
     $seen[$full] = $true
     $text = [System.IO.File]::ReadAllText($full)
-    $vars = @([regex]::Matches($text, '\$\{([A-Za-z_][A-Za-z0-9_]*)\}') | ForEach-Object { $_.Groups[1].Value })
+    # ⚠️ `${VAR}` 만 잡으면 **JS 표현식 안의 변수를 놓친다**(2026-09-16 실측).
+    #   `01_04` 의 인터록은 `assertTrue: ${typeof CONFIRM_LOCK !== 'undefined' && ...}` 형태라
+    #   `CONFIRM_LOCK` 이 수집되지 않아 `-ExtraEnv` 로 넘겨도 필터에서 탈락했고,
+    #   인터록이 영원히 닫힌 채 "동의했는데 실패" 로 보였다.
+    #   → `${ ... }` **블록 내부의 식별자를 전부** 거둔다. env 에 없는 이름(typeof·undefined 등)은
+    #     아래 필터에서 자연히 빠지므로 과잉 수집은 무해하다.
+    $vars = @([regex]::Matches($text, '\$\{([^}]*)\}') | ForEach-Object {
+        [regex]::Matches($_.Groups[1].Value, '[A-Za-z_][A-Za-z0-9_]*') | ForEach-Object { $_.Value }
+    })
     $dir  = Split-Path -Parent $full
     foreach ($m in [regex]::Matches($text, '(?m)(?:runFlow:[ \t]*|file:[ \t]*)"?([^"
 ]+\.yaml)"?')) {
@@ -175,6 +176,8 @@ function Get-FlowVars([string]$path, [hashtable]$seen) {
 $needed = @{}
 foreach ($v in (Get-FlowVars $flow (@{}))) { $needed[$v] = $true }
 $needed["APP_ID"] = $true          # 헤더 appId 가 항상 쓴다
+# -ExtraEnv 는 **사람이 그 실행에만 의도적으로 주입한 값**이다 → 수집 결과와 무관하게 항상 넘긴다.
+foreach ($k in $extraKeys.Keys) { $needed[$k] = $true }
 if ($needed.Count -gt 1) {
     $filtered = @()
     for ($i = 0; $i -lt $envArgs.Count; $i += 2) {

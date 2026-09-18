@@ -1,0 +1,274 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: **어느 단계에 있든 회원가입을 "완료"까지 민다** (2026-09-17 신설)
+# ================================================================
+# 목적은 **케이스 검증이 아니라 복구**다.
+#   `06_Registration_*` 이 중간에 깨지면 계정이 **KYC 미완료 상태로 남는다**
+#   (계정은 **신분증 제출 시점**에 생긴다 — 2026-09-16 실측).
+#   그 상태로는 06 을 다시 돌려도 `Username already taken` 으로 막히고, 어중간한 계정만 쌓인다.
+#   → 이 헬퍼가 **남은 단계를 전부 눌러 가입을 끝내** 계정을 깨끗한 "완주" 상태로 만든다.
+#     그 뒤 admin 에서 지우면 06 을 처음부터 다시 돌릴 수 있다.
+#
+# ⚠️ **검증용이 아니다.** assert·takeScreenshot 을 두지 않는다 — 여기서 뭘 통과시켜도
+#   케이스 근거가 되지 않는다(이미 각 단계를 지나쳐 버린 실행이다). 그 판단은 06 본문이 한다.
+#
+# ★ **내국인·외국인 공용이다**(2026-09-17 확인):
+#   개인정보·계좌·PIN 화면이 같은 셀렉터를 쓰고, **재개 상황에선 신분증이 이미 제출돼 있다**
+#   (계정이 신분증 제출 시점에 생기므로) → 내국인 전용인 신분증·영문이름 블록은 조건이 거짓이라 탄다.
+#
+# 시작 지점을 가리지 않는다:
+#   신분증 타입 선택 / 신분증 정보 확인 / 개인정보 1·3·4 단계 / 계좌 인증 / 간편비밀번호 —
+#   **현재 떠 있는 화면을 보고 그 블록만 실행**하고, 홈에 닿을 때까지 반복한다.
+#
+# 사용:
+#   .\run_test.ps1 -lang ko -flow "Old\_reg_complete_signup_old.yaml" -ExtraEnv SIGNUP_EMAIL=anfrhrl002@gmail.com
+#   (또는 06 의 재개 분기에서 `_reg_resume_login_old.yaml` 뒤에 이어서 호출)
+#
+# 입력: SIGNUP_EMAIL = 그 계정의 가입 이메일
+#       test007=anfrhrl002@gmail.com / test006=anfrhrl001@gmail.com
+#   ⚠️ 호출자가 바꿀 값이라 **헤더 `env:` 에 기본값을 두지 않는다** — 두면 `--env` 가 무시된다.
+# ================================================================
+
+# 앱이 이미 떠 있는 상태에서 호출된다(로그인 직후) → launchApp 하지 않는다.
+# ⛔ 여기서 `launchApp` 을 쓰면 마지막 화면 복원 때문에 오히려 엉뚱한 데서 시작한다.
+
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      # ── 팝업류 먼저 치운다(뒤 화면이 트리에서 사라지므로 판별 자체가 막힌다) ──
+      - runFlow:
+          when:
+            visible: "${REG_VOICE_PHISHING}"
+          commands:
+            - tapOn:
+                id: "check_customer"
+            - waitForAnimationToEnd
+            - tapOn: "${REG_VOICE_PHISHING_OK}"
+            - waitForAnimationToEnd
+      # 홈 팝업은 큐로 뜬다 → 공용 헬퍼로 한 번에 비운다(배너 id 가 빌드마다 다르다).
+      - runFlow: "_dismiss_popups_stag_old.yaml"
+      - runFlow:
+          when:
+            visible: "${REG_LATER}"
+          commands:
+            - tapOn: "${REG_LATER}"
+            - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "${ASK_ME_LATER_TEXT}"
+          commands:
+            - tapOn: "${ASK_ME_LATER_TEXT}"
+            - waitForAnimationToEnd
+
+      # ── 신분증 타입 선택 ──
+      - runFlow:
+          when:
+            visible: "${REG_DRIVING_LICENSE}"
+          commands:
+            - tapOn: "${REG_ID_CARD}"
+            - waitForAnimationToEnd
+            - tapOn: "${REG_NEXT}"
+            - waitForAnimationToEnd
+            # 촬영 화면 → 갤러리. OS 버전에 따라 피커가 다르다(Android 16 = 좌표).
+            - runFlow:
+                when:
+                  visible:
+                    id: "galleryBtnImageView"
+                commands:
+                  - tapOn:
+                      id: "galleryBtnImageView"
+                  - waitForAnimationToEnd
+                  - runFlow:
+                      when:
+                        visible:
+                          id: "icon_thumbnail"
+                      commands:
+                        - tapOn:
+                            id: "icon_thumbnail"
+                            index: 2
+                  - runFlow:
+                      when:
+                        notVisible:
+                          id: "icon_thumbnail"
+                      commands:
+                        - tapOn:
+                            point: "83%, 48%"
+                  - waitForAnimationToEnd
+                  # ⚠️ 좌표 탭은 **빗나가도 COMPLETED 로 찍힌다**(해상도가 바뀌면 조용히 어긋난다)
+                  #   → 선택이 실제로 먹혔는지 **크롭 화면 도달**로 확인한다(린터 W11).
+                  - extendedWaitUntil:
+                      visible: "${REG_DONE_GALLERY}"
+                      timeout: 20000
+                  # 크롭 "완료" 는 기기에 따라 1~2회다 → 사라질 때까지 누른다.
+                  - repeat:
+                      times: 3
+                      while:
+                        visible: "${REG_DONE_GALLERY}"
+                      commands:
+                        - tapOn: "${REG_DONE_GALLERY}"
+                        - waitForAnimationToEnd
+
+      # ── 신분증 정보 확인(자동채움) → 제출 ──
+      #   ⚠️ `btnSubmit` 은 개인정보 화면의 "다음" 에도 쓰인다 → **`btnRetry` 가 함께 있을 때만**
+      #     이 화면으로 본다(재시도/확인 짝은 신분증 확인 화면에만 있다).
+      - runFlow:
+          when:
+            visible:
+              id: "btnRetry"
+          commands:
+            - tapOn:
+                id: "btnSubmit"
+            - waitForAnimationToEnd
+
+      # ── 개인정보 1/4: 영문 이름 ──
+      #   ⚠️ 3/4 와 같은 이유로 **채워졌으면 건드리지 않는다**(placeholder 가 사라져 못 찾는다).
+      - runFlow:
+          when:
+            visible: "${REG_SURNAME}"
+          commands:
+            - runFlow:
+                when:
+                  visible: "${REG_SURNAME}"
+                commands:
+                  - tapOn: "${REG_SURNAME}"
+                  - inputText: "LEE"
+            - runFlow:
+                when:
+                  visible: "${REG_FIRSTNAME}"
+                commands:
+                  - tapOn: "${REG_FIRSTNAME}"
+                  - inputText: "SEUNGSOO"
+            - hideKeyboard
+            - waitForAnimationToEnd
+            - tapOn: "${REG_NEXT}"
+            - waitForAnimationToEnd
+
+      # ── 개인정보 3/4: 주소 · 직업 · 성별 ──
+      #   ⚠️ 재개하면 **입력값이 남아 있지 않다**(2026-09-17 실측: 전부 placeholder) → 다시 넣는다.
+      # ★★ 화면 식별은 **id 로 한다** — `pageIndexTitle` 은 못 쓴다.
+      #   2026-09-17 실측: 주소/직업/성별(`PersonalInfo1Activity`)과 이메일/추천인
+      #   (`PersonalInfo2Activity`)이 **둘 다 `3/4`** 로 표시된다. 텍스트로 가르면 이메일 화면에서
+      #   주소 블록이 열려 `남성` 을 찾다 죽는다. → citySelectionField / emailInputField 로 가른다.
+      #   ⚠️⚠️ **이 블록은 두 번 들어올 수 있다** → 각 입력을 **"아직 안 채워졌을 때만"** 실행한다.
+      #     placeholder 는 값을 넣는 순간 사라지므로(도시를 고르면 `국내 거주지 (시,군) 입력` →
+      #     `Suwon`), 무조건 탭하면 2회차에 `Element not found` 로 죽는다(2026-09-17 실측).
+      - runFlow:
+          when:
+            visible:
+              id: "citySelectionField"
+          commands:
+            - runFlow:
+                when:
+                  visible: "${REG_ADDRESS_CITY}"
+                commands:
+                  - tapOn: "${REG_ADDRESS_CITY}"
+                  - waitForAnimationToEnd
+                  - tapOn: "${REG_SELECT_CITY}"
+                  - inputText: "SUWON"
+                  - tapOn:
+                      id: "itemName"
+                  - waitForAnimationToEnd
+            # 상세주소는 GPS 버튼(prefixImage)으로 채운다. 위치 권한이 뜨면 허용.
+            # ⚠️ 이미 채워져 있으면 placeholder 문구가 없다 → 그때는 건드리지 않는다.
+            - runFlow:
+                when:
+                  visible: "상세 주소를 영어로 입력하세요"
+                commands:
+                  - tapOn:
+                      id: "prefixImage"
+                  - waitForAnimationToEnd
+                  - runFlow:
+                      when:
+                        visible: "${REG_LOCATION_ALLOW}"
+                      commands:
+                        - tapOn: "${REG_LOCATION_ALLOW}"
+                        - waitForAnimationToEnd
+                  - tapOn:
+                      id: "prefixImage"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible: "${REG_SELECT_OCCUPATION}"
+                commands:
+                  - tapOn: "${REG_SELECT_OCCUPATION}"
+                  - waitForAnimationToEnd
+                  - tapOn: "Salaried"
+                  - waitForAnimationToEnd
+            # 성별은 라디오라 다시 눌러도 무해하다.
+            - tapOn: "${REG_MALE}"
+            - waitForAnimationToEnd
+            - tapOn: "${REG_NEXT}"
+            - waitForAnimationToEnd
+
+      # ── 개인정보 4/4: 이메일 · 추천인 코드 ──
+      - runFlow:
+          when:
+            visible:
+              id: "emailInputField"
+          commands:
+            - tapOn:
+                id: "emailInputField"
+            - waitForAnimationToEnd
+            - eraseText: 40
+            - inputText: "${SIGNUP_EMAIL}"
+            - hideKeyboard
+            - waitForAnimationToEnd
+            - tapOn: "${REG_NEXT}"
+            - waitForAnimationToEnd
+
+      # ── 계좌 인증: 복구에서는 **입력하지 않고 건너뛴다** ──
+      #   (은행/계좌 입력은 `[25][26]` 케이스의 검증 대상이지 복구의 목적이 아니다)
+      - runFlow:
+          when:
+            visible: "${REG_SKIP}"
+          commands:
+            - tapOn: "${REG_SKIP}"
+            - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible: "${REG_YES}"
+                commands:
+                  - tapOn: "${REG_YES}"
+                  - waitForAnimationToEnd
+
+      # ── 간편비밀번호(PIN) 설정: 생성 + 재입력 ──
+      #   ⚠️ 키패드는 화면 진입 시 셔플되지만 탭마다는 아니다 → 탭 사이 대기는 불필요하다.
+      #     위험한 건 첫 탭 전이다(도달 전에 누르면 같은 글자를 가진 다른 요소를 집는다).
+      - runFlow:
+          when:
+            visible:
+              id: "input_dot_1"
+          commands:
+            - tapOn: "1"
+            - tapOn: "2"
+            - tapOn: "1"
+            - tapOn: "2"
+            - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible:
+                    id: "input_dot_1"
+                commands:
+                  - tapOn: "1"
+                  - tapOn: "2"
+                  - tapOn: "1"
+                  - tapOn: "2"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible: "OK|${BTN_CONFIRM}"
+                commands:
+                  - tapOn: "OK|${BTN_CONFIRM}"
+                  - waitForAnimationToEnd
+
+      - waitForAnimationToEnd
+
+# 가입이 끝나면 홈이다. 여기서 못 서면 **복구 실패**이므로 조용히 넘기지 않는다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 60000

@@ -31,7 +31,6 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 ├── Old\*.yaml            ★ 실행 대상 66개 — 구 UI(V2)용, `_old` 접미사
 ├── *.yaml                개편 UI(V3)용 사본 — 배포 전까지 손대지 않는다
 ├── env\ko.env, en.env    화면 문구 사전(${VAR}로 참조)
-├── env\secrets.env       자격정보·개인정보. **정본에만 있다**(저장소에 없음)
 ├── Test Files\           갤러리 업로드용 이미지 픽스처 4장
 ├── run_test.ps1          단일 플로우 실행기
 ├── run_suite.ps1         회귀 스위트 실행기
@@ -39,6 +38,17 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 ├── lint_flows.ps1        정적 검사기(실행 전에 돌린다)
 ├── shots_runs\           실행별 스크린샷(자동 회수)
 └── suite_logs\           스위트 실행 로그 + SUMMARY.md
+```
+
+**저장소에만 있는 것**(정본에 없다 → 동기화가 지우지 않도록 제외 목록에 들어 있다):
+
+```
+C:\GME\qa-automation\
+├── gme_excel.py          체크리스트(SharePoint 엑셀) 셀 단위 기입 도구
+├── docs\README_win.md    ★ 그 도구 안내 — **Windows 기준. 이 팀은 이걸 본다**
+├── docs\README_mac.md    같은 도구의 macOS 원본
+├── docs\PROGRESS.md · SUITE.md
+└── .claude\skills\       작업별 상세 절차
 ```
 
 ### 정본은 한 곳뿐이다 — 저장소 사본을 고치지 말 것
@@ -50,8 +60,7 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 
 동기화는 **정본 → 저장소 한 방향**이고 저장소 루트의 `sync_from_source.ps1`이 한다.
 ⛔ 저장소 쪽을 고치면 다음 동기화가 **지운다.**
-⚠️ GitHub만 받은 사람은 `env\secrets.env`가 없다 → 그 값을 쓰는 플로우는 미치환으로 실패한다.
-별도로 받아 `Maestro\env\`에 두어야 한다.
+✅ **저장소만 받아도 실행에 필요한 파일은 다 있다**(2026-09-18 `secrets.env` 폐지).
 
 ---
 
@@ -65,6 +74,7 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 | Maestro CLI | **2.5.1** | scoop 설치(`~\scoop\apps\maestro\2.5.1`) |
 | Android platform-tools (adb) | 36.0.2 | `adb`가 PATH에 있어야 한다 |
 | PowerShell | 7+ | 러너가 `.ps1`이다 |
+| Python 3 | 3.14.2 | 체크리스트 기입 도구(`gme_excel.py`)용. **`python3` 가 아니라 `python`** |
 
 기기 쪽:
 
@@ -79,6 +89,105 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 maestro -v            # 2.5.1
 adb devices -l        # 정확히 1대. 2대 이상이면 러너가 실행을 거부한다
 ```
+
+### 설치 명령 — 새 PC 기준
+
+이 PC에 실제로 깔려 있는 방식이다.
+
+```powershell
+# 1) scoop (패키지 매니저) — 이미 있으면 건너뛴다
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+# 2) Maestro
+scoop install maestro
+```
+
+| 도구 | 설치 방식 | 실제 경로 |
+|---|---|---|
+| Maestro | `scoop install maestro` | `~\scoop\shims\maestro.cmd` |
+| JDK | Oracle 설치 프로그램 | `C:\Program Files\Common Files\Oracle\Java\javapath\java.exe` |
+| adb | **Android SDK platform-tools** | `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` |
+| Python | python.org 설치 프로그램 | `C:\Python314\python.exe` |
+| Git | Git for Windows | 저장소 clone 용 |
+
+⚠️ **adb 는 PATH 에 직접 걸어야 한다** — SDK 설치 프로그램이 걸어주지 않는다.
+
+```powershell
+setx PATH "$env:PATH;$env:LOCALAPPDATA\Android\Sdk\platform-tools"
+```
+
+### 파일 받기 — 저장소만으로 자동화 환경이 선다
+
+```powershell
+git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
+```
+
+**저장소 사본만으로도 실행된다.** 러너에 절대경로가 없고 전부 **CWD 기준**으로 동작한다
+(2026-09-17 실측: `run_test.ps1`·`run_suite.ps1`·`push_test_images.ps1`·`lint_flows.ps1` 에
+정본 경로 하드코딩 **0건**, `$PSScriptRoot` 도 안 쓴다). CWD 를 clone 한 `Maestro\` 로 잡으면 된다.
+
+⚠️ 단 **편집은 정본에서만** 한다(§1) — 저장소에서 고치면 다음 동기화가 지운다.
+정본(OneDrive)이 붙어 있는 환경이라면 그쪽을 CWD 로 쓰는 것이 맞다.
+
+#### 저장소에 없는 파일은 없다
+
+자격정보·개인정보라 **의도적으로** 제외돼 있다. 별도로 받아 `Maestro\env\` 에 둔다.
+없어도 러너는 **경고만 찍고 계속 진행**하지만, 그 값을 쓰는 플로우는 미치환으로 실패한다.
+
+| 키 | 쓰는 곳 |
+|---|---|
+| `MAIL_ACCOUNT` | `01_05_Login_Password_Reset` — 초기화 메일 확인 |
+| `PROFILE_EMAIL` · `PROFILE_EMAIL_TEST` | `25_Profile` — 이메일 변경 |
+| `STAG_ID` | `_stag_login_probe` (헬퍼) |
+
+2026-09-17 실측 기준이다. `Old\` 가 쓰는 `${...}` 중 **`env\ko.env`(416키)에도, 플로우 내부
+`env:` 블록에도 없는 키**가 이 넷뿐이었다. 나머지 자격정보는 플로우 내부 `env:` 에 있다
+(예: `PW_CUR_LAST` · `PW_LAST` · `PW_NEW_LAST` · `LOCK_ID`).
+
+#### 필수와 불필요 — 추적 185개 중 90개가 필수
+
+⚠️ **골라 받지 마라.** 전체가 **5.1 MB**, 필수만 추려도 **4.2 MB** 다(차이 0.9 MB).
+이 분류는 *받을 것*을 고르려는 게 아니라 **"고쳐도 되는 것과 아닌 것"** 을 가리는 용도다.
+
+**필수 — 없으면 못 돌린다**
+
+| 항목 | 수 |
+|---|---|
+| `Maestro\Old\*.yaml` — 실행 대상 50 + 헬퍼 17 | 67 |
+| `Maestro\env\ko.env` · `en.env` — 각 418키, **키 집합이 같아야 한다** | 2 |
+| `run_test.ps1` · `run_suite.ps1` · `push_test_images.ps1` | 3 |
+| `Maestro\Test Files\` — 갤러리 픽스처 | 4 |
+| `lint_flows.ps1` · `lint_labels.json` · `lint_whitelist.txt` | 3 |
+| `CLAUDE.md` · `.claude\skills\` 4 · `docs\` 4 | 9 |
+
+**없어도 돌아간다 — 지우지는 말 것(용도가 있다)**
+
+| 항목 | 수 | 무엇인가 |
+|---|---|---|
+| `Maestro\*.yaml` (루트) | 44 | **개편 UI(V3) 사본.** 폐기가 아니라 **보류** — 개편 빌드를 못 받아서다. 재개하면 쓴다 |
+| `Maestro\lint_selftest\` + `lint_selftest.ps1` | 23 | 린터 **자기검사 픽스처** |
+| `Maestro\_archive\` · `Old\_archive\` | 18 | 보관본 |
+| `lint_*.json` | 2 | 린터 **산출물**(돌리면 재생성) |
+| `flows_index.json` | 1 | **낡았다**(2026-06-25, V3 기준). 쓰기 전에 재생성하거나 무시 |
+| `k_*.yaml` · `_stag_login*.yaml` · `charge.yaml` | 7 | 실험·단편 |
+| `Automation Report.bat/.txt` · 루트 `run_test.ps1` | 3 | 데일리 리포트 / `Maestro\` 쪽과 중복 |
+| `sync_from_source.ps1` | 1 | **정본이 있는 환경에서만** 의미 있다 |
+
+### 체크리스트 기입 도구 — 결과를 적을 사람만
+
+테스트 실행에는 필요 없다. **QA 체크리스트에 결과를 기입할 때만** 쓴다.
+절차는 [README_win.md](README_win.md) 에 있고, 요점은 셋이다:
+
+```powershell
+setx GME_CLIENT_ID "0ba0c638-c539-4584-b803-8af3ae62ddd1"
+setx GME_TENANT_ID "b19514d1-d63d-4dda-b580-d80917436738"
+$env:PYTHONIOENCODING = "utf-8"        # ★ 빼면 성공해 놓고 cp949 오류로 죽는다
+python gme_excel.py login              # 최초 1회, 브라우저 인증
+```
+
+- ⚠️ **`login` 은 Claude가 대신 못 한다** — 자동모드가 브라우저 인증을 막는다. `!` 로 직접 실행한다.
+- ⚠️ 대상 파일의 **편집** 권한이 있어야 한다. 읽기만 되면 `set` 에서 `HTTP 403` 이다.
 
 ---
 
@@ -273,11 +382,14 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 ## 9. 결과 보고
 
 - 작업 결과는 **ClickUp 태스크에 댓글로** 남긴다(태스크를 임의로 검색·생성하지 않는다).
-- QA 체크리스트 결과는 **`Checklist\GME QA Checklist V2.1_WORK.xlsx` 한 곳에만** 적는다.
-  같은 이름의 다른 파일들은 결과 열이 없는 **자동화 매핑 사본**이다(손상이 아니다).
-  - 기입은 `write_bb.py`로 한다. ⛔ **openpyxl·Excel COM 금지**(다른 시트 파트가 깨지거나
-    저장이 조용히 무시된다).
+- QA 체크리스트 결과는 **SharePoint 마스터**에 직접 적는다
+  (GME-IT-Korea > Shared Documents > General > QA Report > Final Checklist > `GME QA Checklist V2.1.xlsx`).
+  로컬 `_WORK` 사본에 적고 손으로 옮기던 구조는 **2026-09-16 폐기**했다.
+  - 기입은 저장소 루트의 **`gme_excel.py`** 로 한다(Graph Excel API, 셀 단위 → 동시 편집·서식 안전).
+    ⛔ **openpyxl·Excel COM 금지**(다른 시트 파트가 깨지거나 저장이 조용히 무시된다).
+  - ⚠️ **`PYTHONIOENCODING=utf-8`** 을 붙인다 — 없으면 기입은 되고 마지막 출력에서 죽는다.
   - **결과 열은 라운드마다 이동한다** → 열을 고정하지 말고 헤더를 읽어 확인한다.
+  - ★ 기입 전 `get` 으로 행을 대조한다. F열은 중복 문구가 많아 **D열(2Depth)까지** 봐야 한다.
   - ⚠️ **검증하지 않은 행은 비워 둔다.** 통과로 적으면 과대 보고다.
 
 ---
@@ -348,8 +460,7 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
   ⛔ 실송금·실결제는 **동적 선택 금지**(어느 계좌로 돈이 갔는지 재현돼야 한다).
 - **자격정보(PIN·로그인 비밀번호)는 일괄 치환이 안 된다.** PIN은 숫자 탭으로, 비밀번호는 보안
   키보드 탭 시퀀스로 흩어져 있다 → **바뀌면 시간이 걸린다는 것을 예상**할 것.
-- `env\secrets.env`는 **새 환경에서 새로 채운다**(현재 키 2개: `PROFILE_EMAIL`,
-  `PROFILE_EMAIL_TEST`). 정본에만 있고 저장소에는 없다.
+- 이메일(`PROFILE_EMAIL` · `PROFILE_EMAIL_TEST`)은 `ko/en.env` 에 있다. 새 환경에서는 값을 바꾼다.
 
 ### 10.3 ② 코드 — 스크립트·설정 파일
 
@@ -365,8 +476,7 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 | `env\ko.env` · `en.env` | UI 문구 사전. 현재 **381키, 양쪽 동일** | 한쪽에만 있으면 그 언어에서 **조용히 SKIP** |
 | `lint_labels.json` | 실측 라벨·id 사전(`wrongLabels`·`genericLabels`·`injectedEnvVars` 등) | 빌드가 올라가 문구가 바뀌면 검사기가 낡는다. ⛔ **추측으로 넣지 말 것** |
 | `lint_whitelist.txt` | 검사 예외(`RULE 파일명:줄`) | "확인해서 의도된 것"만. 줄 번호는 파일이 밀리면 어긋난다 |
-| `..\Checklist\_bb_mapping.json` | 케이스 ↔ 체크리스트 행 매핑 315건 | ⚠️ **정본 행 = 매핑 row + 1** — 확인 없이 쓰면 315건이 한 행 위에 기입된다 |
-| `..\Checklist\write_bb.py` | 경로가 박혀 있지 않다 → **정본 경로를 인자로 매번 넘긴다** | 엉뚱한 사본에 적힌다 |
+| `gme_excel.py` (저장소 루트) | `GME_CLIENT_ID`·`GME_TENANT_ID` 환경변수, 대상은 **SharePoint 공유 링크**(`-f`) | 링크가 바뀌면 `HTTP 404`. 토큰은 `~/.gme_excel_token.json` 에 계정별로 남는다 |
 
 ⚠️ **저장소 루트에도 `run_test.ps1`이 따로 있다**(`-flow`가 `Maestro\` 기준, 픽스처를
 `/sdcard/DCIM`에 푸시). 헷갈리면 **`Maestro\` 쪽을 쓴다.**
@@ -392,11 +502,13 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 
 1. **사전조건** 준비 — 계정 5개 · 잔액 · 픽스처 · admin 권한 (§10.1)
 2. **스크립트** 경로·패키지 — `sync_from_source.ps1 $Source`, `$BuildMap` (§10.3)
-3. **env** — `ko/en.env` 문구, `secrets.env` 재작성 (§10.2)
+3. **env** — `ko/en.env` 문구·계정 이메일 (§10.2)
 4. **yaml 값** — 계정·은행·수취인·계좌·이메일·금액 (§10.2, 상세는 `ENVIRONMENT.md` §3)
 5. **검사기 사전** — `lint_labels.json` · `lint_whitelist.txt`
 6. **skill·CLAUDE.md** 갱신 (§10.4)
-7. **검증** — 아래 순서로, 한 단계씩 통과시킨 뒤 다음으로 간다
+7. **체크리스트 기입 도구** — `gme_excel.py` 환경변수·`login`([README_win.md](README_win.md)).
+   결과를 적을 사람만 하면 된다
+8. **검증** — 아래 순서로, 한 단계씩 통과시킨 뒤 다음으로 간다
 
 ```powershell
 .\lint_flows.ps1                                       # ERROR 0
@@ -421,7 +533,7 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 | 비밀번호 추측 시도 | 5회 = 계정 잠금. admin 개입이 필요하다 |
 | 기기 시리얼 하드코딩 | 기기는 교체된다. 러너가 자동 감지한다 |
 | PowerShell `Set-Content`로 yaml 편집 | 파일 전체가 깨진다 |
-| 자격정보를 yaml·문서에 적기 | `env\secrets.env`에 두고 `${VAR}`로 참조한다 |
+| 실계정·실개인정보를 yaml에 적기 | 테스트 계정 값만 쓴다. 실제 사람에게 닿는 값은 애초에 넣지 않는다 |
 | 검증 안 한 행을 체크리스트에 Pass로 | 과대 보고다. 비워 두는 것이 맞다 |
 
 막히면 `ENVIRONMENT.md` → `PROGRESS.md` → skill 순서로 본다.

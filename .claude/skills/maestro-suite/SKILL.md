@@ -79,7 +79,7 @@ $PSNativeCommandArgumentPassing = 'Legacy'
 ① **범위 = 전부 포함**(실결제·계정소모까지). 단 **G9는 기본에서 뺀다.**
 ② **실패 시 = 계속 + 자동 복구**(`_suite_recover_old.yaml`). ⚠️ **복구가 2회 연속 실패하면 중단**한다 — 안 그러면 남은 항목이 전부 FAIL로 찍히고 몇 시간이 날아간다. `-NoRecover`로 끌 수 있다.
 ③ **잔액 = 부족하면 SKIP + 리포트에 사유 명시**(코드 결함 FAIL과 갈라 보이게).
-④ **준비 상태는 검사하지 않는다.** 회원가입을 해보기 전에는 계정 존재를 알 수 없다. 준비가 안 된 실행은 휴먼 에러로 본다 → `test006/test007` 존재·픽스처 게이트를 넣지 않는다. 사람용 체크리스트는 `ENVIRONMENT.md`.
+④ **준비 상태는 검사하지 않는다.** 회원가입을 해보기 전에는 계정 존재를 알 수 없다. 준비가 안 된 실행은 휴먼 에러로 본다 → `test006/test007` 존재·픽스처 게이트를 넣지 않는다. 사람용 체크리스트는 `docs\ENVIRONMENT.md`.
 
 ## 순서 제약 — 순서가 곧 상태 의존성이다
 
@@ -102,7 +102,7 @@ $PSNativeCommandArgumentPassing = 'Legacy'
 | `14_Deposit_old.yaml` | 분할본 `14_01`/`14_02`/`14_03`과 **중복**(원본 450스텝) |
 | `13_ReceiveOverseas_old.yaml` | 분할본 `13_01`~`13_07`과 **중복**(원본 20케이스·약 42분) |
 | `01_Login_screen_old.yaml` | `01_03`(비파괴) / `01_04` / `01_05`로 분리됨 |
-| `06_Registration_Korean/_Foreigner_old.yaml` | `All`의 부분집합(실행줄 diff 0) |
+| ~~`06_Registration_Korean/_Foreigner_old.yaml`~~ | **2026-09-17 삭제** — `06_Registration_old.yaml` 로 일원화했다(분리본은 부분집합이었고 같은 수정을 세 곳에 이식하느라 드리프트가 났다) |
 | `23_MyWallet_old.yaml` | 구 UI에 화면 자체가 없다 — 실행 케이스 0건인 문서용 파일 |
 | `27_EasyCare_i18n_*_stag_old.yaml` | appId가 `.stag` 고정인 별도 트랙(언어별 UI) |
 

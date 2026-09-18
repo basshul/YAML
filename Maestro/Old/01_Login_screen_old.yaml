@@ -17,8 +17,15 @@ appId: ${APP_ID}
 #   [03] [Low] 아이디 찾기 - 아이디 찾기 화면 이동 확인
 #   [04] [Low] 비밀번호 찾기 - 비밀번호 찾기 화면 이동 확인
 #   [05] [Medium] 아이디 찾기 - 휴대폰 번호 / 생년월일 입력 후 조회
-#   [06] [Medium] 비밀번호 찾기 - 사용자 ID 입력 후 초기화 요청
-#   [07] [Medium] 이메일 수신 확인 - GME ID / 새 비밀번호 (30초 타임아웃)
+#   [06] [Medium] 비밀번호 찾기 - 사용자 ID 입력 후 초기화 요청          🔴 파괴적
+#   [07] [Medium] 이메일 수신 확인 - GME ID / 새 비밀번호 (30초 타임아웃)  🔴 파괴적
+#
+# 🔴🔴 **`[06]` 은 대상 계정의 비밀번호를 실제로 초기화한다.**
+#   앱이 임의값으로 바꿔 메일로 보내고, admin 재설정 전에는 그 계정으로 로그인할 수 없다.
+#   ⚠️ 이 경고가 **헤더에 없어서 2026-09-16 에 실제로 밟았다** — "로그인 화면만 본다"는
+#     파일 이름과 `[01]~[05]` 만 보고 안전하다고 판단했는데 `[06]` 이 주 계정을 초기화했다.
+#   → 대상은 **test007 고정**(사용자 지시, 2026-09-16). 등록 메일 `anfrhrl002@gmail.com`.
+#     `[01]~[05]` 만 필요하면 **`01_03_Login_screen_safe_old.yaml`** 을 쓸 것.
 # ================================================================
 
 - launchApp:
@@ -58,6 +65,14 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - tapOn: "${LANG_SWITCH_TARGET}"
       - waitForAnimationToEnd
+      # ⚠️ 언어를 바꾸면 **앱이 재시작**되고 Server Override 스플래시가 **다시 뜬다**
+      #   (2026-09-16 en 실측). ko 는 `LANG_SWITCH_TRIGGER=__NEVER_MATCH__` 라 이 블록이
+      #   통째로 SKIP 되어 이 결함이 드러나지 않았다.
+      - runFlow: "_server_override_old.yaml"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_lgn"
+          timeout: 30000
 
 - tapOn:
     id: "btn_lgn"
@@ -251,7 +266,7 @@ appId: ${APP_ID}
 
 - tapOn:
     id: "email_mobile"
-- inputText: "seungsoo818"
+- inputText: "test007"
 - pressKey: Enter
 - waitForAnimationToEnd
 - takeScreenshot: "[06-2]_아이디_입력"

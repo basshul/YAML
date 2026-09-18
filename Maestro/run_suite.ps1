@@ -84,7 +84,7 @@ $Suite = @(
   # ── G1 로그인 불필요 ───────────────────────────────────────────
   @{ n="05_InitialScreen";        g="G1"; acct="-";           est=5;  f="Old\05_InitialScreen_old.yaml"
      note="clearState — 로그아웃 상태에서 시작한다" }
-  @{ n="06_Registration";         g="G1"; acct="-";           est=20; f="Old\06_Registration_All_old.yaml"; push=$true
+  @{ n="06_Registration";         g="G1"; acct="-";           est=20; f="Old\06_Registration_old.yaml"; push=$true
      note="⚠️ 비멱등 — test006/test007을 소모한다. 원복 꼬리는 주석 처리돼 test006 로그인 상태로 끝난다" }
   @{ n="01_03_Login_screen_safe"; g="G1"; acct="-";           est=3;  f="Old\01_03_Login_screen_safe_old.yaml"
      note="[01]~[05] 비파괴. clearState라 앞 항목의 test006 세션을 정리한다" }

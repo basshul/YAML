@@ -6,10 +6,12 @@ appId: ${APP_ID}
 #  진행: 한국인 계정 EXIT=0(175스텝, 15케이스). 외국인 계정(test123) 분기는 [01]에서 검증 완료(2026-08-13).
 #
 # ClickUp `[HOME] 시나리오`(z8nfn6m9ym, 29건) 대조 — 2026-08-13
-#   각 케이스 위의 `# CLICKUP:` 주석을 데일리 리포트(run_report_old.ps1)가 읽어 complete로 올린다.
+#   각 케이스 위의 `# CLICKUP:` 주석이 ClickUp 케이스와의 **매핑 정본**이다.
+#   ⚠️ 2026-09-16 정정: 이 주석을 읽어 상태를 올리는 자동화(`run_report_old.ps1`)는 **존재하지 않는다.**
+#      상태 갱신은 수동이고, 주석은 대조 때 ClickUp 조회(하루 100회 한도)를 아끼는 용도다.
 #   **실기기에서 실제로 검증한 것만** 달았다. 아래 부분커버/미커버는 일부러 뺀 것이니 임의로 채우지 말 것.
 #
-#   ✅ 커버완료 9건
+#   ✅ 커버완료 10건 (2026-09-16 ma1z 추가)
 #      z8nfn6ma1a  Total Wallet Balance 숨기기/보이기      → [02]
 #      z8nfn6ma1n  QR 선택시 QR 페이지 전환                → [04]
 #      z8nfn6ma1r  Reward Points 노출 + 선택시 페이지 이동  → [01](노출) + [06](이동)
@@ -29,11 +31,13 @@ appId: ${APP_ID}
 #      z8nfn6ma1q  QR Receive → My QR 이동             → 위와 같음
 #      z8nfn6ma1v  Customer Support 챗봇 전환(Live Chat) → [12]는 항목 노출만, 진입 안 함
 #
-#   ✗ 미커버 14건 — 알림 선택/삭제(ma12,ma13), 공지 선택(ma15), Bank 하위 5건
-#      (ma1f KFTC 번호 Copy / ma1g Bank Balance 마스킹 / ma1h Bank Transfer /
-#       ma1j Check Statement / ma1k 스와이프 계좌추가 / ma1m Add bank account),
-#      Customer Support 외부 채널 5건(ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그 /
-#      ma1z 카카오 / ma20 전화번호 자동입력)
+#   ✗ 미커버 13건 (2026-09-16 재집계 — 종전 "Bank 하위 5건"은 오기였다)
+#      · 알림·공지 3건 : ma12 알림 선택 / ma13 알림 삭제 / ma15 공지 선택
+#      · Bank 하위 6건 : ma1f KFTC 번호 Copy / ma1g Bank Balance 마스킹 / ma1h Bank Transfer /
+#                        ma1j Check Statement / ma1k 스와이프 계좌추가 / ma1m Add bank account
+#      · Customer Support 4건 : ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그 / ma20 전화번호 자동입력
+#        (ma1z 카카오는 2026-09-16 **메신저 채널 전환으로 넓혀 [12]에서 커버**했다)
+#      전부 환경 제약이 아니라 **추가 작업 대상**이다(생체·OTP와 무관).
 # 2026-08-11 작성. 대상 화면 = HomeActivityV2.
 #
 # 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
@@ -582,6 +586,10 @@ appId: ${APP_ID}
 # [12] [Medium] 플로팅 고객지원 버튼 탭 → 고객지원 바텀시트 항목 확인
 # CLICKUP: z8nfn6ma1u
 # CLICKUP-PARTIAL: z8nfn6ma1v | "실시간 채팅" 항목 노출만 확인, 탭 후 챗봇 화면 전환은 미확인
+# CLICKUP: z8nfn6ma1z
+# ★ 2026-09-16 결정: **텔레그램 케이스를 따로 만들지 않는다.** 카카오 케이스(ma1z)를
+#   **"메신저 채널 전환"으로 넓혔다** → env `SCR_KAKAO=Kakao|Telegram` 으로 둘 다 받는다.
+# ⚠️ 나머지 채널(ma1w 페이스북 / ma1x 인스타 / ma1y 네이버 / ma20 전화)은 여전히 미커버다.
 # ----------------------------------------------------------------
 - tapOn:
     id: "llChatCardView"
@@ -604,8 +612,46 @@ appId: ${APP_ID}
     id: "media_name"
 - assertVisible:
     id: "callTxtView"
+
+# ---- 메신저 채널 전환 확인 (ma1z) ----
+# ⚠️ 채널명을 고정하지 말 것 — **서버가 되돌린다.** 실측이 두 번 갈렸다:
+#   2026-09-03 = Facebook/Instagram/**Telegram**(Kakao 없음) / 2026-09-16 = 실시간 채팅/**Kakao**.
+#   그래서 `SCR_KAKAO=Kakao|Telegram` 으로 둘 다 받는다.
+# ⚠️ 전환 성립을 **"Play 스토어가 떴다"로 단언하지 말 것.** 해당 메신저가 설치돼 있으면 그 앱이 뜬다
+#   (2026-09-16 실측: 카카오톡 미설치라 Play 스토어 카카오톡 페이지로 갔다).
+#   기기 상태에 안 흔들리도록 **"GME 앱을 벗어났는가"** 로 판정한다.
 - tapOn:
-    id: "btnCancel"
+    id: "media_name"
+    text: "${SCR_KAKAO}"
+- extendedWaitUntil:
+    notVisible:
+      id: "rvMediaView"
+    timeout: 20000
+- assertNotVisible:
+    id: "bottom_item_home"
+- takeScreenshot: "09_12_messenger_channel"
+# 외부 앱에서 복귀. 시트가 남아 있을 수 있어 홈 도달까지 back 을 민다(무한 루프 방지로 상한).
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# 시트가 다시 열려 있으면 닫는다(복귀 경로에 따라 갈린다)
+- runFlow:
+    when:
+      visible:
+        id: "btnCancel"
+    commands:
+      - tapOn:
+          id: "btnCancel"
 - waitForAnimationToEnd
 - assertVisible:
     id: "btnTransfer"
