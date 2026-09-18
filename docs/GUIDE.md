@@ -130,20 +130,23 @@ git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
 ⚠️ 단 **편집은 정본에서만** 한다(§1) — 저장소에서 고치면 다음 동기화가 지운다.
 정본(OneDrive)이 붙어 있는 환경이라면 그쪽을 CWD 로 쓰는 것이 맞다.
 
-#### 저장소에 없는 파일은 없다
+#### 저장소에 없는 파일은 없다 (2026-09-18)
 
-자격정보·개인정보라 **의도적으로** 제외돼 있다. 별도로 받아 `Maestro\env\` 에 둔다.
-없어도 러너는 **경고만 찍고 계속 진행**하지만, 그 값을 쓰는 플로우는 미치환으로 실패한다.
+종전에는 `env\secrets.env` 를 정본에만 두었으나, **전부 테스트 전용 계정·이메일이라 공개돼도
+무방하다는 판단**으로 폐지하고 값을 `ko.env`·`en.env` 로 옮겼다
+(`PROFILE_EMAIL` · `PROFILE_EMAIL_TEST`). `.gitignore` · `sync_from_source.ps1` · `run_test.ps1` 의
+관련 처리도 함께 제거했다. → **clone 한 것만으로 값이 다 갖춰진다.**
 
-| 키 | 쓰는 곳 |
-|---|---|
-| `MAIL_ACCOUNT` | `01_05_Login_Password_Reset` — 초기화 메일 확인 |
-| `PROFILE_EMAIL` · `PROFILE_EMAIL_TEST` | `25_Profile` — 이메일 변경 |
-| `STAG_ID` | `_stag_login_probe` (헬퍼) |
+#### 실행할 때 `--env` 로 넘기는 파라미터 2개
 
-2026-09-17 실측 기준이다. `Old\` 가 쓰는 `${...}` 중 **`env\ko.env`(416키)에도, 플로우 내부
-`env:` 블록에도 없는 키**가 이 넷뿐이었다. 나머지 자격정보는 플로우 내부 `env:` 에 있다
-(예: `PW_CUR_LAST` · `PW_LAST` · `PW_NEW_LAST` · `LOCK_ID`).
+이건 "없는 값"이 아니라 **호출 시 주는 인자**다. 각 파일 헤더에 사용법이 적혀 있다.
+
+| 키 | 쓰는 곳 | 안 넘기면 |
+|---|---|---|
+| `MAIL_ACCOUNT` | `01_05_Login_Password_Reset` — 초기화 메일의 **수신 계정 확인** | `typeof` 가드가 있어 **그 단계만 건너뛴다**(메일 본문은 그대로 검사) |
+| `STAG_ID` | `_stag_login_probe` — 수동 프로브 헬퍼 | 단독 실행 대상이 아니다. 쓸 때 `--env STAG_ID=test123` 처럼 준다 |
+
+나머지 자격정보는 플로우 내부 `env:` 블록에 있다(`PW_CUR_LAST` · `PW_LAST` · `PW_NEW_LAST` · `LOCK_ID`).
 
 #### 필수와 불필요 — 추적 185개 중 90개가 필수
 

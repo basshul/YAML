@@ -164,9 +164,18 @@ UI 라벨을 `${VAR}`로 참조하는 사전이다. **빌드가 올라가 문구
 ⚠️ 신분증번호는 **가입 성공 1회당 소모**된다.
 
 ### 3.5 이메일 — 11곳 / 9종
-`test006@test.com` / `test007@test.com`(가입용, 소모됨) · `*@example.com`(13_ReceiveOverseas 5종)
-⚠️ `25_Profile_old.yaml`에 **실제 Gmail 주소 2건**이 들어 있다(값은 여기 적지 않는다).
-공유 전에 반드시 확인하고 교체할 것.
+
+| 용도 | 값 | 어디에 |
+|---|---|---|
+| 프로필(seungsoo818) | `PROFILE_EMAIL` · `PROFILE_EMAIL_TEST`(같은 사서함의 `+test` 주소) | `env\ko.env`·`en.env` |
+| 가입용(소모됨) | `test006`=`anfrhrl001@gmail.com` / `test007`=`anfrhrl002@gmail.com` | `06_Registration` · `01_05` · `_reg_complete_signup` 에 직접 |
+| 인바운드 수취인 | `*@example.com` 5종 | `13_ReceiveOverseas` 계열 |
+
+- 전부 **테스트 전용 계정**이라 공개돼도 무방하다(2026-09-18 사용자 확인). `secrets.env` 는 폐지했다.
+- ★ **주소가 바뀌어도 `25_Profile` 은 고칠 필요가 없다.** 단언이 지역부를 보지 않고
+  `@gmail\.com` / `\+test@gmail\.com` **유무로만** 판정한다. `ko/en.env` 두 줄만 바꾸면 된다.
+- ⚠️ `test006`/`test007` 메일은 **프로필 메일과 별개다.** `01_05` 는 2026-09-16에 대상이
+  **seungsoo818 → test007 로 고정**됐다(주 계정을 초기화해 스위트가 멈춘 사고 때문). 함께 바꾸지 말 것.
 
 ### 3.6 appId — **2026-09-03 정책 변경**
 
