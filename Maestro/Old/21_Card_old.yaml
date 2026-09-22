@@ -78,11 +78,16 @@ appId: ${APP_ID}
 # [Card Apply] - 카드 추가 신청 (Pay 카드, 지점 수령)
 # ================================================================
 # ★ **2026-09-11 사용자 확인: `Pay 카드` 는 없어진 게 아니다 — 상품 목록을 아래로 스크롤하면 나온다.**
-#   2026-09-10 에 `[01]` 의 `assertVisible: "Pay 카드"` 가 실패한 것은 상품이 단종된 것이 아니고
+#   2026-09-10 에 `[01]` 의 `assertVisible: "${CARD_PRODUCT_PAY}"` 가 실패한 것은 상품이 단종된 것이 아니고
 #   **첫 화면에 EasyCare·EasyGo 만 보이고 Pay 는 화면 밖에 있었기 때문**이다.
 #   → 상품 단언·탭 전에 스크롤을 넣는다(해상도가 바뀌면 요소가 화면 밖으로 밀리는 것과 같은 부류).
 # ⚠ 이 구간은 실계정에 **실제 카드 신청**을 낸다. 신청 대상은 **Pay 카드**로 고정하고,
 #   엉뚱한 상품으로 들어갔는지를 상세 화면 제목(`GME 카드 - Pay`)으로 못박는다.
+#   → 둘 다 `${CARD_PRODUCT_PAY}` · `${CARD_DETAIL_TITLE_PAY}` 로 변수화했다(2026-09-22 en 실측).
+#     en 상품 목록: `EasyCare Card` / `EasyGo Card` / **`Pay Card`** / `Premium Card`
+#     (목록 id `card_list_title_textview`), 상세 제목 `GME Card - Pay`(id `toolbar_title`).
+#   ⚠️ **상품명 탭으로는 상세가 열리지 않는다**(실측 재확인) — 행의 `Apply` 버튼이 상세를 연다.
+#     실제 신청은 상세 안의 `${APPLY_CARD_TEXT}` 이므로, 상세까지는 신청 없이 볼 수 있다.
 #   [10] 이 그 신청을 취소하므로 전 구간을 돌리면 상태는 원복된다 — 중간에 끊기면 신청이 남는다.
 
 # 카드 이미지 좌로 스와이프 후 "카드 추가 요청" 있을 때만 진행 (이미 신청된 경우 스킵)
@@ -126,15 +131,15 @@ appId: ${APP_ID}
       #   고정 위치 가정을 버리고 중앙 정렬까지 스크롤한 뒤 단언·탭한다.
       - scrollUntilVisible:
           element:
-            text: "Pay 카드"
+            text: "${CARD_PRODUCT_PAY}"
           direction: DOWN
           centerElement: true
           timeout: 20000
-      - assertVisible: "Pay 카드"
+      - assertVisible: "${CARD_PRODUCT_PAY}"
       # 신청 대상 행에서 진입한다. ⛔ 맨 위 `카드 신청` 을 그냥 탭하면 **EasyGo 행**을 집는다
       #   (텍스트 index 0 = 그 순간 화면 맨 위). 이미 발급된 상품은 버튼이 `내 카드` 로 바뀐다.
       - tapOn:
-          text: "Pay 카드"
+          text: "${CARD_PRODUCT_PAY}"
       - waitForAnimationToEnd
       # 상품명 탭으로 상세가 열리지 않아 목록이 그대로 남아 있으면 그 행의 신청 버튼을 누른다 — 자기교정.
       - runFlow:
@@ -145,7 +150,7 @@ appId: ${APP_ID}
             - tapOn:
                 text: "${CARD_APPLY_TEXT}"
                 below:
-                  text: "Pay 카드"
+                  text: "${CARD_PRODUCT_PAY}"
             - waitForAnimationToEnd
       # 이미 진행 중인 신청 팝업 처리 → 배송지로 바로 이동
       - runFlow:
@@ -168,7 +173,7 @@ appId: ${APP_ID}
             # ★ 엉된 상품에 신청을 넣지 않도록 상세 화면이 **Pay** 임을 못박는다.
             #   이건 상품명 하드코딩이 아니라 **이 케이스가 신청하는 상품 자신**이다 — 고정이 맞다.
             - assertVisible:
-                text: 'GME 카드 - Pay[\s\S]*'
+                text: "${CARD_DETAIL_TITLE_PAY}"
             - tapOn: "${APPLY_CARD_TEXT}"
             - waitForAnimationToEnd
             # 이용약관
