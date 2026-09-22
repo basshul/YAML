@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ⚠️ **`docs\` 로 옮기면 안 되는 md 가 있다** — 경로가 고정이라 옮기면 조용히 로드되지 않는다:
 **이 파일(`CLAUDE.md`, 저장소 루트)** 과 **`.claude\skills\*\SKILL.md`**.
 린터 산출물 `lint_*.md` 는 문서가 아니라 **돌릴 때마다 다시 만들어지는 산출물**이라
-`artifacts\lint\` 로 보냈다(`.gitignore` 의 `artifacts/`, 미러도 `lint_*.md` 를 제외한다).
+`.gitignore` 로 제외한다(`artifacts/` · `lint_*.md`).
 
 ### `.claude/skills/` — 작업별 상세 절차(skill)
 
@@ -32,35 +32,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `maestro-yaml` — yaml 작성. 셀렉터 함정, 거짓 통과를 막는 assert 구조, 임시본 재추출
   - `maestro-suite` — 회귀 스위트. 태그·순서 제약·제외 파일·재작성 계획
 
-⚠️ **작업 파일은 이 디렉터리(`C:\GME\qa-automation`)에 없다.** 실제 경로:
+### 폴더는 하나다 — 2026-09-22 병합
+
+종전에는 OneDrive 에 정본을 두고 이 저장소가 그 **사본**이었다. 두 벌이 있으면 반드시 한쪽이 낡아서
+(2026-09-10 에 9일치가 벌어져 저장소 린터가 이미 고쳐진 결함 11건을 ERROR 로 리포트했다)
+**이 저장소 하나로 합쳤다.** 미러 동기화 스크립트(`sync_from_source.ps1`)는 폐기했다.
 
 ```
-C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro\
-├── *.yaml            # 개편 UI(V3)용 사본 — 건드리지 않는다
-├── Old\*.yaml        # ★ 편집 대상: 구 UI(V2)용, `_old` 접미사
-├── env\{ko,en}.env   # i18n 문자열 (147개 키)
-├── Test Files\       # 갤러리 업로드용 이미지 픽스처 4장
-├── run_test.ps1      # 실행 러너
-└── push_test_images.ps1
+C:\GME\qa-automation\            ★ 편집·실행·커밋이 전부 여기서 일어난다
+├── Maestro\
+│   ├── *.yaml            # 개편 UI(V3)용 사본 — 건드리지 않는다
+│   ├── Old\*.yaml       # ★ 편집 대상: 구 UI(V2)용, `_old` 접미사
+│   ├── env\{ko,en}.env  # i18n 문자열
+│   ├── Test Files\      # 갤러리 업로드용 이미지 픽스처 4장
+│   ├── run_test.ps1      # 실행 러너 (CWD 는 항상 `Maestro\`)
+│   ├── run_suite.ps1 · lint_flows.ps1 · push_test_images.ps1
+│   └── shots_runs\ · suite_logs\   # 실행 산출물(gitignore)
+├── Checklist\          # SharePoint 마스터 바로가기(.url) + 참고 사본 xlsx
+├── docs\ · gme_excel.py · CLAUDE.md · .claude\skills\
+└── GME QA Checklist V2.1.xlsx   # 데일리 배치가 매일 읽고 덮어쓰는 작업본
 ```
 
-이 저장소의 `Maestro\`·`Checklist\`·루트 러너는 그 정본의 **사본**이다. 두 벌이 있으면 반드시 한쪽이 낡는다 —
-2026-09-10에 9일치가 벌어져 **저장소 린터가 이미 고쳐진 결함 11건을 ERROR로 리포트**했다(정본은 0건).
-→ 손으로 맞추지 말고 `sync_from_source.ps1` 을 쓴다. 방향은 **정본 → 저장소 한쪽뿐**이다.
+**OneDrive 쪽에 남은 것 — 증적뿐이다. 작업 파일은 없다.**
+`개인용 - Automation\` 에는 스크린샷(`Maestro\shots_*`, `Screenshot\`)·실행 로그(`suite_logs\`)·
+오래된 백업 폴더만 남겨 클라우드 백업을 유지한다. 실행 로그에는 **계정 ID·잔액·거래내역·실 이메일**이
+그대로 남아 git 에 올리지 않는다.
+- 앞으로 생기는 증적은 `Maestro\shots_runs\` 에 쌓인다(gitignore) → 클라우드 보관이 필요하면
+  주기적으로 OneDrive 로 옮긴다(수동).
+- `_pre_merge_20260922\` 는 병합 전 원본을 담아둔 **롤백용**이다. 이상 없으면 지워도 된다.
 
-```powershell
-.\sync_from_source.ps1              # 계획만 (아무것도 바꾸지 않는다)
-.\sync_from_source.ps1 -Apply       # 적용 후 재대조까지 한다
-```
-
-- 제외는 `.gitignore` 와 맞춰 뒀다(`shots_*/`·`*.png`·`*.zip`, `Checklist\*.xlsx`).
-  **2026-09-11 추가**: `Maestro\suite_logs\`(실행 로그)도 제외한다.
-  제외는 `.gitignore` 와 `sync_from_source.ps1` **양쪽**에 넣어야 한다 — 한쪽만 하면 미러가 계속
-  다시 채우거나 매번 "차이 있음"으로 뜬다.
-
-- **삭제로 뜨는 항목은 대개 이름이 바뀌었거나 옮겨진 파일**이다 — 같은 목록의 추가에 반대편이 있는지 보고 적용할 것.
-- 스크립트는 **저장소 루트**에 둔다. `Maestro\` 안에 두면 정본에 없는 파일이라 스스로를 지운다.
-
+⛔ **외부 스크립트 3곳이 이 경로를 박아 둔다** — 경로를 또 옮기면 같이 고쳐야 한다:
+`~/qa_daily.sh`(`--yaml-dir`·`--xlsx`) · `C:\Users\GME\run_report_old.ps1` ·
+`C:\Users\GME\report_scenario_map_old.json`(`yaml_dir`, 이게 리포트 스크립트의 기본값을 덮어쓴다).
 
 ### 저장소에 올라가는 값 — `secrets.env` 는 2026-09-18 폐지했다
 

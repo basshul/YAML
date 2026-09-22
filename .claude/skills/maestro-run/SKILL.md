@@ -16,8 +16,8 @@ CWD는 항상 `Maestro\` 루트다. 플로우 경로는 그 기준 상대경로.
 $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
 ```
 
-작업 파일은 이 저장소가 아니라 다음 경로에 있다:
-`C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro\`
+작업 파일은 **이 저장소 안에** 있다(2026-09-22 폴더 병합, OneDrive 정본 폐지):
+`C:\GME\qa-automation\Maestro\`
 편집 대상은 **`Old\`**(구 UI). 루트의 동일 사본은 개편 UI용이라 건드리지 않는다.
 
 ## 실행 명령
@@ -150,5 +150,5 @@ adb shell wm size && adb shell wm density     # 해상도·DPI 를 기록해 둔
 - 결과는 `suite_logs\<타임스탬프>\`에 항목별 `.log` + `SUMMARY.md`로 남는다.
 - **스크린샷은 러너가 회수한다** — `takeScreenshot` 은 CWD 에 떨어뜨리지만(경로 옵션이 없다)
   실행 직후 `shots_runs\<yyyyMMdd_HHmmss>_<플로우>\` 로 옮겨진다. 루트에 png 가 쌓이면 회수가 안 된 것이다.
-  ⚠️ 폴더명이 `shots_` 로 시작해야 `.gitignore` 와 `sync_from_source.ps1` 이 함께 걸러낸다.
+  ⚠️ 폴더명이 `shots_` 로 시작해야 `.gitignore` 가 걸러낸다.
 - 실패했으면 `maestro-debug` 스킬로 진단한다. **환경 문제와 코드 결함을 먼저 구분할 것.**

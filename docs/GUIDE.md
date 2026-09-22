@@ -27,7 +27,7 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 ### 폴더 구조
 
 ```
-개인용 - Automation\Maestro\        ← 편집·실행의 정본. CWD는 항상 여기다
+C:\GME\qa-automation\Maestro\   ← 편집·실행 폴더. CWD는 항상 여기다
 ├── Old\*.yaml            ★ 실행 대상 66개 — 구 UI(V2)용, `_old` 접미사
 ├── *.yaml                개편 UI(V3)용 사본 — 배포 전까지 손대지 않는다
 ├── env\ko.env, en.env    화면 문구 사전(${VAR}로 참조)
@@ -55,11 +55,12 @@ C:\GME\qa-automation\
 
 | | 경로 | 성격 |
 |---|---|---|
-| **정본** | OneDrive `개인용 - Automation\` | **편집·실행은 여기서만** |
-| 미러 | GitHub `basshul/YAML` (비공개) | 읽기 전용 사본. 이력·리뷰용 |
+| **작업 폴더** | `C:\GME\qa-automation\` | **편집·실행·커밋이 전부 여기다** |
+| 원격 | GitHub `basshul/YAML` (비공개) | `main` 만 푸시한다 |
+| 증적 | OneDrive `개인용 - Automation\` | 스크린샷·실행 로그만. **작업 파일은 없다** |
 
-동기화는 **정본 → 저장소 한 방향**이고 저장소 루트의 `sync_from_source.ps1`이 한다.
-⛔ 저장소 쪽을 고치면 다음 동기화가 **지운다.**
+**2026-09-22 에 폴더를 하나로 합쳤다.** 종전의 OneDrive 정본 + 미러 2벌 구조와
+동기화 스크립트(`sync_from_source.ps1`)는 폐기했다 — 두 벌이 있으면 반드시 한쪽이 낡는다.
 ✅ **저장소만 받아도 실행에 필요한 파일은 다 있다**(2026-09-18 `secrets.env` 폐지).
 
 ---
@@ -175,7 +176,6 @@ git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
 | `flows_index.json` | 1 | **낡았다**(2026-06-25, V3 기준). 쓰기 전에 재생성하거나 무시 |
 | `k_*.yaml` · `_stag_login*.yaml` · `charge.yaml` | 7 | 실험·단편 |
 | `Automation Report.bat/.txt` · 루트 `run_test.ps1` | 3 | 데일리 리포트 / `Maestro\` 쪽과 중복 |
-| `sync_from_source.ps1` | 1 | **정본이 있는 환경에서만** 의미 있다 |
 
 ### 체크리스트 기입 도구 — 결과를 적을 사람만
 
@@ -198,7 +198,7 @@ python gme_excel.py login              # 최초 1회, 브라우저 인증
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'    # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
-cd "C:\Users\GME\Global Money Express Co., Ltd\개인용 - Automation\Maestro"
+cd "C:\GME\qa-automation\Maestro"
 .\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml"
 ```
 
@@ -471,7 +471,7 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 
 | 파일 | 고칠 것 | 안 고치면 |
 |---|---|---|
-| `sync_from_source.ps1` (저장소 루트) | `param $Source` = **정본 절대경로**(사용자 계정명 포함) | `정본 경로가 없습니다`로 즉시 중단 |
+| `~/qa_daily.sh` · `run_report_old.ps1` · `report_scenario_map_old.json` | 저장소 **절대경로**(`C:\GME\qa-automation`) | 데일리 집계·리포트가 빈 결과로 돈다 |
 | `run_test.ps1` · `run_suite.ps1` | `$BuildMap` — stag/live **패키지명 2종** | 앱 패키지가 바뀌면 전 플로우가 launch 실패 |
 | `run_suite.ps1`의 `$Suite` 블록 | `acct`(계정명) · `needs.balance`(임계) · `est`(소요) · `f`(파일 경로) · 그룹과 **순서** | 계정 전환이 어긋나 뒤 항목이 연쇄 실패 |
 | `run_suite.ps1` `-MaxCharge` | 자동 충전 상한 기본 **30,000원**(실계좌에서 빠진다) | `-AutoCharge`를 쓸 때만 의미 있다 |
@@ -504,7 +504,7 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 ### 10.5 옮기는 순서
 
 1. **사전조건** 준비 — 계정 5개 · 잔액 · 픽스처 · admin 권한 (§10.1)
-2. **스크립트** 경로·패키지 — `sync_from_source.ps1 $Source`, `$BuildMap` (§10.3)
+2. **스크립트** 경로·패키지 — 데일리 배치 3곳의 절대경로, `$BuildMap` (§10.3)
 3. **env** — `ko/en.env` 문구·계정 이메일 (§10.2)
 4. **yaml 값** — 계정·은행·수취인·계좌·이메일·금액 (§10.2, 상세는 `ENVIRONMENT.md` §3)
 5. **검사기 사전** — `lint_labels.json` · `lint_whitelist.txt`

@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-06-25T01:47:54.150917+00:00",
-  "source_dir": "/mnt/c/Users/GME/Global Money Express Co., Ltd/개인용 - Automation/Maestro",
+  "source_dir": "/mnt/c/GME/qa-automation/Maestro",
   "flow_count": 37,
   "note": "TC 단위 매칭용. key_texts/assertions/comments 를 체크리스트 TC 문구와 대조하세요.",
   "flows": [
