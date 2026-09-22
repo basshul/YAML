@@ -11,3 +11,8 @@ shots_*/
 Maestro/suite_logs/
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
+
+# 임시 탐색본 — 큰 yaml 의 일부 구간만 잘라 돌리는 일회용 파일이다(본 파일에서 재추출한다).
+#   ⚠️ 제외는 `sync_from_source.ps1` 의 Maestro 영역 Exclude 에도 **같이** 넣어야 한다 —
+#      한쪽만 넣으면 미러가 계속 되채우거나 매번 '차이 있음'으로 뜬다.
+_tmp_*.yaml

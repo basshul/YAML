@@ -61,7 +61,9 @@ $areas = @(
     @{ Name = "Checklist"; Dir = "Checklist"; Exclude = @("*.xlsx", "*.xlsx.bak_*") }
     #   lint_*.md = 린터가 **돌릴 때마다 다시 만드는 산출물**이다(문서가 아니다) → 미러하지 않는다.
     #               2026-09-16 정리 전까지 `Maestro\` 에 문서와 섞여 있어 md 를 찾기 어려웠다.
-    @{ Name = "Maestro";   Dir = "Maestro";   Exclude = @("lint_*.md") }
+    #   _tmp_*.yaml = 큰 yaml 의 일부 구간만 잘라 돌리는 **일회용 탐색본**이다(본 파일에서 재추출한다).
+    #               Test-IgnoredFile 은 파일명만 보므로 `Old\` 하위도 함께 걸린다.
+    @{ Name = "Maestro";   Dir = "Maestro";   Exclude = @("lint_*.md", "_tmp_*.yaml") }
     #   README_*.md = `gme_excel.py` 안내(win/mac). 스크립트와 함께 **저장소에만** 둔다.
     #               와일드카드로 둔다 — 이름이 바뀌어도(README.md → README_mac.md) 안 지워지게.
     @{ Name = "docs";      Dir = "docs";      Exclude = @("PROGRESS.md", "SUITE.md", "README_*.md") }
