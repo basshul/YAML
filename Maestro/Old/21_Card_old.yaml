@@ -1138,7 +1138,7 @@ appId: ${APP_ID}
 - tapOn: "${SCAN_TEXT}"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "스캔, 업로드 또는 QR로 결제하세요."
+    text: "${QR_SCAN_GUIDE}"
 
 # 갤러리 업로드로 실제 KHQR 이미지 인식 확인
 # run_test.ps1이 Global QR.jpg를 타임스탬프 최상단으로 갤러리에 배치해둠 (갤러리 1번째)
@@ -1148,12 +1148,26 @@ appId: ${APP_ID}
 - tapOn:
     point: "20%, 41%"
 - waitForAnimationToEnd
+# ⚠️ 2026-09-22 실측: 이 기기의 사진 선택 도구(`com.android.documentsui`)는 **다중 선택식**이라
+#   썸네일을 눌러도 앱으로 돌아오지 않고 하단 `완료` 를 한 번 더 눌러야 한다(구 기기 갤러리는 즉시 복귀).
+#   OS 화면이라 **앱 언어를 따르지 않는다**(기기 언어) → 한/영 라벨을 둘 다 받고, 없으면 그냥 넘어간다.
+- runFlow:
+    when:
+      visible: "완료|Done|DONE"
+    commands:
+      - tapOn: "완료|Done|DONE"
+      - waitForAnimationToEnd:
+          timeout: 20000
+- extendedWaitUntil:
+    visible:
+      text: "${PAYMENT_TEXT}"
+    timeout: 20000
 - assertVisible:
     text: "${PAYMENT_TEXT}"
 - assertVisible:
     text: "CHANSOKOL MORK"
 - assertVisible:
-    text: "사용 가능한 잔액.*"
+    text: "${QR_AVAILABLE_BALANCE}"
 - assertVisible:
     text: "${PAYMENT_AMOUNT}"
 # 실제 해외 가맹점 대상 송금이 발생하므로 금액 입력/다음 진행은 하지 않고 화면 확인 후 이탈
@@ -1182,10 +1196,21 @@ appId: ${APP_ID}
 # CLICKUP-PARTIAL: z8nfn6mae1 | Easy Go 화면과 월/최근 이용내역은 단언, 카드번호·잔액 자체는 미단언
 # ----------------------------------------------------------------
 - scroll
+# ⛔ 종전 `.*교통카드` 는 **월이 앞에 붙는 라벨**(`2026-09 교통카드`)이라 문구로 잡기 나쁘고,
+#   en 은 아예 `2026-09 Transportation` 이다 → 언어·날짜에 안 흔들리는 id 로 바꿨다(2026-09-22 실측).
 - tapOn:
-    text: ".*교통카드"
+    id: "txViewTravelHistory"
+# ⛔ 종전 `${EASY_GO_CARD_TEXT}` 단언은 **상품명 하드코딩**이었다 — 이 화면 툴바는 계정이 들고 있는
+#   카드 이름을 보여주므로 `EasyCare` 계정에서는 `EasyGo` 가 나오지 않는다(2026-09-22 실측).
+#   `[22]` 에서 이미 같은 부류를 고쳤다. 다국어와 무관하게 ko 에서도 깨지는 자리였다.
+# ★ 대신 **이 케이스가 검증한다고 적어둔 것**을 실제로 단언한다(카드번호·잔액).
+#   종전에는 `CLICKUP-PARTIAL` 사유가 "카드번호·잔액 자체는 미단언"이었는데 그게 해소된다.
+- extendedWaitUntil:
+    visible:
+      id: "cashbeecardnumber"
+    timeout: 20000
 - assertVisible:
-    text: "${EASY_GO_CARD_TEXT}"
+    id: "txvBalanceAmt"
 - assertVisible:
     text: "${MONTHLY_USAGE}"
 - assertVisible:
