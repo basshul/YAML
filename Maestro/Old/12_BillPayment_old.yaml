@@ -55,7 +55,7 @@ appId: ${APP_ID}
 #     `dp_biller_selection`(EditText, "청구인 선택")
 #     국가·청구 구분·청구인 리스트: `searchEditText`(검색)
 #     청구인별 입력필드 `rvField` / 출금계좌 리스트("GME Wallet" 등) / `btnProceed`("진행")
-#   결제내역 확인화면: `btnOk`("GME Wallet을 사용하여 결제")
+#   결제내역 확인화면: `btnOk`("${BILL_PAY_USING_WALLET}")
 #   간편비번: `ActivityLockScreen` (`input_dot_1`~`input_dot_4`)
 #
 # ★ 함정(개편UI에서 확인, 구 UI에서도 유효):
@@ -174,12 +174,12 @@ appId: ${APP_ID}
 # 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
 - scrollUntilVisible:
     element:
-      text: ".*모바일 충전.*"
+      text: "${HOME_TOPUP_BILL}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
 - tapOn:
-    text: ".*모바일 충전.*"
+    text: "${HOME_TOPUP_BILL}"
 - extendedWaitUntil:
     visible:
       id: "international_bill_payment"
@@ -232,7 +232,7 @@ appId: ${APP_ID}
       text: "${BILLER_CATEGORY_TEXT}"
     timeout: 15000
 - takeScreenshot: "shots_12_billpayment_old/03_청구구분"
-- tapOn: "모바일/전화"
+- tapOn: "${BILLER_CATEGORY_MOBILE}"
 
 # ----------------------------------------------------------------
 # [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)
@@ -290,10 +290,10 @@ appId: ${APP_ID}
 # 결제내역 확인 화면 → GME Wallet 결제
 - extendedWaitUntil:
     visible:
-      text: "GME Wallet을 사용하여 결제"
+      text: "${BILL_PAY_USING_WALLET}"
     timeout: 20000
 - takeScreenshot: "shots_12_billpayment_old/06_2_결제내역"
-- tapOn: "GME Wallet을 사용하여 결제"
+- tapOn: "${BILL_PAY_USING_WALLET}"
 # 간편비밀번호 화면 도달 확인 — **여기서 정지. PIN 입력 안 함.**
 - extendedWaitUntil:
     visible:
@@ -318,12 +318,12 @@ appId: ${APP_ID}
 #   ⚠️ 앱은 PIN 입력 전까지 잔액을 검증하지 않으므로, 부족하면 여기서 서버가 거부한다.
 - extendedWaitUntil:
     visible:
-      text: "결제가 완료|완료되었습니다|성공|오류|실패|Insufficient|insufficient"
+      text: "${BILL_RESULT_ANY}"
     timeout: 120000
 - takeScreenshot: "shots_12_billpayment_old/06_4_결제결과"
 # 성공 판정 — 실패 응답이면 여기서 FAIL로 드러난다(조용히 통과하지 않게 한다).
 - assertVisible:
-    text: ".*(결제가 완료|완료되었습니다|성공).*"
+    text: "${BILL_SUCCESS}"
 
 # ⚠️ 결제 성공 시 **"성공" 화면이 먼저 뜨고, 이걸 닫지 않으면 홈까지 못 나온다.**
 #   ⚠️ **11과 12의 성공 UI 구조가 다르다**(2026-08-28 실측):
