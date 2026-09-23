@@ -175,8 +175,123 @@ function updateRunState() {
 
 /* -------------------------------------------------------------------- 실행 */
 
-function onRun() {
-  alert("실행 연결은 4단계에서 붙입니다.");
+function logLine(text) {
+  const box = $("log");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+
+  const el = document.createElement("div");
+  if (/\bPASS\b|정상|OK$/.test(text)) el.className = "l-pass";
+  else if (/\bFAIL\b|⛔|실패|\[STOP\]/.test(text)) el.className = "l-fail";
+  else if (/⚠️|SKIP/.test(text)) el.className = "l-warn";
+  else if (/^===|^──|^▶|^\$ /.test(text)) el.className = "l-head";
+  el.textContent = text;
+  box.appendChild(el);
+
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+
+function setRunning(on) {
+  state.running = on;
+  $("logMeta").textContent = on ? "실행 중…" : "";
+  document.querySelectorAll("input, select, button").forEach((el) => {
+    if (el.id !== "runBtn") el.disabled = on || el.dataset.alwaysDisabled === "1";
+  });
+  $("runBtn").textContent = on ? "실행 중…" : "실행";
+  updateRunState();
+}
+
+async function onRun() {
+  const picked = state.tests.filter((t) => state.selected.has(t.name));
+  const isLive = state.config.servers.find((s) => s.value === state.server)?.live;
+  const money = picked.filter((t) => t.irreversible);
+
+  let ask = `${picked.length}개 테스트를 실행합니다.\n\n`;
+  if (isLive) ask += "⚠️ 운영(Live) — 실서비스 계정과 실자금이 움직입니다.\n";
+  if (money.length) ask += `⚠️ 실결제 포함: ${money.map((t) => t.name).join(", ")}\n`;
+  ask += "\n계속할까요?";
+  if (!confirm(ask)) return;
+
+  $("log").innerHTML = "";
+  $("summary").classList.add("hidden");
+  setRunning(true);
+
+  try {
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tests: picked.map((t) => t.name),
+        device: $("deviceSel").value,
+        server: state.server,
+        platform: "android",
+        confirm_live: !!isLive,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "실행을 시작하지 못했습니다.");
+    listen();
+  } catch (err) {
+    logLine("[오류] " + err.message);
+    setRunning(false);
+  }
+}
+
+function listen() {
+  const es = new EventSource("/api/run/stream");
+  es.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === "line") {
+      logLine(msg.text);
+    } else if (msg.type === "done") {
+      es.close();
+      showSummary(msg.summary);
+      setRunning(false);
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    logLine("[연결 끊김] 서버와의 로그 연결이 끊겼습니다.");
+    setRunning(false);
+  };
+}
+
+function showSummary(s) {
+  const box = $("summary");
+  if (!s) {
+    box.classList.add("hidden");
+    return;
+  }
+  const rows = s.items
+    .map(
+      (i) =>
+        `<tr><td>${i.group}</td><td>${i.name}</td>` +
+        `<td class="st-${i.status}">${i.status}</td>` +
+        `<td>${i.steps}</td><td>${i.elapsed}</td><td>${i.reason || ""}</td></tr>`
+    )
+    .join("");
+
+  box.className = "panel summary " + (s.ok ? "pass" : "fail");
+  box.innerHTML =
+    `<div class="headline">${s.ok ? "PASS — 전부 통과" : "FAIL — 실패한 항목이 있습니다"}</div>` +
+    `<div>PASS ${s.counts.PASS} · FAIL ${s.counts.FAIL} · SKIP ${s.counts.SKIP} · 소요 ${s.elapsed}` +
+    ` <span class="muted">(종료코드 ${s.returncode})</span></div>` +
+    (rows
+      ? `<table><tr><th>그룹</th><th>항목</th><th>결과</th><th>스텝</th><th>소요</th><th>사유</th></tr>${rows}</table>`
+      : "") +
+    `<div class="muted" style="margin-top:8px">로그 파일: ${s.log_file}</div>`;
+}
+
+/* 서버가 이미 실행 중이면(새로고침 등) 이어서 붙는다 */
+async function attachIfRunning() {
+  try {
+    const st = await api("/api/run/status");
+    if (st.running) {
+      setRunning(true);
+      listen();
+    }
+  } catch (_) {
+    /* 실행 중인 게 없으면 그만 */
+  }
 }
 
 /* -------------------------------------------------------------------- 시작 */
@@ -189,4 +304,4 @@ $("clearSel").addEventListener("click", () => {
 });
 $("runBtn").addEventListener("click", onRun);
 
-boot();
+boot().then(attachIfRunning);

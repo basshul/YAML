@@ -6,12 +6,15 @@ PowerShell 호출은 전부 runner.py 가 맡는다 — 여기서는 직접 부�
 
 from __future__ import annotations
 
+import json
+import queue
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 import runner
 
@@ -51,6 +54,66 @@ def api_config():
         ],
         "group_labels": runner.GROUP_LABELS,
     }
+
+
+class RunRequest(BaseModel):
+    tests: list[str]
+    device: str
+    server: str
+    platform: str = "android"
+    confirm_live: bool = False
+
+
+@app.post("/api/run")
+def api_run(req: RunRequest):
+    """실행 시작. 한 번에 하나만 — 대기열은 이번 데모 범위 밖이다."""
+    if req.platform != "android":
+        return JSONResponse(status_code=400, content={"error": "iOS 실행은 아직 지원하지 않습니다."})
+    # 운영(Live)은 실자금이 움직인다 → 화면에서 한 번 더 확인받은 요청만 받는다.
+    if runner.SERVER_CHOICES.get(req.server, {}).get("live") and not req.confirm_live:
+        return JSONResponse(status_code=400, content={"error": "운영(Live) 실행은 확인이 필요합니다."})
+    try:
+        run = runner.start_run(req.tests, req.device, req.server)
+    except RuntimeError as exc:
+        return JSONResponse(status_code=409, content={"error": str(exc)})
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    return run.status()
+
+
+@app.get("/api/run/status")
+def api_run_status():
+    run = runner.current_run()
+    return run.status() if run else {"running": False}
+
+
+@app.get("/api/run/stream")
+def api_run_stream():
+    """실행 로그를 줄 단위로 흘려보낸다(Server-Sent Events)."""
+    run = runner.current_run()
+    if not run:
+        return JSONResponse(status_code=404, content={"error": "실행 중인 작업이 없습니다."})
+
+    def events():
+        q = run.subscribe()
+        try:
+            while True:
+                try:
+                    line = q.get(timeout=15)
+                except queue.Empty:
+                    yield ": keep-alive\n\n"   # 프록시·브라우저가 끊지 않게
+                    continue
+                if line is None:
+                    payload = {"type": "done", "summary": run.summary}
+                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                    return
+                payload = {"type": "line", "text": line}
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        finally:
+            run.unsubscribe(q)
+
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache"})
 
 
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
