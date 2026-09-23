@@ -119,7 +119,11 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
 - 갤러리 의존 케이스(신분증/ARC/여권 업로드, QR 스캔)는 **실행 직전 `.\push_test_images.ps1`**을
   돌려야 한다. `icon_thumbnail`의 index가 "테스트 이미지 4장이 갤러리 최신 4개"라는 전제에 기대므로,
   다른 이미지가 쌓이면 앱이 "OCR이 유효하지 않습니다"로 거부한다(앱 버그가 아니다).
-- 상위 폴더에도 `run_test.ps1`이 있다(`-flow`가 `Maestro\` 기준). 헷갈리면 `Maestro\` 쪽을 쓴다.
+- 저장소 루트에도 `run_test.ps1` 이 있다 — **갤러리 픽스처가 필요한 케이스 전용 래퍼**다
+  (`21_Card [24]` 글로벌 QR, `06_Registration` OCR). 이미지를 push 한 뒤 `Maestro\run_test.ps1` 로
+  **그대로 넘긴다**(2026-09-23 재작성). 인자는 같고 `-flow` 는 `Maestro\` 기준이다.
+  ⚠️ 종전엔 러너 전체를 **복사해 갖고 있어** `Maestro\` 쪽에만 들어간 개선(플로우가 쓰는 env 만 추리기)이
+  여기엔 없었고, env 가 475개로 늘자 **"The command line is too long."** 로 죽었다.
 
 ### 단일 케이스만 돌리는 법
 

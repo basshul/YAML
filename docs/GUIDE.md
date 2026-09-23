@@ -481,8 +481,9 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 | `lint_whitelist.txt` | 검사 예외(`RULE 파일명:줄`) | "확인해서 의도된 것"만. 줄 번호는 파일이 밀리면 어긋난다 |
 | `gme_excel.py` (저장소 루트) | `GME_CLIENT_ID`·`GME_TENANT_ID` 환경변수, 대상은 **SharePoint 공유 링크**(`-f`) | 링크가 바뀌면 `HTTP 404`. 토큰은 `~/.gme_excel_token.json` 에 계정별로 남는다 |
 
-⚠️ **저장소 루트에도 `run_test.ps1`이 따로 있다**(`-flow`가 `Maestro\` 기준, 픽스처를
-`/sdcard/DCIM`에 푸시). 헷갈리면 **`Maestro\` 쪽을 쓴다.**
+⚠️ **저장소 루트의 `run_test.ps1` 은 갤러리 픽스처 전용 래퍼**다 — 이미지를
+`/sdcard/DCIM` 에 push 한 뒤 `Maestro\run_test.ps1` 로 그대로 넘긴다(인자 동일).
+`21_Card [24]`·`06_Registration` 처럼 갤러리가 필요한 것만 이걸 쓰고, 나머지는 `Maestro\` 쪽을 쓴다.
 
 ### 10.4 ③ skill·문서
 

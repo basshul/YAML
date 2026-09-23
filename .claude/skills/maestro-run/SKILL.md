@@ -30,7 +30,8 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
 
 - `-device` 생략 시 자동 감지하고 **2대 이상이면 실행을 거부**한다. 시리얼을 하드코딩하지 말 것.
 - `run_test.ps1`이 `env\<lang>.env`를 파싱해 `--env KEY="VALUE"`로 넘긴다. 값의 인용은 필수.
-- 상위 폴더에도 `run_test.ps1`이 있다. 헷갈리면 `Maestro\` 쪽을 쓴다.
+- 저장소 루트의 `run_test.ps1` 은 **갤러리 픽스처 전용 래퍼**다 — 이미지를 push 하고
+  `Maestro\run_test.ps1` 로 넘긴다(인자 동일). `21_Card [24]`·`06_Registration` 만 이걸 쓴다.
 - 스위트 상세는 `maestro-suite` 스킬 참고.
 
 ### 빌드 2종 (2026-09-03 사용자 선언)
