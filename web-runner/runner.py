@@ -145,6 +145,17 @@ def list_devices() -> list[dict]:
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
 _SAFE_SERIAL = re.compile(r"^[A-Za-z0-9_.:-]+$")
 
+# run_test.ps1 이 찍는 maestro 커맨드 에코는 `--env` 가 수십 개라 한 줄이 4KB 를 넘는다.
+# 화면에서는 어느 플로우를 도는지만 보이면 된다 → env 부분을 개수로 줄인다.
+_ECHO = re.compile(r"^(\s*Running: maestro .*?test\s+\S+)\s+(--env\s.*)$")
+
+
+def _shorten(line: str) -> str:
+    m = _ECHO.match(line)
+    if not m:
+        return line
+    return f"{m.group(1)}  (--env {m.group(2).count('--env')}개 생략)"
+
 
 class Run:
     """한 번의 실행. 로그 줄을 모아 두고 구독자에게 흘려보낸다."""
@@ -254,7 +265,7 @@ class Run:
                             offsets[path] = size
                             for line in chunk.decode("utf-8", "replace").splitlines():
                                 if line.strip():
-                                    self._emit("   " + line.rstrip())
+                                    self._emit("   " + _shorten(line.rstrip()))
                     except OSError:
                         continue
             if last:
