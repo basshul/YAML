@@ -61,9 +61,21 @@
 
       <section id="summary" class="panel summary hidden"></section>
 
-      <section class="panel grow logpanel">
-        <h2>실행 로그 <span class="spacer"></span><span id="logMeta" class="muted"></span></h2>
-        <pre id="log" class="log">실행하면 여기에 로그가 실시간으로 표시됩니다.</pre>
+      <section class="panel grow progpanel">
+        <h2>진행 상황 <span class="spacer"></span><span id="logMeta" class="muted"></span></h2>
+
+        <div id="progBarWrap" class="barwrap hidden">
+          <div id="progBar" class="bar"></div>
+        </div>
+
+        <div id="progList" class="proglist">
+          <p class="muted">테스트를 고르고 실행하면 진행 상황이 여기에 표시됩니다.</p>
+        </div>
+
+        <details class="logbox">
+          <summary>자세한 로그 보기</summary>
+          <pre id="log" class="log"></pre>
+        </details>
       </section>
     </div>
   </main>

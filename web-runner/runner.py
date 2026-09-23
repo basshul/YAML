@@ -157,6 +157,14 @@ def _shorten(line: str) -> str:
     return f"{m.group(1)}  (--env {m.group(2).count('--env')}개 생략)"
 
 
+# maestro 는 스텝마다 `<설명>... COMPLETED|FAILED|SKIPPED` 한 줄을 찍는다 → 진행 표시의 재료.
+_STEP = re.compile(r"^\s*(.+?)\.\.\.\s*(COMPLETED|FAILED|SKIPPED|PENDING)\s*$")
+# run_suite.ps1 의 항목 결과 줄: `▶ 09_Home   PASS   192 steps  05:43`
+_ITEM_DONE = re.compile(r"^▶\s+(\S+)\s+(PASS|FAIL|SKIP)\b\s*(.*)$")
+_STEPS_N = re.compile(r"(\d+)\s*steps")
+_ELAPSED = re.compile(r"(\d{2}:\d{2})")
+
+
 class Run:
     """한 번의 실행. 로그 줄을 모아 두고 구독자에게 흘려보낸다."""
 
@@ -175,27 +183,34 @@ class Run:
         tag = names[0] if len(names) == 1 else f"{len(names)}개"
         self.log_path = RUN_LOG_DIR / f"{stamp}_{tag}.log"
 
-        self._lines: list[str] = []
+        self._events: list[dict] = []
         self._subs: list[queue.Queue] = []
         self._lock = threading.Lock()
         self._proc: subprocess.Popen | None = None
         self._stop = threading.Event()
+        self._started_tests: set[str] = set()
 
-    # ---------------------------------------------------------- 로그 배달
-    def _emit(self, text: str) -> None:
+    # ------------------------------------------------------------ 이벤트
+    # 화면은 로그가 아니라 **진행 상황**을 본다. 그래서 줄을 그대로 흘리지 않고
+    # 여기서 종류를 갈라 이벤트로 내보낸다(로그 원문은 파일에 그대로 남는다).
+    def _push(self, event: dict) -> None:
         with self._lock:
-            self._lines.append(text)
+            self._events.append(event)
             for q in self._subs:
-                q.put(text)
+                q.put(event)
+
+    def _emit(self, text: str) -> None:
+        """로그 한 줄: 파일에 쓰고, 이벤트로도 내보낸다."""
         with self.log_path.open("a", encoding="utf-8") as fh:
             fh.write(text + "\n")
+        self._push({"type": "line", "text": text})
 
     def subscribe(self) -> queue.Queue:
-        """지금까지의 로그를 먼저 받고, 이후 새 줄을 이어받는 큐."""
+        """지금까지의 이벤트를 먼저 받고, 이후 새 이벤트를 이어받는 큐."""
         q: queue.Queue = queue.Queue()
         with self._lock:
-            for line in self._lines:
-                q.put(line)
+            for event in self._events:
+                q.put(event)
             self._subs.append(q)
         return q
 
@@ -234,11 +249,29 @@ class Run:
         for raw in self._proc.stdout:
             line = raw.rstrip("\r\n")
             self._emit(line)
+
             # "로그: <경로>" 줄에서 이번 실행의 항목별 로그 위치를 알아낸다
             if self.suite_log_dir is None:
                 m = re.search(r"로그:\s*(.+suite_logs[\\/][^\s]+)", line)
                 if m:
                     self.suite_log_dir = Path(m.group(1).strip())
+
+            # 항목 결과 줄 → 진행 표시의 "끝났다" 신호
+            #   ⚠️ run_suite 는 `▶ 이름` 을 개행 없이 찍고 결과를 같은 줄에 이어 붙인다
+            #     → 시작 신호로는 못 쓴다. 시작은 항목 로그 파일이 생기는 것으로 잡는다.
+            done = _ITEM_DONE.match(line)
+            if done:
+                tail = done.group(3)
+                steps = _STEPS_N.search(tail)
+                elapsed = _ELAPSED.search(tail)
+                self._push({
+                    "type": "test_done",
+                    "name": done.group(1),
+                    "status": done.group(2),
+                    "steps": int(steps.group(1)) if steps else None,
+                    "elapsed": elapsed.group(1) if elapsed else None,
+                    "reason": tail.strip() if done.group(2) == "SKIP" else "",
+                })
         self.returncode = self._proc.wait()
         self._stop.set()
         time.sleep(1.0)              # 마지막 항목 로그가 밀려 들어올 틈을 준다
@@ -249,23 +282,46 @@ class Run:
                 q.put(None)          # 스트림 종료 신호
 
     def _tail_item_logs(self) -> None:
-        """suite_logs\\<시각>\\*.log 를 따라 읽어 maestro 진행 상황을 실시간으로 보낸다."""
+        """suite_logs\\<시각>\\*.log 를 따라 읽어 maestro 진행 상황을 실시간으로 보낸다.
+
+        항목 로그 파일이 **생기는 것**이 그 항목의 시작 신호다(콘솔의 `▶ 이름` 은
+        개행 없이 찍혀 결과가 날 때까지 도착하지 않는다).
+        """
         offsets: dict[Path, int] = {}
         while True:
             last = self._stop.is_set()
             if self.suite_log_dir and self.suite_log_dir.exists():
                 for path in sorted(self.suite_log_dir.glob("*.log")):
+                    stem = path.stem
+                    if stem.startswith("_") or stem.endswith("_push"):
+                        continue          # 충전·픽스처 push 로그는 진행 표시 대상이 아니다
+                    recover = stem.endswith("_recover")
+                    name = stem[: -len("_recover")] if recover else stem
                     try:
                         size = path.stat().st_size
                         start = offsets.get(path, 0)
-                        if size > start:
-                            with path.open("rb") as fh:
-                                fh.seek(start)
-                                chunk = fh.read(size - start)
-                            offsets[path] = size
-                            for line in chunk.decode("utf-8", "replace").splitlines():
-                                if line.strip():
-                                    self._emit("   " + _shorten(line.rstrip()))
+                        if size <= start:
+                            continue
+                        if name not in self._started_tests:
+                            self._started_tests.add(name)
+                            self._push({"type": "test_start", "name": name})
+                        with path.open("rb") as fh:
+                            fh.seek(start)
+                            chunk = fh.read(size - start)
+                        offsets[path] = size
+                        for line in chunk.decode("utf-8", "replace").splitlines():
+                            if not line.strip():
+                                continue
+                            self._emit("   " + _shorten(line.rstrip()))
+                            step = _STEP.match(line)
+                            if step:
+                                self._push({
+                                    "type": "step",
+                                    "name": name,
+                                    "text": step.group(1).strip(),
+                                    "status": step.group(2),
+                                    "recover": recover,
+                                })
                     except OSError:
                         continue
             if last:

@@ -139,10 +139,48 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .summary .st-FAIL { color: #d43c3c; font-weight: 600; }
 .summary .st-SKIP { color: #96631a; font-weight: 600; }
 
-/* 로그 */
-.logpanel { min-height: 0; }
+/* 진행 상황 */
+.progpanel { min-height: 0; }
+
+.barwrap {
+  height: 8px; background: #eceff2; border-radius: 4px; overflow: hidden; margin-bottom: 14px;
+}
+.bar {
+  height: 100%; width: 0; background: #2f6feb; border-radius: 4px;
+  transition: width .4s ease;
+}
+.bar.fail { background: #d43c3c; }
+.bar.done { background: #2f9e44; }
+
+.proglist { flex: 1; overflow-y: auto; min-height: 0; }
+.prog {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 10px; border-radius: 6px; border: 1px solid #eceff2; margin-bottom: 6px;
+}
+.prog.running { border-color: #2f6feb; background: #f7faff; }
+.prog .chip {
+  flex: none; min-width: 60px; text-align: center; font-size: 11px; font-weight: 600;
+  padding: 3px 0; border-radius: 10px; background: #eceff2; color: #6b7480;
+}
+.prog.running .chip { background: #e5efff; color: #2f6feb; }
+.prog .chip.PASS { background: #e6f5ea; color: #2f9e44; }
+.prog .chip.FAIL { background: #fdeeee; color: #d43c3c; }
+.prog .chip.SKIP { background: #fff5e5; color: #96631a; }
+.prog .body { min-width: 0; flex: 1; }
+.prog .name { display: block; font-size: 13px; font-weight: 600; }
+.prog .now {
+  display: block; font-size: 11px; color: #6b7480; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.prog .now.recover { color: #96631a; }
+.prog .num { flex: none; font-size: 11px; color: #8b939e; text-align: right; min-width: 74px; }
+
+/* 로그 — 기본은 접어 둔다 */
+.logbox { margin-top: 10px; border-top: 1px solid #eceff2; padding-top: 8px; }
+.logbox summary { font-size: 12px; color: #6b7480; cursor: pointer; }
+.logbox[open] summary { margin-bottom: 8px; }
 .log {
-  flex: 1; margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  margin: 0; max-height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
   background: #10151c; color: #cfd8e3; border-radius: 6px; padding: 10px 12px;
   font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px; line-height: 1.55;
 }
@@ -156,5 +194,4 @@ button.small { padding: 3px 9px; font-size: 12px; }
   main { flex-direction: column; height: auto; }
   .col-left { flex: none; }
   .testlist { max-height: 340px; }
-  .log { min-height: 260px; }
 }

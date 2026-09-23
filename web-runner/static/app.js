@@ -190,6 +190,90 @@ function logLine(text) {
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
+/* ---------------------------------------------------------------- 진행 표시 */
+
+const prog = { items: [], timer: null };
+
+function startProgress(names, finished) {
+  prog.items = (names || []).map((name) => {
+    const t = state.tests.find((x) => x.name === name);
+    const r = finished ? (finished.items || []).find((x) => x.name === name) : null;
+    return {
+      name,
+      est: t ? t.est : 0,
+      status: r ? r.status : "대기",   // 대기 → 실행 중 → PASS/FAIL/SKIP
+      steps: r ? parseInt(r.steps, 10) || 0 : 0,
+      now: "",
+      recover: false,
+      startedAt: null,
+      elapsed: r ? r.elapsed : null,
+      reason: r ? r.reason : "",
+    };
+  });
+  renderProgress();
+  $("progBarWrap").classList.remove("hidden");
+  clearInterval(prog.timer);
+  if (finished) {
+    $("progBar").className = "bar " + (finished.ok ? "done" : "fail");
+    $("progBar").style.width = "100%";
+    prog.timer = null;
+  } else {
+    $("progBar").className = "bar";
+    prog.timer = setInterval(renderProgress, 1000);
+  }
+}
+
+function stopProgress(ok) {
+  clearInterval(prog.timer);
+  prog.timer = null;
+  $("progBar").className = "bar " + (ok ? "done" : "fail");
+  $("progBar").style.width = "100%";
+  renderProgress();
+}
+
+function item(name) {
+  return prog.items.find((i) => i.name === name);
+}
+
+function mmss(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function renderProgress() {
+  const list = $("progList");
+  list.innerHTML = "";
+
+  for (const i of prog.items) {
+    const running = i.status === "실행 중";
+    const row = document.createElement("div");
+    row.className = "prog" + (running ? " running" : "");
+
+    const over = ["PASS", "FAIL", "SKIP"].includes(i.status);
+    const chipClass = over ? i.status : "";
+    const elapsed = i.elapsed || (running && i.startedAt ? mmss(Date.now() - i.startedAt) : "");
+    const detail =
+      i.reason ||
+      (over ? "" : running ? i.now || "시작하는 중…" : `약 ${i.est}분 예상`);
+
+    row.innerHTML =
+      `<span class="chip ${chipClass}">${i.status}</span>` +
+      `<span class="body"><span class="name">${i.name}</span>` +
+      `<span class="now${i.recover ? " recover" : ""}">${i.recover ? "복구 중 · " : ""}${detail}</span></span>` +
+      `<span class="num">${i.steps ? i.steps + "스텝" : ""}${elapsed ? "<br>" + elapsed : ""}</span>`;
+    list.appendChild(row);
+  }
+
+  // 진행률: 끝난 항목 수 + 현재 항목의 (경과/예상). 예상은 빗나가므로 95%에서 멈춘다.
+  const total = prog.items.length || 1;
+  let done = prog.items.filter((i) => i.status !== "대기" && i.status !== "실행 중").length;
+  const cur = prog.items.find((i) => i.status === "실행 중");
+  if (cur && cur.startedAt && cur.est > 0) {
+    done += Math.min((Date.now() - cur.startedAt) / (cur.est * 60000), 0.95);
+  }
+  if (prog.timer) $("progBar").style.width = Math.min(99, (done / total) * 100) + "%";
+}
+
 function setRunning(on) {
   state.running = on;
   $("logMeta").textContent = on ? "실행 중…" : "";
@@ -213,6 +297,7 @@ async function onRun() {
 
   $("log").innerHTML = "";
   $("summary").classList.add("hidden");
+  startProgress(picked.map((t) => t.name));
   setRunning(true);
 
   try {
@@ -240,17 +325,57 @@ function listen() {
   const es = new EventSource("/api/run/stream");
   es.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
+
     if (msg.type === "line") {
       logLine(msg.text);
+      return;
+    }
+    if (msg.type === "test_start") {
+      const i = item(msg.name);
+      if (i) {
+        i.status = "실행 중";
+        i.startedAt = Date.now();
+      }
+    } else if (msg.type === "step") {
+      const i = item(msg.name);
+      if (i) {
+        i.now = msg.text;
+        i.recover = !!msg.recover;
+        if (msg.status === "COMPLETED") i.steps += 1;
+      }
+    } else if (msg.type === "test_done") {
+      const i = item(msg.name);
+      if (i) {
+        i.status = msg.status;
+        i.recover = false;
+        i.now = "";
+        i.reason = msg.reason || "";
+        if (msg.steps != null) i.steps = msg.steps;
+        if (msg.elapsed) i.elapsed = msg.elapsed;
+      }
     } else if (msg.type === "done") {
       es.close();
+      // 요약이 정본이다 — 실패 사유처럼 스트림에 안 실린 것도 여기서 채운다
+      for (const r of (msg.summary && msg.summary.items) || []) {
+        const i = item(r.name);
+        if (!i) continue;
+        i.status = r.status;
+        i.steps = parseInt(r.steps, 10) || i.steps;
+        i.elapsed = r.elapsed || i.elapsed;
+        i.reason = r.reason || "";
+        i.now = "";
+      }
       showSummary(msg.summary);
+      stopProgress(msg.summary ? msg.summary.ok : false);
       setRunning(false);
+      return;
     }
+    renderProgress();
   };
   es.onerror = () => {
     es.close();
     logLine("[연결 끊김] 서버와의 로그 연결이 끊겼습니다.");
+    stopProgress(false);
     setRunning(false);
   };
 }
@@ -286,9 +411,11 @@ async function attachIfRunning() {
   try {
     const st = await api("/api/run/status");
     if (st.running) {
+      startProgress(st.names);   // 이벤트 backlog 를 다시 받아 상태를 복원한다
       setRunning(true);
       listen();
     } else if (st.summary) {
+      startProgress(st.names, st.summary);
       showSummary(st.summary);
       $("logMeta").textContent = "직전 실행 결과";
     }

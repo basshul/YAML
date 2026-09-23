@@ -99,16 +99,15 @@ def api_run_stream():
         try:
             while True:
                 try:
-                    line = q.get(timeout=15)
+                    event = q.get(timeout=15)
                 except queue.Empty:
                     yield ": keep-alive\n\n"   # 프록시·브라우저가 끊지 않게
                     continue
-                if line is None:
-                    payload = {"type": "done", "summary": run.summary}
-                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                if event is None:
+                    event = {"type": "done", "summary": run.summary}
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                     return
-                payload = {"type": "line", "text": line}
-                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         finally:
             run.unsubscribe(q)
 
