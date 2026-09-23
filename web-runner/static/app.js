@@ -281,16 +281,19 @@ function showSummary(s) {
     `<div class="muted" style="margin-top:8px">로그 파일: ${s.log_file}</div>`;
 }
 
-/* 서버가 이미 실행 중이면(새로고침 등) 이어서 붙는다 */
+/* 새로고침해도 이어지게: 실행 중이면 로그에 다시 붙고, 끝난 실행이면 결과를 되살린다 */
 async function attachIfRunning() {
   try {
     const st = await api("/api/run/status");
     if (st.running) {
       setRunning(true);
       listen();
+    } else if (st.summary) {
+      showSummary(st.summary);
+      $("logMeta").textContent = "직전 실행 결과";
     }
   } catch (_) {
-    /* 실행 중인 게 없으면 그만 */
+    /* 서버가 기억하는 실행이 없으면 그만 */
   }
 }
 
