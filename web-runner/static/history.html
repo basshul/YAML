@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>실행 이력 — Maestro Web Runner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Maestro Web Runner</h1>
+    <span class="tag">실행 이력</span>
+    <nav class="topnav">
+      <a href="/">실행 화면</a>
+      <a href="/history.html" class="on">실행 이력</a>
+    </nav>
+  </header>
+
+  <main class="wide">
+    <section class="panel">
+      <h2>요약 <span class="spacer"></span><span id="statMeta" class="muted"></span></h2>
+      <div id="stats" class="stats">불러오는 중…</div>
+    </section>
+
+    <section class="panel">
+      <h2>테스트별 최근 결과</h2>
+      <div id="byTest" class="bytest"></div>
+    </section>
+
+    <section class="panel">
+      <h2>실행 목록 <span class="spacer"></span><span class="muted">줄을 누르면 항목별 결과가 펼쳐집니다</span></h2>
+      <div id="runs"></div>
+    </section>
+  </main>
+
+  <div id="logModal" class="modal hidden">
+    <div class="modal-box">
+      <header>
+        <span id="logTitle"></span>
+        <span class="spacer"></span>
+        <button id="logClose" class="ghost small" type="button">닫기</button>
+      </header>
+      <pre id="logBody" class="log"></pre>
+    </div>
+  </div>
+
+  <script src="history.js"></script>
+</body>
+</html>

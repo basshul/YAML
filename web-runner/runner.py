@@ -365,6 +365,114 @@ class Run:
         }
 
 
+# ====================================================================
+# 실행 이력
+# ====================================================================
+#
+# 이력의 정본은 `Maestro\suite_logs\<시각>\SUMMARY.md` 다 — run_suite.ps1 이 매 실행마다 쓴다.
+# 웹이 따로 기록을 쌓지 않는 이유: **웹 밖에서 돌린 실행도 이력에 나와야** 하고
+# (PowerShell 로 직접 돌리는 경우가 많다), 서버를 재시작해도 남아야 한다.
+
+SUITE_LOGS_DIR = MAESTRO_DIR / "suite_logs"
+_STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}$")
+
+_H_COUNTS = re.compile(r"항목\s*(\d+)개\s*—\s*\*\*PASS (\d+)\*\*\s*/\s*\*\*FAIL (\d+)\*\*\s*/\s*\*\*SKIP (\d+)\*\*")
+_H_ELAPSED = re.compile(r"소요\s*([\d:]+)\s*/\s*예상\s*(\d+)")
+_H_RES = re.compile(r"기기 해상도:\s*`([^`]+)`")
+_H_BUILD = re.compile(r"빌드:\s*`([^`]+)`")
+_H_HOSTS = re.compile(r"livetest\s*\*\*(\d+)\*\*건\s*/\s*gmeuat\(STAG\)\s*\*\*(\d+)\*\*건")
+_H_LANG = re.compile(r"lang\s*`(\w+)`")
+_H_DEVICE = re.compile(r"^- 기기:\s*`([^`]+)`", re.M)
+# 2026-09-23 이전 실행에는 SUMMARY.md 에 기기 줄이 없다 → 항목 로그의 maestro 호출에서 찾는다
+_LOG_DEVICE = re.compile(r"--device\s+(\S+)")
+
+
+def _device_from_logs(run_dir: Path) -> str:
+    for log in sorted(run_dir.glob("*.log"))[:3]:
+        try:
+            head = log.read_text(encoding="utf-8", errors="replace")[:4000]
+        except OSError:
+            continue
+        m = _LOG_DEVICE.search(head)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _parse_summary(path: Path) -> dict | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    items = []
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 6 and cells[2] in ("PASS", "FAIL", "SKIP"):
+            items.append({
+                "group": cells[0], "name": cells[1], "status": cells[2],
+                "steps": cells[3], "elapsed": cells[4], "reason": cells[5],
+            })
+
+    counts = _H_COUNTS.search(text)
+    elapsed = _H_ELAPSED.search(text)
+    hosts = _H_HOSTS.search(text)
+    res = _H_RES.search(text)
+    build = _H_BUILD.search(text)
+    lang = _H_LANG.search(text)
+    dev = _H_DEVICE.search(text)
+    stag_hosts = int(hosts.group(2)) if hosts else 0
+    live_build = build and not build.group(1).endswith(".stag")
+
+    return {
+        "stamp": path.parent.name,
+        "items": items,
+        "counts": {
+            "PASS": int(counts.group(2)) if counts else sum(1 for i in items if i["status"] == "PASS"),
+            "FAIL": int(counts.group(3)) if counts else sum(1 for i in items if i["status"] == "FAIL"),
+            "SKIP": int(counts.group(4)) if counts else sum(1 for i in items if i["status"] == "SKIP"),
+        },
+        "total": int(counts.group(1)) if counts else len(items),
+        "elapsed": elapsed.group(1) if elapsed else "",
+        "est": int(elapsed.group(2)) if elapsed else None,
+        "device": dev.group(1) if dev else _device_from_logs(path.parent),
+        "resolution": res.group(1) if res else "",
+        "build": build.group(1).strip() if build else "",
+        "server": "운영(Live)" if live_build else "LiveTest",
+        "lang": lang.group(1) if lang else "",
+        "hosts": {"livetest": int(hosts.group(1)) if hosts else 0, "stag": stag_hosts},
+        "aborted": "중단됨" in text,
+        # stag 빌드인데 STAG 서버 트래픽이 섞였으면 그 실행 결과는 신뢰할 수 없다
+        "server_mixed": bool(not live_build and stag_hosts > 0),
+    }
+
+
+def read_history(limit: int = 50) -> list[dict]:
+    """최근 실행부터 돌려준다. 폴더 이름이 곧 시각이라 이름 역순이 시간 역순이다."""
+    if not SUITE_LOGS_DIR.exists():
+        return []
+    runs = []
+    for d in sorted(SUITE_LOGS_DIR.iterdir(), reverse=True):
+        if not d.is_dir() or not _STAMP.match(d.name):
+            continue
+        parsed = _parse_summary(d / "SUMMARY.md")
+        if parsed:
+            runs.append(parsed)
+        if len(runs) >= limit:
+            break
+    return runs
+
+
+def read_item_log(stamp: str, item: str) -> str:
+    """이력에서 항목 하나의 실행 로그를 읽는다(경로 조작 차단을 위해 형식을 검사한다)."""
+    if not _STAMP.match(stamp) or not _SAFE_NAME.match(item):
+        raise ValueError("잘못된 이력 경로입니다.")
+    path = SUITE_LOGS_DIR / stamp / f"{item}.log"
+    if not path.exists():
+        raise FileNotFoundError(f"로그가 없습니다: {stamp}/{item}.log")
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
 _current: Run | None = None
 _start_lock = threading.Lock()
 

@@ -56,6 +56,26 @@ def api_config():
     }
 
 
+@app.get("/api/history")
+def api_history(limit: int = 50):
+    """지난 실행 이력. 정본은 run_suite.ps1 이 쓰는 suite_logs\\<시각>\\SUMMARY.md 다
+    (웹 밖에서 돌린 실행도 여기 들어온다)."""
+    try:
+        return {"runs": runner.read_history(limit)}
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
+
+
+@app.get("/api/history/{stamp}/log")
+def api_history_log(stamp: str, item: str):
+    try:
+        return {"text": runner.read_item_log(stamp, item)}
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except FileNotFoundError as exc:
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+
+
 class RunRequest(BaseModel):
     tests: list[str]
     device: str

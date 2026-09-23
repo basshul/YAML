@@ -24,6 +24,79 @@ body {
 .conn { margin-left: auto; font-size: 12px; color: #9fb3c8; }
 .conn.bad { color: #ff9d9d; }
 
+.topnav { margin-left: 12px; display: flex; gap: 4px; }
+.topnav a {
+  font-size: 12px; color: #9fb3c8; text-decoration: none;
+  padding: 5px 11px; border-radius: 6px;
+}
+.topnav a:hover { background: #2a3645; color: #fff; }
+.topnav a.on { background: #2f4053; color: #fff; }
+
+/* 이력 페이지 */
+main.wide { flex-direction: column; height: auto; overflow-y: auto; }
+
+.stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.stat {
+  flex: 1; min-width: 92px; padding: 10px 12px;
+  border: 1px solid #eceff2; border-radius: 6px; text-align: center;
+}
+.stat b { display: block; font-size: 20px; }
+.stat span { font-size: 11px; color: #8b939e; }
+.stat.pass b { color: #2f9e44; }
+.stat.fail b { color: #d43c3c; }
+.stat.skip b { color: #96631a; }
+
+table.grid { width: 100%; border-collapse: collapse; }
+table.grid th, table.grid td {
+  text-align: left; padding: 5px 8px; border-bottom: 1px solid #eceff2; font-size: 12px;
+}
+table.grid th { color: #6b7480; font-weight: 600; }
+.st-PASS { color: #2f9e44; font-weight: 600; }
+.st-FAIL { color: #d43c3c; font-weight: 600; }
+.st-SKIP { color: #96631a; font-weight: 600; }
+
+.run { border: 1px solid #eceff2; border-radius: 6px; margin-bottom: 6px; }
+.run.bad { border-left: 3px solid #d43c3c; }
+.run.ok { border-left: 3px solid #2f9e44; }
+.run > summary {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; cursor: pointer; font-size: 12px;
+}
+.run > summary::-webkit-details-marker { display: none; }
+.run > table { margin: 0 12px 12px; width: calc(100% - 24px); }
+
+/* 실행 일시 / 기기 / 환경 / 결과 4열 */
+.run.head {
+  display: flex; gap: 10px; padding: 6px 12px; border: none;
+  font-size: 11px; color: #6b7480; font-weight: 600;
+}
+.run .c-when { flex: 0 0 140px; }
+.run .c-dev { flex: 0 0 160px; }
+.run .c-env { flex: 1; min-width: 120px; }
+.run .c-res { flex: 0 0 190px; }
+.run > summary > span { display: flex; flex-direction: column; gap: 1px; }
+.run > summary > .c-env,
+.run > summary > .c-res {
+  flex-direction: row; align-items: center; gap: 4px; flex-wrap: wrap;
+}
+.run > summary b { font-size: 13px; }
+.run > summary .muted { font-size: 11px; }
+
+/* 로그 모달 */
+.modal {
+  position: fixed; inset: 0; background: rgba(16, 21, 28, .55);
+  display: flex; align-items: center; justify-content: center; padding: 30px; z-index: 10;
+}
+.modal-box {
+  background: #fff; border-radius: 8px; width: min(980px, 100%);
+  max-height: 100%; display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-box > header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid #eceff2; font-size: 13px; font-weight: 600;
+}
+.modal-box .log { margin: 0; max-height: none; flex: 1; border-radius: 0; }
+
 main {
   display: flex;
   gap: 14px;

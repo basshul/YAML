@@ -418,6 +418,15 @@ if ($devCount -ne 1 -and -not $Device) {
 }
 Write-Host ("  기기            {0}대" -f $devCount) -ForegroundColor Green
 
+# 어느 기기에서 돌았는지 요약에 남긴다 — 이력에서 "이 결과가 어느 기기 것인지"를 가르는 축이다
+# (해상도만으로는 같은 해상도의 다른 기기를 구분하지 못한다).
+$devSerial = if ($Device) {
+    $Device
+} else {
+    @(adb devices | Select-String '^(\S+)\s+device$' |
+        ForEach-Object { $_.Matches[0].Groups[1].Value })[0]
+}
+
 # ②-1 해상도 — **바뀌면 실패가 무더기로 나온다.** 2026-09-09 기기 교체(1080x2220 → 1080x2340)에서
 #   7개 파일이 한꺼번에 깨졌고, 증상이 제각각이라 전부 셀렉터 버그로 오진할 뻔했다.
 #   원인은 하나다: 요소가 화면 밖으로 밀리거나 키패드에 가려진다.
@@ -757,6 +766,7 @@ $md += "- lang ``$Lang`` / groups ``$($Group -join ',')`` / app ``$appLabel``"
 $md += "- 항목 $($results.Count)개 — **PASS $pass** / **FAIL $fail** / **SKIP $skipN**"
 $md += "- 케이스 단위 제외: BLOCKED $blk / N/A $naN (알려진 앱버그·범위 밖)"
 $md += "- 소요 $($swAll.Elapsed.ToString('hh\:mm\:ss')) / 예상 $totalEst 분"
+$md += "- 기기: ``$devSerial``"
 $md += "- 기기 해상도: ``$devRes``" + $(if ($prevRes -and $wmSize -and $prevRes -ne $devRes) { "  ⚠️ **지난 실행($prevRes)과 다름** — 실패가 몰리면 해상도를 먼저 의심할 것" } else { "" })
 $md += "- 빌드: ``$EffAppId``" + $(if ($IsLive) { "  **[운영/Live]**" } else { "  (서버 LIVETEST 강제)" })
 $md += "- 접속 호스트: livetest **$hLive**건 / gmeuat(STAG) **$hStag**건"
