@@ -60,6 +60,7 @@ param(
     [switch]$NoRecover,
     [switch]$SkipLint,
     [switch]$List,
+    [switch]$DumpJson,          # 스위트 표를 JSON으로 출력만 하고 끝낸다 (web-runner 용)
     [string]$Device = "",
     [ValidateSet("stag","live")][string]$Build = "stag",
     [switch]$AutoCharge,        # 잔액이 모자라면 자동 충전한다 — ⚠️ **미검증**(아래 ③ OTP 참고)
@@ -216,6 +217,19 @@ $Suite = @(
   @{ n="01_05_Login_Password_Reset";      g="G9"; acct="-"; est=4; f="Old\01_05_Login_Password_Reset_old.yaml"
      destructive="[06]이 **비밀번호를 실제 초기화**한다 → admin 재설정 전까지 모든 플로우가 깨진다" }
 )
+
+# ----------------------------------------------------------------
+# -DumpJson — 스위트 표를 그대로 JSON으로 내보내고 끝낸다 (web-runner 가 목록을 그린다)
+#
+# 조회 전용이다: adb·기기·린터를 건드리지 않는다. 기기가 없어도 목록은 보여야 하므로
+# **P0 전제검사보다 앞**에 둔다. 표(`$Suite`)가 유일한 정본이고, 그리는 쪽에서 g/needs 로 거른다.
+# ⚠️ 한글이 섞이므로 출력 인코딩을 UTF-8로 고정한다 — 받는 쪽(Python)은 utf-8로 읽는다.
+# ----------------------------------------------------------------
+if ($DumpJson) {
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+    $Suite | ConvertTo-Json -Depth 5
+    exit 0
+}
 
 # ----------------------------------------------------------------
 # 빌드 결정 (2026-09-03 사용자 선언)
