@@ -30,7 +30,6 @@ async function boot() {
   }
 
   renderStats(runs);
-  renderByTest(runs);
   renderRuns(runs);
 }
 
@@ -53,32 +52,6 @@ function renderStats(runs) {
     `<div class="stat"><b>${rate}%</b><span>통과율</span></div>` +
     (mixed ? `<div class="stat fail"><b>${mixed}</b><span>서버 혼입</span></div>` : "") +
     (aborted ? `<div class="stat fail"><b>${aborted}</b><span>중단됨</span></div>` : "");
-}
-
-function renderByTest(runs) {
-  // 최근 실행이 앞이므로, 처음 만나는 항목이 그 테스트의 최근 결과다
-  const map = new Map();
-  for (const r of runs) {
-    for (const i of r.items) {
-      if (!map.has(i.name)) {
-        map.set(i.name, { name: i.name, group: i.group, last: i.status, when: r.stamp, PASS: 0, FAIL: 0, SKIP: 0 });
-      }
-      map.get(i.name)[i.status] += 1;
-    }
-  }
-  const rows = [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-
-  $("byTest").innerHTML =
-    `<table class="grid"><tr><th>테스트</th><th>그룹</th><th>최근 결과</th><th>최근 실행</th><th>PASS</th><th>FAIL</th><th>SKIP</th></tr>` +
-    rows
-      .map(
-        (t) =>
-          `<tr><td>${esc(t.name)}</td><td class="muted">${esc(t.group)}</td>` +
-          `<td class="st-${t.last}">${t.last}</td><td class="muted">${when(t.when)}</td>` +
-          `<td>${t.PASS}</td><td>${t.FAIL}</td><td>${t.SKIP}</td></tr>`
-      )
-      .join("") +
-    `</table>`;
 }
 
 function renderRuns(runs) {
