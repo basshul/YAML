@@ -346,7 +346,7 @@ appId: ${APP_ID}
     timeout: 20000
 - tapOn:
     id: "agent_info_txt_label_1"
-    text: '경기도 안산시[\s\S]*'
+    text: "${CARD_BRANCH_ADDRESS}"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -428,7 +428,7 @@ appId: ${APP_ID}
     timeout: 10000
 - assertVisible:
     id: "dialog_title_text"
-    text: '카드 신청 취소[\s\S]*'
+    text: "${CARD_CANCEL_APPLY_DIALOG}"
 - tapOn:
     id: "btnConfirm"
 - waitForAnimationToEnd
@@ -1306,7 +1306,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - waitForAnimationToEnd
 - assertVisible:
-    text: "비밀번호가 맞지 않습니다.*"
+    text: "${PIN_WRONG_PASSWORD}"
 # 일치: PIN <정상 PIN> 입력
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
 - tapOn: "1"
@@ -1374,11 +1374,22 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [33] [High] GME Shop - GME Shop 화면 진입 확인
 # ----------------------------------------------------------------
-# [32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨
+# ⛔ 2026-09-23: 종전 주석의 "[32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨" 은
+#   이 빌드에서 **더 이상 맞지 않는다** — back 으로 나오면 시트가 닫힌 채 카드 화면으로 돌아온다.
+#   그대로 두면 `${SHOP_TEXT}` 를 못 찾고 죽는다(실제로 그렇게 실패했다).
+#   → 시트가 없으면 `uparrow` 로 다시 연다. 이미 열려 있으면 건드리지 않는다(누르면 닫힌다).
+- runFlow:
+    when:
+      notVisible:
+        text: "${SHOP_TEXT}"
+    commands:
+      - tapOn:
+          id: "uparrow"
+      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "${SHOP_TEXT}"
-    timeout: 5000
+    timeout: 10000
 - tapOn: "${SHOP_TEXT}"
 - waitForAnimationToEnd
 - assertVisible:
@@ -1403,7 +1414,7 @@ appId: ${APP_ID}
 #   2026-08-06 실기기에서 다시 "충전 계좌 / GME Wallet / 잔액"으로 되돌아옴.
 #   어느 쪽이든 통과하도록 정규식으로 둘 다 허용.
 - assertVisible:
-    text: "충전 계좌|GME Pay 잔액.*"
+    text: "${SHOP_PAY_ACCOUNT_LABEL}"
 - scroll
 - assertVisible:
     text: "${PAYMENT_AMOUNT_TEXT}"
@@ -1426,7 +1437,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - waitForAnimationToEnd
 - assertVisible:
-    text: "비밀번호가 맞지 않습니다.*"
+    text: "${PIN_WRONG_PASSWORD}"
 # 일치: PIN <정상 PIN> 입력
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
 - tapOn: "1"
@@ -1440,7 +1451,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible:
-    text: ".*CU 3,000 원.*"
+    text: "${SHOP_PURCHASED_PRODUCT}"
 - tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 구매 완료 후 쿠폰 상세(바코드) 화면 노출 확인
@@ -1453,7 +1464,7 @@ appId: ${APP_ID}
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "기프트 카드를 취소하시겠습니까?"
+    text: "${SHOP_CANCEL_COUPON_CONFIRM}"
 - tapOn: "${BTN_YES}"
 - waitForAnimationToEnd
 - assertVisible:
