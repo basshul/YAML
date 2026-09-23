@@ -1,0 +1,9 @@
+{
+  "_설명": "이 파일을 config.local.json 으로 복사해서 쓰세요. config.local.json 은 git 에 올라가지 않습니다.",
+  "_비밀정보": "테스트 계정 비밀번호·PIN 처럼 git 에 올리면 안 되는 값은 여기(config.local.json)에만 둡니다.",
+  "port": 8765,
+  "lang": "ko",
+  "default_device": "",
+  "pwsh": "pwsh",
+  "adb": "adb"
+}

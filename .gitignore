@@ -11,3 +11,11 @@ shots_*/
 Maestro/suite_logs/
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
+
+# web-runner (브라우저 실행 데모)
+#   config.local.json 은 이 PC 전용 설정 + 비밀정보 자리다 — 저장소에 올리지 않는다.
+#   공유용 템플릿은 config.example.json 쪽이다.
+web-runner/config.local.json
+web-runner/run_logs/
+web-runner/.venv/
+__pycache__/
