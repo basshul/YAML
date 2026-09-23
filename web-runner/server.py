@@ -49,6 +49,7 @@ def api_config():
             {"value": key, "label": val["label"], "live": val["live"]}
             for key, val in runner.SERVER_CHOICES.items()
         ],
+        "group_labels": runner.GROUP_LABELS,
     }
 
 

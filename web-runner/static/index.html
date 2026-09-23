@@ -2,15 +2,72 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maestro Web Runner</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Maestro Web Runner (준비 중)</h1>
-  <p>서버가 떠 있습니다. 화면은 3단계에서 만듭니다.</p>
-  <ul>
-    <li><a href="/api/tests">/api/tests</a> — 테스트 목록</li>
-    <li><a href="/api/devices">/api/devices</a> — 연결된 기기</li>
-    <li><a href="/api/config">/api/config</a> — 화면 설정값</li>
-  </ul>
+  <header class="topbar">
+    <h1>Maestro Web Runner</h1>
+    <span class="tag">데모</span>
+    <span id="connState" class="conn">연결 중…</span>
+  </header>
+
+  <main>
+    <div class="col col-left">
+      <section class="panel">
+        <h2>실행 환경</h2>
+
+        <div class="field">
+          <label>서버</label>
+          <div id="serverChoices" class="choices"></div>
+          <p id="liveWarn" class="warn hidden">
+            운영(Live)은 <strong>실서비스·실자금</strong>입니다. 의도한 실행인지 확인하세요.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="deviceSel">기기</label>
+          <div class="row">
+            <select id="deviceSel"></select>
+            <button id="refreshDevices" class="ghost" type="button">새로고침</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>플랫폼</label>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="platform" value="android" checked> Android</label>
+            <label class="choice disabled"><input type="radio" name="platform" value="ios" disabled> iOS <span class="muted">(준비 중)</span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel grow">
+        <h2>
+          테스트 선택
+          <span class="spacer"></span>
+          <button id="clearSel" class="ghost small" type="button">전체 해제</button>
+        </h2>
+        <div id="testList" class="testlist">불러오는 중…</div>
+      </section>
+    </div>
+
+    <div class="col col-right">
+      <section class="panel runbar">
+        <div id="selInfo" class="selinfo">선택된 테스트 없음</div>
+        <button id="runBtn" class="primary" type="button" disabled>실행</button>
+      </section>
+
+      <section id="summary" class="panel summary hidden"></section>
+
+      <section class="panel grow logpanel">
+        <h2>실행 로그 <span class="spacer"></span><span id="logMeta" class="muted"></span></h2>
+        <pre id="log" class="log">실행하면 여기에 로그가 실시간으로 표시됩니다.</pre>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>

@@ -25,6 +25,15 @@ SERVER_CHOICES = {
     "live": {"label": "운영(Live)", "build": "live", "live": True},
 }
 
+# 그룹 태그의 사람용 설명. 태그의 뜻(계정·순서 제약)은 run_suite.ps1 주석이 정본이다.
+GROUP_LABELS = {
+    "G1": "로그인 불필요",
+    "G2": "한국인 계정 (seungsoo818)",
+    "G3": "외국인 계정 (test123 → test251024)",
+    "G4": "설정 변경 — 반드시 맨 뒤",
+    "G9": "파괴적 — admin 개입 필요 (목록에서 제외)",
+}
+
 _DEFAULT_CONFIG = {
     "port": 8765,
     "lang": "ko",
