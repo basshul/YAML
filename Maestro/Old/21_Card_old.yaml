@@ -1253,11 +1253,17 @@ appId: ${APP_ID}
     start: "50%, 30%"
     end: "50%, 80%"
 - waitForAnimationToEnd
-# ">" 아이콘 element ID: imgvArrow
+# ⛔ 2026-09-23: 종전 `id: imgvArrow`(">" 아이콘)는 **`clickable=false`** 다 —
+#   탭이 `COMPLETED` 로 찍히는데 아무 일도 일어나지 않는다(높이 0 노드 탭과 같은 부류).
+#   실제로 누를 수 있는 건 잔액 행 컨테이너 **`llBalance`**(`clickable=true`)이고,
+#   그걸 누르면 `[30]` 이 보려던 GME Pay 상세(`toolbar_title`="GME Pay")가 열린다(실측).
+# ⚠️ 도달을 강제한다 — 탭이 무반응이어도 조용히 넘어가지 않게.
 - tapOn:
-    id: "imgvArrow"
-- assertVisible:
-    text: "${GMEPAY_TITLE}"
+    id: "llBalance"
+- extendedWaitUntil:
+    visible:
+      text: "${GMEPAY_TITLE}"
+    timeout: 20000
 - assertVisible:
     text: "${TXT_BALANCE}"
 - pressKey: back
