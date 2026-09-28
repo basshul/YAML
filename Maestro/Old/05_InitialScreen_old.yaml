@@ -66,11 +66,40 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnConfirm"
       - waitForAnimationToEnd
+
+# OS 런타임 권한 다이얼로그 처리 — **여러 개가 순차로 뜬다**
+# ================================================================
+# 2026-09-28 실측(SM-S928N / Android 15): `GrantPermissionsActivity` 가 **2번** 뜬다.
+#   ① `READ_PHONE_NUMBERS`  ② `POST_NOTIFICATIONS`  — **간격이 약 20초**(10:27:49 → 10:28:09).
+#   종전 코드는 `runFlow when "허용"` **1회**뿐이라 ①만 허용하고 ②가 화면에 남아
+#   초기화면을 덮었다 → `selectLangBg` 단언이 깨졌다(`허용` 문구 인식 자체는 정상이었다).
+#
+# ⛔ 단순 `repeat while visible` 로는 못 잡는다 — ② 는 20초 뒤에 오므로 그 사이
+#   조건이 거짓이 되어 루프가 먼저 빠져나간다. → **"초기화면 또는 다음 다이얼로그"**
+#   둘 중 먼저 뜨는 쪽을 기다린 뒤 판정한다(id 셀렉터는 정규식이라 `|` 로 묶인다).
+#
+# ⛔ 문구(`허용`)로 잡지 않는다 — ① en 실행에서는 `Allow` 라 안 맞고
+#   ② **위치 권한 다이얼로그에는 `허용` 버튼이 아예 없다**(`앱 사용 중에만 허용`/`이번만 허용`).
+#   → AOSP 표준 id 로 잡는다: `permission_allow_button` · `permission_allow_foreground_only_button`.
+#   ※ id 는 부분 일치라 패키지 접두사(`com.android.permissioncontroller:id/`)는 떼고 쓴다
+#     (린터 E01 이 "패키지명 박힘"으로 잡는다 — 시스템 패키지라 실제로는 안전하지만 규칙을 따른다).
+- repeat:
+    times: 5
+    while:
+      notVisible:
+        id: "selectLangBg"
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "selectLangBg|grant_dialog"
+          timeout: 30000
       - runFlow:
           when:
-            visible: "허용"
+            visible:
+              id: "grant_dialog"
           commands:
-            - tapOn: "허용"
+            - tapOn:
+                id: "permission_allow_(foreground_only_)?button"
             - waitForAnimationToEnd
 
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env에만 적용)
