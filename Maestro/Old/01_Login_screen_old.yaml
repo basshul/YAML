@@ -41,19 +41,8 @@ appId: ${APP_ID}
 - runFlow: "_server_override_old.yaml"
 
 # 서비스 이용 안내 팝업 (조건부)
-- runFlow:
-    when:
-      visible: "${INIT_SERVICE_GUIDE}"
-    commands:
-      - tapOn:
-          id: "btnConfirm"
-      - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "허용"
-          commands:
-            - tapOn: "허용"
-            - waitForAnimationToEnd
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 
 # clearState 후 언어 자동 전환 (en 실행 시: "신규 회원" 감지 → English 전환)
 - runFlow:
