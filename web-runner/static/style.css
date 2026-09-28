@@ -6,11 +6,10 @@ body {
   font-size: 14px;
   color: #1b1f24;
   background: #f2f4f7;
-  /* 화면을 꽉 채우고 **창 전체는 스크롤하지 않는다** — 스크롤은 각 칸이 스스로 한다.
-     (종전엔 main 높이를 `100vh - 46px` 로 박아 뒀는데, 헤더 높이가 그 값과 어긋나
-      항상 4px 짜리 스크롤이 남았다) */
-  height: 100vh;
-  overflow: hidden;
+  /* 최소 한 화면은 채우되, 내용이 많아지면 **창 전체가 스크롤한다**(2026-09-28 사용자 지시).
+     로그를 펼칠 때 오른쪽 칸을 안에서 스크롤시키면 진행 상황 목록이 눌려 작아진다 —
+     그래서 각 칸을 내용 크기 그대로 두고 넘치는 만큼 창이 스크롤하게 한다. */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -40,7 +39,7 @@ body {
 .topnav a.on { background: #2f4053; color: #fff; }
 
 /* 이력 페이지 */
-main.wide { flex-direction: column; height: auto; overflow-y: auto; }
+main.wide { flex-direction: column; height: auto; align-items: stretch; }
 
 .stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .stat {
@@ -108,15 +107,14 @@ main {
   display: flex;
   gap: 14px;
   padding: 14px;
-  align-items: stretch;
+  /* ⚠️ stretch 면 한쪽 칸이 길어질 때 반대쪽도 같이 늘어난다 → 왼쪽 목록 크기가 흔들린다. */
+  align-items: flex-start;
   flex: 1;
   min-height: 0;
 }
-.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .col-left { flex: 0 0 420px; }
-/* 로그를 펼치거나 결과가 길어져도 **페이지가 늘어나지 않게** 이 칸이 스스로 스크롤한다.
-   (안 그러면 창 전체에 스크롤이 생겨 왼쪽 테스트 목록이 화면 밖으로 밀린다) */
-.col-right { flex: 1; overflow-y: auto; }
+.col-right { flex: 1; }
 
 .panel {
   background: #fff;
@@ -174,10 +172,14 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .hidden { display: none; }
 .muted { color: #8b939e; font-weight: normal; }
 
-/* 테스트 목록 — **남는 높이를 채우고 스스로 스크롤한다.**
-   ⚠️ 고정 높이(440px)를 줬더니 창이 그보다 낮을 때 패널이 창 밖으로 나가 잘렸다.
-   오른쪽 칸이 스스로 스크롤하므로(위 `.col-right`) 로그를 펼쳐도 이쪽은 흔들리지 않는다. */
-.testlist { overflow-y: auto; flex: 1; min-height: 0; margin: -4px -4px 0; padding: 4px; }
+/* 테스트 목록 — 창 높이에 비례한 크기로 **고정**하고 스스로 스크롤한다.
+   px 로 박으면 낮은 창에서 잘리고(2026-09-28 실제로 잘렸다), `flex: 1` 로 두면
+   오른쪽 칸 길이에 끌려가 로그를 펼칠 때마다 크기가 바뀐다. */
+.testlist {
+  overflow-y: auto; flex: none;
+  height: 52vh; min-height: 220px;
+  margin: -4px -4px 0; padding: 4px;
+}
 .group { margin-bottom: 14px; }
 .group-head {
   display: flex; align-items: baseline; gap: 8px;
@@ -237,7 +239,9 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .bar.fail { background: #d43c3c; }
 .bar.done { background: #2f9e44; }
 
-.proglist { flex: 1; overflow-y: auto; min-height: 0; }
+/* 진행 상황 목록은 **항목 수만큼 그대로 보여준다** — 안에서 스크롤시키면 로그를 펼쳤을 때
+   눌려서 작아진다. 넘치는 만큼은 창이 스크롤한다. */
+.proglist { flex: none; }
 .prog {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 9px 10px; border-radius: 6px; border: 1px solid #eceff2; margin-bottom: 6px;
@@ -265,7 +269,8 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .logbox summary { font-size: 12px; color: #6b7480; cursor: pointer; }
 .logbox[open] summary { margin-bottom: 8px; }
 .log {
-  margin: 0; max-height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  /* 창이 스크롤하므로 로그를 넉넉히 보여줘도 다른 영역을 밀지 않는다 */
+  margin: 0; max-height: 60vh; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
   background: #10151c; color: #cfd8e3; border-radius: 6px; padding: 10px 12px;
   font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px; line-height: 1.55;
 }
@@ -276,9 +281,7 @@ button.small { padding: 3px 9px; font-size: 12px; }
 
 /* 창이 좁으면 위아래로 쌓는다 */
 @media (max-width: 900px) {
-  body { height: auto; overflow: visible; }   /* 쌓이는 배치에서는 창이 스크롤한다 */
-  main { flex-direction: column; height: auto; }
+  main { flex-direction: column; height: auto; align-items: stretch; }
   .col-left { flex: none; }
-  .col-right { overflow-y: visible; }   /* 위아래로 쌓일 때는 페이지가 스크롤한다 */
   .testlist { height: 340px; }
 }
