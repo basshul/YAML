@@ -223,11 +223,11 @@ function startProgress(names, finished) {
   }
 }
 
-function stopProgress(ok) {
+function stopProgress(ok, stopped) {
   clearInterval(prog.timer);
   prog.timer = null;
-  $("progBar").className = "bar " + (ok ? "done" : "fail");
-  $("progBar").style.width = "100%";
+  $("progBar").className = "bar " + (stopped ? "stopped" : ok ? "done" : "fail");
+  if (!stopped) $("progBar").style.width = "100%";  // 중단은 거기서 멈춘 그대로 둔다
   renderProgress();
 }
 
@@ -278,10 +278,37 @@ function setRunning(on) {
   state.running = on;
   $("logMeta").textContent = on ? "실행 중…" : "";
   document.querySelectorAll("input, select, button").forEach((el) => {
-    if (el.id !== "runBtn") el.disabled = on || el.dataset.alwaysDisabled === "1";
+    if (el.id !== "runBtn" && el.id !== "stopBtn") {
+      el.disabled = on || el.dataset.alwaysDisabled === "1";
+    }
   });
   $("runBtn").textContent = on ? "실행 중…" : "실행";
+  $("stopBtn").classList.toggle("hidden", !on);
+  $("stopBtn").disabled = false;
+  $("stopBtn").textContent = "중단";
   updateRunState();
+}
+
+async function onStop() {
+  const ok = confirm(
+    "실행을 중단합니다.\n\n" +
+      "⚠️ 진행 중인 테스트가 즉시 끊깁니다. 자동 복구도 함께 끊기므로\n" +
+      "앱은 중단된 그 화면에 그대로 남습니다 — 다음 실행 전에 상태를 확인하세요.\n\n" +
+      "계속할까요?"
+  );
+  if (!ok) return;
+
+  $("stopBtn").disabled = true;
+  $("stopBtn").textContent = "중단하는 중…";
+  try {
+    const res = await fetch("/api/run/stop", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "중단하지 못했습니다.");
+  } catch (err) {
+    logLine("[중단 오류] " + err.message);
+    $("stopBtn").disabled = false;
+    $("stopBtn").textContent = "중단";
+  }
 }
 
 async function onRun() {
@@ -355,6 +382,15 @@ function listen() {
       }
     } else if (msg.type === "done") {
       es.close();
+      // 중단하면 run_suite 가 SUMMARY.md 를 못 쓴다 → 끝나지 않은 항목은 화면에서 표시해 준다
+      if (msg.summary && msg.summary.stopped) {
+        for (const i of prog.items) {
+          if (i.status === "대기" || i.status === "실행 중") {
+            i.status = i.status === "대기" ? "미실행" : "중단";
+            i.now = "";
+          }
+        }
+      }
       // 요약이 정본이다 — 실패 사유처럼 스트림에 안 실린 것도 여기서 채운다
       for (const r of (msg.summary && msg.summary.items) || []) {
         const i = item(r.name);
@@ -366,7 +402,7 @@ function listen() {
         i.now = "";
       }
       showSummary(msg.summary);
-      stopProgress(msg.summary ? msg.summary.ok : false);
+      stopProgress(msg.summary ? msg.summary.ok : false, msg.summary && msg.summary.stopped);
       setRunning(false);
       return;
     }
@@ -395,9 +431,19 @@ function showSummary(s) {
     )
     .join("");
 
-  box.className = "panel summary " + (s.ok ? "pass" : "fail");
+  const headline = s.stopped
+    ? "중단됨 — 사용자가 실행을 멈췄습니다"
+    : s.ok
+    ? "PASS — 전부 통과"
+    : "FAIL — 실패한 항목이 있습니다";
+
+  box.className = "panel summary " + (s.stopped ? "stopped" : s.ok ? "pass" : "fail");
   box.innerHTML =
-    `<div class="headline">${s.ok ? "PASS — 전부 통과" : "FAIL — 실패한 항목이 있습니다"}</div>` +
+    `<div class="headline">${headline}</div>` +
+    (s.stopped
+      ? `<div class="warn">앱이 <strong>중단된 그 화면에 그대로</strong> 남아 있습니다. ` +
+        `자동 복구도 함께 끊겼으니 다음 실행 전에 기기 상태를 확인하세요.</div>`
+      : "") +
     `<div>PASS ${s.counts.PASS} · FAIL ${s.counts.FAIL} · SKIP ${s.counts.SKIP} · 소요 ${s.elapsed}` +
     ` <span class="muted">(종료코드 ${s.returncode})</span></div>` +
     (rows
@@ -433,5 +479,6 @@ $("clearSel").addEventListener("click", () => {
   renderSelection();
 });
 $("runBtn").addEventListener("click", onRun);
+$("stopBtn").addEventListener("click", onStop);
 
 boot().then(attachIfRunning);

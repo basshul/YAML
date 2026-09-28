@@ -101,6 +101,16 @@ def api_run(req: RunRequest):
     return run.status()
 
 
+@app.post("/api/run/stop")
+def api_run_stop():
+    """실행 중단. ⚠️ 자동 복구도 함께 끊기므로 앱은 중단 시점 화면에 남는다."""
+    run = runner.current_run()
+    if not run or run.finished:
+        return JSONResponse(status_code=409, content={"error": "중단할 실행이 없습니다."})
+    run.stop()
+    return run.status()
+
+
 @app.get("/api/run/status")
 def api_run_status():
     run = runner.current_run()

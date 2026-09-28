@@ -8,8 +8,10 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import re
+import signal
 import subprocess
 import threading
 import time
@@ -242,6 +244,7 @@ class Run:
         self.server = server
         self.started_at = datetime.now()
         self.finished = False
+        self.stopped = False
         self.returncode: int | None = None
         self.summary: dict | None = None
         self.suite_log_dir: Path | None = None
@@ -308,13 +311,43 @@ class Run:
                    f"-Device {self.device} -Build {build} -Lang {cfg['lang']}")
         self._emit("")
 
+        # POSIX 에서는 자식들을 한 묶음으로 끊을 수 있게 프로세스 그룹을 따로 연다(Mac 이전 대비).
+        extra = {}
+        if os.name == "posix":
+            extra["start_new_session"] = True
+
         self._proc = subprocess.Popen(
             cmd, cwd=str(MAESTRO_DIR),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            encoding="utf-8", errors="replace", bufsize=1,
+            encoding="utf-8", errors="replace", bufsize=1, **extra,
         )
         threading.Thread(target=self._pump, daemon=True).start()
         threading.Thread(target=self._tail_item_logs, daemon=True).start()
+
+    def stop(self) -> None:
+        """실행을 끊는다.
+
+        ⚠️ **자식까지 끊어야 한다.** 흐름이 pwsh → run_suite.ps1 → run_test.ps1 →
+        maestro.bat → java 로 이어져서, pwsh 만 죽이면 **java 가 살아남아 기기를 계속 조작한다.**
+        ⚠️ 중단하면 run_suite 의 자동 복구도 같이 끊긴다 → 앱은 **그 시점 화면 그대로** 남는다.
+        """
+        if self.finished:
+            return
+        self.stopped = True
+        self._emit("")
+        self._emit("⛔ 사용자가 실행을 중단했습니다 — 앱은 중단 시점 화면에 그대로 남습니다.")
+
+        proc = self._proc
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                               capture_output=True, timeout=20)
+            else:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except Exception as exc:
+            self._emit(f"[중단 실패] {exc}")
 
     def _pump(self) -> None:
         """run_suite.ps1 의 콘솔 출력을 읽어 나른다."""
@@ -418,7 +451,8 @@ class Run:
         counts = {s: sum(1 for i in items if i["status"] == s) for s in ("PASS", "FAIL", "SKIP")}
         elapsed = datetime.now() - self.started_at
         return {
-            "ok": self.returncode == 0,
+            "ok": self.returncode == 0 and not self.stopped,
+            "stopped": self.stopped,
             "returncode": self.returncode,
             "items": items,
             "counts": counts,
@@ -430,6 +464,7 @@ class Run:
     def status(self) -> dict:
         return {
             "running": not self.finished,
+            "stopped": self.stopped,
             "names": self.names,
             "device": self.device,
             "server": self.server,

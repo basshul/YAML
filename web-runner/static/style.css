@@ -163,6 +163,8 @@ button.primary {
 }
 button.primary.live { background: #d43c3c; border-color: #d43c3c; }
 button.ghost { color: #48505a; }
+button.danger { color: #d43c3c; border-color: #e8b4b4; font-weight: 600; padding: 9px 18px; }
+button.danger:hover:not(:disabled) { background: #fdeeee; }
 button.small { padding: 3px 9px; font-size: 12px; }
 
 .warn {
@@ -214,9 +216,12 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .summary { font-size: 13px; line-height: 1.7; }
 .summary.pass { border-left: 4px solid #2f9e44; }
 .summary.fail { border-left: 4px solid #d43c3c; }
+.summary.stopped { border-left: 4px solid #96631a; }
 .summary .headline { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
 .summary.pass .headline { color: #2f9e44; }
 .summary.fail .headline { color: #d43c3c; }
+.summary.stopped .headline { color: #96631a; }
+.summary .warn { background: #fff5e5; color: #7a5115; margin: 6px 0 8px; }
 .summary table { border-collapse: collapse; margin-top: 8px; width: 100%; }
 .summary th, .summary td {
   text-align: left; padding: 4px 8px; border-bottom: 1px solid #eceff2; font-size: 12px;
@@ -238,6 +243,7 @@ button.small { padding: 3px 9px; font-size: 12px; }
 }
 .bar.fail { background: #d43c3c; }
 .bar.done { background: #2f9e44; }
+.bar.stopped { background: #96631a; }
 
 /* 진행 상황 목록은 **항목 수만큼 그대로 보여준다** — 안에서 스크롤시키면 로그를 펼쳤을 때
    눌려서 작아진다. 넘치는 만큼은 창이 스크롤한다. */
