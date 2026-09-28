@@ -510,6 +510,14 @@ appId: ${APP_ID}
 - tapOn:
     id: "location"
 - waitForAnimationToEnd
+# ★ 2026-09-28: GPS 를 누르는 **이 순간** 위치 권한을 묻는다 — 온보딩 때가 아니다.
+#   (`ACCESS_COARSE_LOCATION` 은 clearState 로 초기화되고, 실제로 위치를 쓸 때 물어본다)
+#   실측 문구: `GME 해외송금(stag)에서 기기의 대략적인 위치에 액세스하도록 허용하시겠습니까?`
+#   ⛔ 이 다이얼로그에는 `허용` 버튼이 **없다** — `앱 사용 중에만 허용`/`이번만 허용` 뿐이라
+#      문구(`SYS_PERMISSION_ALLOW`)로는 못 잡는다. 헬퍼가 AOSP id 로 잡는다.
+#   ⚠️ 이게 없으면 다이얼로그가 화면을 덮은 채 아래 `notVisible: GPSTEST` 가
+#      **거짓 통과**하고(가려서 안 보일 뿐) `btn_next` 단언에서 죽는다.
+- runFlow: "_allow_permission_old.yaml"
 # ⚠️ 위치 확보가 느릴 수 있다(실내·COARSE 권한). 2026-09-09 SM-S911N 에서 20초로는 모자라 실패했다.
 - extendedWaitUntil:
     notVisible: ".*GPSTEST.*"
@@ -819,8 +827,12 @@ appId: ${APP_ID}
 #   → 둘 다 → `util.NativeCropActivity` → "완료"(=${REG_DONE_GALLERY}) → 프로필 사진 화면 복귀
 #
 # 선택자 메모(2026-08-18 실측):
-#   · 카메라 셔터는 **GL 뷰라 id도 content-desc도 없다** → 좌표 탭이 유일한 수단이다.
-#     (1080x2220 기준 50%,87%. 해상도가 바뀌면 여기부터 깨진다 — [[feedback_coordinate_debug]])
+#   · ★2026-09-28 정정: 카메라 셔터에 **id 가 있다** — `center_button_container`.
+#     종전 주석의 "GL 뷰라 id 도 content-desc 도 없다"(2026-08-18)는 이 기기에서 틀렸다.
+#     그래서 쓰던 좌표 `50%,87%` 가 1440x3120 에서 빗나갔다: 셔터 컨테이너 bounds 는
+#     `[569,2412][871,2714]` = 중심 y≈**82.1%** 인데 87% 는 y=2714 로 **아래 경계**라
+#     클릭이 안 먹었고, 프리뷰에 머문 채 `okay` 를 기다리다 죽었다.
+#     → 좌표를 버리고 id 로 잡는다(해상도 무관).
 #   · 반대로 촬영 결과 확인 바는 id가 살아 있다: `retry`("다시 시도") / `okay`("확인").
 #   · 사진 선택 도구의 썸네일은 전부 id `icon_thumbnail`이다. 항목 자체엔 id가 없고
 #     content-desc가 "2026-08-18 09:26:19에 촬영된 사진"처럼 **촬영 시각**이라 실행마다 달라진다
@@ -861,15 +873,13 @@ appId: ${APP_ID}
 - tapOn:
     id: "takeImage"
 - waitForAnimationToEnd
-# 카메라 권한은 이미 부여돼 있어 보통 SKIP된다. 초기화된 기기에서만 뜬다.
-- runFlow:
-    when:
-      visible: "${SYS_PERMISSION_ALLOW}"
-    commands:
-      - tapOn: "${SYS_PERMISSION_ALLOW}"
-      - waitForAnimationToEnd
+# 카메라 권한 — clearState 를 거친 실행에서는 **매번 뜬다**(2026-09-28 `granted=false` 확인).
+#   ⛔ 종전의 문구 기반(`SYS_PERMISSION_ALLOW`=`허용|Allow`)은 이 다이얼로그에 안 맞는다 —
+#      카메라도 `앱 사용 중에만 허용` 뿐이라 `허용` 버튼이 없다. → 공용 헬퍼로 교체.
+- runFlow: "_allow_permission_old.yaml"
+# 셔터 — 좌표 금지(위 메모 참고). 삼성 카메라의 촬영 버튼 컨테이너다.
 - tapOn:
-    point: "50%, 87%"
+    id: "center_button_container"
 - waitForAnimationToEnd
 - takeScreenshot: "[01-6-2]_촬영결과_확인화면"
 - extendedWaitUntil:
