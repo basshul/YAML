@@ -6,6 +6,13 @@ body {
   font-size: 14px;
   color: #1b1f24;
   background: #f2f4f7;
+  /* 화면을 꽉 채우고 **창 전체는 스크롤하지 않는다** — 스크롤은 각 칸이 스스로 한다.
+     (종전엔 main 높이를 `100vh - 46px` 로 박아 뒀는데, 헤더 높이가 그 값과 어긋나
+      항상 4px 짜리 스크롤이 남았다) */
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
@@ -102,11 +109,14 @@ main {
   gap: 14px;
   padding: 14px;
   align-items: stretch;
-  height: calc(100vh - 46px);
+  flex: 1;
+  min-height: 0;
 }
-.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
 .col-left { flex: 0 0 420px; }
-.col-right { flex: 1; }
+/* 로그를 펼치거나 결과가 길어져도 **페이지가 늘어나지 않게** 이 칸이 스스로 스크롤한다.
+   (안 그러면 창 전체에 스크롤이 생겨 왼쪽 테스트 목록이 화면 밖으로 밀린다) */
+.col-right { flex: 1; overflow-y: auto; }
 
 .panel {
   background: #fff;
@@ -164,8 +174,10 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .hidden { display: none; }
 .muted { color: #8b939e; font-weight: normal; }
 
-/* 테스트 목록 */
-.testlist { overflow-y: auto; flex: 1; margin: -4px -4px 0; padding: 4px; }
+/* 테스트 목록 — 높이를 고정한다.
+   오른쪽 칸에서 무슨 일이 일어나든(로그 펼치기·결과 표 길어짐) 이 영역은 그대로여야 한다. */
+.col-left .panel.grow { flex: none; }
+.testlist { overflow-y: auto; flex: none; height: 440px; margin: -4px -4px 0; padding: 4px; }
 .group { margin-bottom: 14px; }
 .group-head {
   display: flex; align-items: baseline; gap: 8px;
@@ -264,7 +276,9 @@ button.small { padding: 3px 9px; font-size: 12px; }
 
 /* 창이 좁으면 위아래로 쌓는다 */
 @media (max-width: 900px) {
+  body { height: auto; overflow: visible; }   /* 쌓이는 배치에서는 창이 스크롤한다 */
   main { flex-direction: column; height: auto; }
   .col-left { flex: none; }
-  .testlist { max-height: 340px; }
+  .col-right { overflow-y: visible; }   /* 위아래로 쌓일 때는 페이지가 스크롤한다 */
+  .testlist { height: 340px; }
 }
