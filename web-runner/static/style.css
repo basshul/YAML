@@ -290,4 +290,13 @@ button.small { padding: 3px 9px; font-size: 12px; }
   main { flex-direction: column; height: auto; align-items: stretch; }
   .col-left { flex: none; }
   .testlist { height: 340px; }
+
+  /* 좁은 화면에서는 **실행 버튼이 테스트 목록 위**에 온다 — 목록이 길어 버튼까지 스크롤해야 하는 걸 막는다.
+     두 칸(.col)을 `display: contents` 로 없애야 양쪽 패널이 같은 흐름에 놓여 순서를 바꿀 수 있다. */
+  .col { display: contents; }
+  .envpanel  { order: 1; }
+  .runbar    { order: 2; }
+  .col-left > .panel.grow { order: 3; }   /* 테스트 선택 */
+  .summary   { order: 4; }
+  .progpanel { order: 5; }
 }
