@@ -191,6 +191,17 @@ if ($needed.Count -ge 1) {
     $envArgs = $filtered
 }
 
+# ── maestro 출력의 한글이 깨지는 것을 막는다 (2026-09-28) ─────────────────
+# maestro 는 JVM 프로그램이고, 출력이 **파이프로 리다이렉트되면** stdout 을 OS 기본 인코딩
+# (한국어 Windows = MS949)으로 쓴다. PowerShell 은 UTF-8(65001)로 읽으므로 그대로 깨진다:
+#   `Tap on "���"... COMPLETED`   ← 원래는 `Tap on "확인"`
+# 보기 나쁜 정도가 아니다 — `run_suite.ps1` 의 실패 분류기는 로그에서 `세션이 만료` 같은
+# **한글 문자열을 찾아** 환경 문제와 코드 결함을 가르는데, 그 패턴이 영영 매칭되지 않았다.
+# ⚠️ `JAVA_TOOL_OPTIONS` 는 쓰지 말 것 — JVM 이 "Picked up JAVA_TOOL_OPTIONS:" 를 stderr 에
+#   찍어 로그에 줄이 하나씩 낀다. maestro 런처(`maestro.bat`)가 `MAESTRO_OPTS` 를 JVM 에
+#   그대로 넘겨주므로 이쪽이 노이즈가 없다.
+$env:MAESTRO_OPTS = "-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+
 $cmd = @("maestro", "--device", $device, "test", $flow) + $envArgs
 Write-Host "Running: $($cmd -join ' ')"
 & maestro --device $device test $flow @envArgs
