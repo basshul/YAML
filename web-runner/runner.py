@@ -21,6 +21,8 @@ REPO_ROOT = WEB_RUNNER_DIR.parent
 MAESTRO_DIR = REPO_ROOT / "Maestro"
 SUITE_SCRIPT = MAESTRO_DIR / "run_suite.ps1"
 RUN_LOG_DIR = WEB_RUNNER_DIR / "run_logs"
+PARAM_BLOCK_RE = r"^param\s*\((.*?)^\)"
+VAR_RE = r"\$(\w+)"
 
 # 화면에 보이는 "서버" 선택지 → run_*.ps1 의 -Build 값.
 # 사용자 기준은 빌드가 아니라 **어느 서버에 붙는가**다. stag 빌드는 플로우가 서버를
@@ -58,11 +60,67 @@ def load_config() -> dict:
     return cfg
 
 
+# ============================================================================
+# 안전장치 — 2026-09-28 사고 재발 방지
+#
+# `pwsh -File <script>.ps1 -없는옵션` 은 **에러가 아니다.** 그 옵션을 조용히 버리고
+# 스크립트를 *기본값으로* 실행한다(실측 확인). run_suite.ps1 에 이게 일어나면
+# **옵션 없는 전체 스위트 = 실기기 전 항목**이 처음부터 돌기 시작한다.
+#
+# 실제로 브랜치가 어긋나(-DumpJson 없는 run_suite.ps1) /api/tests 를 두 번 부른 것만으로
+# 스위트가 두 번 시작됐다. 그래서 **부르기 전에** 옵션 실재를 확인한다. 사후 검사로는 늦다.
+# ============================================================================
+
+_PARAM_CACHE: dict[str, set[str]] = {}
+
+
+def _script_params(script: Path) -> set[str]:
+    """스크립트 `param(...)` 블록이 선언한 파라미터 이름(소문자)."""
+    key = str(script)
+    if key not in _PARAM_CACHE:
+        text = script.read_text(encoding="utf-8", errors="replace")
+        m = re.search(PARAM_BLOCK_RE, text, re.S | re.M)
+        body = m.group(1) if m else ""
+        _PARAM_CACHE[key] = {n.lower() for n in re.findall(VAR_RE, body)}
+    return _PARAM_CACHE[key]
+
+
+def require_params(script: Path, names: list[str]) -> None:
+    """스크립트가 이 옵션들을 실제로 받는지 확인한다. 아니면 **부르지 않고** 끊는다."""
+    missing = [n for n in names if n.lower() not in _script_params(script)]
+    if missing:
+        opts = ", ".join("-" + n for n in missing)
+        raise RuntimeError(
+            f"{script.name} 에 {opts} 옵션이 없습니다. 브랜치가 어긋났을 수 있습니다"
+            "(web-runner 는 feat/web-runner-demo 전용). 그대로 부르면 옵션이 무시된 채 "
+            "**실기기 전체 스위트**가 시작되므로 중단합니다."
+        )
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """자식만 죽이면 maestro(java) 가 **고아로 살아남아 기기를 계속 조작한다.**"""
+    try:
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                       capture_output=True, timeout=15)
+    except Exception:
+        proc.kill()
+
+
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        cmd, cwd=str(cwd), capture_output=True,
-        encoding="utf-8", errors="replace", timeout=60,
+    proc = subprocess.Popen(
+        cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        encoding="utf-8", errors="replace",
     )
+    try:
+        out, err = proc.communicate(timeout=60)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc)
+        proc.communicate()
+        raise RuntimeError(
+            "60초 안에 끝나지 않아 프로세스 트리를 종료했습니다. 목록 조회가 이렇게 "
+            "오래 걸리면 실제로 테스트가 돌고 있는 것입니다 — 기기 상태를 확인하세요."
+        )
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
 def list_tests(include_destructive: bool = False) -> list[dict]:
@@ -72,9 +130,19 @@ def list_tests(include_destructive: bool = False) -> list[dict]:
     G9(파괴적: 계정 잠금·비밀번호 초기화)는 기본으로 뺀다.
     """
     cfg = load_config()
+    # ★ 부르기 전에 옵션 실재를 확인한다 — 없으면 실기기가 돈다(위 안전장치 주석 참고)
+    require_params(SUITE_SCRIPT, ["DumpJson"])
     proc = _run([cfg["pwsh"], "-NoProfile", "-File", str(SUITE_SCRIPT), "-DumpJson"], MAESTRO_DIR)
     if proc.returncode != 0:
         raise RuntimeError(f"run_suite.ps1 -DumpJson 실패 (exit={proc.returncode})\n{proc.stderr.strip()}")
+
+    head = proc.stdout.lstrip()[:1]
+    if head not in ("[", "{"):
+        raise RuntimeError(
+            "run_suite.ps1 -DumpJson 이 JSON 을 주지 않았습니다. 목록 조회가 아니라 "
+            "**실행**이 일어났을 수 있습니다 — 기기 상태를 확인하세요.\n"
+            f"받은 출력 앞부분: {proc.stdout[:200]!r}"
+        )
 
     data = json.loads(proc.stdout)
     if isinstance(data, dict):  # 항목이 1개면 배열이 아니라 객체로 온다
@@ -221,6 +289,11 @@ class Run:
 
     # ------------------------------------------------------------- 실행
     def start(self) -> None:
+        # ⛔ 빈 -Names 는 run_suite.ps1 에서 **전체 스위트**가 된다(실결제 항목 포함).
+        if not self.names:
+            raise RuntimeError("실행할 테스트를 고르지 않았습니다. 전체 스위트가 도는 것을 막기 위해 중단합니다.")
+        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Lang"])
+
         cfg = load_config()
         build = SERVER_CHOICES[self.server]["build"]
         inner = (
