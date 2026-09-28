@@ -115,6 +115,13 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnTwo|btnClose"
       - waitForAnimationToEnd
+# ★ 2026-09-28: 세션이 만료되면 PIN 검증 API(`ConfirmPassword`)가 **401 Unauthorized** 를
+#   받고 앱이 `로그인 세션이 만료되었습니다` 바텀시트를 띄운다(`txvDialogDescription`).
+#   ⚠️ 그 상태로 두면 아래 `btnTransfer` 를 못 찾는 것으로만 드러나 **셀렉터 결함으로 오진**한다
+#      (실제로 그랬다 — 실패 사유가 `Assertion is false: id: btnTransfer` 로만 남았다).
+#   → 여기서 **사유를 밝히며** 끊는다. 재로그인은 스위트의 `_suite_recover_old.yaml` 이 맡는다.
+#   ※ 토큰 수명 문제가 아니었다 — 발급 19분 된 JWT(exp 는 7일 뒤)인데 서버가 401 을 줬다.
+- assertNotVisible: "${SESSION_EXPIRED}"
 - extendedWaitUntil:
     visible:
       id: "btnTransfer"

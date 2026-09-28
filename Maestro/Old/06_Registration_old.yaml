@@ -64,6 +64,8 @@ appId: ${APP_ID}
       text: "Server Override|언어 선택|신규 회원"
     timeout: 20000
 - runFlow: "_server_override_old.yaml"
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
 - runFlow:
     when:
@@ -279,6 +281,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -304,6 +309,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -325,6 +333,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -696,6 +707,8 @@ appId: ${APP_ID}
       text: "Server Override|언어 선택|신규 회원"
     timeout: 20000
 - runFlow: "_server_override_old.yaml"
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
 - runFlow:
     when:
@@ -803,6 +816,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -938,6 +954,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"

@@ -1,0 +1,31 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 지금 떠 있는 OS 런타임 권한 다이얼로그를 허용한다 (2026-09-28 작성)
+#
+# 온보딩 관문(`_onboarding_gate_old.yaml`)과 달리 **화면 도달 조건이 없다** —
+# 흐름 중간에 권한을 묻는 지점(카메라·위치 등) 바로 앞에서 부른다.
+# 다이얼로그가 없으면 조건이 거짓이라 통째로 SKIP 되므로 어디에 넣어도 무해하다.
+#
+# ★ 왜 문구로 잡으면 안 되는가 — 2026-09-28 06_Registration 실측:
+#     permission_message = 'GME 해외송금(stag)에서 사진을 촬영하고 동영상을 녹화하도록 허용하시겠습니까?'
+#     permission_allow_foreground_only_button = '앱 사용 중에만 허용'
+#     permission_allow_one_time_button        = '이번만 허용'
+#     permission_deny_button                  = '허용 안함'
+#   **`허용` 버튼이 아예 없다.** 카메라·위치 다이얼로그가 이 형태다.
+#   그래서 이 다이얼로그가 카메라 화면을 덮어 `captureBtnImageView` 를 못 찾고 죽었다.
+#
+# 정규식은 `permission_allow_button`(알림 등)과 `permission_allow_foreground_only_button`
+# (카메라·위치)만 잡는다 — `permission_allow_one_time_button`(이번만 허용)은 **안 잡힌다**.
+# 매번 다시 묻게 만들지 않으려는 것이다.
+# ⛔ 패키지 접두사(`com.android.permissioncontroller:id/`)는 붙이지 않는다(린터 E01).
+# ================================================================
+- repeat:
+    times: 4
+    while:
+      visible:
+        id: "grant_dialog"
+    commands:
+      - tapOn:
+          id: "permission_allow_(foreground_only_)?button"
+      - waitForAnimationToEnd

@@ -81,25 +81,8 @@ env:
           id: "button1"
       - waitForAnimationToEnd
 # 서비스 이용 안내(최초 실행/clearState 후) → 확인 → OS 권한 허용
-- runFlow:
-    when:
-      visible: "${INIT_SERVICE_GUIDE}"
-    commands:
-      - tapOn:
-          id: "btnConfirm"
-      - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "허용"
-          commands:
-            - tapOn: "허용"
-            - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "허용"
-          commands:
-            - tapOn: "허용"
-            - waitForAnimationToEnd
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 # clearState 로 앱 언어가 한국어로 초기화된다 → en 실행이면 여기서 영어로 바꾼다
 #   (`01_03`·`01_05`·`01_Login_screen`·`05_InitialScreen` 과 같은 패턴. 2026-09-18 이식).
 #   ko 는 `LANG_SWITCH_TRIGGER=__NEVER_MATCH__` 라 통째로 SKIP 되어 평소 동작은 그대로다.
