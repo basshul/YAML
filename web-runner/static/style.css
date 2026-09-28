@@ -124,7 +124,7 @@ main {
 }
 .panel.grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .panel h2 {
-  display: flex; align-items: center;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   font-size: 13px; margin: 0 0 12px; color: #48505a; font-weight: 600;
 }
 .spacer { flex: 1; }
@@ -166,6 +166,7 @@ button.ghost { color: #48505a; }
 button.danger { color: #d43c3c; border-color: #e8b4b4; font-weight: 600; padding: 9px 18px; }
 button.danger:hover:not(:disabled) { background: #fdeeee; }
 button.small { padding: 3px 9px; font-size: 12px; }
+.panel h2 button.small { padding: 4px 12px; }   /* 헤더 안에서는 조금 더 누르기 좋게 */
 
 .warn {
   margin: 8px 0 0; padding: 8px 10px; border-radius: 6px;
@@ -208,9 +209,8 @@ button.small { padding: 3px 9px; font-size: 12px; }
 .pill.balance { background: #fff5e5; color: #96631a; }
 .pill.fixture { background: #eef4ff; color: #2f5bb7; }
 
-/* 실행바 */
-.runbar { display: flex; align-items: center; gap: 12px; }
-.selinfo { flex: 1; font-size: 13px; color: #48505a; }
+/* 선택 안내 — 제목 줄에 같이 두면 버튼이 밀려 줄바꿈된다 → 바로 아랫줄에 둔다 */
+.selinfo { font-size: 12px; color: #8b939e; margin: -6px 0 9px; }
 
 /* 요약 */
 .summary { font-size: 13px; line-height: 1.7; }
@@ -295,8 +295,7 @@ button.small { padding: 3px 9px; font-size: 12px; }
      두 칸(.col)을 `display: contents` 로 없애야 양쪽 패널이 같은 흐름에 놓여 순서를 바꿀 수 있다. */
   .col { display: contents; }
   .envpanel  { order: 1; }
-  .runbar    { order: 2; }
-  .col-left > .panel.grow { order: 3; }   /* 테스트 선택 */
-  .summary   { order: 4; }
-  .progpanel { order: 5; }
+  .col-left > .panel.grow { order: 2; }   /* 테스트 선택(실행 버튼이 이 헤더에 있다) */
+  .summary   { order: 3; }
+  .progpanel { order: 4; }
 }

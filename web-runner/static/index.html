@@ -51,19 +51,17 @@
         <h2>
           테스트 선택
           <span class="spacer"></span>
+          <button id="stopBtn" class="danger small hidden" type="button">중단</button>
+          <button id="runBtn" class="primary small" type="button" disabled>실행</button>
+          <button id="runAllBtn" class="small" type="button">전체 실행</button>
           <button id="clearSel" class="ghost small" type="button">전체 해제</button>
         </h2>
+        <div id="selInfo" class="selinfo">선택된 테스트 없음</div>
         <div id="testList" class="testlist">불러오는 중…</div>
       </section>
     </div>
 
     <div class="col col-right">
-      <section class="panel runbar">
-        <div id="selInfo" class="selinfo">선택된 테스트 없음</div>
-        <button id="stopBtn" class="danger hidden" type="button">중단</button>
-        <button id="runBtn" class="primary" type="button" disabled>실행</button>
-      </section>
-
       <section id="summary" class="panel summary hidden"></section>
 
       <section class="panel grow progpanel">

@@ -171,6 +171,7 @@ function renderSelection() {
 function updateRunState() {
   const hasDevice = !!$("deviceSel").value;
   $("runBtn").disabled = state.running || state.selected.size === 0 || !hasDevice;
+  $("runAllBtn").disabled = state.running || !hasDevice || state.tests.length === 0;
 }
 
 /* -------------------------------------------------------------------- 실행 */
@@ -311,12 +312,22 @@ async function onStop() {
   }
 }
 
+/* 전체 실행 — 목록 전부를 고른 뒤 그대로 실행한다(G9 파괴적 항목은 애초에 목록에 없다) */
+function onRunAll() {
+  for (const t of state.tests) state.selected.add(t.name);
+  renderSelection();
+  onRun();
+}
+
 async function onRun() {
   const picked = state.tests.filter((t) => state.selected.has(t.name));
   const isLive = state.config.servers.find((s) => s.value === state.server)?.live;
   const money = picked.filter((t) => t.irreversible);
 
-  let ask = `${picked.length}개 테스트를 실행합니다.\n\n`;
+  const minutes = picked.reduce((sum, t) => sum + t.est, 0);
+  let ask =
+    `${picked.length}개 테스트를 실행합니다. ` +
+    `(예상 ${Math.floor(minutes / 60)}시간 ${minutes % 60}분)\n\n`;
   if (isLive) ask += "⚠️ 운영(Live) — 실서비스 계정과 실자금이 움직입니다.\n";
   if (money.length) ask += `⚠️ 실결제 포함: ${money.map((t) => t.name).join(", ")}\n`;
   ask += "\n계속할까요?";
@@ -479,6 +490,7 @@ $("clearSel").addEventListener("click", () => {
   renderSelection();
 });
 $("runBtn").addEventListener("click", onRun);
+$("runAllBtn").addEventListener("click", onRunAll);
 $("stopBtn").addEventListener("click", onStop);
 
 boot().then(attachIfRunning);
