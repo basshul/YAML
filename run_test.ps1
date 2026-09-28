@@ -1,27 +1,42 @@
 # ================================================================
-# run_test.ps1 — Maestro 다국어 테스트 실행 스크립트
+# run_test.ps1 (저장소 루트) — 테스트 이미지 배치 + Maestro\run_test.ps1 위임
 #
-# 사용법:
-#   .\run_test.ps1                          # 한국어 기본 실행
-#   .\run_test.ps1 -lang en                 # 영어로 실행
-#   .\run_test.ps1 -lang ko -flow 09_Home.yaml
-#   .\run_test.ps1 -lang en -flow 09_Home.yaml -device 27dbf1ec440d7ece
+# 갤러리 픽스처가 필요한 케이스 전용 래퍼다.
+#   · 21_Card [24] 글로벌 QR 갤러리 업로드
+#   · 06_Registration 신분증/ARC/여권 OCR
+# 그 외에는 `Maestro\run_test.ps1` 을 직접 쓰면 된다.
 #
-# -device를 생략하면 연결된 기기를 자동으로 감지합니다.
-# (2026-08-06: 기존엔 기본값이 "R3CW90MTK9H"로 하드코딩돼 있었는데 기기가 교체되면서
-#  아무것도 지정하지 않으면 항상 실패하는 상태였음 → 자동 감지로 변경)
+# 사용법(인자는 Maestro\run_test.ps1 과 동일하다):
+#   .\run_test.ps1 -lang ko -flow "Old\21_Card_old.yaml"
+#   .\run_test.ps1 -lang en -flow "Old\06_Registration_old.yaml" -Build live
+#
+# ⛔ 2026-09-23 재작성 — 종전에는 이 파일이 러너 전체를 **복사해 갖고 있었다.**
+#   그래서 `Maestro\run_test.ps1` 에만 들어간 개선(플로우가 실제로 쓰는 env 만 추리는 것)이
+#   여기엔 없었고, env 가 475개로 늘자 **"The command line is too long."** 으로 죽었다.
+#   두 벌을 두면 반드시 한쪽이 낡는다 → 이제 이미지 배치만 하고 본 러너로 넘긴다.
 # ================================================================
 param(
-    [string]$lang   = "ko",
-    [string]$flow   = "09_Home.yaml",
-    [string]$device = ""
+    [Parameter(Mandatory=$true)][string]$lang,
+    [Parameter(Mandatory=$true)][string]$flow,
+    [string]$device = "",
+    [ValidateSet("stag","live")][string]$Build = "stag",
+    [string]$AppId = "",
+    [string[]]$ExtraEnv = @()
 )
 
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$envFile   = Join-Path $scriptDir "Maestro\env\$lang.env"
-$flowPath  = Join-Path $scriptDir "Maestro\$flow"
+$ErrorActionPreference = 'Stop'
+$scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
+$maestroDir  = Join-Path $scriptDir "Maestro"
+$innerRunner = Join-Path $maestroDir "run_test.ps1"
 
-# 기기 자동 감지 (-device 미지정 시)
+if (-not (Test-Path $innerRunner)) {
+    Write-Error "본 러너를 찾을 수 없습니다: $innerRunner"
+    exit 1
+}
+
+# ── 기기 결정 ────────────────────────────────────────────────────
+#   여기서 먼저 정하는 이유는 **이미지 push 에 시리얼이 필요해서**다.
+#   ⛔ 시리얼을 하드코딩하지 말 것 — 기기는 교체된다.
 if (-not $device) {
     $connected = @(adb devices | Select-String '^\S+\s+device$' | ForEach-Object { ($_ -split '\s+')[0] })
     if ($connected.Count -eq 0) {
@@ -35,119 +50,65 @@ if (-not $device) {
     $device = $connected[0]
 }
 
-# 파일 존재 확인
-if (-not (Test-Path $envFile)) {
-    Write-Error "언어 파일을 찾을 수 없습니다: $envFile"
-    Write-Host  "지원 언어: $(Get-ChildItem (Join-Path $scriptDir 'Maestro\env') -Filter '*.env' | ForEach-Object { $_.BaseName }) " -ForegroundColor Yellow
-    exit 1
-}
-if (-not (Test-Path $flowPath)) {
-    Write-Error "플로우 파일을 찾을 수 없습니다: $flowPath"
-    exit 1
-}
-
-# env 파일 파싱 → --env 인자 배열 생성
-#
-# ⚠️ 값은 반드시 큰따옴표로 감싼다(2026-08-18 수정).
-#   maestro는 scoop 심(shims\maestro.cmd)이 `%*`로 넘기는 .bat이라 cmd.exe가 인자를 다시 파싱한다.
-#   그래서 값에 `|`가 들어간 항목(예: SYS_PERMISSION_ALLOW=허용|Allow)이 파이프로 해석돼
-#   "'Allow' is not recognized as an internal or external command"로 **모든 플로우가 즉시 죽었다**.
-#   인용부호 안에 있으면 cmd가 리터럴로 취급한다. 아래 Legacy 인자 전달과 반드시 같이 써야 한다.
-$envArgs = [System.Collections.Generic.List[string]]::new()
-Get-Content $envFile -Encoding UTF8 | Where-Object {
-    $_ -notmatch "^\s*#" -and $_ -match "="
-} | ForEach-Object {
-    $envArgs.Add("--env")
-    $envArgs.Add('"' + $_.Trim() + '"')
-}
-
-Write-Host ""
-Write-Host "======================================" -ForegroundColor Cyan
-Write-Host " 언어  : $lang"                         -ForegroundColor Cyan
-Write-Host " 플로우: $flow"                          -ForegroundColor Cyan
-Write-Host " 기기  : $device"                        -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
-Write-Host ""
-
 # ================================================================
 # 테스트 이미지 사전 배치
-# push 순서: 3→2→1 (ARC 먼저, ID Card 나중)
-#   갤러리 1번째: Global QR.jpg          → 21_Card.yaml [24] 글로벌 QR 갤러리 업로드 케이스
-#   갤러리 2번째: 3. ARC.jpg            → ARC OCR 케이스 (17%, 52%)
-#   갤러리 3번째: 1. ID Card_Korean.jpg → 주민등록증 케이스 (50%, 52%)
-#   갤러리 4번째: 2. Passport.jpg       → Passport 케이스 (83%, 52%)
+#   갤러리 1번째: Global QR.jpg          → 21_Card [24] 글로벌 QR 갤러리 업로드
+#   갤러리 2번째: 3. ARC.jpg            → ARC OCR
+#   갤러리 3번째: 1. ID Card_Korean.jpg → 주민등록증
+#   갤러리 4번째: 2. Passport.jpg       → 여권
+#   ⚠️ 케이스가 "테스트 이미지 4장이 갤러리 최신 4개"라는 전제에 기대므로 순서가 곧 index 다.
+#      다른 이미지가 쌓이면 앱이 "OCR이 유효하지 않습니다"로 거부한다(앱 버그가 아니다).
 # ================================================================
-# 스크립트 기준 상대경로 (2026-08-06: 기존 "D:\Automation\Maestro\Test Files" 하드코딩에서 변경).
-#   원본 4개는 Maestro\Test Files\ 로 복사해 두었음. 구 D: 경로는 폴백으로만 남겨둠.
-$testFilesDir = Join-Path $scriptDir "Maestro\Test Files"
+$testFilesDir = Join-Path $maestroDir "Test Files"
 if (-not (Test-Path $testFilesDir)) {
-    $legacyDir = "D:\Automation\Maestro\Test Files"
-    if (Test-Path $legacyDir) {
-        Write-Host " 테스트 이미지 폴더를 찾지 못해 구 경로를 사용합니다: $legacyDir" -ForegroundColor Yellow
-        $testFilesDir = $legacyDir
-    } else {
-        Write-Error "테스트 이미지 폴더를 찾을 수 없습니다: $testFilesDir"
-        exit 1
-    }
+    Write-Error "테스트 이미지 폴더를 찾을 수 없습니다: $testFilesDir"
+    exit 1
 }
 
+Write-Host ""
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host " 언어  : $lang"   -ForegroundColor Cyan
+Write-Host " 플로우: $flow"    -ForegroundColor Cyan
+Write-Host " 기기  : $device"  -ForegroundColor Cyan
+Write-Host "======================================" -ForegroundColor Cyan
 Write-Host " 테스트 이미지 배치 중..." -ForegroundColor Yellow
 
-# 갤러리 최신순 정렬 대응: push 직전 타임스탬프를 현재 시간으로 설정
+# 갤러리는 최신순 정렬이라 push 직전에 타임스탬프를 벌려 둔다.
 $now = Get-Date
 (Get-Item "$testFilesDir\2. Passport.jpg").LastWriteTime       = $now.AddSeconds(-4)
 (Get-Item "$testFilesDir\1. ID Card_Korean.jpg").LastWriteTime = $now.AddSeconds(-2)
 (Get-Item "$testFilesDir\3. ARC.jpg").LastWriteTime            = $now
 (Get-Item "$testFilesDir\Global QR.jpg").LastWriteTime         = $now.AddSeconds(2)
 
-adb -s $device push "$testFilesDir\Global QR.jpg" "/sdcard/DCIM/test_global_qr.jpg" | Out-Null
-adb -s $device shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/DCIM/test_global_qr.jpg" | Out-Null
-Start-Sleep -Milliseconds 800
-adb -s $device push "$testFilesDir\3. ARC.jpg" "/sdcard/DCIM/test_arc.jpg" | Out-Null
-adb -s $device shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/DCIM/test_arc.jpg" | Out-Null
-Start-Sleep -Milliseconds 800
-adb -s $device push "$testFilesDir\2. Passport.jpg" "/sdcard/DCIM/test_passport.jpg" | Out-Null
-adb -s $device shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/DCIM/test_passport.jpg" | Out-Null
-Start-Sleep -Milliseconds 800
-adb -s $device push "$testFilesDir\1. ID Card_Korean.jpg" "/sdcard/DCIM/test_id_card.jpg" | Out-Null
-adb -s $device shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/DCIM/test_id_card.jpg" | Out-Null
-Start-Sleep -Milliseconds 800
-Write-Host " 이미지 배치 완료 (갤러리 1번째: Global QR / 2번째: ARC / 3번째: ID Card / 4번째: Passport)" -ForegroundColor Green
+$pushes = @(
+    @{ src = "Global QR.jpg";          dst = "/sdcard/DCIM/test_global_qr.jpg" }
+    @{ src = "3. ARC.jpg";             dst = "/sdcard/DCIM/test_arc.jpg"       }
+    @{ src = "2. Passport.jpg";        dst = "/sdcard/DCIM/test_passport.jpg"  }
+    @{ src = "1. ID Card_Korean.jpg";  dst = "/sdcard/DCIM/test_id_card.jpg"   }
+)
+foreach ($p in $pushes) {
+    adb -s $device push "$testFilesDir\$($p.src)" $p.dst | Out-Null
+    adb -s $device shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$($p.dst)" | Out-Null
+    Start-Sleep -Milliseconds 800
+}
+Write-Host " 이미지 배치 완료 (1번째: Global QR / 2번째: ARC / 3번째: ID Card / 4번째: Passport)" -ForegroundColor Green
 Write-Host ""
 
-$argsToPass = $envArgs.ToArray()
+# ── 본 러너로 위임 ───────────────────────────────────────────────
+#   env 추리기·빌드 전환·자동 로그아웃 선검사·스크린샷 회수는 전부 저쪽에 있다.
+#   ⚠️ CWD 를 `Maestro\` 로 옮긴다 — `-flow` 가 그 기준의 상대경로이고,
+#     `takeScreenshot` 도 CWD 에 떨어진다(본 러너가 실행 직후 회수한다).
+$inner = @{ lang = $lang; flow = $flow; device = $device; Build = $Build }
+if ($AppId)            { $inner.AppId    = $AppId }
+if ($ExtraEnv.Count)   { $inner.ExtraEnv = $ExtraEnv }
 
-# 화면 켜기 (꺼진 상태로 실행 시 UI 인식 실패 방지)
-adb -s $device shell input keyevent 224 | Out-Null
-
-# PS7 기본 인자 전달은 위에서 붙인 큰따옴표를 이스케이프해버린다(\" 로 넘어감).
-# Legacy로 두어야 따옴표가 그대로 cmd에 전달된다.
-$runStart = Get-Date
-$PSNativeCommandArgumentPassing = 'Legacy'
-
-maestro --device $device test @argsToPass "`"$flowPath`""
-$exitCode = $LASTEXITCODE
-
-# ── 실행 후 스크린샷 회수 ────────────────────────────────────────────────
-#   `takeScreenshot` 은 **CWD** 에 `<이름>.png` 로 떨어뜨린다(경로 지정 옵션이 없다).
-#   그대로 두면 실행마다 루트에 쌓이고 **같은 이름은 조용히 덮인다**.
-#   한 번 치우는 걸로는 끝나지 않는다 — 2026-09-02에 정리했는데 하루 만에 39개가 다시 쌓였고,
-#   2026-09-10 정리에서는 191개(37MB)가 나왔다 → 실행 직후 **실행별 폴더**로 옮긴다.
-#   ⚠️ 폴더명은 반드시 `shots_` 로 시작한다 — `.gitignore(shots_*/)` 와 `sync_from_source.ps1`
-#      이 그 접두사로 걸러낸다. 다른 이름을 쓰면 산출물이 저장소에 딸려 들어간다.
-#   ⚠️ maestro 의 종료 코드를 먼저 붙잡아 두고 마지막에 그대로 돌려준다 —
-#      run_suite.ps1 이 `$LASTEXITCODE` 로 성패를 가른다.
-
-$shotSrc = $scriptDir
-$shotDst = (Join-Path $scriptDir "Maestro")
-$shots = @(Get-ChildItem -LiteralPath $shotSrc -Filter "*.png" -File -ErrorAction SilentlyContinue |
-           Where-Object { $_.LastWriteTime -ge $runStart })
-if ($shots.Count) {
-    $tag = [IO.Path]::GetFileNameWithoutExtension($flow) -replace '[^\w가-힣]', '_'
-    $dir = Join-Path $shotDst ("shots_runs\{0}_{1}" -f $runStart.ToString("yyyyMMdd_HHmmss"), $tag)
-    New-Item -ItemType Directory -Path $dir -Force | Out-Null
-    $shots | Move-Item -Destination $dir -Force
-    Write-Host ("스크린샷 {0}장 → shots_runs\{1}" -f $shots.Count, (Split-Path -Leaf $dir)) -ForegroundColor DarkGray
+Push-Location $maestroDir
+try {
+    & $innerRunner @inner
+    $exitCode = $LASTEXITCODE
+}
+finally {
+    Pop-Location
 }
 
 exit $exitCode

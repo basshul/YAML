@@ -78,11 +78,16 @@ appId: ${APP_ID}
 # [Card Apply] - 카드 추가 신청 (Pay 카드, 지점 수령)
 # ================================================================
 # ★ **2026-09-11 사용자 확인: `Pay 카드` 는 없어진 게 아니다 — 상품 목록을 아래로 스크롤하면 나온다.**
-#   2026-09-10 에 `[01]` 의 `assertVisible: "Pay 카드"` 가 실패한 것은 상품이 단종된 것이 아니고
+#   2026-09-10 에 `[01]` 의 `assertVisible: "${CARD_PRODUCT_PAY}"` 가 실패한 것은 상품이 단종된 것이 아니고
 #   **첫 화면에 EasyCare·EasyGo 만 보이고 Pay 는 화면 밖에 있었기 때문**이다.
 #   → 상품 단언·탭 전에 스크롤을 넣는다(해상도가 바뀌면 요소가 화면 밖으로 밀리는 것과 같은 부류).
 # ⚠ 이 구간은 실계정에 **실제 카드 신청**을 낸다. 신청 대상은 **Pay 카드**로 고정하고,
 #   엉뚱한 상품으로 들어갔는지를 상세 화면 제목(`GME 카드 - Pay`)으로 못박는다.
+#   → 둘 다 `${CARD_PRODUCT_PAY}` · `${CARD_DETAIL_TITLE_PAY}` 로 변수화했다(2026-09-22 en 실측).
+#     en 상품 목록: `EasyCare Card` / `EasyGo Card` / **`Pay Card`** / `Premium Card`
+#     (목록 id `card_list_title_textview`), 상세 제목 `GME Card - Pay`(id `toolbar_title`).
+#   ⚠️ **상품명 탭으로는 상세가 열리지 않는다**(실측 재확인) — 행의 `Apply` 버튼이 상세를 연다.
+#     실제 신청은 상세 안의 `${APPLY_CARD_TEXT}` 이므로, 상세까지는 신청 없이 볼 수 있다.
 #   [10] 이 그 신청을 취소하므로 전 구간을 돌리면 상태는 원복된다 — 중간에 끊기면 신청이 남는다.
 
 # 카드 이미지 좌로 스와이프 후 "카드 추가 요청" 있을 때만 진행 (이미 신청된 경우 스킵)
@@ -126,15 +131,15 @@ appId: ${APP_ID}
       #   고정 위치 가정을 버리고 중앙 정렬까지 스크롤한 뒤 단언·탭한다.
       - scrollUntilVisible:
           element:
-            text: "Pay 카드"
+            text: "${CARD_PRODUCT_PAY}"
           direction: DOWN
           centerElement: true
           timeout: 20000
-      - assertVisible: "Pay 카드"
+      - assertVisible: "${CARD_PRODUCT_PAY}"
       # 신청 대상 행에서 진입한다. ⛔ 맨 위 `카드 신청` 을 그냥 탭하면 **EasyGo 행**을 집는다
       #   (텍스트 index 0 = 그 순간 화면 맨 위). 이미 발급된 상품은 버튼이 `내 카드` 로 바뀐다.
       - tapOn:
-          text: "Pay 카드"
+          text: "${CARD_PRODUCT_PAY}"
       - waitForAnimationToEnd
       # 상품명 탭으로 상세가 열리지 않아 목록이 그대로 남아 있으면 그 행의 신청 버튼을 누른다 — 자기교정.
       - runFlow:
@@ -145,7 +150,7 @@ appId: ${APP_ID}
             - tapOn:
                 text: "${CARD_APPLY_TEXT}"
                 below:
-                  text: "Pay 카드"
+                  text: "${CARD_PRODUCT_PAY}"
             - waitForAnimationToEnd
       # 이미 진행 중인 신청 팝업 처리 → 배송지로 바로 이동
       - runFlow:
@@ -168,7 +173,7 @@ appId: ${APP_ID}
             # ★ 엉된 상품에 신청을 넣지 않도록 상세 화면이 **Pay** 임을 못박는다.
             #   이건 상품명 하드코딩이 아니라 **이 케이스가 신청하는 상품 자신**이다 — 고정이 맞다.
             - assertVisible:
-                text: 'GME 카드 - Pay[\s\S]*'
+                text: "${CARD_DETAIL_TITLE_PAY}"
             - tapOn: "${APPLY_CARD_TEXT}"
             - waitForAnimationToEnd
             # 이용약관
@@ -341,7 +346,7 @@ appId: ${APP_ID}
     timeout: 20000
 - tapOn:
     id: "agent_info_txt_label_1"
-    text: '경기도 안산시[\s\S]*'
+    text: "${CARD_BRANCH_ADDRESS}"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -423,7 +428,7 @@ appId: ${APP_ID}
     timeout: 10000
 - assertVisible:
     id: "dialog_title_text"
-    text: '카드 신청 취소[\s\S]*'
+    text: "${CARD_CANCEL_APPLY_DIALOG}"
 - tapOn:
     id: "btnConfirm"
 - waitForAnimationToEnd
@@ -692,7 +697,7 @@ appId: ${APP_ID}
     id: "pause_switch"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: '카드가 일시적으로[\s\S]*'
+    visible: "${CARD_PAUSED_DIALOG}"
     timeout: 20000
 - tapOn:
     id: "btnConfirm"
@@ -846,7 +851,7 @@ appId: ${APP_ID}
     id: "oversee_offline_use_title_checkbox"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: '해외 오프라인 결제[\s\S]*'
+    visible: "${CARD_OVERSEAS_OFFLINE_DISABLED}"
     timeout: 20000
 - tapOn:
     id: "btnConfirm"
@@ -929,7 +934,7 @@ appId: ${APP_ID}
     id: "offline_use_title_checkbox"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: '[\s\S]*(오프라인 결제|사용이 중단|중단되었습니다)[\s\S]*'
+    visible: "${CARD_DOMESTIC_OFFLINE_DISABLED}"
     timeout: 20000
 - tapOn:
     id: "btnConfirm"
@@ -979,12 +984,15 @@ appId: ${APP_ID}
 - assertVisible:
     id: "oversee_won_payment_restrictions_sub_title"
     text: "on"
-- assertVisible: '해외 원화[\s\S]*'
+# ⛔ 라벨 문구로 단언하지 않는다 — en 은 `Overseas won⏎ payment restrictions` 로 **줄바꿈이 들어가고**
+#   ko 와 길이도 달라 전체매칭이 흔들린다. 같은 것을 가리키는 id 가 있으니 그걸 쓴다(2026-09-22).
+- assertVisible:
+    id: "oversee_won_payment_restrictions_title"
 - tapOn:
     id: "overseas_won_payment_restrictions_switch"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: '[\s\S]*원화\(KRW\) 결제[\s\S]*'
+    visible: "${CARD_DCC_CONFIRM_DIALOG}"
     timeout: 20000
 - assertVisible: "${REG_NO}"
 - assertVisible: "${BTN_CONFIRM}"
@@ -1083,7 +1091,7 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible:
       id: "toolbar_title"
-      text: 'GME 카드 - [\s\S]*'
+      text: "${CARD_BENEFITS_TITLE_PREFIX}"
     timeout: 20000
 - assertVisible:
     id: "gmeCardDescriptionPager"
@@ -1130,7 +1138,7 @@ appId: ${APP_ID}
 - tapOn: "${SCAN_TEXT}"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "스캔, 업로드 또는 QR로 결제하세요."
+    text: "${QR_SCAN_GUIDE}"
 
 # 갤러리 업로드로 실제 KHQR 이미지 인식 확인
 # run_test.ps1이 Global QR.jpg를 타임스탬프 최상단으로 갤러리에 배치해둠 (갤러리 1번째)
@@ -1140,12 +1148,26 @@ appId: ${APP_ID}
 - tapOn:
     point: "20%, 41%"
 - waitForAnimationToEnd
+# ⚠️ 2026-09-22 실측: 이 기기의 사진 선택 도구(`com.android.documentsui`)는 **다중 선택식**이라
+#   썸네일을 눌러도 앱으로 돌아오지 않고 하단 `완료` 를 한 번 더 눌러야 한다(구 기기 갤러리는 즉시 복귀).
+#   OS 화면이라 **앱 언어를 따르지 않는다**(기기 언어) → 한/영 라벨을 둘 다 받고, 없으면 그냥 넘어간다.
+- runFlow:
+    when:
+      visible: "완료|Done|DONE"
+    commands:
+      - tapOn: "완료|Done|DONE"
+      - waitForAnimationToEnd:
+          timeout: 20000
+- extendedWaitUntil:
+    visible:
+      text: "${PAYMENT_TEXT}"
+    timeout: 20000
 - assertVisible:
     text: "${PAYMENT_TEXT}"
 - assertVisible:
     text: "CHANSOKOL MORK"
 - assertVisible:
-    text: "사용 가능한 잔액.*"
+    text: "${QR_AVAILABLE_BALANCE}"
 - assertVisible:
     text: "${PAYMENT_AMOUNT}"
 # 실제 해외 가맹점 대상 송금이 발생하므로 금액 입력/다음 진행은 하지 않고 화면 확인 후 이탈
@@ -1174,10 +1196,21 @@ appId: ${APP_ID}
 # CLICKUP-PARTIAL: z8nfn6mae1 | Easy Go 화면과 월/최근 이용내역은 단언, 카드번호·잔액 자체는 미단언
 # ----------------------------------------------------------------
 - scroll
+# ⛔ 종전 `.*교통카드` 는 **월이 앞에 붙는 라벨**(`2026-09 교통카드`)이라 문구로 잡기 나쁘고,
+#   en 은 아예 `2026-09 Transportation` 이다 → 언어·날짜에 안 흔들리는 id 로 바꿨다(2026-09-22 실측).
 - tapOn:
-    text: ".*교통카드"
+    id: "txViewTravelHistory"
+# ⛔ 종전 `${EASY_GO_CARD_TEXT}` 단언은 **상품명 하드코딩**이었다 — 이 화면 툴바는 계정이 들고 있는
+#   카드 이름을 보여주므로 `EasyCare` 계정에서는 `EasyGo` 가 나오지 않는다(2026-09-22 실측).
+#   `[22]` 에서 이미 같은 부류를 고쳤다. 다국어와 무관하게 ko 에서도 깨지는 자리였다.
+# ★ 대신 **이 케이스가 검증한다고 적어둔 것**을 실제로 단언한다(카드번호·잔액).
+#   종전에는 `CLICKUP-PARTIAL` 사유가 "카드번호·잔액 자체는 미단언"이었는데 그게 해소된다.
+- extendedWaitUntil:
+    visible:
+      id: "cashbeecardnumber"
+    timeout: 20000
 - assertVisible:
-    text: "${EASY_GO_CARD_TEXT}"
+    id: "txvBalanceAmt"
 - assertVisible:
     text: "${MONTHLY_USAGE}"
 - assertVisible:
@@ -1220,11 +1253,17 @@ appId: ${APP_ID}
     start: "50%, 30%"
     end: "50%, 80%"
 - waitForAnimationToEnd
-# ">" 아이콘 element ID: imgvArrow
+# ⛔ 2026-09-23: 종전 `id: imgvArrow`(">" 아이콘)는 **`clickable=false`** 다 —
+#   탭이 `COMPLETED` 로 찍히는데 아무 일도 일어나지 않는다(높이 0 노드 탭과 같은 부류).
+#   실제로 누를 수 있는 건 잔액 행 컨테이너 **`llBalance`**(`clickable=true`)이고,
+#   그걸 누르면 `[30]` 이 보려던 GME Pay 상세(`toolbar_title`="GME Pay")가 열린다(실측).
+# ⚠️ 도달을 강제한다 — 탭이 무반응이어도 조용히 넘어가지 않게.
 - tapOn:
-    id: "imgvArrow"
-- assertVisible:
-    text: "${GMEPAY_TITLE}"
+    id: "llBalance"
+- extendedWaitUntil:
+    visible:
+      text: "${GMEPAY_TITLE}"
+    timeout: 20000
 - assertVisible:
     text: "${TXT_BALANCE}"
 - pressKey: back
@@ -1273,7 +1312,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - waitForAnimationToEnd
 - assertVisible:
-    text: "비밀번호가 맞지 않습니다.*"
+    text: "${PIN_WRONG_PASSWORD}"
 # 일치: PIN <정상 PIN> 입력
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
 - tapOn: "1"
@@ -1341,11 +1380,22 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [33] [High] GME Shop - GME Shop 화면 진입 확인
 # ----------------------------------------------------------------
-# [32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨
+# ⛔ 2026-09-23: 종전 주석의 "[32] pressKey: back 후 바텀시트(충전/환불/쇼핑) 유지됨" 은
+#   이 빌드에서 **더 이상 맞지 않는다** — back 으로 나오면 시트가 닫힌 채 카드 화면으로 돌아온다.
+#   그대로 두면 `${SHOP_TEXT}` 를 못 찾고 죽는다(실제로 그렇게 실패했다).
+#   → 시트가 없으면 `uparrow` 로 다시 연다. 이미 열려 있으면 건드리지 않는다(누르면 닫힌다).
+- runFlow:
+    when:
+      notVisible:
+        text: "${SHOP_TEXT}"
+    commands:
+      - tapOn:
+          id: "uparrow"
+      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "${SHOP_TEXT}"
-    timeout: 5000
+    timeout: 10000
 - tapOn: "${SHOP_TEXT}"
 - waitForAnimationToEnd
 - assertVisible:
@@ -1370,7 +1420,7 @@ appId: ${APP_ID}
 #   2026-08-06 실기기에서 다시 "충전 계좌 / GME Wallet / 잔액"으로 되돌아옴.
 #   어느 쪽이든 통과하도록 정규식으로 둘 다 허용.
 - assertVisible:
-    text: "충전 계좌|GME Pay 잔액.*"
+    text: "${SHOP_PAY_ACCOUNT_LABEL}"
 - scroll
 - assertVisible:
     text: "${PAYMENT_AMOUNT_TEXT}"
@@ -1393,7 +1443,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - waitForAnimationToEnd
 - assertVisible:
-    text: "비밀번호가 맞지 않습니다.*"
+    text: "${PIN_WRONG_PASSWORD}"
 # 일치: PIN <정상 PIN> 입력
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
 - tapOn: "1"
@@ -1407,7 +1457,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible: "${LOGIN_SUCCESS}"
 - assertVisible:
-    text: ".*CU 3,000 원.*"
+    text: "${SHOP_PURCHASED_PRODUCT}"
 - tapOn: "${BTN_CONFIRM}"
 - waitForAnimationToEnd
 # 구매 완료 후 쿠폰 상세(바코드) 화면 노출 확인
@@ -1420,7 +1470,7 @@ appId: ${APP_ID}
 - tapOn: "${TXT_CANCEL}"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "기프트 카드를 취소하시겠습니까?"
+    text: "${SHOP_CANCEL_COUPON_CONFIRM}"
 - tapOn: "${BTN_YES}"
 - waitForAnimationToEnd
 - assertVisible:

@@ -178,7 +178,10 @@ foreach ($v in (Get-FlowVars $flow (@{}))) { $needed[$v] = $true }
 $needed["APP_ID"] = $true          # 헤더 appId 가 항상 쓴다
 # -ExtraEnv 는 **사람이 그 실행에만 의도적으로 주입한 값**이다 → 수집 결과와 무관하게 항상 넘긴다.
 foreach ($k in $extraKeys.Keys) { $needed[$k] = $true }
-if ($needed.Count -gt 1) {
+# ⚠️ `-gt 1` 이면 **플로우가 ${VAR} 를 하나도 안 쓸 때 필터가 통째로 꺼져** env 423개가
+#   그대로 넘어가고 명령행 길이 한도에 걸린다(2026-09-18 실측: id 만 쓰는 임시 플로우).
+#   `$needed` 에는 APP_ID 가 항상 들어가므로 조건 없이 늘 거른다.
+if ($needed.Count -ge 1) {
     $filtered = @()
     for ($i = 0; $i -lt $envArgs.Count; $i += 2) {
         $k = ($envArgs[$i + 1] -split '=', 2)[0]

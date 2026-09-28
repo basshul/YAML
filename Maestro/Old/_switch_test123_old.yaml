@@ -175,7 +175,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd

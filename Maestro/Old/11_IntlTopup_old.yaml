@@ -160,12 +160,12 @@ appId: ${APP_ID}
 # 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
 - scrollUntilVisible:
     element:
-      text: ".*모바일 충전.*"
+      text: "${HOME_TOPUP_BILL}"
     direction: DOWN
     timeout: 25000
     visibilityPercentage: 20
 - tapOn:
-    text: ".*모바일 충전.*"
+    text: "${HOME_TOPUP_BILL}"
 - extendedWaitUntil:
     visible:
       id: "international_topUp"
@@ -214,6 +214,7 @@ appId: ${APP_ID}
     id: "phone_number_input_field"
 - inputText: "000"
 - hideKeyboard
+# ★ 2026-09-23 실측: 이 검증 문구는 **영문 UI 에서도 한국어** 다 → 변수화 대상이 아니다.
 - assertVisible:
     text: "6자 이상으로 입력해 주세요"
 - assertVisible:
@@ -348,12 +349,12 @@ appId: ${APP_ID}
 #   ⚠️ 앱은 PIN 입력 전까지 잔액을 검증하지 않으므로, 잔액이 부족하면 여기서 서버가 거부한다.
 - extendedWaitUntil:
     visible:
-      text: "충전이 완료|완료되었습니다|성공|오류|실패|Insufficient|insufficient"
+      text: "${TOPUP_RESULT_ANY}"
     timeout: 120000
 - takeScreenshot: "shots_11_intltopup_old/08_충전결과"
 # 성공 판정 — 실패 응답이면 여기서 FAIL로 드러난다(조용히 통과하지 않게 한다).
 - assertVisible:
-    text: ".*(충전이 완료|완료되었습니다|성공).*"
+    text: "${TOPUP_SUCCESS}"
 
 # ================================================================
 # 홈 복귀

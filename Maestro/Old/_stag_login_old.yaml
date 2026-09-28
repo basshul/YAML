@@ -98,7 +98,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 #   → PIN이 설정되지 않은 채 넘어간다(06_Registration 결함 #1과 같은 부류).
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - tapOn: "2"
@@ -108,7 +108,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
       # PIN 재입력 화면 도달 확정 — 이전 화면에도 input_dot_1이 있어 id로는 전환을 판정할 수 없다
       - extendedWaitUntil:
           visible:
-            text: ".*간편 비밀번호를 다시 입력.*"
+            text: "${LOCK_REENTER_PROMPT}"
           timeout: 20000
       - tapOn: "1"
       - tapOn: "2"

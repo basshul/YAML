@@ -48,7 +48,7 @@ appId: ${APP_ID}
 #   optional 이라 아무것도 안 잡혀도 죽지 않는다(그 경우 아래 분기들이 순차로 처리한다).
 - extendedWaitUntil:
     visible:
-      text: "Server Override|4자리 숫자를 입력하세요|${REG_NEW_MEMBER}|.*간편 비밀번호를 생성.*"
+      text: "Server Override|${PIN_ENTER_4DIGIT}|${REG_NEW_MEMBER}|${LOCK_CREATE_PROMPT}"
     timeout: 30000
     optional: true
 
@@ -104,7 +104,7 @@ appId: ${APP_ID}
 # ---------------------------------------------------------------
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - tapOn: "2"
@@ -113,7 +113,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible:
-            text: ".*간편 비밀번호를 다시 입력.*"
+            text: "${LOCK_REENTER_PROMPT}"
           timeout: 20000
       - tapOn: "1"
       - tapOn: "2"

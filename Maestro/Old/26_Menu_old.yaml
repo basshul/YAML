@@ -150,8 +150,15 @@ appId: ${APP_ID}
     visible:
       text: "${AUTO_DEBIT_TITLE_TEXT}"
     timeout: 20000
+# ⛔ 2026-09-23: 종전 `${MAIN_ACCOUNT_TEXT}`("기본 계좌") 문구 단언은 **en 에서 깨진다** —
+#   이 빌드의 기본 계좌 표시는 **텍스트가 아니라 아이콘**이다(`llMainAccountSection` 안의
+#   `imgvMainAccount`). 계좌 목록 어디에도 그 문구가 없다(실측).
+#   → 언어와 무관한 id 로 단언한다. 목록 자체(`accountListRv`)도 함께 봐서
+#     "목록은 떴는데 기본 계좌 표시가 없다"와 "화면이 안 떴다"를 구분한다.
 - assertVisible:
-    text: "${MAIN_ACCOUNT_TEXT}"
+    id: "accountListRv"
+- assertVisible:
+    id: "imgvMainAccount"
 
 # ----------------------------------------------------------------
 # [01-1] [Low] 은행 계좌 연결 → [?](csButton) → 고객센터 팝업 발생 확인
@@ -240,6 +247,9 @@ appId: ${APP_ID}
     visible:
       id: "txt_user_email"
     timeout: 15000
+# ★ 2026-09-23 en 실행으로 확인: `한국어 주소` 는 **영문 UI 에서도 그대로 보인다**
+#   (지점 화면이 한국어 주소를 별도 섹션으로 보여준다) → 변수화 대상이 아니다.
+#   19_IssueCertificate 의 증명서명과 같은 부류다 — 빼면 오히려 깨진다.
 - tapOn: "${INIT_BRANCH_TITLE}"
 - extendedWaitUntil:
     visible:

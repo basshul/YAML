@@ -100,6 +100,20 @@ env:
           commands:
             - tapOn: "허용"
             - waitForAnimationToEnd
+# clearState 로 앱 언어가 한국어로 초기화된다 → en 실행이면 여기서 영어로 바꾼다
+#   (`01_03`·`01_05`·`01_Login_screen`·`05_InitialScreen` 과 같은 패턴. 2026-09-18 이식).
+#   ko 는 `LANG_SWITCH_TRIGGER=__NEVER_MATCH__` 라 통째로 SKIP 되어 평소 동작은 그대로다.
+#   ⚠️ 언어를 바꾸면 **앱이 재시작**되고 Server Override 스플래시가 **다시 뜬다** → 재처리한다.
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+      - runFlow: "_server_override_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "btn_lgn"
@@ -157,7 +171,7 @@ env:
 # 화면 문구: "앱에서 사용할 간편 비밀번호를 생성해 주세요" → 부분매칭 정규식으로 판정
 - runFlow:
     when:
-      visible: ".*간편 비밀번호를 생성.*"
+      visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - tapOn: "1"
       - waitForAnimationToEnd
@@ -210,6 +224,19 @@ env:
 #     헬퍼는 닫히는 팝업이 없어질 때까지 반복하고, 상한(times)이 있어 무한 루프에 빠지지 않는다.
 - runFlow:
     file: _dismiss_popups_stag_old.yaml
+# ⚠️ **`btnTransfer` 로 홈을 판정하지 말 것** — 구 UI 홈은 스크롤 위치를 유지해서 상단 카드가
+#   화면 밖일 수 있고, **영문은 문구가 길어 레이아웃이 밀린다**(2026-09-18 en 실행에서 실패).
+#   → 하단 내비로 홈 도달을 먼저 확정하고, 상단 카드는 끌어올린 뒤 본다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       id: "btnTransfer"
