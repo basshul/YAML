@@ -149,7 +149,12 @@ adb shell wm size && adb shell wm density     # 해상도·DPI 를 기록해 둔
 ## 실행 후
 
 - 결과는 `suite_logs\<타임스탬프>\`에 항목별 `.log` + `SUMMARY.md`로 남는다.
-- **스크린샷은 러너가 회수한다** — `takeScreenshot` 은 CWD 에 떨어뜨리지만(경로 옵션이 없다)
-  실행 직후 `shots_runs\<yyyyMMdd_HHmmss>_<플로우>\` 로 옮겨진다. 루트에 png 가 쌓이면 회수가 안 된 것이다.
+- **스크린샷은 러너가 회수한다** — `takeScreenshot` 은 maestro 산출물 폴더
+  (`~/.maestro/tests/<시각>/<플로우파일명>/takeScreenshot/`)에 떨어지고, 실행 직후
+  `shots_runs\<yyyyMMdd_HHmmss>_<플로우>\` 로 복사된다(원본은 산출물에 남는다).
+  회수가 0장이면 러너가 **경고를 찍는다** — 조용히 넘어가지 않는다.
   ⚠️ 폴더명이 `shots_` 로 시작해야 `.gitignore` 가 걸러낸다.
+  실패하면 maestro 가 스스로 남긴 **화면 + 그 시점의 뷰 계층(json)**이 같은 폴더의
+  `_maestro\` 하위에 짝으로 들어온다(파일명 동일, 확장자만 다름) — 기기를 다시 잡지 않고
+  실패 순간을 보고, 셀렉터가 왜 안 맞았는지는 json 으로 확인한다.
 - 실패했으면 `maestro-debug` 스킬로 진단한다. **환경 문제와 코드 결함을 먼저 구분할 것.**

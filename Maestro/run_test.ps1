@@ -208,25 +208,92 @@ Write-Host "Running: $($cmd -join ' ')"
 $exitCode = $LASTEXITCODE
 
 # ── 실행 후 스크린샷 회수 ────────────────────────────────────────────────
-#   `takeScreenshot` 은 **CWD** 에 `<이름>.png` 로 떨어뜨린다(경로 지정 옵션이 없다).
-#   그대로 두면 실행마다 루트에 쌓이고 **같은 이름은 조용히 덮인다**.
-#   한 번 치우는 걸로는 끝나지 않는다 — 2026-09-02에 정리했는데 하루 만에 39개가 다시 쌓였고,
-#   2026-09-10 정리에서는 191개(37MB)가 나왔다 → 실행 직후 **실행별 폴더**로 옮긴다.
-#   ⚠️ 폴더명은 반드시 `shots_` 로 시작한다 — `.gitignore(shots_*/)` 와 `sync_from_source.ps1`
-#      이 그 접두사로 걸러낸다. 다른 이름을 쓰면 산출물이 저장소에 딸려 들어간다.
+#   `takeScreenshot` 은 **CWD 가 아니라** maestro 산출물 폴더에 떨어진다(2026-09-29 실측, 2.10.0):
+#     ~/.maestro/tests/<yyyy-MM-dd_HHmmss>/<플로우파일명>/takeScreenshot/<이름>.png
+#   같은 폴더의 `manifest.json` 이 `TAKE_SCREENSHOT` 항목에 장수를 적어 둔다 → 회수 검산에 쓴다.
+#   maestro 가 **스스로 남기는 것**(실패 지점·assert 평가)은 `screenshots/`(화면)와
+#   `screen-hierarchy/`(그 시점 뷰 계층, 파일명은 같고 확장자만 다르다)에 쌓인다 →
+#   케이스 증적과 섞지 않도록 `shots_runs\<시각>_<플로우>\_maestro\` 하위로 같이 회수한다.
+#   ⚠️ 종전 코드는 CWD(`$here`)에서 `*.png` 를 찾았다. 옛 버전은 실제로 CWD 에 떨궜지만
+#      2.10.0 에서는 0장이라 회수 블록이 통째로 건너뛰어졌고, **아무 말 없이** 증적이
+#      저장소로 안 들어왔다 → 소스를 산출물 폴더로 바꾸고, 0장이면 경고를 찍는다.
+#      (루트에 남아 있을 수 있는 잔여 png 도 계속 걷어 간다.)
+#   ⚠️ 폴더명은 반드시 `shots_` 로 시작한다 — `.gitignore(shots_*/)` 가 그 접두사로 걸러낸다.
+#      다른 이름을 쓰면 산출물이 저장소에 딸려 들어간다.
 #   ⚠️ maestro 의 종료 코드를 먼저 붙잡아 두고 마지막에 그대로 돌려준다 —
 #      run_suite.ps1 이 `$LASTEXITCODE` 로 성패를 가른다.
 
-$shotSrc = $here
-$shotDst = $here
-$shots = @(Get-ChildItem -LiteralPath $shotSrc -Filter "*.png" -File -ErrorAction SilentlyContinue |
+$flowName  = [IO.Path]::GetFileNameWithoutExtension($flow)   # 산출물 폴더 이름 = 플로우 파일명
+$tag       = $flowName -replace '[^\w가-힣]', '_'            # 저장 폴더 이름(안전 문자만)
+$dstDir    = Join-Path $here ("shots_runs\{0}_{1}" -f $runStart.ToString("yyyyMMdd_HHmmss"), $tag)
+$testsRoot = Join-Path $HOME ".maestro\tests"
+
+# 이번 실행이 만든 산출물 폴더 = $runStart 이후에 갱신되고 이 플로우 이름의 하위 폴더를 가진 것
+$runDir = Get-ChildItem -LiteralPath $testsRoot -Directory -ErrorAction SilentlyContinue |
+          Where-Object { $_.LastWriteTime -ge $runStart.AddSeconds(-5) -and
+                         (Test-Path -LiteralPath (Join-Path $_.FullName $flowName)) } |
+          Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+$shots    = @()
+$fails    = @()        # maestro 가 스스로 찍는 화면(실패 지점·assert 평가)
+$trees    = @()        # 그 시점의 뷰 계층 — 셀렉터가 왜 안 맞았는지는 이쪽에 답이 있다
+$expected = $null      # manifest 가 말하는 takeScreenshot 장수(없으면 $null)
+if ($runDir) {
+    $artDir = Join-Path $runDir.FullName $flowName
+    $shots  = @(Get-ChildItem -LiteralPath (Join-Path $artDir "takeScreenshot")   -Filter "*.png"  -File -ErrorAction SilentlyContinue)
+    $fails  = @(Get-ChildItem -LiteralPath (Join-Path $artDir "screenshots")      -Filter "*.png"  -File -ErrorAction SilentlyContinue)
+    $trees  = @(Get-ChildItem -LiteralPath (Join-Path $artDir "screen-hierarchy") -Filter "*.json" -File -ErrorAction SilentlyContinue)
+    $mf = Join-Path $artDir "manifest.json"
+    if (Test-Path -LiteralPath $mf) {
+        try {
+            $e = (Get-Content -LiteralPath $mf -Raw -Encoding UTF8 | ConvertFrom-Json).entries |
+                 Where-Object { $_.kind -eq "TAKE_SCREENSHOT" } | Select-Object -First 1
+            $expected = if ($e) { [int]$e.count } else { 0 }
+        } catch { $expected = $null }
+    }
+}
+
+# 옛 버전 호환: CWD 에 떨어진 잔여 png 도 같이 회수한다
+$stray = @(Get-ChildItem -LiteralPath $here -Filter "*.png" -File -ErrorAction SilentlyContinue |
            Where-Object { $_.LastWriteTime -ge $runStart })
-if ($shots.Count) {
-    $tag = [IO.Path]::GetFileNameWithoutExtension($flow) -replace '[^\w가-힣]', '_'
-    $dir = Join-Path $shotDst ("shots_runs\{0}_{1}" -f $runStart.ToString("yyyyMMdd_HHmmss"), $tag)
-    New-Item -ItemType Directory -Path $dir -Force | Out-Null
-    $shots | Move-Item -Destination $dir -Force
-    Write-Host ("스크린샷 {0}장 → shots_runs\{1}" -f $shots.Count, (Split-Path -Leaf $dir)) -ForegroundColor DarkGray
+
+# 이 플로우가 애초에 스크린샷을 찍는가 — 0장일 때 경고할지 조용히 넘길지 가른다.
+#   ⚠️ `commands.json` 으로는 못 가린다: **실행된 명령만** 적히므로 중간에 실패하면 뒤가 통째로 빈다.
+$wantsShots = [bool](Select-String -LiteralPath $flow -Pattern 'takeScreenshot' -SimpleMatch -Quiet -ErrorAction SilentlyContinue)
+
+if ($shots.Count -or $stray.Count -or $fails.Count -or $trees.Count) {
+    New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+    # 파일 이름에 `[01-1]` 처럼 대괄호가 들어간다 → 반드시 -LiteralPath (와일드카드로 해석되면 못 찾는다)
+    foreach ($f in $shots) { Copy-Item -LiteralPath $f.FullName -Destination $dstDir -Force }  # 원본은 산출물에 남긴다
+    foreach ($f in $stray) { Move-Item -LiteralPath $f.FullName -Destination $dstDir -Force }  # 루트 오염은 걷어낸다
+    $msg = "스크린샷 {0}장" -f ($shots.Count + $stray.Count)
+    if ($fails.Count -or $trees.Count) {
+        # 케이스 증적(`takeScreenshot`)과 섞지 않는다 — 이름 규칙도 의미도 다르다.
+        # 화면과 뷰 계층은 파일명이 같고 확장자만 다르다(`step-027-...png` / `.json`) → 한 폴더에 짝으로 둔다.
+        $failDir = Join-Path $dstDir "_maestro"
+        New-Item -ItemType Directory -Path $failDir -Force | Out-Null
+        foreach ($f in $fails) { Copy-Item -LiteralPath $f.FullName -Destination $failDir -Force }
+        foreach ($f in $trees) { Copy-Item -LiteralPath $f.FullName -Destination $failDir -Force }
+        $extra = @()
+        if ($fails.Count) { $extra += ("실패화면 {0}장" -f $fails.Count) }
+        if ($trees.Count) { $extra += ("뷰계층 {0}건" -f $trees.Count) }
+        $msg += (" + {0}(_maestro\)" -f ($extra -join " · "))
+    }
+    Write-Host ("{0} → shots_runs\{1}" -f $msg, (Split-Path -Leaf $dstDir)) -ForegroundColor DarkGray
+}
+
+# 케이스 증적 회수 여부는 따로 판정한다 — 실패 산출물이 있다고 증적이 들어온 건 아니다.
+if ($shots.Count -or $stray.Count) {
+    if ($null -ne $expected -and $shots.Count -lt $expected) {
+        Write-Warning ("스크린샷 회수 누락 — manifest 는 {0}장인데 {1}장만 회수했다: {2}" -f $expected, $shots.Count, $dstDir)
+    }
+} elseif (-not $runDir) {
+    Write-Warning ("스크린샷 회수 0장 — maestro 산출물 폴더를 못 찾았다: {0}\<시각>\{1} (증적이 저장소에 안 들어온다)" -f $testsRoot, $flowName)
+} elseif ($wantsShots) {
+    $why = if ($exitCode -ne 0) { " — 플로우가 중간에 실패해 촬영 지점에 못 갔을 수 있다" } else { "" }
+    Write-Warning ("스크린샷 회수 0장{0}. 산출물: {1}" -f $why, (Join-Path $runDir.FullName $flowName))
+} else {
+    Write-Host "스크린샷 없음 (이 플로우에 takeScreenshot 이 없다)" -ForegroundColor DarkGray
 }
 
 exit $exitCode
