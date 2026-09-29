@@ -35,8 +35,10 @@ env:
 # 간편비밀번호 잠금화면을 명시적으로 대기 후 PIN <정상 PIN>
 - extendedWaitUntil:
     visible:
-      id: "input_dot_1|bottom_item_home"
+      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
     timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
 # PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
 #   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
 #   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)

@@ -43,6 +43,8 @@ appId: ${APP_ID}
       - tapOn:
           id: "button1"
       - waitForAnimationToEnd
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
 - runFlow:
     when:
       visible:

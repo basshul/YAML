@@ -49,7 +49,7 @@ appId: ${APP_ID}
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "input_dot_1|bottom_item_home|button1"
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
     timeout: 60000
 - runFlow:
     when:
@@ -83,8 +83,10 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible:
-            id: "input_dot_1|bottom_item_home"
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
           timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
 # PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기 필수 —
 #   없으면 maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력됨(누적되면 계정 잠금 위험).
 - runFlow:

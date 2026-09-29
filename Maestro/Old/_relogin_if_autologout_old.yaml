@@ -1,0 +1,112 @@
+appId: ${APP_ID}
+env:
+  # 로그인 비밀번호 끝 한 글자의 **보안키패드 라벨**("느낌표"=`!` / "골뱅이"=`@`).
+  # ⚠️ env 파일에 없는 키라 `--env` 로 들어오지 않는다 → 여기 기본값이 유일한 출처다.
+  #   비밀번호가 바뀌면 이 파일과 `01_01_Login_Success_old.yaml` **두 곳**을 같이 고칠 것.
+  PW_CUR_LAST: "느낌표"
+---
+# ================================================================
+# 공통 헬퍼: 자동 로그아웃 후 재인증 화면 복구 (2026-09-29 신설)
+# ================================================================
+# 언제 뜨나 — LIVETEST 세션은 **로그인 시점부터 약 10분** 뒤 죽는다(2026-09-29 실측:
+#   로그인 14:17:33 → 401 14:27:51 / 14:30:59 → 14:41:13, 오차 4초).
+#   중간에 플로우가 정상 동작해도 죽는다 = **활동과 무관한 절대 TTL**이다.
+#   그 뒤 앱이 처음 호출하는 API(`ConfirmPassword` 등)가
+#   `{"ErrorCode":"1","Msg":"Unauthorised access.","Lokalise":"http_response_401"}` 를 받고
+#   `AutoLogoutActivity` 를 띄운 뒤 **로그인 비밀번호 재입력 화면**으로 떨어진다.
+#
+# 화면 식별 (실측 뷰 계층) — 잠금화면도 로그인화면도 아니다:
+#   `rootViewLogin` > `toolbarLayout`("비밀번호를 입력하세요", id 없음)
+#   `securityKeyboardEditText`(EditText, 힌트 `********`) / `transKeypad_main`(보안키패드)
+#   ⚠️ **`usernameId` 가 없다** — 그래서 아이디칸이 있는 정상 로그인 화면([01_01] `[02]`)과
+#     구분된다. 이 헬퍼는 그 구분을 조건으로 쓰므로 로그인 플로우에 넣어도 오작동하지 않는다.
+#
+# ⛔ **재시도 금지.** 로그인 실패는 누적되고 **6회째에 계정이 잠긴다**([[project_suite_design]]).
+#   이 헬퍼는 **한 번만** 시도한다. 실패하면 뒤따르는 대기가 타임아웃되며 죽게 두는 게 맞다 —
+#   `times:` 나 repeat 로 감싸지 말 것.
+# ⚠️ 보안키패드는 **앱 언어를 따르지 않는다**(화면 버튼은 COMPLETE 인데 접근성 라벨은 한국어).
+#   그래서 키 라벨은 변수화하지 않고 한국어로 고정한다 — en 실행에서도 같다.
+# ⚠️ 한 `when:` 에 visible 과 notVisible 을 같이 쓰는 문법은 이 저장소에 전례가 없다.
+#   35개 파일이 부르는 헬퍼라 파싱이 깨지면 **전 플로우가 죽는다** → 검증된 중첩으로 간다.
+- runFlow:
+    when:
+      visible:
+        id: "securityKeyboardEditText"
+    commands:
+    - runFlow:
+        when:
+          notVisible:
+            id: "usernameId"
+        commands:
+          # 키패드가 이미 열려 있으면 칸을 다시 누르지 않는다.
+          # ⚠️ `securityKeyboardEditText` 탭 직후 `transKeypad_row4` 를 누르면 문자가 하나 더
+          #   입력돼 비밀번호가 깨진다([[project_14_deposit]] 실제 사고) → 탭은 칸 하나만.
+          - runFlow:
+              when:
+                notVisible:
+                  id: "transKeypad_main"
+              commands:
+                - tapOn:
+                    id: "securityKeyboardEditText"
+                - waitForAnimationToEnd
+          # 대문자 G — 키패드가 소문자면 먼저 전환한다.
+          - runFlow:
+              when:
+                notVisible: "Capital G 히읃"
+              commands:
+                - tapOn: "대문자 키보드 변경"
+                - waitForAnimationToEnd
+          - tapOn: "Capital G 히읃"
+          - tapOn: "m 으"
+          - tapOn: "e 디귿"
+          - tapOn: "t 시옫"
+          - tapOn: "e 디귿"
+          - tapOn: "s 니은"
+          - tapOn: "t 시옫"
+          - tapOn: "1"
+          - tapOn: "특수문자변경"
+          - tapOn: "${PW_CUR_LAST}"
+          - tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+          - waitForAnimationToEnd
+          # 로그인 직후 뜰 수 있는 것들 — 전부 조건부다.
+          - runFlow:
+              when:
+                visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+              commands:
+                - tapOn: "${REG_LATER}"
+                - waitForAnimationToEnd
+          # 간편 비밀번호 재설정 요구(입력 2회) — 기존 PIN 이 살아 있으면 안 뜬다.
+          - runFlow:
+              when:
+                visible: "${LOCK_CREATE_PROMPT}"
+              commands:
+                - tapOn: "1"
+                - waitForAnimationToEnd
+                - tapOn: "2"
+                - waitForAnimationToEnd
+                - tapOn: "1"
+                - waitForAnimationToEnd
+                - tapOn: "2"
+                - waitForAnimationToEnd
+                - tapOn: "1"
+                - waitForAnimationToEnd
+                - tapOn: "2"
+                - waitForAnimationToEnd
+                - tapOn: "1"
+                - waitForAnimationToEnd
+                - tapOn: "2"
+                - waitForAnimationToEnd
+                - runFlow:
+                    when:
+                      visible:
+                        id: "btnOk"
+                    commands:
+                      - tapOn:
+                          id: "btnOk"
+                      - waitForAnimationToEnd
+          # 호출자의 진입 가드가 이어받을 수 있는 상태까지만 데려다 놓는다
+          # (잠금화면이면 PIN 가드가, 홈이면 팝업 가드가 받는다).
+          - extendedWaitUntil:
+              visible:
+                id: "input_dot_1|bottom_item_home"
+              timeout: 60000

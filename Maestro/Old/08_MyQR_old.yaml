@@ -72,7 +72,7 @@ appId: ${APP_ID}
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "input_dot_1|bottom_item_home|button1"
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
     timeout: 60000
 - runFlow:
     when:
@@ -106,8 +106,10 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
       - extendedWaitUntil:
           visible:
-            id: "input_dot_1|bottom_item_home"
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
           timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
 # PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
 - runFlow:
     when:

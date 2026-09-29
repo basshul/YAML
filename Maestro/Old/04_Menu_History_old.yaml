@@ -32,7 +32,7 @@ appId: ${APP_ID}
 #   세 갈래 중 하나가 반드시 온다: 서버선택 / 잠금화면 / (세션 살아있으면) 홈.
 - extendedWaitUntil:
     visible:
-      id: "input_dot_1|bottom_item_home|button1"
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
     timeout: 60000
 - runFlow:
     when:
@@ -67,8 +67,10 @@ appId: ${APP_ID}
       # CONTINUE 후 잠금화면이 뜨는 데도 시간이 걸린다
       - extendedWaitUntil:
           visible:
-            id: "input_dot_1|bottom_item_home"
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
           timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
 # 잠금화면을 명시적으로 대기한 뒤 PIN 입력(캐시된 홈에 먼저 매칭되는 레이스 회피).
 # 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수 — 오입력 누적은 계정 잠금이다.
 - runFlow:
