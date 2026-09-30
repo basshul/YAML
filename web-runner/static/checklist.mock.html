@@ -37,11 +37,10 @@
     /* 필터 이름은 셀렉트 밖에 둔다 — 안에 넣으면 선택지처럼 보이고, 고르고 나면 사라진다 */
     .filters label.f { display: flex; align-items: center; gap: 6px; }
     .filters label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
-    .filters select, .filters input[type=search] {
+    .filters select {
       padding: 6px 9px; border: 1px solid #ccd2d9; border-radius: 6px;
       font-size: 12px; font-family: inherit; background: #fff;
     }
-    .filters input[type=search] { flex: 1; min-width: 160px; }
 
     table.cl { width: 100%; border-collapse: collapse; }
     table.cl th, table.cl td {
@@ -218,16 +217,12 @@
           <option>빠진 것만</option>
         </select>
       </label>
-      <label class="f"><span>매핑</span>
-        <select><option selected>전체</option><option>미매핑만</option><option>매핑됨만</option><option>자동화 불가만</option></select>
-      </label>
       <label class="f"><span>중요도</span>
         <select><option selected>전체</option><option>High</option><option>Medium</option><option>Low</option></select>
       </label>
       <label class="f"><span>결과</span>
         <select><option selected>전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
       </label>
-      <input type="search" placeholder="확인 항목 검색…">
     </div>
 
     <table class="cl">
