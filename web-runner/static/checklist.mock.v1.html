@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>체크리스트 목업 v1 — 분리형</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 목업 전용. 확정되면 style.css 로 옮긴다. */
+    main.wide { flex-direction: column; align-items: stretch; }
+
+    .mockbar {
+      background: #fff5e5; color: #7a5115; font-size: 12px;
+      padding: 7px 20px; border-bottom: 1px solid #f0dfc0;
+    }
+
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+    .tabs button.on { background: #2f4053; border-color: #2f4053; color: #fff; font-weight: 600; }
+
+    /* 매핑 진척 */
+    .cov { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .cov .barwrap { flex: 1; margin: 0; height: 10px; }
+    .cov .bar { background: #2f9e44; }
+    .cov .bar.part { background: #96631a; }
+
+    /* 결과 보기 — 지금 화면의 결과 칸이 '어느 실행 것'인지 정하는 단 하나의 셀렉트 */
+    .basisrow {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 9px 11px; margin-bottom: 12px;
+      background: #f5f7fa; border: 1px solid #e3e8ee; border-radius: 6px;
+    }
+    .basisrow > label { font-size: 12px; color: #48505a; font-weight: 600; }
+    .basisrow select { font-size: 12px; min-width: 330px; }
+    .basisrow .muted { font-size: 11px; }
+
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 10px; }
+    /* 필터 이름은 셀렉트 밖에 둔다 — 안에 넣으면 선택지처럼 보이고, 고르고 나면 사라진다 */
+    .filters label.f { display: flex; align-items: center; gap: 6px; }
+    .filters label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
+    .filters select {
+      padding: 6px 9px; border: 1px solid #ccd2d9; border-radius: 6px;
+      font-size: 12px; font-family: inherit; background: #fff;
+    }
+
+    table.cl { width: 100%; border-collapse: collapse; }
+    table.cl th, table.cl td {
+      text-align: left; padding: 7px 8px; border-bottom: 1px solid #eceff2;
+      font-size: 12px; vertical-align: top;
+    }
+    table.cl th { color: #6b7480; font-weight: 600; white-space: nowrap; }
+    table.cl tr:hover td { background: #f7f9fc; }
+
+    .c-id    { width: 78px; }
+    .c-pri   { width: 72px; }
+    .c-depth { width: 168px; }
+    .c-map   { width: 150px; }
+    .c-res   { width: 136px; }
+    .c-cmt   { width: 194px; }
+
+    .id { font-family: "Cascadia Mono", Consolas, monospace; font-size: 11px; color: #2f5bb7; font-weight: 600; }
+    .depth { color: #6b7480; font-size: 11px; line-height: 1.5; }
+    .depth b { color: #48505a; font-weight: 600; display: block; }
+
+    .txt { line-height: 1.5; }
+    .txt[contenteditable]:focus { outline: 2px solid #2f6feb; border-radius: 3px; background: #fff; }
+    .edited { border-left: 2px solid #2f6feb; padding-left: 6px; }
+    .edited::after {
+      content: "수정됨 · 저장 안 됨"; display: block;
+      font-size: 10px; color: #2f5bb7; margin-top: 2px;
+    }
+
+    /* 매핑은 한 줄 텍스트. 클릭하면 그 자리에서 고친다. */
+    .map {
+      font-family: "Cascadia Mono", Consolas, monospace; font-size: 11px;
+      color: #2f4058; white-space: nowrap;
+      padding: 3px 6px; border-radius: 4px; border: 1px solid transparent;
+    }
+    .map:hover { border-color: #ccd2d9; background: #fff; }
+    .map:focus { outline: none; border-color: #2f6feb; background: #fff; }
+    .map.none { color: #96631a; font-style: italic; font-family: inherit; }
+    /* 저장할 때 -DumpJson 에 없는 이름이면 이렇게 표시한다 */
+    .map.bad { color: #a02c2c; border-color: #e8b4b4; background: #fdeeee; }
+    /* 자동화 불가 = 「매핑 안 됨」의 한 갈래. 사유는 Comment 에 적는다. */
+    .map.none.manual { color: #6b3fa0; font-style: normal; }
+    .unmapped td { background: #fffaf0; }
+
+    /* 결과 수동 입력 — 엑셀에 실제로 쓰이는 값만 고를 수 있게 한다.
+       (정본에 'pass' 소문자 5건과 확인 문구가 결과칸에 들어간 행이 섞여 있다) */
+    .rsel {
+      width: 100%; font-size: 11px; padding: 4px 6px;
+      border: 1px solid #ccd2d9; border-radius: 5px; background: #fff;
+      font-family: inherit; color: #8b939e;
+    }
+    .rsel.set { color: #1b1f24; font-weight: 600; }
+    .rsel.over { border-color: #f0c98a; background: #fffaf0; }
+
+    /* 출처 — 이 값이 실행에서 나온 건지 사람이 고친 건지. 셀렉트만 두면 이게 사라진다. */
+    .prov { display: block; font-size: 10px; color: #8b939e; margin-top: 3px; line-height: 1.4; }
+    .prov a { color: #2f5bb7; }
+    .prov.over { color: #96631a; }
+    /* 실행이 채웠지만 아직 엑셀에 안 나간 값 */
+    .pend { color: #2f6feb; font-weight: 600; }
+    .prov.over b { color: #d43c3c; }
+
+    /* Comment — 엑셀 J열. 이미 "(aos)" / "- ios :" 접두사 관례가 쓰이고 있어 그대로 따른다. */
+    .cmt {
+      display: block; font-size: 11px; line-height: 1.5; color: #48505a;
+      padding: 3px 6px; border-radius: 4px; border: 1px solid transparent; min-height: 22px;
+    }
+    .cmt:hover { border-color: #ccd2d9; background: #fff; }
+    .cmt:focus { outline: none; border-color: #2f6feb; background: #fff; }
+    .cmt:empty::before { content: "—"; color: #c3c9d1; }
+    /* 자동값을 덮었는데 사유가 비어 있으면 저장을 막는다 */
+    .cmt.need { border-color: #e8b4b4; background: #fdeeee; }
+    .cmt.need:empty::before { content: "덮어쓴 사유를 적어야 저장됩니다"; color: #a02c2c; }
+    /* 사유의 정본은 저장소다. 엑셀 J열에 원래 있던 메모는 읽어서 같이 보여주되 고치지 않는다. */
+    .cmt .from { display: block; font-size: 10px; color: #a8b0ba; margin-top: 2px; }
+    .cmt.xlsx { color: #6b7480; background: #f7f9fc; border-color: #eceff2; }
+    .cmt.xlsx:hover { border-color: #eceff2; }
+    .rsel:focus { outline: none; border-color: #2f6feb; }
+    .manualrow td { background: #faf7ff; }
+    .manualrow:hover td { background: #f4eeff; }
+    .unmapped:hover td { background: #fff5e5; }
+
+    .res { display: block; font-weight: 600; }
+    .res .when { display: block; font-weight: normal; color: #8b939e; font-size: 10px; margin-top: 1px; }
+    .res a { color: #2f5bb7; }
+    .na { color: #8b939e; }
+
+    .badge {
+      display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px;
+    }
+    .badge.auto   { background: #eef4ff; color: #2f5bb7; }
+    .badge.manual { background: #eceff2; color: #6b7480; }
+    .badge.na     { background: #eceff2; color: #8b939e; }
+
+    .areahead td {
+      background: #eef1f5; font-weight: 700; font-size: 12px; color: #2f4058;
+      border-bottom: 1px solid #dfe3e8;
+    }
+    .areahead .right { float: right; font-weight: normal; color: #6b7480; font-size: 11px; }
+
+    .footbar {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff2; font-size: 12px;
+    }
+    .note { font-size: 11px; color: #8b939e; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Maestro Web Runner</h1>
+  <span class="tag">데모</span>
+  <span class="conn">연결됨 · SharePoint 캐시 2026-09-30 10:12</span>
+  <nav class="topnav">
+    <a href="/">실행 화면</a>
+    <a href="/history.html">실행 이력</a>
+    <a href="#" class="on">체크리스트</a>
+  </nav>
+</header>
+
+<div class="mockbar">
+  <strong>목업 v1 · 분리형</strong> — 체크리스트가 <b>독립 화면</b>이고 실행은 기존 「실행 화면」이 맡는 안.
+  <b>비교용으로 남겨 둔 것</b>이며 v2 로 대체될 수 있습니다 →
+  <a href="checklist.mock.v2.html">v2 (통합형) 보기</a><br>
+  동작하지 않습니다(필터·버튼 모두). 실제로는 <b>413행이 영역별로 이어집니다</b> —
+  여기 보이는 3개 영역 14행은 서로 다른 상태를 보여주려고 <b>발췌</b>한 것입니다.
+  Telecom 8행의 내용은 SharePoint 정본에서 실제로 읽어온 값입니다.
+</div>
+
+<main class="wide">
+
+  <div class="tabs">
+    <button class="on" type="button">① 체크리스트 · 매핑</button>
+    <button type="button">② 실행 결과에서 보이는 모습</button>
+  </div>
+
+  <!-- ─────────── ① 체크리스트 · 매핑 ─────────── -->
+  <section class="panel">
+    <h2>체크리스트
+      <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span>
+      <span class="spacer"></span>
+      <button class="ghost small" type="button">엑셀에서 다시 읽기</button>
+      <button class="primary small" type="button">엑셀에 저장 (16)</button>
+    </h2>
+
+    <div class="basisrow">
+      <label for="basis">결과 보기</label>
+      <select id="basis">
+        <optgroup label="자동 실행 (suite_logs)">
+          <option selected>최신 결과 — 항목마다 가장 최근 실행</option>
+          <option>2026-09-29 16:48 · 5항목 · SM-S928N · 7.21.0-stag</option>
+          <option>2026-09-29 15:36 · 5항목 · SM-S928N · 7.21.0-stag</option>
+          <option>2026-09-28 17:38 · 1항목 · SM-S928N · 7.21.0-stag</option>
+          <option>2026-09-23 17:08 · 25항목 · SM-S911N · 7.20.0-stag</option>
+        </optgroup>
+        <optgroup label="엑셀">
+          <option>엑셀 현재값 — I열에 지금 적혀 있는 것</option>
+        </optgroup>
+      </select>
+      <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 지난 실행 기록은 고치지 않습니다.</span>
+    </div>
+
+    <div class="cov">
+      <span><b>매핑 168 / 413</b></span>
+      <div class="barwrap">
+        <div class="bar" style="width:41%; float:left"></div>
+        <div class="bar part" style="width:9%; float:left"></div>
+      </div>
+      <span class="muted">자동 168 · <b style="color:#96631a">자동화 불가 37</b> · 미분류 208</span>
+    </div>
+
+    <div class="filters">
+      <label class="f"><span>영역</span>
+        <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
+      </label>
+      <label class="f" title="기준은 위 「결과 보기」 에서 고른 실행입니다"><span>이번 실행</span>
+        <select>
+          <option selected>전체 (413행)</option>
+          <option>테스트한 것만</option>
+          <option>빠진 것만</option>
+        </select>
+      </label>
+      <label class="f"><span>중요도</span>
+        <select><option selected>전체</option><option>High</option><option>Medium</option><option>Low</option></select>
+      </label>
+      <label class="f"><span>결과</span>
+        <select><option selected>전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
+      </label>
+    </div>
+
+    <table class="cl">
+      <thead>
+        <tr>
+          <th class="c-id">ID</th>
+          <th class="c-pri">중요도</th>
+          <th class="c-depth">분류</th>
+          <th>확인 항목 <span class="muted">(클릭해서 수정)</span></th>
+          <th class="c-map">매핑 <span class="muted">(시나리오 [케이스])</span></th>
+          <th class="c-res">Android</th>
+          <th class="c-res">iOS</th>
+          <th class="c-cmt">Comment <span class="muted">(엑셀 J열)</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="areahead"><td colspan="8">Telecom <span class="right">8행 · 매핑 8 · 최근 실행 2026-09-29 16:48</span></td></tr>
+
+        <tr>
+          <td><span class="id">TEL-001</span></td>
+          <td>Low</td>
+          <td class="depth"><b>GME Mobile</b>Home</td>
+          <td class="txt" contenteditable>홈화면 이동 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [01]</span></td>
+          <td><select class="rsel set"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
+              <span class="prov">자동 · <a href="#">2026-09-29 16:48</a> · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-002</span></td>
+          <td>Low</td>
+          <td class="depth"><b>GME Mobile</b>Contact us</td>
+          <td class="txt" contenteditable>CS 팝업 발생 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [02]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable>(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-003</span></td>
+          <td>Medium</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt" contenteditable>Mobile SIM 선택 시 요금제 선택 페이지 발생 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [03]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-004</span></td>
+          <td>Medium</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt" contenteditable>Apply for line sim / Pre-paid 상품 선택시 요금제 발생 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [04]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-005</span></td>
+          <td>Medium</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt edited" contenteditable>임의의 요금제 선택 시 New Number / Same Number 선택 페이지 발생 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [05]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-006</span></td>
+          <td>High</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt" contenteditable>New Number 상품 요금제 정상신청 동작 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [06]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-007</span></td>
+          <td>High</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt" contenteditable>Same Number 상품 요금제 정상신청 동작 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [07]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">TEL-008</span></td>
+          <td>High</td>
+          <td class="depth"><b>GME Mobile</b>GME Mobile</td>
+          <td class="txt" contenteditable>Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인</td>
+          <td><span class="map" contenteditable>18_Telecom [08]</span></td>
+          <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
+              <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr class="areahead"><td colspan="8">HOME <span class="right">29행 · 매핑 21 · <b>미매핑 8</b></span></td></tr>
+
+        <tr>
+          <td><span class="id">HOM-001</span></td>
+          <td>Low</td>
+          <td class="depth"><b>Notification</b>Notification</td>
+          <td class="txt" contenteditable>알림 내역 표시 확인</td>
+          <td><span class="map" contenteditable>09_Home [07]</span></td>
+          <td><select class="rsel set"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
+              <span class="prov">자동 · <a href="#">2026-09-29 16:48</a> · <b class="pend">미기입</b></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt xlsx">- ios : 알림 아이콘이 사라지지 않음<span class="from">엑셀 J열에 원래 있던 메모 · 고치지 않음</span></span></td>
+        </tr>
+
+        <tr class="unmapped">
+          <td><span class="id">HOM-003</span></td>
+          <td>Medium</td>
+          <td class="depth"><b>Notification</b>Notification</td>
+          <td class="txt" contenteditable>알림 삭제 동작 확인</td>
+          <td><span class="map none" contenteditable>매핑 안 됨</span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr class="unmapped">
+          <td><span class="id">HOM-006</span></td>
+          <td>Medium</td>
+          <td class="depth"><b>Account</b>GME Wallet</td>
+          <td class="txt" contenteditable>GME Wallet Number 노출 확인</td>
+          <td><span class="map none" contenteditable>매핑 안 됨</span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr class="areahead"><td colspan="8">Card <span class="right">3행 · 매핑 2 · <b>자동화 불가 1</b></span></td></tr>
+
+        <tr>
+          <td><span class="id">CRD-001</span></td>
+          <td>High</td>
+          <td class="depth"><b>View Booking History</b>GME Mobile</td>
+          <td class="txt" contenteditable>Balance 선택 시 GME PAY 잔액 노출 확인</td>
+          <td><span class="map" contenteditable>21_Card [01]</span></td>
+          <td><select class="rsel set"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
+              <span class="prov">자동 · <a href="#">2026-09-29 15:36</a></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable></span></td>
+        </tr>
+
+        <tr>
+          <td><span class="id">CRD-002</span></td>
+          <td>High</td>
+          <td class="depth"><b>Recharge_Wallet</b>Simple Password</td>
+          <td class="txt" contenteditable>간편비밀번호 일치 시 충전동작 확인</td>
+          <td><span class="map" contenteditable>21_Card [21]</span></td>
+          <td><select class="rsel set over"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
+              <span class="prov over">직접 수정 · 자동은 <b>Fail</b> · <a href="#">2026-09-29 15:36</a></span></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable>(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
+        </tr>
+
+        <tr class="manualrow">
+          <td><span class="id">CRD-003</span></td>
+          <td>High</td>
+          <td class="depth"><b>Recharge_Wallet</b>Biometric</td>
+          <td class="txt" contenteditable>생체인식 일치 시 충전동작 확인</td>
+          <td><span class="map none manual" contenteditable>매핑 안 됨 (자동화 불가)</span></td>
+          <td><select class="rsel"><option selected>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
+          <td><span class="cmt" contenteditable>(aos) 자동화 불가 — 생체인증 필요<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footbar">
+      <span class="muted"><b class="pend">기입 대기 12건</b>(자동) · 사람 수정 4건<span class="muted"> (문구 3 · 매핑 0 · 결과 1)</span></span>
+      <span class="spacer"></span>
+      <button class="ghost small" type="button">되돌리기</button>
+      <button class="primary small" type="button">엑셀에 저장 (16)</button>
+    </div>
+
+    <p class="note">
+      <b class="pend">기입 대기</b> = 실행이 채웠지만 <b>아직 엑셀에 없는 값</b>입니다.
+      저장을 눌러야 나갑니다 — 실행만으로는 엑셀이 채워지지 않습니다.<br>
+      ⛔ <b>자동 <code>Fail</code> 은 기입 대기에 들어가지 않습니다.</b> 「확인 대기」라서,
+      사람이 최종값을 고른 뒤에야 사람 수정 쪽으로 넘어갑니다.<br>
+      <b>기본은 전체 413행입니다.</b> 실행한 항목에 따라 목록이 줄어들지 않습니다 —
+      이번에 테스트한 것만 보려면 <b>「이번 실행 → 테스트한 것만」</b> 필터를 씁니다.
+      그 필터의 기준은 위 <b>「결과 보기」</b> 에서 고른 실행이고, <code>최신 결과</code> 를
+      고른 상태에서는 기준이 정해지지 않아 전체만 보입니다.<br>
+      기입 대상은 <b>언제나 <code>I11:I423</code></b> 입니다 — 릴리스 버전은 보지 않습니다.
+      첫 데이터 행이 11행이라 <code>I11</code> 부터 시작합니다.
+      다만 앞쪽에 열이 삽입되면 <code>I</code> 가 다른 칸을 가리키므로,
+      저장 직전에 <b><code>I9</code> 가 <code>Android Result</code> 인지</b> 한 칸만 확인하고 진행합니다.<br>
+      ⚠️ 저장은 <b>고친 셀만</b> SharePoint 에 PATCH 합니다(같은 통합 문서의 다른 시트·다른 사람 편집에 영향 없음).<br>
+      <b>사유의 정본은 저장소</b>입니다. 엑셀 J열에는 사람이 읽으라고 <b>한 줄만 덧붙입니다</b>(사본).
+      한 칸에 플랫폼·실행이 섞여 쌓이는 구조라, 기계가 읽을 원본은 따로 둡니다.<br>
+      엑셀 J열에 <b>원래 있던 메모는 읽어서 같이 보여주되 고치지 않습니다</b>(위 회색 칸).
+      덧붙일 때는 기존 내용을 지우지 않고, 접두사는 정본에서 이미 쓰는
+      <code>(aos)</code> / <code>- ios :</code> / <code>- aos/ios :</code> 관례를 따릅니다.<br>
+      매핑은 엑셀이 아니라 저장소(<code>checklist_map.json</code>)에 저장됩니다 — 엑셀을 나중에 놓더라도 남습니다.<br>
+      <b>자동으로 채워진 칸도 사람이 고칠 수 있습니다</b> — 외부 요인·셋팅 불량으로 Fail 이 났지만
+      사람이 보면 정상인 경우가 있습니다. 대신 <b>고치면 누가 넣은 값인지 표시가 바뀝니다</b>:
+      <code>자동</code> → <code>직접 수정 · 자동은 Fail</code>. 원래 실행값이 무엇이었는지는 지워지지 않습니다.<br>
+      <b>덮어쓸 때는 Comment 에 사유가 있어야 저장됩니다.</b> 3개월 뒤 같은 케이스가 또 Fail 날 때
+      "그때 왜 덮었더라"를 답할 수 있는 건 이 한 줄뿐입니다.
+    </p>
+    <table class="cl" style="max-width:720px; margin-top:4px">
+      <thead><tr><th style="width:86px">값</th><th>뜻</th><th style="width:150px">누가 넣나</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pass</b></td><td>확인했고 정상</td><td>자동 / 수동</td></tr>
+        <tr><td><b>Fail</b></td><td>확인했고 결함</td><td>수동 <span class="muted">(자동 Fail 은 확인 대기로 둔다)</span></td></tr>
+        <tr><td><b>Not Test</b></td><td>확인하지 못함</td><td>수동 <span class="muted">(자동으로는 넣지 않는다)</span></td></tr>
+        <tr><td><b>NA</b></td><td>해당 없음 — <b>확인할 화면·기능이 없음</b></td><td>자동 <span class="muted">(run_suite 의 <code>na</code>)</span> / 수동</td></tr>
+      </tbody>
+    </table>
+    <p class="note">
+      「결과 보기」를 바꾸면 결과 두 열이 <b>그 시점 값</b>으로 바뀝니다. 자동 실행을 고르면
+      <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 지난 실행 기록을, 엑셀을 고르면 I열의 현재값을 봅니다.<br>
+      <b>자동화 불가 행은 결과를 비워 둡니다.</b> 매핑 칸에 <code>매핑 안 됨 (자동화 불가)</code> 로 적고,
+      왜 못 하는지는 Comment 에 남깁니다. 사람이 수동으로 확인하면 그때 결과를 고르면 됩니다.<br>
+      ⚠️ <code>Not Test</code> 와 <code>NA</code> 는 다릅니다. <b>Not Test = 못 했다</b>(언젠가 해야 함),
+      <b>NA = 할 것이 없다</b>(영영 없음). 섞이면 "남은 일"이 몇 건인지 셀 수 없게 됩니다.
+      Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
+      생체인증이 <b>빈칸</b> 인 것은 <b>화면은 있는데 자동화가 못 닿아</b> 아직 아무도 확인하지 않았기 때문입니다.
+    </p>
+  </section>
+
+  <!-- ─────────── ② 실행 결과에서 보이는 모습 ─────────── -->
+  <section class="panel" style="margin-top:14px">
+    <h2>② 실행 결과에서 보이는 모습 <span class="muted">— 실행 이력 화면의 항목을 펼쳤을 때</span></h2>
+
+    <section class="panel summary pass" style="margin:0">
+      <div class="headline">18_Telecom — PASS</div>
+      <div>2026-09-29 16:48 · 33스텝 · 00:47 · <code>SM-S928N</code> · 7.21.0-stag · LiveTest</div>
+
+      <div class="stats" style="margin-top:10px">
+        <div class="stat pass"><b>1</b><span>Pass</span></div>
+        <div class="stat fail"><b>0</b><span>Fail</span></div>
+        <div class="stat skip"><b>7</b><span>NA</span></div>
+        <div class="stat"><b>0</b><span>미커버</span></div>
+      </div>
+
+      <table>
+        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
+        <tbody>
+          <tr><td><span class="id">TEL-001</span></td><td>홈화면 이동 확인</td><td>[01]</td>
+              <td class="st-PASS">Pass</td></tr>
+          <tr><td><span class="id">TEL-002</span></td><td>CS 팝업 발생 확인</td><td>[02]</td>
+              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
+          <tr><td><span class="id">TEL-003</span></td><td>Mobile SIM 선택 시 요금제 선택 페이지 발생 확인</td><td>[03]</td>
+              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
+          <tr><td colspan="4" class="muted">… TEL-004 ~ TEL-008 동일 (NA)</td></tr>
+        </tbody>
+      </table>
+
+      <p class="note" style="margin-top:10px">
+        이 표는 <b>실행한 그때 값으로 남습니다</b>(<code>suite_logs/2026-09-29_164807/checklist.json</code>).<br>
+        나중에 체크리스트 문구를 고치거나 행을 지워도 <b>이 기록은 그대로</b>입니다 — 그래야 지난 리포트가 흔들리지 않습니다.
+      </p>
+    </section>
+
+    <section class="panel summary fail" style="margin-top:10px">
+      <div class="headline">21_Card — FAIL</div>
+      <div>2026-09-29 15:36 · 118스텝 · 04:12 · <code>[22]</code> 에서 실패</div>
+
+      <table>
+        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
+        <tbody>
+          <tr><td><span class="id">CRD-001</span></td><td>Balance 선택 시 GME PAY 잔액 노출 확인</td><td>[01]</td>
+              <td class="st-PASS">Pass</td></tr>
+          <tr><td><span class="id">CRD-002</span></td><td>간편비밀번호 일치 시 충전동작 확인</td><td>[21]</td>
+              <td class="muted">미확인 <span style="font-size:11px">— 실패 지점 이전까지만 진행</span></td></tr>
+          <tr><td><span class="id">CRD-003</span></td><td>생체인식 일치 시 충전동작 확인</td><td>[22]</td>
+              <td class="st-FAIL">Fail</td></tr>
+        </tbody>
+      </table>
+
+      <p class="warn" style="margin-top:10px">
+        자동 Fail 은 체크리스트에 <b>바로 기입하지 않고 「확인 대기」로 둡니다.</b>
+        외부 요인·셋팅 불량으로 난 Fail 이 그대로 릴리스 판단에 실리면 안 되고, 반대로 조용히 무시돼서도 안 됩니다
+        — 사람이 체크리스트 화면에서 최종값을 고릅니다(고치면 <code>직접 수정 · 자동은 Fail</code> 로 남습니다).<br>
+        실패 지점 <b>이후</b> 케이스는 "확인함"이 아니라 <b>미확인</b>입니다 — 여기까지 Fail 로 적으면 하지 않은 확인을 했다고 적는 셈이 됩니다.
+      </p>
+    </section>
+  </section>
+
+</main>
+</body>
+</html>
