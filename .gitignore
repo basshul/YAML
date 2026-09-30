@@ -8,7 +8,15 @@ shots_*/
 *.png
 *.zip
 
-Maestro/suite_logs/
+# ★ 2026-09-30: **result.json 만 예외로 추적한다.**
+#   실행 결과(항목별 PASS/FAIL·스텝·소요·사유)에는 PII 가 없다 — 실측으로 확인했다
+#   (SUMMARY 28건: 이메일 0 / 계정ID 0). PII 는 항목 로그(*.log) 쪽에만 있다(이메일 13 / 계정ID 32).
+#   이걸 git 에 두면 **다른 PC 실행분이 git 으로 합류하고 백업이 생긴다.**
+#   ⛔ 폴더를 통째로 제외하면 하위 파일을 되살릴 수 없다 → `/*` 로 내용만 막고 폴더는 열어 둔다.
+Maestro/suite_logs/*
+!Maestro/suite_logs/*/
+Maestro/suite_logs/*/*
+!Maestro/suite_logs/*/result.json
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
 

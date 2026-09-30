@@ -555,15 +555,61 @@ def _parse_summary(path: Path) -> dict | None:
     }
 
 
+def _parse_result_json(path: Path) -> dict | None:
+    """run_suite.ps1 이 쓰는 기계용 결과(result.json). 2026-09-30 신설.
+
+    SUMMARY.md 는 **사람이 읽는 문서**다 — 아래 `_parse_summary` 가 그걸 정규식으로 긁는데,
+    문구를 손보는 순간 조용히 깨진다. 이쪽이 정본이고 SUMMARY 파싱은 옛 실행용 폴백이다.
+    이 파일만 git 에 추적되므로 **다른 PC 실행분도 git 으로 합류한다.**
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or "items" not in data:
+        return None
+
+    c = data.get("counts") or {}
+    h = data.get("hosts") or {}
+    stag = int(h.get("stag") or 0)
+    live = bool(data.get("live"))
+    return {
+        "stamp": data.get("stamp") or path.parent.name,
+        "items": [
+            {"group": i.get("group", ""), "name": i.get("name", ""),
+             "status": i.get("status", ""), "steps": str(i.get("steps", "")),
+             "elapsed": i.get("elapsed", ""), "reason": i.get("reason") or ""}
+            for i in data.get("items") or []
+        ],
+        "counts": {"PASS": int(c.get("pass") or 0), "FAIL": int(c.get("fail") or 0),
+                   "SKIP": int(c.get("skip") or 0)},
+        "total": int(c.get("total") or 0),
+        "elapsed": data.get("elapsed") or "",
+        "est": data.get("estMin"),
+        "device": data.get("device") or "",
+        "resolution": data.get("resolution") or "",
+        "build": (data.get("build") or "").strip(),
+        "server": "운영(Live)" if live else "LiveTest",
+        "lang": data.get("lang") or "",
+        "hosts": {"livetest": int(h.get("livetest") or 0), "stag": stag},
+        "aborted": bool(data.get("aborted")),
+        # stag 빌드인데 STAG 서버 트래픽이 섞였으면 그 실행 결과는 신뢰할 수 없다
+        "server_mixed": bool(not live and stag > 0),
+    }
+
+
 def read_history(limit: int = 50) -> list[dict]:
-    """최근 실행부터 돌려준다. 폴더 이름이 곧 시각이라 이름 역순이 시간 역순이다."""
+    """최근 실행부터 돌려준다. 폴더 이름이 곧 시각이라 이름 역순이 시간 역순이다.
+
+    result.json 이 있으면 그걸 쓰고, 없으면 SUMMARY.md 를 파싱한다(2026-09-30 이전 실행).
+    """
     if not SUITE_LOGS_DIR.exists():
         return []
     runs = []
     for d in sorted(SUITE_LOGS_DIR.iterdir(), reverse=True):
         if not d.is_dir() or not _STAMP.match(d.name):
             continue
-        parsed = _parse_summary(d / "SUMMARY.md")
+        parsed = _parse_result_json(d / "result.json") or _parse_summary(d / "SUMMARY.md")
         if parsed:
             runs.append(parsed)
         if len(runs) >= limit:

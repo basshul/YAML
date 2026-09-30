@@ -797,4 +797,42 @@ $mdPath = Join-Path $logDir "SUMMARY.md"
 $md -join "`n" | Out-File $mdPath -Encoding UTF8
 Write-Host "요약: $mdPath" -ForegroundColor DarkGray
 
+# ----------------------------------------------------------------
+# result.json — **기계가 읽는** 실행 결과 (2026-09-30 신설)
+# ----------------------------------------------------------------
+#   왜 따로 쓰나:
+#     ① SUMMARY.md 는 **사람이 읽는 문서**다. web-runner 가 그걸 정규식으로 파싱하고 있어서
+#        문구를 손보는 순간 조용히 깨진다. 기계용 산출물을 갈라 둔다.
+#     ② 이 파일만 **git 에 추적한다**(.gitignore 참고). 그래서 다른 PC 실행분도 git 으로 합류하고
+#        백업이 생긴다. 원시 로그(*.log)는 계정ID·이메일이 들어 있어 계속 제외다.
+#
+#   ⛔ **담을 필드를 고른다. 빼는 방식으로 쓰지 말 것.**
+#     `-Balance` 를 주면 SUMMARY 에 실제 잔액이, 자동충전을 쓰면 충전액이 찍힌다(위 786·783행).
+#     "지금은 미지정이라 괜찮다"에 기대면 언젠가 샌다 → 아래 목록에 없는 건 안 나간다.
+#     금액(잔액·충전액)은 의도적으로 제외했다.
+$resultObj = [ordered]@{
+    schema     = 1
+    stamp      = $stamp
+    lang       = $Lang
+    groups     = @($Group)
+    build      = $EffAppId
+    live       = [bool]$IsLive
+    device     = $devSerial
+    resolution = $devRes
+    elapsed    = $swAll.Elapsed.ToString("hh\:mm\:ss")
+    estMin     = $totalEst
+    aborted    = [bool]$aborted
+    counts     = [ordered]@{ total = $results.Count; pass = $pass; fail = $fail; skip = $skipN
+                             blocked = $blk; na = $naN }
+    hosts      = [ordered]@{ livetest = $hLive; stag = $hStag }
+    items      = @($results | ForEach-Object {
+        [ordered]@{ group = $_.Group; name = $_.Name; status = $_.Status
+                    steps = $_.Steps; elapsed = $_.Elapsed; reason = $_.Reason
+                    blocked = $_.Blocked; na = $_.Na; log = $_.Log }
+    })
+}
+$jsonPath = Join-Path $logDir "result.json"
+$resultObj | ConvertTo-Json -Depth 5 | Out-File $jsonPath -Encoding UTF8
+Write-Host "결과(JSON): $jsonPath" -ForegroundColor DarkGray
+
 if ($fail -gt 0 -or $aborted) { exit 1 } else { exit 0 }
