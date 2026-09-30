@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>체크리스트 목업 v2 — 통합형</title>
+  <title>체크리스트 목업 v3 — 실행 화면 기반</title>
   <link rel="stylesheet" href="style.css">
   <style>
     /* 목업 전용. 확정되면 style.css 로 옮긴다. */
@@ -170,6 +170,25 @@
       margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff2; font-size: 12px;
     }
     .note { font-size: 11px; color: #8b939e; line-height: 1.6; }
+
+    /* ── v3 전용: 실행 화면의 2단 구성을 유지한다 ─────────────── */
+    main.two { flex-direction: row; align-items: flex-start; }
+    .col-left  { flex: 0 0 340px; }
+    .col-right { flex: 1; min-width: 0; }
+    .panel.tight { padding: 12px 14px; }
+    .panel.tight h2 { margin-bottom: 9px; }
+    .runbtns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .runbtns button.primary { flex: 1; }
+    .sumline { font-size: 12px; line-height: 1.7; }
+    .sumline b { color: #2f5bb7; }
+    .sumline .warn2 { display: block; color: #7a5115; font-size: 11px; margin-top: 4px; }
+    /* 좁아진 오른쪽 칸에서 표가 가로로 넘칠 때만 스크롤 */
+    .clwrap { overflow-x: auto; }
+    .clwrap table.cl { min-width: 880px; }
+    @media (max-width: 900px) {
+      main.two { flex-direction: column; }
+      .col-left { flex: none; }
+    }
   </style>
 </head>
 <body>
@@ -179,56 +198,88 @@
   <span class="tag">데모</span>
   <span class="conn">연결됨 · SharePoint 캐시 2026-09-30 10:12</span>
   <nav class="topnav">
-    <a href="#" class="on">체크리스트</a>
+    <a href="#" class="on">실행 · 체크리스트</a>
     <a href="/history.html">실행 이력</a>
   </nav>
 </header>
 
 <div class="mockbar">
-  <strong>목업 v2 · 통합형</strong> — 실행 화면을 체크리스트에 <b>합치고</b>,
-  진행·로그는 <b>실행 상세</b> 별도 페이지로 뺀 안. 테스트 선택 패널이 없어지고
-  체크리스트 자체가 선택 화면이 됩니다 →
-  <a href="checklist.mock.v1.html">v1 (분리형)</a> · <a href="checklist.mock.v3.html">v3 (실행 화면 기반)</a><br>
+  <strong>목업 v3 · 실행 화면 기반</strong> — v2 와 같은 요구(실행+체크리스트 통합, 진행·로그는 별도 페이지)를
+  <b>기존 실행 화면의 2단 구성</b>으로 푼 안. 왼쪽 칸이 <b>조작판</b>(환경·실행·저장)이고 오른쪽이 체크리스트 본문입니다 →
+  <a href="checklist.mock.v1.html">v1 (분리형)</a> · <a href="checklist.mock.v2.html">v2 (통합형)</a><br>
   동작하지 않습니다(필터·버튼 모두). 실제로는 <b>413행이 영역별로 이어집니다</b> —
   여기 보이는 3개 영역 14행은 서로 다른 상태를 보여주려고 <b>발췌</b>한 것입니다.
   Telecom 8행의 내용은 SharePoint 정본에서 실제로 읽어온 값입니다.
 </div>
 
-<main class="wide">
+<main class="two">
 
-  <div class="tabs">
-    <button class="on" type="button">체크리스트 (메인 화면)</button>
-    <button type="button">실행 상세 — 행이나 실행을 누르면 열리는 별도 페이지</button>
+  <div class="col col-left">
+
+    <section class="panel tight envpanel">
+      <h2>실행 환경</h2>
+      <div class="field">
+        <label>서버</label>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="srv" checked> LiveTest</label>
+          <label class="choice live"><input type="radio" name="srv"> 운영(Live)</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="dev">기기</label>
+        <div class="row">
+          <select id="dev"><option>SM-S928N · R3CX608N6GY</option></select>
+          <button class="ghost" type="button">새로고침</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>플랫폼</label>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="plat" checked> Android</label>
+          <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel tight">
+      <h2>실행</h2>
+      <div class="sumline">
+        선택 <b>9행</b> → 시나리오 <b>2개</b><br>
+        <code>18_Telecom</code> · <code>21_Card</code> · 예상 <b>5분</b>
+        <span class="warn2">⚠️ 행은 케이스 단위지만 <b>실행은 시나리오 단위</b>입니다 —
+          <code>21_Card</code> 는 1행만 골라도 22개 케이스가 통째로 돕니다.</span>
+      </div>
+      <div class="runbtns">
+        <button class="primary" type="button">실행</button>
+        <button type="button">전체 실행</button>
+        <button class="danger hidden" type="button">중단</button>
+        <button class="ghost" type="button">선택 해제</button>
+      </div>
+      <p class="note" style="margin-top:9px">
+        실행을 누르면 <b>실행 상세</b> 페이지가 열려 진행이 보입니다.
+      </p>
+    </section>
+
+    <section class="panel tight">
+      <h2>엑셀 <span class="muted">I11:I423</span></h2>
+      <div class="sumline">
+        <b class="pend">기입 대기 12건</b>(자동)<br>
+        사람 수정 4건 <span class="muted">(문구 3 · 매핑 0 · 결과 1)</span>
+      </div>
+      <div class="runbtns">
+        <button class="primary" type="button">엑셀에 저장 (16)</button>
+        <button class="ghost" type="button">다시 읽기</button>
+        <button class="ghost" type="button">되돌리기</button>
+      </div>
+    </section>
+
   </div>
 
-  <!-- ─────────── ① 체크리스트 · 매핑 ─────────── -->
-  <section class="panel">
-    <h2>체크리스트
-      <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span>
-      <span class="spacer"></span>
-      <button class="ghost small" type="button">엑셀에서 다시 읽기</button>
-      <button class="ghost small" type="button">엑셀에 저장 (16)</button>
-      <span class="vbar"></span>
-      <button class="danger small hidden" type="button">중단</button>
-      <button class="primary small" type="button">실행</button>
-      <button class="small" type="button">전체 실행</button>
-    </h2>
+  <div class="col col-right">
+    <section class="panel">
+      <h2>체크리스트 <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span></h2>
 
-    <div class="envrow">
-      <label class="f"><span>서버</span>
-        <select><option selected>LiveTest (stag 빌드 · 서버 강제)</option><option>운영(Live) — 실자금</option></select>
-      </label>
-      <label class="f"><span>기기</span>
-        <select><option selected>SM-S928N · R3CX608N6GY</option></select>
-      </label>
-      <label class="f"><span>플랫폼</span>
-        <select><option selected>Android</option><option disabled>iOS (준비 중)</option></select>
-      </label>
-      <span class="spacer"></span>
-      <span class="muted">실행 중에는 <b>실행 상세</b> 페이지가 열려 진행이 보입니다.</span>
-    </div>
-
-    <div class="basisrow">
+      <div class="basisrow">
       <label for="basis">결과 보기</label>
       <select id="basis">
         <optgroup label="자동 실행 (suite_logs)">
@@ -245,7 +296,7 @@
       <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 지난 실행 기록은 고치지 않습니다.</span>
     </div>
 
-    <div class="cov">
+      <div class="cov">
       <span><b>매핑 168 / 413</b></span>
       <div class="barwrap">
         <div class="bar" style="width:41%; float:left"></div>
@@ -254,7 +305,7 @@
       <span class="muted">자동 168 · <b style="color:#96631a">자동화 불가 37</b> · 미분류 208</span>
     </div>
 
-    <div class="filters">
+      <div class="filters">
       <label class="f"><span>영역</span>
         <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
       </label>
@@ -273,7 +324,8 @@
       </label>
     </div>
 
-    <table class="cl">
+      <div class="clwrap">
+      <table class="cl">
       <thead>
         <tr>
           <th class="c-chk"><input type="checkbox"></th>
@@ -474,23 +526,9 @@
         </tr>
       </tbody>
     </table>
+      </div>
 
-    <div class="selbar">
-      <span>선택 <b>9행</b> → 실행 대상 <b>시나리오 2개</b>
-        (<code>18_Telecom</code> · <code>21_Card</code>) · 예상 <b>5분</b></span>
-      <span class="spacer"></span>
-      <span class="warn2">⚠️ 행은 케이스 단위지만 <b>실행은 시나리오 단위</b>입니다 —
-        <code>21_Card</code> 는 1행만 골라도 22개 케이스가 통째로 돕니다.</span>
-    </div>
-
-    <div class="footbar">
-      <span class="muted"><b class="pend">기입 대기 12건</b>(자동) · 사람 수정 4건<span class="muted"> (문구 3 · 매핑 0 · 결과 1)</span></span>
-      <span class="spacer"></span>
-      <button class="ghost small" type="button">되돌리기</button>
-      <button class="primary small" type="button">엑셀에 저장 (16)</button>
-    </div>
-
-    <p class="note">
+      <p class="note">
       <b class="pend">기입 대기</b> = 실행이 채웠지만 <b>아직 엑셀에 없는 값</b>입니다.
       저장을 눌러야 나갑니다 — 실행만으로는 엑셀이 채워지지 않습니다.<br>
       ⛔ <b>자동 <code>Fail</code> 은 기입 대기에 들어가지 않습니다.</b> 「확인 대기」라서,
@@ -535,9 +573,10 @@
       Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
       생체인증이 <b>빈칸</b> 인 것은 <b>화면은 있는데 자동화가 못 닿아</b> 아직 아무도 확인하지 않았기 때문입니다.
     </p>
-  </section>
+  
+    </section>
 
-  <!-- ─────────── 실행 상세 (별도 페이지) ─────────── -->
+    <!-- ─────────── 실행 상세 (별도 페이지) ─────────── -->
   <section class="panel" style="margin-top:14px">
     <h2>실행 상세
       <span class="muted">— 체크리스트에서 행이나 실행을 누르면 열리는 별도 페이지</span>
@@ -629,6 +668,9 @@ Assert that "GME 카드 - EasyCare" is visible... <span class="l-fail">FAILED</s
       </p>
     </section>
   </section>
+
+
+  </div>
 
 </main>
 </body>
