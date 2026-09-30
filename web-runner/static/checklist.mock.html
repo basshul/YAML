@@ -35,6 +35,31 @@
 
     .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 10px; }
     /* 필터 이름은 셀렉트 밖에 둔다 — 안에 넣으면 선택지처럼 보이고, 고르고 나면 사라진다 */
+    .vbar { width: 1px; height: 18px; background: #dfe3e8; margin: 0 4px; }
+
+    /* 실행 환경 — 실행 버튼과 같은 화면에 있어야 무엇으로 도는지 보인다 */
+    .envrow {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 9px 11px; margin-bottom: 12px;
+      background: #fbfcfd; border: 1px solid #e3e8ee; border-radius: 6px;
+    }
+    .envrow label.f { display: flex; align-items: center; gap: 6px; }
+    .envrow label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
+    .envrow select { font-size: 12px; }
+    .envrow .muted { font-size: 11px; }
+
+    /* 선택 → 실행 대상 요약. 행은 케이스 단위지만 실행은 시나리오 단위다. */
+    .selbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 11px; margin: 10px 0 0;
+      background: #eef4ff; border: 1px solid #cfe0ff; border-radius: 6px; font-size: 12px;
+    }
+    .selbar b { color: #2f5bb7; }
+    .selbar .warn2 { color: #7a5115; font-size: 11px; }
+
+    .c-chk { width: 30px; }
+    table.cl td.c-chk, table.cl th.c-chk { padding-right: 0; }
+
     .filters label.f { display: flex; align-items: center; gap: 6px; }
     .filters label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
     .filters select {
@@ -154,9 +179,8 @@
   <span class="tag">데모</span>
   <span class="conn">연결됨 · SharePoint 캐시 2026-09-30 10:12</span>
   <nav class="topnav">
-    <a href="/">실행 화면</a>
-    <a href="/history.html">실행 이력</a>
     <a href="#" class="on">체크리스트</a>
+    <a href="/history.html">실행 이력</a>
   </nav>
 </header>
 
@@ -167,8 +191,8 @@
 <main class="wide">
 
   <div class="tabs">
-    <button class="on" type="button">① 체크리스트 · 매핑</button>
-    <button type="button">② 실행 결과에서 보이는 모습</button>
+    <button class="on" type="button">체크리스트 (메인 화면)</button>
+    <button type="button">실행 상세 — 행이나 실행을 누르면 열리는 별도 페이지</button>
   </div>
 
   <!-- ─────────── ① 체크리스트 · 매핑 ─────────── -->
@@ -177,8 +201,26 @@
       <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span>
       <span class="spacer"></span>
       <button class="ghost small" type="button">엑셀에서 다시 읽기</button>
-      <button class="primary small" type="button">엑셀에 저장 (16)</button>
+      <button class="ghost small" type="button">엑셀에 저장 (16)</button>
+      <span class="vbar"></span>
+      <button class="danger small hidden" type="button">중단</button>
+      <button class="primary small" type="button">실행</button>
+      <button class="small" type="button">전체 실행</button>
     </h2>
+
+    <div class="envrow">
+      <label class="f"><span>서버</span>
+        <select><option selected>LiveTest (stag 빌드 · 서버 강제)</option><option>운영(Live) — 실자금</option></select>
+      </label>
+      <label class="f"><span>기기</span>
+        <select><option selected>SM-S928N · R3CX608N6GY</option></select>
+      </label>
+      <label class="f"><span>플랫폼</span>
+        <select><option selected>Android</option><option disabled>iOS (준비 중)</option></select>
+      </label>
+      <span class="spacer"></span>
+      <span class="muted">실행 중에는 <b>실행 상세</b> 페이지가 열려 진행이 보입니다.</span>
+    </div>
 
     <div class="basisrow">
       <label for="basis">결과 보기</label>
@@ -228,6 +270,7 @@
     <table class="cl">
       <thead>
         <tr>
+          <th class="c-chk"><input type="checkbox"></th>
           <th class="c-id">ID</th>
           <th class="c-pri">중요도</th>
           <th class="c-depth">분류</th>
@@ -239,9 +282,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="areahead"><td colspan="8">Telecom <span class="right">8행 · 매핑 8 · 최근 실행 2026-09-29 16:48</span></td></tr>
+        <tr class="areahead"><td colspan="9"><input type="checkbox" checked> Telecom <span class="right">8행 · 매핑 8 · 최근 실행 2026-09-29 16:48</span></td></tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-001</span></td>
           <td>Low</td>
           <td class="depth"><b>GME Mobile</b>Home</td>
@@ -254,6 +298,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-002</span></td>
           <td>Low</td>
           <td class="depth"><b>GME Mobile</b>Contact us</td>
@@ -266,6 +311,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-003</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -278,6 +324,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-004</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -290,6 +337,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-005</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -302,6 +350,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-006</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -314,6 +363,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-007</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -326,6 +376,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">TEL-008</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -337,9 +388,10 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr class="areahead"><td colspan="8">HOME <span class="right">29행 · 매핑 21 · <b>미매핑 8</b></span></td></tr>
+        <tr class="areahead"><td colspan="9"><input type="checkbox"> HOME <span class="right">29행 · 매핑 21 · <b>미매핑 8</b></span></td></tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox"></td>
           <td><span class="id">HOM-001</span></td>
           <td>Low</td>
           <td class="depth"><b>Notification</b>Notification</td>
@@ -352,6 +404,7 @@
         </tr>
 
         <tr class="unmapped">
+          <td class="c-chk"><input type="checkbox"></td>
           <td><span class="id">HOM-003</span></td>
           <td>Medium</td>
           <td class="depth"><b>Notification</b>Notification</td>
@@ -363,6 +416,7 @@
         </tr>
 
         <tr class="unmapped">
+          <td class="c-chk"><input type="checkbox"></td>
           <td><span class="id">HOM-006</span></td>
           <td>Medium</td>
           <td class="depth"><b>Account</b>GME Wallet</td>
@@ -373,9 +427,10 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr class="areahead"><td colspan="8">Card <span class="right">3행 · 매핑 2 · <b>자동화 불가 1</b></span></td></tr>
+        <tr class="areahead"><td colspan="9"><input type="checkbox"> Card <span class="right">3행 · 매핑 2 · <b>자동화 불가 1</b></span></td></tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox" checked></td>
           <td><span class="id">CRD-001</span></td>
           <td>High</td>
           <td class="depth"><b>View Booking History</b>GME Mobile</td>
@@ -388,6 +443,7 @@
         </tr>
 
         <tr>
+          <td class="c-chk"><input type="checkbox"></td>
           <td><span class="id">CRD-002</span></td>
           <td>High</td>
           <td class="depth"><b>Recharge_Wallet</b>Simple Password</td>
@@ -400,6 +456,7 @@
         </tr>
 
         <tr class="manualrow">
+          <td class="c-chk"><input type="checkbox"></td>
           <td><span class="id">CRD-003</span></td>
           <td>High</td>
           <td class="depth"><b>Recharge_Wallet</b>Biometric</td>
@@ -411,6 +468,14 @@
         </tr>
       </tbody>
     </table>
+
+    <div class="selbar">
+      <span>선택 <b>9행</b> → 실행 대상 <b>시나리오 2개</b>
+        (<code>18_Telecom</code> · <code>21_Card</code>) · 예상 <b>5분</b></span>
+      <span class="spacer"></span>
+      <span class="warn2">⚠️ 행은 케이스 단위지만 <b>실행은 시나리오 단위</b>입니다 —
+        <code>21_Card</code> 는 1행만 골라도 22개 케이스가 통째로 돕니다.</span>
+    </div>
 
     <div class="footbar">
       <span class="muted"><b class="pend">기입 대기 12건</b>(자동) · 사람 수정 4건<span class="muted"> (문구 3 · 매핑 0 · 결과 1)</span></span>
@@ -466,9 +531,43 @@
     </p>
   </section>
 
-  <!-- ─────────── ② 실행 결과에서 보이는 모습 ─────────── -->
+  <!-- ─────────── 실행 상세 (별도 페이지) ─────────── -->
   <section class="panel" style="margin-top:14px">
-    <h2>② 실행 결과에서 보이는 모습 <span class="muted">— 실행 이력 화면의 항목을 펼쳤을 때</span></h2>
+    <h2>실행 상세
+      <span class="muted">— 체크리스트에서 행이나 실행을 누르면 열리는 별도 페이지</span>
+      <span class="spacer"></span>
+      <button class="ghost small" type="button">← 체크리스트로</button>
+    </h2>
+
+    <p class="note" style="margin-top:0">
+      체크리스트 화면에는 <b>진행 상황과 로그를 두지 않습니다.</b> 413행이 본문인 화면에
+      로그까지 얹으면 둘 다 안 보입니다 — 실행을 누르면 이 페이지가 열려 진행이 보이고,
+      끝나면 그대로 결과 페이지가 됩니다.
+    </p>
+
+    <section class="panel" style="margin:0 0 10px">
+      <h2>진행 상황 <span class="spacer"></span><span class="muted">2 / 2 항목 · 04:59</span></h2>
+      <div class="barwrap"><div class="bar done" style="width:100%"></div></div>
+      <div class="proglist">
+        <div class="prog"><span class="chip PASS">PASS</span><div class="body">
+          <span class="name">18_Telecom</span>
+          <span class="now">33스텝 · 00:47 · 체크리스트 8행 커버</span></div>
+          <span class="num">00:47</span></div>
+        <div class="prog"><span class="chip FAIL">FAIL</span><div class="body">
+          <span class="name">21_Card</span>
+          <span class="now">118스텝 · 04:12 · [22] 에서 실패</span></div>
+          <span class="num">04:12</span></div>
+      </div>
+      <details class="logbox"><summary>자세한 로그 보기</summary>
+        <pre class="log"><span class="l-head"> &gt; Flow 18_Telecom</span>
+Launch app... COMPLETED
+Tap on "${HOME_TELECOM}"... COMPLETED
+Assert that ".*gmemobile\.com.*" is visible... <span class="l-pass">COMPLETED</span>
+Assert that id: bottom_item_home is not visible... <span class="l-pass">COMPLETED</span>
+<span class="l-head"> &gt; Flow 21_Card</span>
+Assert that "GME 카드 - EasyCare" is visible... <span class="l-fail">FAILED</span></pre>
+      </details>
+    </section>
 
     <section class="panel summary pass" style="margin:0">
       <div class="headline">18_Telecom — PASS</div>
