@@ -23,7 +23,7 @@
     .cov .bar { background: #2f9e44; }
     .cov .bar.part { background: #96631a; }
 
-    /* 결과 기준 — 지금 화면의 결과 칸이 '어느 실행 것'인지 정하는 단 하나의 셀렉트 */
+    /* 결과 보기 — 지금 화면의 결과 칸이 '어느 실행 것'인지 정하는 단 하나의 셀렉트 */
     .basisrow {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
       padding: 9px 11px; margin-bottom: 12px;
@@ -49,7 +49,7 @@
     table.cl tr:hover td { background: #f7f9fc; }
 
     .c-id    { width: 78px; }
-    .c-pri   { width: 62px; }
+    .c-pri   { width: 72px; }
     .c-depth { width: 168px; }
     .c-map   { width: 150px; }
     .c-res   { width: 136px; }
@@ -153,7 +153,7 @@
 </header>
 
 <div class="mockbar">
-  <strong>화면 목업</strong> — 동작하지 않습니다. Telecom 8행의 확인 문구는 SharePoint 정본에서 실제로 읽어온 값입니다.
+  <strong>화면 목업</strong> — 동작하지 않습니다. Telecom 8행의 내용은 SharePoint 정본에서 실제로 읽어온 값입니다.
 </div>
 
 <main class="wide">
@@ -173,7 +173,7 @@
     </h2>
 
     <div class="basisrow">
-      <label for="basis">결과 기준</label>
+      <label for="basis">결과 보기</label>
       <select id="basis">
         <optgroup label="자동 실행 (suite_logs)">
           <option selected>최신 결과 — 항목마다 가장 최근 실행</option>
@@ -188,7 +188,7 @@
           <option>2025.05.28 · GME App 7.6.1 (OldApp)</option>
         </optgroup>
       </select>
-      <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 굳은 기록은 고치지 않습니다.</span>
+      <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 지난 실행 기록은 고치지 않습니다.</span>
     </div>
 
     <div class="cov">
@@ -205,16 +205,16 @@
       <select><option>매핑 — 전체</option><option>미매핑만</option><option>매핑됨만</option><option>자동화 불가만</option></select>
       <select><option>Priority — 전체</option><option>High</option><option>Medium</option><option>Low</option></select>
       <select><option>결과 — 전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
-      <input type="search" placeholder="확인 문구 검색…">
+      <input type="search" placeholder="확인 항목 검색…">
     </div>
 
     <table class="cl">
       <thead>
         <tr>
           <th class="c-id">ID</th>
-          <th class="c-pri">Pri</th>
-          <th class="c-depth">Depth</th>
-          <th>확인 문구 <span class="muted">(클릭해서 수정)</span></th>
+          <th class="c-pri">중요도</th>
+          <th class="c-depth">분류</th>
+          <th>확인 항목 <span class="muted">(클릭해서 수정)</span></th>
           <th class="c-map">매핑</th>
           <th class="c-res">Android</th>
           <th class="c-res">iOS</th>
@@ -243,9 +243,9 @@
           <td class="txt" contenteditable>CS 팝업 발생 확인</td>
           <td><span class="map" contenteditable>18_Telecom [02]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸 · 2026-09-29</span></td>
+              <span class="prov">자동 · 진입 불가 · 2026-09-29</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
-          <td><span class="cmt" contenteditable>(aos) 진입 경로 소멸 — 홈 그리드가 외부 웹으로 이동</span></td>
+          <td><span class="cmt" contenteditable>(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동</span></td>
         </tr>
 
         <tr>
@@ -255,7 +255,7 @@
           <td class="txt" contenteditable>Mobile SIM 선택 시 요금제 선택 페이지 발생 확인</td>
           <td><span class="map" contenteditable>18_Telecom [03]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -267,7 +267,7 @@
           <td class="txt" contenteditable>Apply for line sim / Pre-paid 상품 선택시 요금제 발생 확인</td>
           <td><span class="map" contenteditable>18_Telecom [04]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -279,7 +279,7 @@
           <td class="txt edited" contenteditable>임의의 요금제 선택 시 New Number / Same Number 선택 페이지 발생 확인</td>
           <td><span class="map" contenteditable>18_Telecom [05]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -291,7 +291,7 @@
           <td class="txt" contenteditable>New Number 상품 요금제 정상신청 동작 확인</td>
           <td><span class="map" contenteditable>18_Telecom [06]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -303,7 +303,7 @@
           <td class="txt" contenteditable>Same Number 상품 요금제 정상신청 동작 확인</td>
           <td><span class="map" contenteditable>18_Telecom [07]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -315,7 +315,7 @@
           <td class="txt" contenteditable>Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인</td>
           <td><span class="map" contenteditable>18_Telecom [08]</span></td>
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
-              <span class="prov">자동 · 경로 소멸</span></td>
+              <span class="prov">자동 · 진입 불가</span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable></span></td>
         </tr>
@@ -377,7 +377,7 @@
           <td class="txt" contenteditable>간편비밀번호 일치 시 충전동작 확인</td>
           <td><span class="map" contenteditable>21_Card [21]</span></td>
           <td><select class="rsel set over"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
-              <span class="prov over">수동 덮음 · 자동은 <b>Fail</b> · <a href="#">2026-09-29 15:36</a></span></td>
+              <span class="prov over">직접 수정 · 자동은 <b>Fail</b> · <a href="#">2026-09-29 15:36</a></span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable>(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상</span></td>
         </tr>
@@ -408,8 +408,8 @@
       접두사는 정본에서 이미 쓰는 <code>(aos)</code> / <code>- ios :</code> / <code>- aos/ios :</code> 관례를 따릅니다.<br>
       매핑은 엑셀이 아니라 저장소(<code>checklist_map.json</code>)에 저장됩니다 — 엑셀을 나중에 놓더라도 남습니다.<br>
       <b>자동으로 채워진 칸도 사람이 고칠 수 있습니다</b> — 외부 요인·셋팅 불량으로 Fail 이 났지만
-      사람이 보면 정상인 경우가 있습니다. 대신 <b>고치면 출처가 바뀝니다</b>:
-      <code>자동</code> → <code>수동 덮음 · 자동은 Fail</code>. 원래 실행값이 무엇이었는지는 지워지지 않습니다.<br>
+      사람이 보면 정상인 경우가 있습니다. 대신 <b>고치면 누가 넣은 값인지 표시가 바뀝니다</b>:
+      <code>자동</code> → <code>직접 수정 · 자동은 Fail</code>. 원래 실행값이 무엇이었는지는 지워지지 않습니다.<br>
       <b>덮어쓸 때는 Comment 에 사유가 있어야 저장됩니다.</b> 3개월 뒤 같은 케이스가 또 Fail 날 때
       "그때 왜 덮었더라"를 답할 수 있는 건 이 한 줄뿐입니다.
     </p>
@@ -423,8 +423,8 @@
       </tbody>
     </table>
     <p class="note">
-      「결과 기준」을 바꾸면 결과 두 열이 <b>그 시점 값</b>으로 바뀝니다. 자동 실행을 고르면
-      <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 굳은 기록을, 릴리스를 고르면 엑셀에 기입된 값을 봅니다.<br>
+      「결과 보기」를 바꾸면 결과 두 열이 <b>그 시점 값</b>으로 바뀝니다. 자동 실행을 고르면
+      <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 지난 실행 기록을, 릴리스를 고르면 엑셀에 기입된 값을 봅니다.<br>
       ⚠️ <code>Not Test</code> 와 <code>NA</code> 는 다릅니다. <b>Not Test = 못 했다</b>(언젠가 해야 함),
       <b>NA = 할 것이 없다</b>(영영 없음). 섞이면 "남은 일"이 몇 건인지 셀 수 없게 됩니다.
       Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
@@ -441,27 +441,27 @@
       <div>2026-09-29 16:48 · 33스텝 · 00:47 · <code>SM-S928N</code> · 7.21.0-stag · LiveTest</div>
 
       <div class="stats" style="margin-top:10px">
-        <div class="stat pass"><b>1</b><span>확인함 (Pass)</span></div>
-        <div class="stat fail"><b>0</b><span>확인함 (Fail)</span></div>
+        <div class="stat pass"><b>1</b><span>Pass</span></div>
+        <div class="stat fail"><b>0</b><span>Fail</span></div>
         <div class="stat skip"><b>7</b><span>NA</span></div>
         <div class="stat"><b>0</b><span>미커버</span></div>
       </div>
 
       <table>
-        <thead><tr><th style="width:80px">ID</th><th>확인 문구</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
+        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
         <tbody>
           <tr><td><span class="id">TEL-001</span></td><td>홈화면 이동 확인</td><td>[01]</td>
               <td class="st-PASS">Pass</td></tr>
           <tr><td><span class="id">TEL-002</span></td><td>CS 팝업 발생 확인</td><td>[02]</td>
-              <td class="na">NA <span class="muted">진입 경로 소멸</span></td></tr>
+              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
           <tr><td><span class="id">TEL-003</span></td><td>Mobile SIM 선택 시 요금제 선택 페이지 발생 확인</td><td>[03]</td>
-              <td class="na">NA <span class="muted">진입 경로 소멸</span></td></tr>
+              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
           <tr><td colspan="4" class="muted">… TEL-004 ~ TEL-008 동일 (NA)</td></tr>
         </tbody>
       </table>
 
       <p class="note" style="margin-top:10px">
-        이 표는 <b>실행 시점에 굳어집니다</b>(<code>suite_logs/2026-09-29_164807/checklist.json</code>).<br>
+        이 표는 <b>실행한 그때 값으로 남습니다</b>(<code>suite_logs/2026-09-29_164807/checklist.json</code>).<br>
         나중에 체크리스트 문구를 고치거나 행을 지워도 <b>이 기록은 그대로</b>입니다 — 그래야 지난 리포트가 흔들리지 않습니다.
       </p>
     </section>
@@ -471,7 +471,7 @@
       <div>2026-09-29 15:36 · 118스텝 · 04:12 · <code>[22]</code> 에서 실패</div>
 
       <table>
-        <thead><tr><th style="width:80px">ID</th><th>확인 문구</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
+        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
         <tbody>
           <tr><td><span class="id">CRD-001</span></td><td>Balance 선택 시 GME PAY 잔액 노출 확인</td><td>[01]</td>
               <td class="st-PASS">Pass</td></tr>
@@ -485,8 +485,8 @@
       <p class="warn" style="margin-top:10px">
         자동 Fail 은 체크리스트에 <b>바로 기입하지 않고 「확인 대기」로 둡니다.</b>
         외부 요인·셋팅 불량으로 난 Fail 이 그대로 릴리스 판단에 실리면 안 되고, 반대로 조용히 무시돼서도 안 됩니다
-        — 사람이 체크리스트 화면에서 최종값을 고릅니다(고치면 <code>수동 덮음 · 자동은 Fail</code> 로 남습니다).<br>
-        실패 지점 <b>이후</b> 케이스는 "확인함"이 아니라 <b>미확인</b>입니다 — Fail 로 싸잡으면 거짓 보고가 됩니다.
+        — 사람이 체크리스트 화면에서 최종값을 고릅니다(고치면 <code>직접 수정 · 자동은 Fail</code> 로 남습니다).<br>
+        실패 지점 <b>이후</b> 케이스는 "확인함"이 아니라 <b>미확인</b>입니다 — 여기까지 Fail 로 적으면 하지 않은 확인을 했다고 적는 셈이 됩니다.
       </p>
     </section>
   </section>
