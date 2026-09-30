@@ -168,7 +168,7 @@
   <!-- ─────────── ① 체크리스트 · 매핑 ─────────── -->
   <section class="panel">
     <h2>체크리스트
-      <span class="muted">413행 · 2026.09.23 GME App 7.21.0</span>
+      <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span>
       <span class="spacer"></span>
       <button class="ghost small" type="button">엑셀에서 다시 읽기</button>
       <button class="primary small" type="button">엑셀에 저장 (16)</button>
@@ -184,10 +184,8 @@
           <option>2026-09-28 17:38 · 1항목 · SM-S928N · 7.21.0-stag</option>
           <option>2026-09-23 17:08 · 25항목 · SM-S911N · 7.20.0-stag</option>
         </optgroup>
-        <optgroup label="릴리스 (엑셀 기입값)">
-          <option>2026.09.23 · GME App 7.21.0 (NewApp)</option>
-          <option>2025.07.14 · GME App 7.7.0 (newApp)</option>
-          <option>2025.05.28 · GME App 7.6.1 (OldApp)</option>
+        <optgroup label="엑셀">
+          <option>엑셀 현재값 — I열에 지금 적혀 있는 것</option>
         </optgroup>
       </select>
       <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 지난 실행 기록은 고치지 않습니다.</span>
@@ -409,6 +407,10 @@
       저장을 눌러야 나갑니다 — 실행만으로는 엑셀이 채워지지 않습니다.<br>
       ⛔ <b>자동 <code>Fail</code> 은 기입 대기에 들어가지 않습니다.</b> 「확인 대기」라서,
       사람이 최종값을 고른 뒤에야 사람 수정 쪽으로 넘어갑니다.<br>
+      기입 대상은 <b>언제나 <code>I11:I423</code></b> 입니다 — 릴리스 버전은 보지 않습니다.
+      첫 데이터 행이 11행이라 <code>I11</code> 부터 시작합니다.
+      다만 앞쪽에 열이 삽입되면 <code>I</code> 가 다른 칸을 가리키므로,
+      저장 직전에 <b><code>I9</code> 가 <code>Android Result</code> 인지</b> 한 칸만 확인하고 진행합니다.<br>
       ⚠️ 저장은 <b>고친 셀만</b> SharePoint 에 PATCH 합니다(같은 통합 문서의 다른 시트·다른 사람 편집에 영향 없음).<br>
       Comment 는 릴리스마다 열이 따로 있지 않고 <b>한 칸을 계속 씁니다</b> → 기존 내용을 지우지 않고 <b>줄을 덧붙입니다</b>.
       접두사는 정본에서 이미 쓰는 <code>(aos)</code> / <code>- ios :</code> / <code>- aos/ios :</code> 관례를 따릅니다.<br>
@@ -430,7 +432,7 @@
     </table>
     <p class="note">
       「결과 보기」를 바꾸면 결과 두 열이 <b>그 시점 값</b>으로 바뀝니다. 자동 실행을 고르면
-      <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 지난 실행 기록을, 릴리스를 고르면 엑셀에 기입된 값을 봅니다.<br>
+      <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 지난 실행 기록을, 엑셀을 고르면 I열의 현재값을 봅니다.<br>
       ⚠️ <code>Not Test</code> 와 <code>NA</code> 는 다릅니다. <b>Not Test = 못 했다</b>(언젠가 해야 함),
       <b>NA = 할 것이 없다</b>(영영 없음). 섞이면 "남은 일"이 몇 건인지 셀 수 없게 됩니다.
       Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
