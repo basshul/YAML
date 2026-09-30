@@ -34,6 +34,9 @@
     .basisrow .muted { font-size: 11px; }
 
     .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 10px; }
+    /* 필터 이름은 셀렉트 밖에 둔다 — 안에 넣으면 선택지처럼 보이고, 고르고 나면 사라진다 */
+    .filters label.f { display: flex; align-items: center; gap: 6px; }
+    .filters label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
     .filters select, .filters input[type=search] {
       padding: 6px 9px; border: 1px solid #ccd2d9; border-radius: 6px;
       font-size: 12px; font-family: inherit; background: #fff;
@@ -205,15 +208,25 @@
     </div>
 
     <div class="filters">
-      <select><option selected>영역 — 전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
-      <select title="기준은 위 「결과 보기」 에서 고른 실행입니다">
-        <option selected>이번 실행 — 전체 (413행)</option>
-        <option>이번 실행에서 테스트한 것만</option>
-        <option>이번 실행에서 빠진 것만</option>
-      </select>
-      <select><option>매핑 — 전체</option><option>미매핑만</option><option>매핑됨만</option><option>자동화 불가만</option></select>
-      <select><option>Priority — 전체</option><option>High</option><option>Medium</option><option>Low</option></select>
-      <select><option>결과 — 전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
+      <label class="f"><span>영역</span>
+        <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
+      </label>
+      <label class="f" title="기준은 위 「결과 보기」 에서 고른 실행입니다"><span>이번 실행</span>
+        <select>
+          <option selected>전체 (413행)</option>
+          <option>테스트한 것만</option>
+          <option>빠진 것만</option>
+        </select>
+      </label>
+      <label class="f"><span>매핑</span>
+        <select><option selected>전체</option><option>미매핑만</option><option>매핑됨만</option><option>자동화 불가만</option></select>
+      </label>
+      <label class="f"><span>중요도</span>
+        <select><option selected>전체</option><option>High</option><option>Medium</option><option>Low</option></select>
+      </label>
+      <label class="f"><span>결과</span>
+        <select><option selected>전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
+      </label>
       <input type="search" placeholder="확인 항목 검색…">
     </div>
 
@@ -417,7 +430,7 @@
       ⛔ <b>자동 <code>Fail</code> 은 기입 대기에 들어가지 않습니다.</b> 「확인 대기」라서,
       사람이 최종값을 고른 뒤에야 사람 수정 쪽으로 넘어갑니다.<br>
       <b>기본은 전체 413행입니다.</b> 실행한 항목에 따라 목록이 줄어들지 않습니다 —
-      이번에 테스트한 것만 보려면 <b>「이번 실행에서 테스트한 것만」</b> 필터를 씁니다.
+      이번에 테스트한 것만 보려면 <b>「이번 실행 → 테스트한 것만」</b> 필터를 씁니다.
       그 필터의 기준은 위 <b>「결과 보기」</b> 에서 고른 실행이고, <code>최신 결과</code> 를
       고른 상태에서는 기준이 정해지지 않아 전체만 보입니다.<br>
       기입 대상은 <b>언제나 <code>I11:I423</code></b> 입니다 — 릴리스 버전은 보지 않습니다.
