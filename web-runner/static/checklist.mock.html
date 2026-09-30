@@ -78,7 +78,8 @@
     .map.none { color: #96631a; font-style: italic; font-family: inherit; }
     /* 저장할 때 -DumpJson 에 없는 이름이면 이렇게 표시한다 */
     .map.bad { color: #a02c2c; border-color: #e8b4b4; background: #fdeeee; }
-    .map.manual { color: #6b3fa0; font-style: normal; font-family: inherit; }
+    /* 자동화 불가 = 「매핑 안 됨」의 한 갈래. 사유는 Comment 에 적는다. */
+    .map.none.manual { color: #6b3fa0; font-style: normal; }
     .unmapped td { background: #fffaf0; }
 
     /* 결과 수동 입력 — 엑셀에 실제로 쓰이는 값만 고를 수 있게 한다.
@@ -89,7 +90,6 @@
       font-family: inherit; color: #8b939e;
     }
     .rsel.set { color: #1b1f24; font-weight: 600; }
-    .rsel.nt { color: #6b3fa0; border-color: #d6c7ea; background: #faf7ff; }
     .rsel.over { border-color: #f0c98a; background: #fffaf0; }
 
     /* 출처 — 이 값이 실행에서 나온 건지 사람이 고친 건지. 셀렉트만 두면 이게 사라진다. */
@@ -387,8 +387,8 @@
           <td>High</td>
           <td class="depth"><b>Recharge_Wallet</b>Biometric</td>
           <td class="txt" contenteditable>생체인식 일치 시 충전동작 확인</td>
-          <td><span class="map manual" contenteditable>자동화 불가 · 생체인증</span></td>
-          <td><select class="rsel set nt"><option>—</option><option>Pass</option><option>Fail</option><option selected>Not Test</option><option>NA</option></select></td>
+          <td><span class="map none manual" contenteditable>매핑 안 됨 (자동화 불가)</span></td>
+          <td><select class="rsel"><option selected>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><span class="cmt" contenteditable>(aos) 자동화 불가 — 생체인증 필요</span></td>
         </tr>
@@ -426,17 +426,19 @@
       <tbody>
         <tr><td><b>Pass</b></td><td>확인했고 정상</td><td>자동 / 수동</td></tr>
         <tr><td><b>Fail</b></td><td>확인했고 결함</td><td>수동 <span class="muted">(자동 Fail 은 확인 대기로 둔다)</span></td></tr>
-        <tr><td><b>Not Test</b></td><td><b>자동화 불가</b> — 이번 실행으로 확인하지 못함</td><td>자동화 불가 행의 기본값</td></tr>
+        <tr><td><b>Not Test</b></td><td>확인하지 못함</td><td>수동 <span class="muted">(자동으로는 넣지 않는다)</span></td></tr>
         <tr><td><b>NA</b></td><td>해당 없음 — <b>확인할 화면·기능이 없음</b></td><td>자동 <span class="muted">(run_suite 의 <code>na</code>)</span> / 수동</td></tr>
       </tbody>
     </table>
     <p class="note">
       「결과 보기」를 바꾸면 결과 두 열이 <b>그 시점 값</b>으로 바뀝니다. 자동 실행을 고르면
       <code>suite_logs/&lt;시각&gt;/checklist.json</code> 의 지난 실행 기록을, 엑셀을 고르면 I열의 현재값을 봅니다.<br>
+      <b>자동화 불가 행은 결과를 비워 둡니다.</b> 매핑 칸에 <code>매핑 안 됨 (자동화 불가)</code> 로 적고,
+      왜 못 하는지는 Comment 에 남깁니다. 사람이 수동으로 확인하면 그때 결과를 고르면 됩니다.<br>
       ⚠️ <code>Not Test</code> 와 <code>NA</code> 는 다릅니다. <b>Not Test = 못 했다</b>(언젠가 해야 함),
       <b>NA = 할 것이 없다</b>(영영 없음). 섞이면 "남은 일"이 몇 건인지 셀 수 없게 됩니다.
       Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
-      생체인증이 <code>Not Test</code> 인 것은 <b>화면은 있는데 자동화가 못 닿기</b> 때문입니다.
+      생체인증이 <b>빈칸</b> 인 것은 <b>화면은 있는데 자동화가 못 닿아</b> 아직 아무도 확인하지 않았기 때문입니다.
     </p>
   </section>
 
