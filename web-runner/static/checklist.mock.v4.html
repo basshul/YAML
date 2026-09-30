@@ -179,6 +179,12 @@
     .panel.tight h2 { margin-bottom: 9px; }
     .runbtns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .runbtns button.primary { flex: 1; }
+
+    /* 진행 표시 — 버튼(조작)과 상태를 구분선으로 떼어 놓는다.
+       붙여 두면 진행 바가 버튼의 일부처럼 보인다. */
+    .runprog { margin-top: 16px; padding-top: 13px; border-top: 1px solid #eceff2; }
+    .runprog .barwrap { margin-bottom: 7px; }
+    .runnow { font-size: 11px; color: #6b7480; line-height: 1.5; }
     .sumline { font-size: 12px; line-height: 1.7; }
     .sumline b { color: #2f5bb7; }
     .sumline .warn2 { display: block; color: #7a5115; font-size: 11px; margin-top: 4px; }
