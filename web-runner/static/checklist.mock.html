@@ -111,6 +111,10 @@
     /* 자동값을 덮었는데 사유가 비어 있으면 저장을 막는다 */
     .cmt.need { border-color: #e8b4b4; background: #fdeeee; }
     .cmt.need:empty::before { content: "덮어쓴 사유를 적어야 저장됩니다"; color: #a02c2c; }
+    /* 사유의 정본은 저장소다. 엑셀 J열에 원래 있던 메모는 읽어서 같이 보여주되 고치지 않는다. */
+    .cmt .from { display: block; font-size: 10px; color: #a8b0ba; margin-top: 2px; }
+    .cmt.xlsx { color: #6b7480; background: #f7f9fc; border-color: #eceff2; }
+    .cmt.xlsx:hover { border-color: #eceff2; }
     .rsel:focus { outline: none; border-color: #2f6feb; }
     .manualrow td { background: #faf7ff; }
     .manualrow:hover td { background: #f4eeff; }
@@ -245,7 +249,7 @@
           <td><select class="rsel set"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option selected>NA</option></select>
               <span class="prov">자동 · 진입 불가 · <b class="pend">미기입</b></span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
-          <td><span class="cmt" contenteditable>(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동</span></td>
+          <td><span class="cmt" contenteditable>(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
         </tr>
 
         <tr>
@@ -331,7 +335,7 @@
           <td><select class="rsel set"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
               <span class="prov">자동 · <a href="#">2026-09-29 16:48</a> · <b class="pend">미기입</b></span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
-          <td><span class="cmt" contenteditable></span></td>
+          <td><span class="cmt xlsx">- ios : 알림 아이콘이 사라지지 않음<span class="from">엑셀 J열에 원래 있던 메모 · 고치지 않음</span></span></td>
         </tr>
 
         <tr class="unmapped">
@@ -379,7 +383,7 @@
           <td><select class="rsel set over"><option>—</option><option selected>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select>
               <span class="prov over">직접 수정 · 자동은 <b>Fail</b> · <a href="#">2026-09-29 15:36</a></span></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
-          <td><span class="cmt" contenteditable>(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상</span></td>
+          <td><span class="cmt" contenteditable>(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
         </tr>
 
         <tr class="manualrow">
@@ -390,7 +394,7 @@
           <td><span class="map none manual" contenteditable>매핑 안 됨 (자동화 불가)</span></td>
           <td><select class="rsel"><option selected>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
           <td><select class="rsel"><option>—</option><option>Pass</option><option>Fail</option><option>Not Test</option><option>NA</option></select></td>
-          <td><span class="cmt" contenteditable>(aos) 자동화 불가 — 생체인증 필요</span></td>
+          <td><span class="cmt" contenteditable>(aos) 자동화 불가 — 생체인증 필요<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
         </tr>
       </tbody>
     </table>
@@ -412,8 +416,11 @@
       다만 앞쪽에 열이 삽입되면 <code>I</code> 가 다른 칸을 가리키므로,
       저장 직전에 <b><code>I9</code> 가 <code>Android Result</code> 인지</b> 한 칸만 확인하고 진행합니다.<br>
       ⚠️ 저장은 <b>고친 셀만</b> SharePoint 에 PATCH 합니다(같은 통합 문서의 다른 시트·다른 사람 편집에 영향 없음).<br>
-      Comment 는 릴리스마다 열이 따로 있지 않고 <b>한 칸을 계속 씁니다</b> → 기존 내용을 지우지 않고 <b>줄을 덧붙입니다</b>.
-      접두사는 정본에서 이미 쓰는 <code>(aos)</code> / <code>- ios :</code> / <code>- aos/ios :</code> 관례를 따릅니다.<br>
+      <b>사유의 정본은 저장소</b>입니다. 엑셀 J열에는 사람이 읽으라고 <b>한 줄만 덧붙입니다</b>(사본).
+      한 칸에 플랫폼·실행이 섞여 쌓이는 구조라, 기계가 읽을 원본은 따로 둡니다.<br>
+      엑셀 J열에 <b>원래 있던 메모는 읽어서 같이 보여주되 고치지 않습니다</b>(위 회색 칸).
+      덧붙일 때는 기존 내용을 지우지 않고, 접두사는 정본에서 이미 쓰는
+      <code>(aos)</code> / <code>- ios :</code> / <code>- aos/ios :</code> 관례를 따릅니다.<br>
       매핑은 엑셀이 아니라 저장소(<code>checklist_map.json</code>)에 저장됩니다 — 엑셀을 나중에 놓더라도 남습니다.<br>
       <b>자동으로 채워진 칸도 사람이 고칠 수 있습니다</b> — 외부 요인·셋팅 불량으로 Fail 이 났지만
       사람이 보면 정상인 경우가 있습니다. 대신 <b>고치면 누가 넣은 값인지 표시가 바뀝니다</b>:
