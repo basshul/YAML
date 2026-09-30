@@ -7,6 +7,9 @@
 #
 # 기본값이 '오늘'인 이유: 스케줄러가 **22:00** 에 돈다. 그날 작업이 끝난 뒤라
 #   그날 자를 쓰는 게 맞다. (아침 실행으로 옮기면 기본값을 '어제'로 되돌릴 것.)
+# ⚠️ 단, **00~06시에 실행되면 '어제' 자로 잡는다.** 작업에 `StartWhenAvailable` 이 켜져 있어
+#   22:00 에 PC 가 자고 있으면 **깨어난 뒤 밀려서 실행된다** → 자정을 넘기면 날짜가 하루 밀려
+#   그날치 자료가 0건인 빈 리포트가 나온다(2026-09-30 01:34 실제 발생).
 #
 # 왜 이 구조인가 —
 #   ★ 옛 `Automation Report.bat` 은 `claude -p` 에게 "첨부한 qa_report.json 을 읽고" 라고만
@@ -23,7 +26,9 @@
 #   git log (Maestro\ / web-runner\ 분리)   조치 + 도구 개발 트랙
 # ================================================================
 param(
-    [string]$Date = (Get-Date).ToString("yyyy-MM-dd"),
+    # 00~06시 실행은 '밀려서 돈 어제 22:00 분' 으로 본다 (위 주석 참고).
+    [string]$Date = $(if ((Get-Date).Hour -lt 6) { (Get-Date).AddDays(-1).ToString("yyyy-MM-dd") }
+                      else                      { (Get-Date).ToString("yyyy-MM-dd") }),
     [switch]$BundleOnly,
     [switch]$NoUpload,                              # 리포트만 만들고 ClickUp 업로드는 건너뛴다
     [string]$OutDir = "artifacts\daily_report",
@@ -40,8 +45,48 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $repo
 
+# ⛔ 지우지 말 것 — 이 프로세스가 **네이티브 명령(git) 출력을 무슨 인코딩으로 읽을지**를 못 박는다.
+#   cp949 로 읽히면 한글 커밋 메시지가 깨진 채 번들에 들어가고(2026-09-30 실측),
+#   깨진 바이트가 줄바꿈까지 삼켜 **커밋 두 건이 한 줄로 붙는다**. 번들 검증은 이를 못 잡는다.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 function Write-Utf8([string]$p, [string]$t) { [System.IO.File]::WriteAllText($p, $t, $utf8) }
+
+# ---------------------------------------------------------------- claude 호출 (타임아웃)
+# ⚠️ 스케줄 작업에는 `ExecutionTimeLimit` 이 걸려 있다. `claude -p` 가 응답 없이 매달리면
+#   작업이 통째로 강제 종료되고(결과코드 0x41306) 로그엔 "리포트 생성 중..." 한 줄만 남는다
+#   — 무엇이 멈췄는지 알 수 없다(2026-09-30 01:34 실제 발생).
+#   → 호출 단위로 먼저 끊어서 **어느 단계가 몇 분 만에 멈췄는지 남기고** 정상 실패시킨다.
+# 작업은 별도 pwsh 프로세스로 돈다 → 호출 전 저장소로 이동시켜 둔다(claude 의 프로젝트 문맥).
+function Invoke-ClaudeWithTimeout {
+    param(
+        [Parameter(Mandatory)][string]$Prompt,
+        [string[]]$AllowedTools = @("Read"),
+        [int]$TimeoutMinutes = 20
+    )
+    $job = Start-Job -ScriptBlock {
+        param($p, $tools, $cwd)
+        Set-Location $cwd
+        # ⛔ 이 줄을 지우지 말 것 — 백그라운드 작업의 `[Console]::OutputEncoding` 은
+        #   부모(UTF-8)와 달리 **cp949** 다. 그대로 두면 claude 가 뱉은 UTF-8 을 cp949 로 읽어
+        #   리포트 전체가 깨진 한글(`?먮룞???곗씪由?`)로 저장된다 — 2026-09-30 실측.
+        [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $OutputEncoding           = [Console]::OutputEncoding
+        $out = & claude -p $p --allowedTools $tools 2>&1 | Out-String
+        [pscustomobject]@{ Output = $out; ExitCode = $LASTEXITCODE }
+    } -ArgumentList $Prompt, $AllowedTools, $repo
+
+    if (Wait-Job $job -Timeout ($TimeoutMinutes * 60)) {
+        $r = Receive-Job $job
+        Remove-Job $job -Force -ErrorAction SilentlyContinue
+        return $r
+    }
+    # 시간 초과 — 작업을 끊는다(자식 claude 프로세스가 남을 수 있다. 남으면 다음 실행에 영향은 없다).
+    Stop-Job   $job -ErrorAction SilentlyContinue
+    Remove-Job $job -Force -ErrorAction SilentlyContinue
+    return [pscustomobject]@{ Output = "TIMEOUT: claude 가 $TimeoutMinutes 분 안에 끝나지 않았다"; ExitCode = 124 }
+}
 
 $suiteRoot = Join-Path $repo "Maestro\suite_logs"
 $outFull   = Join-Path $repo $OutDir
@@ -194,15 +239,19 @@ $bundlePath 파일을 Read 로 읽고, GME QA 자동화 데일리 리포트($Dat
 "@
 
 Write-Host "  리포트 생성 중..." -ForegroundColor DarkGray
-$report = claude -p $prompt --allowedTools "Read" 2>&1 | Out-String
-$claudeExit = $LASTEXITCODE
+$res = Invoke-ClaudeWithTimeout -Prompt $prompt -AllowedTools @("Read") -TimeoutMinutes 25
+$report     = $res.Output
+$claudeExit = $res.ExitCode
 
 # ⛔ 결과를 그대로 파일에 쓰고 "성공" 이라고 하지 말 것 —
 #   실제로 `API Error: 401 ... Please run /login` 이 리포트로 저장되고 초록 글씨가 떴다(2026-09-28).
 #   이 저장소가 계속 잡아온 '거짓 통과' 와 같은 부류다. 넘어가지 말고 시끄럽게 실패시킨다.
 # 인증 실패를 **exit code 보다 먼저** 본다 — 둘 다 걸릴 때 "exit=1" 보다 할 일이 적힌 쪽이 쓸모 있다.
 $bad = $null
-if ($report -match 'API Error|Please run /login|authentication_error') {
+if ($report -match '^TIMEOUT: ') {
+    $bad = "리포트 생성이 시간 초과됐다 — $($report.Trim())"
+}
+elseif ($report -match 'API Error|Please run /login|authentication_error') {
     $bad = "claude CLI 인증 실패 — 터미널에서 claude 를 실행하고 /login 할 것"
 }
 elseif ($claudeExit -ne 0)                      { $bad = "claude exit=$claudeExit" }
@@ -247,8 +296,10 @@ $reportPath 파일을 Read 로 읽어, 그 내용 전체를 본문으로 하는 
 "@
 
 Write-Host "  ClickUp 업로드 중..." -ForegroundColor DarkGray
-$up = claude -p $upPrompt --allowedTools "Read" "mcp__clickup__clickup_create_document_page" 2>&1 | Out-String
-$upExit = $LASTEXITCODE
+$upRes  = Invoke-ClaudeWithTimeout -Prompt $upPrompt `
+              -AllowedTools @("Read", "mcp__clickup__clickup_create_document_page") -TimeoutMinutes 10
+$up     = $upRes.Output
+$upExit = $upRes.ExitCode
 
 # 업로드도 '조용한 실패' 를 막는다 — page id 를 실제로 받았는지로 판정한다.
 $pageId = if ($up -match 'page=([A-Za-z0-9_-]+)') { $Matches[1] } else { $null }
