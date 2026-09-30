@@ -145,6 +145,37 @@
       margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff2; font-size: 12px;
     }
     .note { font-size: 11px; color: #8b939e; line-height: 1.6; }
+
+    /* 화면 설명 팝업 — 필터 줄 오른쪽 끝 물음표 버튼으로 연다.
+       목업이지만 이것만은 실제로 열리게 해 뒀다(CSS 체크박스). */
+    .helptoggle { display: none; }
+    .helpbtn {
+      width: 24px; height: 24px; flex: none; border-radius: 50%;
+      border: 1px solid #ccd2d9; background: #fff; color: #6b7480;
+      font-size: 13px; font-weight: 700; line-height: 22px; text-align: center;
+      cursor: pointer; user-select: none;
+    }
+    .helpbtn:hover { border-color: #2f6feb; color: #2f6feb; background: #f5f9ff; }
+    .helpmodal {
+      display: none; position: fixed; inset: 0; z-index: 20;
+      background: rgba(16, 21, 28, .5); padding: 30px;
+      align-items: center; justify-content: center;
+    }
+    .helptoggle:checked ~ .helpmodal { display: flex; }
+    .helpmodal-box {
+      background: #fff; border-radius: 8px; width: min(760px, 100%);
+      max-height: 100%; overflow-y: auto; padding: 16px 20px 20px;
+    }
+    .helpmodal-box > header {
+      display: flex; align-items: center; margin: -4px 0 10px;
+      font-size: 14px; font-weight: 700; color: #48505a;
+    }
+    .helpmodal-box .x {
+      margin-left: auto; cursor: pointer; font-size: 18px; color: #8b939e;
+      line-height: 1; padding: 2px 6px; border-radius: 4px;
+    }
+    .helpmodal-box .x:hover { background: #f2f4f7; color: #1b1f24; }
+    .helpmodal-box .note { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -211,6 +242,7 @@
       <span class="muted">자동 168 · <b style="color:#96631a">자동화 불가 37</b> · 미분류 208</span>
     </div>
 
+    <input type="checkbox" id="help" class="helptoggle">
     <div class="filters">
       <label class="f"><span>영역</span>
         <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
@@ -228,6 +260,8 @@
       <label class="f"><span>결과</span>
         <select><option selected>전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
       </label>
+      <span class="spacer"></span>
+      <label for="help" class="helpbtn" title="이 화면 설명">?</label>
     </div>
 
     <table class="cl">
@@ -424,7 +458,10 @@
       <button class="primary small" type="button">엑셀에 저장 (16)</button>
     </div>
 
-    <p class="note">
+    <div class="helpmodal">
+      <div class="helpmodal-box">
+        <header>이 화면 읽는 법 <label for="help" class="x" title="닫기">×</label></header>
+        <p class="note">
       <b class="pend">기입 대기</b> = 실행이 채웠지만 <b>아직 엑셀에 없는 값</b>입니다.
       저장을 눌러야 나갑니다 — 실행만으로는 엑셀이 채워지지 않습니다.<br>
       ⛔ <b>자동 <code>Fail</code> 은 기입 대기에 들어가지 않습니다.</b> 「확인 대기」라서,
@@ -469,6 +506,8 @@
       Telecom <code>[02]~[08]</code> 이 <code>NA</code> 인 것은 진입 경로가 사라져 <b>확인할 화면이 없기</b> 때문이고,
       생체인증이 <b>빈칸</b> 인 것은 <b>화면은 있는데 자동화가 못 닿아</b> 아직 아무도 확인하지 않았기 때문입니다.
     </p>
+      </div>
+    </div>
   </section>
 
   <!-- ─────────── ② 실행 결과에서 보이는 모습 ─────────── -->
