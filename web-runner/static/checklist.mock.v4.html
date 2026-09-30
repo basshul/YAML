@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>체크리스트 목업 v1 — 분리형</title>
+  <title>체크리스트 목업 v4 — 시나리오 선택</title>
   <link rel="stylesheet" href="style.css">
   <style>
     /* 목업 전용. 확정되면 style.css 로 옮긴다. */
@@ -35,6 +35,31 @@
 
     .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 10px; }
     /* 필터 이름은 셀렉트 밖에 둔다 — 안에 넣으면 선택지처럼 보이고, 고르고 나면 사라진다 */
+    .vbar { width: 1px; height: 18px; background: #dfe3e8; margin: 0 4px; }
+
+    /* 실행 환경 — 실행 버튼과 같은 화면에 있어야 무엇으로 도는지 보인다 */
+    .envrow {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 9px 11px; margin-bottom: 12px;
+      background: #fbfcfd; border: 1px solid #e3e8ee; border-radius: 6px;
+    }
+    .envrow label.f { display: flex; align-items: center; gap: 6px; }
+    .envrow label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
+    .envrow select { font-size: 12px; }
+    .envrow .muted { font-size: 11px; }
+
+    /* 선택 → 실행 대상 요약. 행은 케이스 단위지만 실행은 시나리오 단위다. */
+    .selbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 11px; margin: 10px 0 0;
+      background: #eef4ff; border: 1px solid #cfe0ff; border-radius: 6px; font-size: 12px;
+    }
+    .selbar b { color: #2f5bb7; }
+    .selbar .warn2 { color: #7a5115; font-size: 11px; }
+
+    .c-chk { width: 30px; }
+    table.cl td.c-chk, table.cl th.c-chk { padding-right: 0; }
+
     .filters label.f { display: flex; align-items: center; gap: 6px; }
     .filters label.f > span { font-size: 11px; color: #6b7480; white-space: nowrap; }
     .filters select {
@@ -146,6 +171,24 @@
     }
     .note { font-size: 11px; color: #8b939e; line-height: 1.6; }
 
+    /* ── v3 전용: 실행 화면의 2단 구성을 유지한다 ─────────────── */
+    main.two { flex-direction: row; align-items: flex-start; }
+    .col-left  { flex: 0 0 340px; }
+    .col-right { flex: 1; min-width: 0; }
+    .panel.tight { padding: 12px 14px; }
+    .panel.tight h2 { margin-bottom: 9px; }
+    .runbtns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .runbtns button.primary { flex: 1; }
+    .sumline { font-size: 12px; line-height: 1.7; }
+    .sumline b { color: #2f5bb7; }
+    .sumline .warn2 { display: block; color: #7a5115; font-size: 11px; margin-top: 4px; }
+    /* 좁아진 오른쪽 칸에서 표가 가로로 넘칠 때만 스크롤 */
+    .clwrap { overflow-x: auto; }
+    .clwrap table.cl { min-width: 880px; }
+    @media (max-width: 900px) {
+      main.two { flex-direction: column; }
+      .col-left { flex: none; }
+    }
     /* 화면 설명 팝업 — 필터 줄 오른쪽 끝 물음표 버튼으로 연다.
        목업이지만 이것만은 실제로 열리게 해 뒀다(CSS 체크박스). */
     .helptoggle { display: none; }
@@ -176,6 +219,18 @@
     }
     .helpmodal-box .x:hover { background: #f2f4f7; color: #1b1f24; }
     .helpmodal-box .note { margin-top: 0; }
+
+    /* ── v4: 좌·우 칸이 따로 스크롤한다 ───────────────────────── */
+    html, body { height: 100%; }
+    body { overflow: hidden; }
+    main.two { flex: 1; min-height: 0; align-items: stretch; }
+    main.two > .col { min-height: 0; overflow-y: auto; padding-right: 2px; }
+
+    /* 선택은 시나리오 단위. 행(케이스)에는 체크박스를 두지 않는다 —
+       케이스 하나만 돌릴 수 없으므로 고를 수 있게 보이면 안 된다. */
+    label.scen { cursor: pointer; }
+    label.scen b { color: #2f4058; }
+    .noscen { color: #96631a; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -185,38 +240,90 @@
   <span class="tag">데모</span>
   <span class="conn">연결됨 · SharePoint 캐시 2026-09-30 10:12</span>
   <nav class="topnav">
-    <a href="/">실행 화면</a>
+    <a href="#" class="on">실행 · 체크리스트</a>
     <a href="/history.html">실행 이력</a>
-    <a href="#" class="on">체크리스트</a>
   </nav>
 </header>
 
 <div class="mockbar">
-  <strong>목업 v1 · 분리형</strong> — 체크리스트가 <b>독립 화면</b>이고 실행은 기존 「실행 화면」이 맡는 안.
-  <b>비교용으로 남겨 둔 것</b>이며 v2 로 대체될 수 있습니다 →
-  <a href="checklist.mock.v2.html">v2</a> · <a href="checklist.mock.v3.html">v3</a> · <a href="checklist.mock.v4.html">v4 (시나리오 선택)</a><br>
-  동작하지 않습니다(필터·버튼 모두). 실제로는 <b>413행이 영역별로 이어집니다</b> —
-  여기 보이는 3개 영역 14행은 서로 다른 상태를 보여주려고 <b>발췌</b>한 것입니다.
-  Telecom 8행의 내용은 SharePoint 정본에서 실제로 읽어온 값입니다.
+  <strong>목업 v4 · v3 기반</strong> — ① 선택은 <b>시나리오 단위</b>만 ② 매핑율 삭제
+  ③ 진행은 왼쪽 「실행」에 간단히 ④ 진행 상세는 <b>실행 이력</b>으로 ⑤ 좌·우 칸 스크롤 분리 →
+  <a href="checklist.mock.v1.html">v1</a> · <a href="checklist.mock.v2.html">v2</a> · <a href="checklist.mock.v3.html">v3</a><br>
+  필터·버튼은 동작하지 않습니다(물음표 팝업만 열립니다). 실제로는 <b>413행이 이어집니다</b> —
+  여기 14행은 서로 다른 상태를 보여주려고 <b>발췌</b>한 것입니다.
+  Telecom 8행의 내용은 SharePoint 정본에서 읽어온 값입니다.
 </div>
 
-<main class="wide">
+<main class="two">
 
-  <div class="tabs">
-    <button class="on" type="button">① 체크리스트 · 매핑</button>
-    <button type="button">② 실행 결과에서 보이는 모습</button>
+  <div class="col col-left">
+
+    <section class="panel tight envpanel">
+      <h2>실행 환경</h2>
+      <div class="field">
+        <label>서버</label>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="srv" checked> LiveTest</label>
+          <label class="choice live"><input type="radio" name="srv"> 운영(Live)</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="dev">기기</label>
+        <div class="row">
+          <select id="dev"><option>SM-S928N · R3CX608N6GY</option></select>
+          <button class="ghost" type="button">새로고침</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>플랫폼</label>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="plat" checked> Android</label>
+          <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel tight">
+      <h2>실행</h2>
+      <div class="sumline">
+        선택 <b>시나리오 1개</b> · 케이스 <b>8</b> · 예상 <b>1분</b><br>
+        <code>18_Telecom</code>
+      </div>
+      <div class="runbtns">
+        <button class="primary" type="button">실행</button>
+        <button type="button">전체 실행</button>
+        <button class="danger" type="button">중단</button>
+      </div>
+
+      <div class="runprog">
+        <div class="barwrap"><div class="bar" style="width:52%"></div></div>
+        <div class="runnow"><b>1 / 2</b> · <code>21_Card</code> 진행 중 · 02:10 경과</div>
+      </div>
+      <p class="note" style="margin-top:8px">
+        스텝별 로그와 결과는 <a href="/history.html">실행 이력</a>에서 봅니다.
+      </p>
+    </section>
+
+    <section class="panel tight">
+      <h2>엑셀 <span class="muted">I11:I423</span></h2>
+      <div class="sumline">
+        <b class="pend">기입 대기 12건</b>(자동)<br>
+        사람 수정 4건 <span class="muted">(문구 3 · 매핑 0 · 결과 1)</span>
+      </div>
+      <div class="runbtns">
+        <button class="primary" type="button">엑셀에 저장 (16)</button>
+        <button class="ghost" type="button">다시 읽기</button>
+        <button class="ghost" type="button">되돌리기</button>
+      </div>
+    </section>
+
   </div>
 
-  <!-- ─────────── ① 체크리스트 · 매핑 ─────────── -->
-  <section class="panel">
-    <h2>체크리스트
-      <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span>
-      <span class="spacer"></span>
-      <button class="ghost small" type="button">엑셀에서 다시 읽기</button>
-      <button class="primary small" type="button">엑셀에 저장 (16)</button>
-    </h2>
+  <div class="col col-right">
+    <section class="panel">
+      <h2>체크리스트 <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span></h2>
 
-    <div class="basisrow">
+      <div class="basisrow">
       <label for="basis">결과 보기</label>
       <select id="basis">
         <optgroup label="자동 실행 (suite_logs)">
@@ -233,17 +340,8 @@
       <span class="muted">과거 실행·릴리스를 고르면 <b>읽기 전용</b>입니다 — 이미 지난 실행 기록은 고치지 않습니다.</span>
     </div>
 
-    <div class="cov">
-      <span><b>매핑 168 / 413</b></span>
-      <div class="barwrap">
-        <div class="bar" style="width:41%; float:left"></div>
-        <div class="bar part" style="width:9%; float:left"></div>
-      </div>
-      <span class="muted">자동 168 · <b style="color:#96631a">자동화 불가 37</b> · 미분류 208</span>
-    </div>
-
-    <input type="checkbox" id="help" class="helptoggle">
-    <div class="filters">
+            <input type="checkbox" id="help" class="helptoggle">
+      <div class="filters">
       <label class="f"><span>영역</span>
         <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
       </label>
@@ -264,7 +362,8 @@
       <label for="help" class="helpbtn" title="이 화면 설명">?</label>
     </div>
 
-    <table class="cl">
+      <div class="clwrap">
+      <table class="cl">
       <thead>
         <tr>
           <th class="c-id">ID</th>
@@ -278,9 +377,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="areahead"><td colspan="8">Telecom <span class="right">8행 · 매핑 8 · 최근 실행 2026-09-29 16:48</span></td></tr>
-
-        <tr>
+        <tr class="areahead"><td colspan="8"><label class="scen"><input type="checkbox" checked> <b>18_Telecom</b></label><span class="muted"> · Telecom 영역 · 케이스 8 · 예상 1분</span><span class="right">최근 실행 2026-09-29 16:48</span></td></tr>
+<tr>
           <td><span class="id">TEL-001</span></td>
           <td>Low</td>
           <td class="depth"><b>GME Mobile</b>Home</td>
@@ -292,7 +390,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-002</span></td>
           <td>Low</td>
           <td class="depth"><b>GME Mobile</b>Contact us</td>
@@ -304,7 +402,7 @@
           <td><span class="cmt" contenteditable>(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-003</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -316,7 +414,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-004</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -328,7 +426,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-005</span></td>
           <td>Medium</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -340,7 +438,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-006</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -352,7 +450,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-007</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -364,7 +462,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">TEL-008</span></td>
           <td>High</td>
           <td class="depth"><b>GME Mobile</b>GME Mobile</td>
@@ -376,9 +474,8 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr class="areahead"><td colspan="8">HOME <span class="right">29행 · 매핑 21 · <b>미매핑 8</b></span></td></tr>
-
-        <tr>
+        <tr class="areahead"><td colspan="8"><label class="scen"><input type="checkbox"> <b>09_Home</b></label><span class="muted"> · HOME 영역 · 이 영역에 걸린 케이스 1 · 예상 6분</span></td></tr>
+<tr>
           <td><span class="id">HOM-001</span></td>
           <td>Low</td>
           <td class="depth"><b>Notification</b>Notification</td>
@@ -390,7 +487,8 @@
           <td><span class="cmt xlsx">- ios : 알림 아이콘이 사라지지 않음<span class="from">엑셀 J열에 원래 있던 메모 · 고치지 않음</span></span></td>
         </tr>
 
-        <tr class="unmapped">
+        <tr class="areahead"><td colspan="8"><span class="noscen">시나리오 없음 — 실행 대상 아님</span><span class="muted"> · HOME · 매핑 안 된 2행</span></td></tr>
+<tr class="unmapped">
           <td><span class="id">HOM-003</span></td>
           <td>Medium</td>
           <td class="depth"><b>Notification</b>Notification</td>
@@ -401,7 +499,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr class="unmapped">
+<tr class="unmapped">
           <td><span class="id">HOM-006</span></td>
           <td>Medium</td>
           <td class="depth"><b>Account</b>GME Wallet</td>
@@ -412,9 +510,8 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr class="areahead"><td colspan="8">Card <span class="right">3행 · 매핑 2 · <b>자동화 불가 1</b></span></td></tr>
-
-        <tr>
+        <tr class="areahead"><td colspan="8"><label class="scen"><input type="checkbox"> <b>21_Card</b></label><span class="muted"> · Card 영역 · 이 영역에 걸린 케이스 2 · 예상 4분</span></td></tr>
+<tr>
           <td><span class="id">CRD-001</span></td>
           <td>High</td>
           <td class="depth"><b>View Booking History</b>GME Mobile</td>
@@ -426,7 +523,7 @@
           <td><span class="cmt" contenteditable></span></td>
         </tr>
 
-        <tr>
+<tr>
           <td><span class="id">CRD-002</span></td>
           <td>High</td>
           <td class="depth"><b>Recharge_Wallet</b>Simple Password</td>
@@ -438,7 +535,8 @@
           <td><span class="cmt" contenteditable>(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상<span class="from">저장소 · 저장 시 엑셀에 한 줄 덧붙임</span></span></td>
         </tr>
 
-        <tr class="manualrow">
+        <tr class="areahead"><td colspan="8"><span class="noscen">시나리오 없음 — 실행 대상 아님</span><span class="muted"> · Card · 자동화 불가 1행</span></td></tr>
+<tr class="manualrow">
           <td><span class="id">CRD-003</span></td>
           <td>High</td>
           <td class="depth"><b>Recharge_Wallet</b>Biometric</td>
@@ -450,15 +548,9 @@
         </tr>
       </tbody>
     </table>
+      </div>
 
-    <div class="footbar">
-      <span class="muted"><b class="pend">기입 대기 12건</b>(자동) · 사람 수정 4건<span class="muted"> (문구 3 · 매핑 0 · 결과 1)</span></span>
-      <span class="spacer"></span>
-      <button class="ghost small" type="button">되돌리기</button>
-      <button class="primary small" type="button">엑셀에 저장 (16)</button>
-    </div>
-
-    <div class="helpmodal">
+      <div class="helpmodal">
       <div class="helpmodal-box">
         <header>이 화면 읽는 법 <label for="help" class="x" title="닫기">×</label></header>
         <p class="note">
@@ -508,67 +600,9 @@
     </p>
       </div>
     </div>
-  </section>
-
-  <!-- ─────────── ② 실행 결과에서 보이는 모습 ─────────── -->
-  <section class="panel" style="margin-top:14px">
-    <h2>② 실행 결과에서 보이는 모습 <span class="muted">— 실행 이력 화면의 항목을 펼쳤을 때</span></h2>
-
-    <section class="panel summary pass" style="margin:0">
-      <div class="headline">18_Telecom — PASS</div>
-      <div>2026-09-29 16:48 · 33스텝 · 00:47 · <code>SM-S928N</code> · 7.21.0-stag · LiveTest</div>
-
-      <div class="stats" style="margin-top:10px">
-        <div class="stat pass"><b>1</b><span>Pass</span></div>
-        <div class="stat fail"><b>0</b><span>Fail</span></div>
-        <div class="stat skip"><b>7</b><span>NA</span></div>
-        <div class="stat"><b>0</b><span>미커버</span></div>
-      </div>
-
-      <table>
-        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
-        <tbody>
-          <tr><td><span class="id">TEL-001</span></td><td>홈화면 이동 확인</td><td>[01]</td>
-              <td class="st-PASS">Pass</td></tr>
-          <tr><td><span class="id">TEL-002</span></td><td>CS 팝업 발생 확인</td><td>[02]</td>
-              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
-          <tr><td><span class="id">TEL-003</span></td><td>Mobile SIM 선택 시 요금제 선택 페이지 발생 확인</td><td>[03]</td>
-              <td class="na">NA <span class="muted">진입 불가</span></td></tr>
-          <tr><td colspan="4" class="muted">… TEL-004 ~ TEL-008 동일 (NA)</td></tr>
-        </tbody>
-      </table>
-
-      <p class="note" style="margin-top:10px">
-        이 표는 <b>실행한 그때 값으로 남습니다</b>(<code>suite_logs/2026-09-29_164807/checklist.json</code>).<br>
-        나중에 체크리스트 문구를 고치거나 행을 지워도 <b>이 기록은 그대로</b>입니다 — 그래야 지난 리포트가 흔들리지 않습니다.
-      </p>
+  
     </section>
 
-    <section class="panel summary fail" style="margin-top:10px">
-      <div class="headline">21_Card — FAIL</div>
-      <div>2026-09-29 15:36 · 118스텝 · 04:12 · <code>[22]</code> 에서 실패</div>
-
-      <table>
-        <thead><tr><th style="width:80px">ID</th><th>확인 항목</th><th style="width:60px">케이스</th><th style="width:150px">결과</th></tr></thead>
-        <tbody>
-          <tr><td><span class="id">CRD-001</span></td><td>Balance 선택 시 GME PAY 잔액 노출 확인</td><td>[01]</td>
-              <td class="st-PASS">Pass</td></tr>
-          <tr><td><span class="id">CRD-002</span></td><td>간편비밀번호 일치 시 충전동작 확인</td><td>[21]</td>
-              <td class="muted">미확인 <span style="font-size:11px">— 실패 지점 이전까지만 진행</span></td></tr>
-          <tr><td><span class="id">CRD-003</span></td><td>생체인식 일치 시 충전동작 확인</td><td>[22]</td>
-              <td class="st-FAIL">Fail</td></tr>
-        </tbody>
-      </table>
-
-      <p class="warn" style="margin-top:10px">
-        자동 Fail 은 체크리스트에 <b>바로 기입하지 않고 「확인 대기」로 둡니다.</b>
-        외부 요인·셋팅 불량으로 난 Fail 이 그대로 릴리스 판단에 실리면 안 되고, 반대로 조용히 무시돼서도 안 됩니다
-        — 사람이 체크리스트 화면에서 최종값을 고릅니다(고치면 <code>직접 수정 · 자동은 Fail</code> 로 남습니다).<br>
-        실패 지점 <b>이후</b> 케이스는 "확인함"이 아니라 <b>미확인</b>입니다 — 여기까지 Fail 로 적으면 하지 않은 확인을 했다고 적는 셈이 됩니다.
-      </p>
-    </section>
-  </section>
-
-</main>
+      </main>
 </body>
 </html>
