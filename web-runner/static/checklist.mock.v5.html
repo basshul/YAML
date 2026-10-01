@@ -1,247 +1,198 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>체크리스트 목업 v5 — 확인할 것 중심</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- 글꼴: 본문 Pretendard, 코드·ID JetBrains Mono. 막혀 있으면 맑은 고딕·Consolas 로 돌아간다. -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <style>
-    /* 목업 전용. 확정되면 style.css 로 옮긴다. */
-    body {
-      font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
-      letter-spacing: -0.005em; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
-    }
-    h1 { letter-spacing: -0.02em; }
-    h2 { letter-spacing: -0.01em; }
-    code, .id, .mono { font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: 0; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>체크리스트 목업 v5 — 확인할 것 중심</title>
+<link rel="stylesheet" href="style.css">
+<!-- 글꼴: 본문 Pretendard, ID·매핑 JetBrains Mono. 막히면 맑은 고딕·Consolas 로 돌아간다. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* v5 전용. 확정되면 style.css 로 옮긴다. */
+  :root{
+    --mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+    --muted:#5f6873;                 /* 흰 배경 대비 4.5:1 이상 */
+    --line:#dfe3e8; --line2:#eceff2;
+    --blue:#2f6feb; --blueDk:#2f5bb7;
+    --red:#c62f2f; --green:#237a37; --amber:#8a5a12; --purple:#5b3a93;
+  }
+  body{font-family:"Pretendard Variable",Pretendard,"Malgun Gothic","Segoe UI",system-ui,sans-serif;
+       letter-spacing:-0.005em;}
+  .muted{color:var(--muted);}
+  code,.mono,.id,.map{font-family:var(--mono);letter-spacing:0;}
 
-    /* 회색 보조 글씨는 대비 4.5:1 이상인 #5f6873 하나로 */
-    .muted, .note, .field > legend, .field > label, table.cl th { color: #5f6873; }
-    .note { font-size: 11px; line-height: 1.6; }
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,tr:focus-visible{
+    outline:2px solid var(--blue); outline-offset:2px; border-radius:4px;
+  }
 
-    .mockbar {
-      background: #fff5e5; color: #7a5115; font-size: 12px;
-      padding: 7px 20px; border-bottom: 1px solid #f0dfc0; line-height: 1.6;
-    }
-    .mockbar a { display: inline-block; padding: 4px 6px; margin: -4px -2px; }
+  /* ── 틀 ──────────────────────────────────────────────────────
+     넓은 화면: 좌/우 칸이 **따로** 스크롤 (페이지는 안 움직인다)
+     좁은 화면: 칸 분리를 풀고 **페이지 전체**가 스크롤
+     ⚠️ body{overflow:hidden} 을 미디어 쿼리 밖에 두면 좁은 화면에서
+        아무것도 스크롤되지 않는다 — 반드시 min-width 안에서만 건다. */
+  .shell{display:flex;gap:14px;padding:14px;align-items:stretch;}
+  .col{display:flex;flex-direction:column;gap:12px;}
+  .col-left{flex:0 0 310px;min-width:0;}
+  .col-right{flex:1;min-width:0;}
+  @media (min-width:900px){
+    html,body{height:100%;}
+    body{overflow:hidden;display:flex;flex-direction:column;}
+    .shell{flex:1;min-height:0;}
+    .shell>.col{min-height:0;overflow-y:auto;padding-right:2px;}
+  }
+  @media (max-width:899px){
+    .shell{flex-direction:column;}
+    .col-left{flex:none;}
+  }
 
-    /* ── 2단 + 좌·우 따로 스크롤 (v4 유지) ───────────────────── */
-    html, body { height: 100%; }
-    body { overflow: hidden; }
-    main.two { flex: 1; min-height: 0; flex-direction: row; align-items: stretch; }
-    main.two > .col { min-height: 0; overflow-y: auto; padding-right: 2px; }
-    .col-left  { flex: 0 0 300px; }
-    .col-right { flex: 1; min-width: 0; }
-    @media (max-width: 900px) { main.two { flex-direction: column; } .col-left { flex: none; } }
-    .panel.tight { padding: 12px 14px; }
-    .panel.tight h2 { margin-bottom: 9px; }
-    fieldset.field { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
-    fieldset.field:last-child { margin-bottom: 0; }
-    fieldset.field > legend { display: block; font-size: 12px; margin-bottom: 6px; padding: 0; }
-    .runbtns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-    .runbtns button.primary { flex: 1; }
-    .runprog { margin-top: 14px; padding-top: 12px; border-top: 1px solid #eceff2; }
-    .runprog .barwrap { margin-bottom: 7px; }
-    .runnow { font-size: 11px; color: #5f6873; line-height: 1.5; }
-    .sumline { font-size: 12px; line-height: 1.7; }
-    .sumline b { color: #2f5bb7; }
+  .mockbar{background:#fff5e5;color:#6b4a12;font-size:12px;padding:7px 20px;
+    border-bottom:1px solid #f0dfc0;line-height:1.6;}
+  .mockbar a{color:var(--blueDk);display:inline-block;padding:3px 5px;margin:-3px -1px;}
 
-    /* ── ① 확인할 것 ─────────────────────────────────────────
-       사람이 매번 처리해야 하는 일만 모은다. 누르면 표가 그 행으로 좁혀진다. */
-    .todo {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 10px 12px; margin-bottom: 12px;
-      background: #fff; border: 1px solid #dfe3e8; border-radius: 8px;
-    }
-    .todo > .ttl { font-size: 13px; font-weight: 700; color: #1b1f24; margin-right: 4px; }
-    .chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
-      border: 1px solid #ccd2d9; background: #fff; color: #1b1f24; cursor: pointer;
-    }
-    .chip .n { font-size: 13px; }
-    .chip.red   { border-color: #e8b4b4; background: #fdeeee; color: #a02c2c; }
-    .chip.blue  { border-color: #cfe0ff; background: #eef4ff; color: #2559c9; }
-    .chip.amber { border-color: #f0c98a; background: #fffaf0; color: #7a5115; }
-    .chip.done  { border-color: #e3e8ee; background: #f7f9fc; color: #5f6873; font-weight: 500; cursor: default; }
-    .chip[aria-pressed="true"] { box-shadow: 0 0 0 2px #1b1f24 inset; }
-    .chip:focus-visible, .rowbtn:focus-visible, .linkbtn:focus-visible { outline: 2px solid #2f6feb; outline-offset: 2px; }
-    .todo .clear { margin-left: auto; }
-    .linkbtn { border: 0; background: none; padding: 4px 2px; color: #2559c9; font-size: 12px; cursor: pointer; text-decoration: underline; font-family: inherit; }
+  .panel.tight{padding:12px 14px;}
+  .panel.tight h2{margin-bottom:9px;}
+  .flab{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .sidehint{font-size:11px;margin:8px 0 0;line-height:1.6;color:var(--muted);}
 
-    /* 결과 보기 + 과거 실행 띠 */
-    .basisrow {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 9px 11px; margin-bottom: 10px;
-      background: #f5f7fa; border: 1px solid #e3e8ee; border-radius: 6px;
-    }
-    .basisrow > label { font-size: 12px; color: #48505a; font-weight: 600; }
-    .basisrow select { font-size: 12px; min-width: 300px; }
-    .pastband {
-      display: none; align-items: center; gap: 10px;
-      padding: 9px 12px; margin-bottom: 10px; border-radius: 6px;
-      background: #3d2e0f; color: #fff3d6; font-size: 12px; font-weight: 600;
-    }
-    .pastband.on { display: flex; }
-    .pastband button { margin-left: auto; padding: 4px 10px; font-size: 12px; }
-    .readonly-view table.cl tbody { background: repeating-linear-gradient(135deg, #fff, #fff 10px, #fbf8f1 10px, #fbf8f1 20px); }
+  .runbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .runbtns button.primary{flex:1;}
+  .sumline{font-size:12px;line-height:1.7;}
+  .sumline b{color:var(--blueDk);}
+  .runprog{margin-top:16px;padding-top:13px;border-top:1px solid var(--line2);}
+  .runprog .barwrap{margin-bottom:7px;}
+  .runnow{font-size:11px;color:var(--muted);line-height:1.5;}
 
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
-    .filters label.f { display: flex; align-items: center; gap: 6px; }
-    .filters label.f > span { font-size: 11px; color: #5f6873; white-space: nowrap; }
-    .filters select { padding: 6px 9px; font-size: 12px; }
-    .filters .spacer { flex: 1; }
-    .modetoggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #48505a; cursor: pointer; }
-    .covline { font-size: 12px; color: #48505a; margin: -2px 0 10px; display: none; }
-    .mapmode .covline { display: block; }
-    .covline b { color: #1b1f24; }
+  .basisrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 11px;
+    margin-bottom:10px;background:#f5f7fa;border:1px solid #e3e8ee;border-radius:6px;}
+  .basisrow>label{font-size:12px;color:#3d4550;font-weight:600;}
+  .basisrow select{font-size:12px;min-width:280px;}
+  .basisrow .muted{font-size:11px;}
 
-    /* ── ③ 표는 읽기용 ───────────────────────────────────────── */
-    .clwrap { overflow-x: auto; }
-    .clwrap:focus-visible { outline: 2px solid #2f6feb; outline-offset: 2px; border-radius: 4px; }
-    table.cl { width: 100%; min-width: 860px; border-collapse: collapse; table-layout: fixed; }
-    table.cl th, table.cl td {
-      text-align: left; padding: 8px 8px; border-bottom: 1px solid #eceff2;
-      font-size: 12px; vertical-align: top;
-    }
-    table.cl th { font-weight: 600; white-space: nowrap; }
-    table.cl tbody tr.row { cursor: pointer; }
-    table.cl tbody tr.row:hover td { background: #f5f9ff; }
-    table.cl tbody tr.row.sel td { background: #eaf1ff; }
-    /* 확인 항목이 남는 폭을 다 갖는다 */
-    .c-id { width: 74px; } .c-pri { width: 58px; } .c-depth { width: 116px; }
-    .c-map { width: 118px; } .c-res { width: 98px; } .c-cmt { width: 150px; }
-    table.cl { min-width: 760px; }
-    table.cl td { overflow-wrap: anywhere; }
-    .rowbtn {
-      border: 0; background: none; padding: 0; cursor: pointer;
-      font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px; font-weight: 600;
-      color: #2559c9; white-space: nowrap;
-    }
-    .depth { color: #5f6873; font-size: 11px; line-height: 1.45; }
-    .depth b { color: #48505a; font-weight: 600; display: block; }
-    .txt { line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .tag-edit { display: inline-block; font-size: 10.5px; color: #2559c9; font-weight: 600; margin-left: 4px; }
-    .mapv { font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px; color: #2f4058; white-space: nowrap; }
-    .mapv.none { font-family: inherit; color: #7a5115; font-style: italic; }
-    .mapv.manual { font-family: inherit; color: #6b3fa0; }
-    .mapv.bad { color: #a02c2c; font-weight: 600; }
-    .mapv.bad::after { content: " ✕ 없는 케이스"; font-family: "Pretendard Variable", sans-serif; font-size: 10.5px; }
-    .mapin {
-      width: 100%; font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px;
-      padding: 4px 6px; border: 1px solid #ccd2d9; border-radius: 4px;
-    }
-    .mapin:focus { outline: 2px solid #2f6feb; outline-offset: 1px; }
-    .mapin.bad { border-color: #d43c3c; background: #fdeeee; }
-    .cmtv { color: #48505a; font-size: 11px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .cmtv .src { color: #5f6873; font-size: 10.5px; }
+  /* 과거 실행 = 읽기 전용 띠 */
+  .roband{display:none;align-items:center;gap:8px;margin-bottom:10px;padding:10px 12px;
+    background:#fff3e0;border:1px solid #e3b872;border-left:5px solid #b87400;
+    border-radius:6px;font-size:12px;color:#6b4a12;}
+  body.ro .roband{display:flex;}
+  body.ro .ro-hide{display:none !important;}
 
-    /* 결과 표시 — 글자 + 옅은 바탕. 색만으로 뜻을 싣지 않는다 */
-    .rv { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11.5px; }
-    .rv.pass { background: #e7f5ec; color: #1d6b34; }
-    .rv.fail { background: #fdeaea; color: #a02c2c; }
-    .rv.na   { background: #eef0f3; color: #48505a; }
-    .rv.nt   { background: #fff2dc; color: #7a5115; }
-    .rv.empty { color: #5f6873; font-weight: 500; padding-left: 0; }
-    .mk { display: block; font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
-    .mk.pend { color: #2559c9; font-weight: 600; }
-    .mk.wait { color: #a02c2c; font-weight: 700; }
-    .mk.over { color: #7a5115; }
-    .mk.auto { color: #5f6873; }
+  .todo{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px 10px;
+    margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:6px;}
+  .todo>.lab{font-size:12px;font-weight:700;color:#3d4550;margin-right:2px;}
+  .tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;font-size:12px;
+    border:1px solid var(--line);border-radius:999px;background:#fff;color:#2c333c;cursor:pointer;}
+  .tbtn .n{font-weight:700;font-variant-numeric:tabular-nums;}
+  .tbtn[aria-pressed="true"]{border-color:var(--blue);background:#eef4ff;color:var(--blueDk);}
+  .tbtn.zero{color:var(--muted);border-color:var(--line2);cursor:default;}
+  .tbtn.warn:not(.zero){border-color:#e3a9a9;background:#fdf0f0;color:var(--red);}
+  .tbtn.warn:not(.zero)[aria-pressed="true"]{border-color:var(--red);background:#fbe3e3;}
 
-    /* 시나리오 머리줄 — 요약을 같이 */
-    .areahead td { background: #eef1f5; font-size: 12px; color: #2f4058; border-bottom: 1px solid #dfe3e8; }
-    .areahead label.scen { cursor: pointer; font-weight: 700; }
-    .areahead .sum { margin-left: 8px; font-weight: 500; color: #48505a; }
-    .areahead .sum b { font-weight: 700; }
-    .areahead .right { float: right; color: #5f6873; font-size: 11px; }
-    .noscen { color: #7a5115; font-weight: 700; }
-    .emptyrow td { text-align: center; color: #5f6873; padding: 26px; }
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:9px;}
+  .filters label.f{display:flex;align-items:center;gap:6px;}
+  .filters label.f>span{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .filters select{padding:6px 9px;border:1px solid #ccd2d9;border-radius:6px;font-size:12px;
+    font-family:inherit;background:#fff;}
+  .modetog{display:flex;align-items:center;gap:6px;font-size:12px;color:#3d4550;
+    padding:5px 9px;border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .modetog:has(input:checked){border-color:var(--purple);background:#f7f3ff;color:var(--purple);font-weight:600;}
+  .helpbtn{width:26px;height:26px;flex:none;border-radius:50%;border:1px solid #ccd2d9;
+    background:#fff;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;}
+  .helpbtn:hover{border-color:var(--blue);color:var(--blue);}
 
-    /* ── 행 상세 패널 ─────────────────────────────────────────── */
-    .drawer {
-      position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); z-index: 30;
-      background: #fff; border-left: 1px solid #dfe3e8; box-shadow: -8px 0 24px rgba(16,21,28,.12);
-      display: flex; flex-direction: column; transform: translateX(100%); transition: transform .18s ease;
-      visibility: hidden;
-    }
-    .drawer.open { transform: none; visibility: visible; }
-    @media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
-    .dr-head { padding: 14px 16px 10px; border-bottom: 1px solid #eceff2; display: flex; align-items: flex-start; gap: 8px; }
-    .dr-head .id { font-size: 13px; color: #2559c9; font-weight: 700; }
-    .dr-head .crumb { font-size: 11px; color: #5f6873; margin-top: 2px; }
-    .dr-head .x { margin-left: auto; border: 0; background: none; font-size: 20px; line-height: 1; padding: 2px 8px; color: #48505a; cursor: pointer; border-radius: 4px; }
-    .dr-head .x:hover { background: #f2f4f7; }
-    .dr-head .x:focus-visible { outline: 2px solid #2f6feb; }
-    .dr-body { flex: 1; overflow-y: auto; padding: 14px 16px 20px; }
-    .dr-sec { margin-bottom: 18px; }
-    .dr-sec > h3 { font-size: 12px; color: #48505a; margin: 0 0 6px; font-weight: 700; }
-    .dr-sec textarea, .dr-sec input[type=text], .dr-sec select {
-      width: 100%; box-sizing: border-box; font-family: inherit; font-size: 12.5px;
-      padding: 7px 9px; border: 1px solid #ccd2d9; border-radius: 6px; background: #fff;
-    }
-    .dr-sec input.mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; }
-    .dr-sec textarea { min-height: 56px; resize: vertical; line-height: 1.5; }
-    .dr-sec :is(textarea, input, select):focus { outline: 2px solid #2f6feb; outline-offset: 1px; }
-    .dr-sec :is(textarea, input, select):disabled { background: #f5f7fa; color: #48505a; }
-    .hint { font-size: 11px; color: #5f6873; margin-top: 4px; line-height: 1.5; }
-    .err { font-size: 11px; color: #a02c2c; margin-top: 4px; font-weight: 600; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .two-col label { display: block; font-size: 11px; color: #5f6873; margin-bottom: 4px; }
+  /* ── 표(읽기 전용) ── */
+  .clwrap{overflow-x:auto;}
+  table.cl{width:100%;border-collapse:collapse;min-width:760px;}
+  table.cl th,table.cl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line2);
+    font-size:12px;vertical-align:top;}
+  table.cl th{color:var(--muted);font-weight:600;white-space:nowrap;}
+  tr.row{cursor:pointer;}
+  tr.row:hover td{background:#f6f9fe;}
+  tr.row[aria-selected="true"] td{background:#eef4ff;box-shadow:inset 3px 0 0 var(--blue);}
+  .c-id{width:84px;} .c-pri{width:64px;} .c-map{width:150px;}
+  .c-res{width:126px;} .c-ios{width:56px;} .c-cmt{width:150px;}
+  .id{font-size:11px;color:var(--blueDk);font-weight:600;}
+  .txt{line-height:1.45;}
+  .sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
+  .map{font-size:11px;color:#2f4058;}
+  .map.none{font-family:inherit;color:var(--amber);font-style:italic;}
+  .map.bad{color:var(--red);background:#fdf0f0;border-radius:3px;padding:1px 4px;}
+  .v{font-weight:700;}
+  .v.Pass{color:var(--green);} .v.Fail{color:var(--red);}
+  .v.NA{color:var(--muted);} .v.NotTest{color:var(--amber);}
+  .v.none{color:#9aa3ae;font-weight:400;}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:1px;}
+  .tag.auto{background:#eef4ff;color:var(--blueDk);}
+  .tag.man{background:#f3eefc;color:var(--purple);}
+  .tag.pend{background:#e7f1ff;color:var(--blueDk);}
+  .tag.wait{background:#fdf0f0;color:var(--red);}
+  .scenhead td{background:#eef1f5;font-weight:700;font-size:12px;color:#2f4058;
+    border-bottom:1px solid var(--line);}
+  .scenhead .sum{float:right;font-weight:400;color:var(--muted);font-size:11px;}
+  .scenhead .noscen{color:var(--amber);}
+  .failbtns{display:flex;gap:4px;margin-top:5px;}
+  .failbtns button{padding:2px 8px;font-size:11px;}
 
-    /* ② 자동 Fail 결정 카드 */
-    .decide { border: 1px solid #e8b4b4; background: #fff7f7; border-radius: 8px; padding: 11px 12px; }
-    .decide .q { font-size: 12.5px; font-weight: 700; color: #a02c2c; margin-bottom: 4px; }
-    .decide .why { font-size: 11.5px; color: #48505a; margin-bottom: 10px; line-height: 1.5; }
-    .decide .btns { display: flex; gap: 6px; flex-wrap: wrap; }
-    .decide .btns button { font-size: 12px; }
-    .overform { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e8b4b4; display: none; }
-    .overform.on { display: block; }
-    .overform .row2 { display: flex; gap: 6px; margin-top: 8px; }
-    .provbox { font-size: 11.5px; color: #48505a; background: #f7f9fc; border: 1px solid #eceff2; border-radius: 6px; padding: 8px 10px; margin-top: 6px; line-height: 1.55; }
-    .xmemo { font-size: 11.5px; color: #48505a; background: #f7f9fc; border: 1px solid #eceff2; border-radius: 6px; padding: 7px 9px; margin-bottom: 8px; }
-    .xmemo .src { display: block; font-size: 10.5px; color: #5f6873; margin-top: 2px; }
+  /* ── 오른쪽 상세 패널 ── */
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);background:#fff;
+    border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(16,21,28,.12);
+    display:flex;flex-direction:column;z-index:30;transform:translateX(101%);
+    transition:transform .18s ease;}
+  .drawer[aria-hidden="false"]{transform:none;}
+  @media (prefers-reduced-motion:reduce){.drawer{transition:none;}}
+  .drawer>header{display:flex;align-items:center;gap:8px;padding:12px 14px;
+    border-bottom:1px solid var(--line2);}
+  .drawer>header .id{font-size:13px;}
+  .drawer .body{flex:1;overflow-y:auto;padding:14px;}
+  .drawer .x{margin-left:auto;background:none;border:none;font-size:20px;color:var(--muted);
+    cursor:pointer;line-height:1;padding:2px 7px;border-radius:4px;}
+  .drawer .x:hover{background:#f2f4f7;color:#1b1f24;}
+  .fld{margin-bottom:14px;}
+  .fld>label,.fld>.lg{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  .fld textarea,.fld input[type=text],.fld select{width:100%;font-family:inherit;font-size:13px;
+    padding:7px 9px;border:1px solid #ccd2d9;border-radius:6px;background:#fff;}
+  .fld textarea{resize:vertical;min-height:54px;line-height:1.5;}
+  .fld input.mono{font-family:var(--mono);font-size:12px;}
+  .fld input:disabled,.fld textarea:disabled,.fld select:disabled{background:#f5f7fa;color:var(--muted);}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.55;}
+  .hist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line2);}
+  .hist li{padding:8px 0;border-bottom:1px solid var(--line2);font-size:12px;line-height:1.55;}
+  .hist .when{display:block;font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:2px;}
+  .drawer>footer{padding:11px 14px;border-top:1px solid var(--line2);display:flex;gap:7px;}
+  .drawer>footer .primary{flex:1;}
 
-    .hist { list-style: none; margin: 0; padding: 0 0 0 12px; border-left: 2px solid #e3e8ee; }
-    .hist li { position: relative; font-size: 11.5px; color: #48505a; padding: 0 0 10px 8px; line-height: 1.5; }
-    .hist li::before { content: ""; position: absolute; left: -18px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #9aa3ae; }
-    .hist li.m::before { background: #b5711a; }
-    .hist li.f::before { background: #d43c3c; }
-    .hist .t { font-family: "JetBrains Mono", Consolas, monospace; font-size: 10.5px; color: #5f6873; display: block; }
-    .dr-foot { border-top: 1px solid #eceff2; padding: 10px 16px; font-size: 11px; color: #5f6873; }
-
-    /* 저장 미리보기 · 도움말 */
-    dialog.sheet { border: 0; border-radius: 10px; padding: 0; width: min(640px, calc(100% - 40px)); max-height: calc(100% - 60px); }
-    dialog.sheet::backdrop { background: rgba(16, 21, 28, .5); }
-    .sheet header { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #eceff2; font-size: 14px; font-weight: 700; }
-    .sheet header .x { margin-left: auto; border: 0; background: none; font-size: 20px; cursor: pointer; color: #48505a; padding: 2px 8px; border-radius: 4px; }
-    .sheet .bd { padding: 14px 18px; overflow-y: auto; max-height: 60vh; }
-    .sheet footer { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid #eceff2; }
-    .guard { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 8px 10px; border-radius: 6px; background: #e7f5ec; color: #1d6b34; margin-bottom: 12px; }
-    .warnbox { font-size: 12px; padding: 8px 10px; border-radius: 6px; background: #fdeeee; color: #a02c2c; margin-bottom: 12px; }
-    .sheet h4 { font-size: 12px; margin: 14px 0 6px; color: #48505a; }
-    .sheet h4:first-of-type { margin-top: 0; }
-    table.diff { width: 100%; border-collapse: collapse; font-size: 12px; }
-    table.diff td, table.diff th { padding: 6px 6px; border-bottom: 1px solid #eceff2; text-align: left; vertical-align: top; }
-    table.diff th { color: #5f6873; font-weight: 600; font-size: 11px; }
-    table.diff .arrow { color: #5f6873; padding: 6px 2px; }
-    .helpbody { font-size: 12.5px; line-height: 1.7; color: #1b1f24; }
-    .helpbody li { margin-bottom: 6px; }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-  </style>
+  /* ── 모달 ── */
+  .modal{position:fixed;inset:0;background:rgba(16,21,28,.5);display:none;
+    align-items:center;justify-content:center;padding:28px;z-index:40;}
+  .modal[aria-hidden="false"]{display:flex;}
+  .modal-box{background:#fff;border-radius:8px;width:min(720px,100%);max-height:100%;
+    overflow-y:auto;padding:16px 20px 18px;}
+  .modal-box>header{display:flex;align-items:center;font-size:14px;font-weight:700;
+    color:#3d4550;margin-bottom:10px;}
+  .modal-box .x{margin-left:auto;background:none;border:none;font-size:19px;color:var(--muted);
+    cursor:pointer;line-height:1;padding:2px 7px;border-radius:4px;}
+  .modal-box .x:hover{background:#f2f4f7;color:#1b1f24;}
+  .modal-box .note{font-size:12px;line-height:1.75;color:#2c333c;}
+  .modal-box table{width:100%;border-collapse:collapse;margin:10px 0;}
+  .modal-box th,.modal-box td{font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left;}
+  .modal-box th{color:var(--muted);font-weight:600;}
+  .okline{display:flex;align-items:center;gap:7px;font-size:12px;padding:8px 10px;
+    border-radius:6px;background:#eaf6ec;color:var(--green);margin-bottom:10px;}
+  .exline{font-size:12px;padding:9px 11px;border-radius:6px;background:#fdf0f0;color:#7a2222;line-height:1.7;}
+  .modal-box>footer{display:flex;gap:7px;justify-content:flex-end;margin-top:12px;}
+  .empty{padding:22px;text-align:center;color:var(--muted);font-size:12px;}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+</style>
 </head>
 <body>
 
 <header class="topbar">
   <h1>Maestro Web Runner</h1>
   <span class="tag">데모</span>
-  <span class="conn">연결됨 · SharePoint 캐시 2026-09-30 10:12</span>
+  <span class="conn">연결됨 · SharePoint 캐시 2026-10-01 10:12</span>
   <nav class="topnav">
     <a href="#" class="on" aria-current="page">실행 · 체크리스트</a>
     <a href="/history.html">실행 이력</a>
@@ -249,519 +200,526 @@
 </header>
 
 <div class="mockbar">
-  <strong>목업 v5 · v4 기반</strong> — ① 맨 위 <b>「확인할 것」</b>: 누르면 그 행만 남는다
-  ② 자동 Fail 은 셀렉트가 아니라 <b>결정 버튼</b> ③ 표는 <b>읽기용</b>, 행을 누르면 오른쪽 <b>상세 패널</b>에서 고친다
-  ④ 매핑 편집은 <b>「매핑 모드」</b> 토글 뒤로 ⑤ 과거 실행은 <b>색 띠</b>로 ⑥ 저장 전 <b>미리보기</b> →
-  <a href="checklist.mock.v1.html">v1</a> · <a href="checklist.mock.v2.html">v2</a> · <a href="checklist.mock.v3.html">v3</a> · <a href="checklist.mock.v4.html">v4</a> · <a href="checklist.mock.v4.a11y.html">v4 접근성</a><br>
-  v4 와 같은 14행(실제로는 413행)입니다. 비교를 위해 <b>CRD-001 을 자동 Fail 확인 대기</b>로, <b>HOM-006 에 잘못된 매핑</b>을 넣었습니다.
-  확인할 것·행 상세·결정 버튼·매핑 모드·결과 보기·저장 미리보기는 실제로 동작합니다(화면 안에서만, 저장은 하지 않음).
+  <strong>목업 v5 · v4 기반</strong> — 「확인할 것」을 맨 위로 올리고, 표는 읽기 전용으로 두고
+  편집은 오른쪽 상세 패널에서 합니다. 자동 Fail 은 셀렉트가 아니라 <b>확정 / 덮기</b> 버튼이고, 덮으려면 사유가 필요합니다.
+  → <a href="checklist.mock.v1.html">v1</a> · <a href="checklist.mock.v2.html">v2</a> ·
+  <a href="checklist.mock.v3.html">v3</a> · <a href="checklist.mock.v4.html">v4</a><br>
+  실행 버튼은 동작하지 않습니다. <b>필터 · 상세 패널 · 덮기 · 저장 미리보기 · 도움말은 실제로 동작합니다.</b>
+  실제로는 413행이 이어지며, 여기 14행은 상태를 보여주려고 발췌한 것입니다.
 </div>
 
-<main class="two">
+<div class="shell">
 
   <div class="col col-left">
-
     <section class="panel tight">
       <h2>실행 환경</h2>
-      <fieldset class="field">
-        <legend>서버</legend>
-        <div class="choices">
+      <div class="field">
+        <span class="flab" id="lb-srv">서버</span>
+        <div class="choices" role="radiogroup" aria-labelledby="lb-srv">
           <label class="choice"><input type="radio" name="srv" checked> LiveTest</label>
           <label class="choice live"><input type="radio" name="srv"> 운영(Live)</label>
         </div>
-      </fieldset>
+      </div>
       <div class="field">
-        <label for="dev">기기</label>
+        <label class="flab" for="dev">기기</label>
         <div class="row">
-          <select id="dev"><option>SM-S928N · R3CX608N6GY</option></select>
+          <select id="dev"><option>SM-S911N · R3CW90MTK9H</option></select>
           <button class="ghost" type="button">새로고침</button>
         </div>
       </div>
-      <fieldset class="field">
-        <legend>플랫폼</legend>
-        <div class="choices">
+      <div class="field">
+        <span class="flab" id="lb-plat">플랫폼</span>
+        <div class="choices" role="radiogroup" aria-labelledby="lb-plat">
           <label class="choice"><input type="radio" name="plat" checked> Android</label>
           <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
         </div>
-      </fieldset>
+      </div>
     </section>
 
     <section class="panel tight">
       <h2>실행</h2>
-      <div class="sumline" id="selsum"></div>
+      <div class="sumline">
+        선택 <b>시나리오 1개</b> · 케이스 <b>8</b> · 예상 <b>1분</b><br>
+        <code>18_Telecom</code>
+      </div>
       <div class="runbtns">
         <button class="primary" type="button">실행</button>
         <button type="button">전체 실행</button>
         <button class="danger" type="button">중단</button>
       </div>
       <div class="runprog">
-        <div class="barwrap" role="progressbar" aria-label="실행 진행" aria-valuemin="0" aria-valuemax="100" aria-valuenow="52" aria-valuetext="2개 중 1번째 · 21_Card 진행 중"><div class="bar" style="width:52%"></div></div>
-        <div class="runnow" role="status"><b>1 / 2</b> · <code>21_Card</code> 진행 중 · 02:10 경과</div>
+        <div class="barwrap"><div class="bar" style="width:52%"></div></div>
+        <div class="runnow"><b>1 / 2</b> · <code>21_Card</code> 진행 중 · 02:10 경과</div>
       </div>
-      <p class="note" style="margin-top:8px">스텝별 로그는 <a href="/history.html">실행 이력</a>에서 봅니다.</p>
+      <p class="sidehint">스텝별 로그와 결과는 <a href="/history.html">실행 이력</a>에서 봅니다.</p>
     </section>
 
     <section class="panel tight">
-      <h2>엑셀 <span class="muted">I11:I423</span></h2>
-      <div class="sumline" id="xlsum" role="status"></div>
+      <h2>엑셀 <span class="muted mono" style="font-size:11px">I11:I423</span></h2>
+      <div class="sumline"><span id="sv-pend"></span><br><span id="sv-mine"></span></div>
       <div class="runbtns">
-        <button class="primary" type="button" id="savebtn">엑셀에 저장…</button>
+        <button class="primary ro-hide" type="button" id="btn-save">엑셀에 저장…</button>
         <button class="ghost" type="button">다시 읽기</button>
       </div>
-      <p class="note" style="margin-top:8px">저장 버튼은 바로 보내지 않고 <b>무엇이 바뀌는지 먼저 보여줍니다.</b></p>
+      <p class="sidehint">저장 전에 <b>바뀌는 칸을 미리 보여줍니다.</b></p>
     </section>
-
   </div>
 
   <div class="col col-right">
-    <section class="panel" id="clpanel">
-      <h2>체크리스트 <span class="muted">413행 · 결과 기입 <b>I11:I423</b>(Android Result)</span></h2>
-
-      <!-- ① 확인할 것 -->
-      <div class="todo" role="group" aria-labelledby="todottl">
-        <span class="ttl" id="todottl">확인할 것</span>
-        <span id="chips"></span>
-        <button type="button" class="linkbtn clear" id="clearf" hidden>전체 413행 보기</button>
-      </div>
+    <section class="panel">
+      <h2>체크리스트 <span class="muted">413행 · 결과 기입 <span class="mono">I11:I423</span></span></h2>
 
       <div class="basisrow">
         <label for="basis">결과 보기</label>
-        <select id="basis">
+        <select id="basis" aria-describedby="basis-hint">
           <optgroup label="자동 실행 (suite_logs)">
             <option value="latest" selected>최신 결과 — 항목마다 가장 최근 실행</option>
-            <option value="2026-09-29 16:48">2026-09-29 16:48 · 5항목 · SM-S928N · 7.21.0-stag</option>
-            <option value="2026-09-29 15:36">2026-09-29 15:36 · 5항목 · SM-S928N · 7.21.0-stag</option>
-            <option value="2026-09-28 17:38">2026-09-28 17:38 · 1항목 · SM-S928N · 7.21.0-stag</option>
+            <option value="past1">2026-09-29 16:48 · 5항목 · SM-S928N · 7.21.0-stag</option>
+            <option value="past2">2026-09-23 17:08 · 25항목 · SM-S911N · 7.20.0-stag</option>
           </optgroup>
           <optgroup label="엑셀">
             <option value="excel">엑셀 현재값 — I열에 지금 적혀 있는 것</option>
           </optgroup>
         </select>
+        <span class="muted" id="basis-hint">과거 실행·엑셀을 고르면 읽기 전용이 됩니다.</span>
       </div>
-      <div class="pastband" id="pastband" role="status">
-        <span aria-hidden="true">⏸</span><span id="pasttxt"></span>
-        <button type="button" id="backlatest">최신 결과로 돌아가기</button>
+
+      <div class="roband" role="status">
+        <span><b>읽기 전용</b> — 지난 기록을 보고 있습니다. 고치려면 「결과 보기」를 <b>최신 결과</b>로 되돌리세요.</span>
+        <span class="spacer"></span>
+        <button class="small" type="button" id="btn-back-latest">최신 결과로</button>
+      </div>
+
+      <div class="todo" role="group" aria-label="확인할 것">
+        <span class="lab">확인할 것</span>
+        <button class="tbtn warn" type="button" data-todo="failwait" aria-pressed="false">
+          자동 Fail 확인 대기 <span class="n">0</span></button>
+        <button class="tbtn" type="button" data-todo="pending" aria-pressed="false">
+          엑셀 기입 대기 <span class="n">0</span></button>
+        <button class="tbtn warn" type="button" data-todo="badmap" aria-pressed="false">
+          매핑 오류 <span class="n">0</span></button>
+        <button class="tbtn warn" type="button" data-todo="noreason" aria-pressed="false">
+          덮었는데 사유 없음 <span class="n">0</span></button>
+        <button class="tbtn" type="button" data-todo="mine" aria-pressed="false">
+          사람 수정 <span class="n">0</span></button>
       </div>
 
       <div class="filters">
-        <label class="f"><span>영역</span>
-          <select><option selected>전체 (28개 영역 · 413행)</option><option>Telecom (8)</option><option>HOME (29)</option><option>MENU (106)</option></select>
-        </label>
+        <label class="f"><span>영역</span><select id="f-area" aria-label="영역 필터"></select></label>
+        <label class="f"><span>이번 실행</span>
+          <select id="f-run" aria-label="이번 실행 필터">
+            <option value="all">전체</option><option value="in">테스트한 것만</option>
+            <option value="out">빠진 것만</option></select></label>
         <label class="f"><span>중요도</span>
-          <select><option selected>전체</option><option>High</option><option>Medium</option><option>Low</option></select>
-        </label>
+          <select id="f-pri" aria-label="중요도 필터">
+            <option value="all">전체</option><option>High</option><option>Medium</option><option>Low</option></select></label>
         <label class="f"><span>결과</span>
-          <select><option selected>전체</option><option>Pass</option><option>Fail</option><option>미실행</option></select>
-        </label>
+          <select id="f-res" aria-label="결과 필터">
+            <option value="all">전체</option><option>Pass</option><option>Fail</option>
+            <option>Not Test</option><option>NA</option><option value="none">비어 있음</option></select></label>
+        <label class="modetog ro-hide"><input type="checkbox" id="mapmode"> 매핑 모드</label>
         <span class="spacer"></span>
-        <label class="modetoggle"><input type="checkbox" id="mapmode"> 매핑 모드</label>
-        <button type="button" class="helpbtn" id="helpopen" title="이 화면 설명" aria-label="이 화면 설명" aria-haspopup="dialog">?</button>
+        <button class="helpbtn" type="button" id="btn-help" aria-label="이 화면 설명 열기">?</button>
       </div>
-      <p class="covline">매핑 진척 — <b>자동 168</b> · 자동화 불가 37 · 미분류 208 <span class="muted">(매핑 모드에서만 보입니다. 실행 화면에서 매번 볼 숫자가 아니라서)</span></p>
 
-      <div class="clwrap" tabindex="0" role="region" aria-label="체크리스트 표 (가로 스크롤)">
+      <div class="clwrap">
         <table class="cl">
+          <caption class="sr-only">체크리스트 — 행을 누르면 오른쪽 상세 패널이 열립니다</caption>
           <thead>
-            <tr>
-              <th scope="col" class="c-id">ID</th>
-              <th scope="col" class="c-pri">중요도</th>
-              <th scope="col" class="c-depth">분류</th>
-              <th scope="col">확인 항목</th>
-              <th scope="col" class="c-map">매핑</th>
-              <th scope="col" class="c-res">Android</th>
-              <th scope="col" class="c-res">iOS</th>
-              <th scope="col" class="c-cmt">Comment</th>
-            </tr>
+            <tr><th class="c-id">ID</th><th class="c-pri">중요도</th><th>확인 항목</th>
+                <th class="c-map">매핑</th><th class="c-res">Android</th>
+                <th class="c-ios">iOS</th><th class="c-cmt">Comment</th></tr>
           </thead>
-          <tbody id="tb"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
+        <div class="empty" id="empty" hidden>조건에 맞는 행이 없습니다.</div>
       </div>
-      <p class="note" style="margin-top:10px">행을 누르면(또는 ID 에서 Enter) 오른쪽에 상세가 열립니다. 표에서는 고치지 않습니다.</p>
     </section>
   </div>
-</main>
+</div>
 
-<!-- 행 상세 패널 -->
-<aside class="drawer" id="drawer" aria-labelledby="drid" role="dialog" aria-modal="false">
-  <div class="dr-head">
-    <div><div class="id" id="drid"></div><div class="crumb" id="drcrumb"></div></div>
-    <button type="button" class="x" id="drclose" aria-label="상세 닫기" title="닫기 (Esc)">×</button>
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-labelledby="dw-id">
+  <header>
+    <span class="id" id="dw-id">—</span>
+    <span class="muted" id="dw-depth" style="font-size:11px"></span>
+    <button class="x" type="button" id="dw-close" aria-label="상세 패널 닫기">×</button>
+  </header>
+  <div class="body">
+    <div class="fld">
+      <label for="dw-text">확인 항목</label>
+      <textarea id="dw-text"></textarea>
+    </div>
+
+    <div class="fld" id="dw-resfld">
+      <label for="dw-res">Android 결과</label>
+      <select id="dw-res">
+        <option value="">—</option><option>Pass</option><option>Fail</option>
+        <option>Not Test</option><option>NA</option>
+      </select>
+      <div class="hint" id="dw-prov"></div>
+    </div>
+
+    <div class="fld" id="dw-failfld" hidden>
+      <span class="lg">자동 결과 <span style="color:var(--red)">Fail</span> — 확인 대기</span>
+      <div class="hint" style="margin:0 0 8px">
+        외부 요인·셋팅 불량일 수 있습니다. <b>확정</b>하거나 <b>다른 값으로 덮으세요.</b>
+      </div>
+      <div class="runbtns" style="margin-top:0">
+        <button class="primary" type="button" id="dw-failok">Fail 확정</button>
+        <button type="button" id="dw-failover">다른 값으로 덮기…</button>
+      </div>
+      <div id="dw-overbox" hidden style="margin-top:12px">
+        <label class="lg" for="dw-overval">덮을 값</label>
+        <select id="dw-overval"><option>Pass</option><option>Not Test</option><option>NA</option></select>
+        <label class="lg" for="dw-overwhy" style="margin:10px 0 5px">
+          사유 <span style="color:var(--red)">(필수)</span></label>
+        <textarea id="dw-overwhy" aria-describedby="dw-whyhint"
+          placeholder="(aos) 자동 Fail — 무엇 때문이었고 사람이 확인한 결과는 무엇인지"></textarea>
+        <div class="hint" id="dw-whyhint">사유를 적어야 덮을 수 있습니다.</div>
+        <div class="runbtns">
+          <button class="primary" type="button" id="dw-overapply" disabled>덮기 적용</button>
+          <button class="ghost" type="button" id="dw-overcancel">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label for="dw-map">매핑 <span class="muted" style="font-weight:400">(시나리오 [케이스])</span></label>
+      <input type="text" class="mono" id="dw-map" aria-describedby="dw-maphint" disabled>
+      <div class="hint" id="dw-maphint"></div>
+    </div>
+
+    <div class="fld">
+      <label for="dw-cmt">Comment <span class="muted" style="font-weight:400">(저장소 정본 · 엑셀엔 한 줄만)</span></label>
+      <textarea id="dw-cmt" aria-describedby="dw-xlcmt"></textarea>
+      <div class="hint" id="dw-xlcmt"></div>
+    </div>
+
+    <div class="fld">
+      <span class="lg">판단 이력</span>
+      <ul class="hist" id="dw-hist"></ul>
+    </div>
   </div>
-  <div class="dr-body" id="drbody"></div>
-  <div class="dr-foot">고친 내용은 <b>저장 전까지 이 PC 에만</b> 남습니다(초안 자동 보관). 엑셀에는 「엑셀에 저장」으로 나갑니다.</div>
+  <footer>
+    <button class="primary" type="button" id="dw-apply">변경 담기</button>
+    <button class="ghost" type="button" id="dw-cancel">되돌리기</button>
+  </footer>
 </aside>
 
-<!-- 저장 미리보기 -->
-<dialog class="sheet" id="savedlg" aria-labelledby="savettl">
-  <header><span id="savettl">엑셀에 저장 — 미리보기</span><button type="button" class="x" data-close aria-label="닫기">×</button></header>
-  <div class="bd" id="savebody"></div>
-  <footer>
-    <button type="button" class="ghost" data-close>취소</button>
-    <button type="button" class="primary" id="saveok">저장</button>
-  </footer>
-</dialog>
-
-<!-- 도움말 -->
-<dialog class="sheet" id="helpdlg" aria-labelledby="helpttl">
-  <header><span id="helpttl">v5 화면 읽는 법</span><button type="button" class="x" data-close aria-label="닫기">×</button></header>
-  <div class="bd helpbody">
-    <ol>
-      <li><b>「확인할 것」이 이 화면의 시작점입니다.</b> 사람이 처리해야 하는 일만 셉니다.
-        다 처리하면 0 이 되고 회색으로 바뀝니다. 누르면 표가 그 행만 남고, 다시 누르거나 「전체 413행 보기」로 돌아갑니다.
-        기본 목록은 여전히 <b>전체 413행</b>입니다(목록이 실행 결과에 따라 줄지 않는다는 원칙은 그대로).</li>
-      <li><b>자동 Fail</b>은 「확인 대기」입니다. 상세 패널에서 <b>[Fail 확정]</b> 또는 <b>[다른 값으로 덮기]</b> 중 하나를 고릅니다.
-        덮기는 사유를 적어야 적용 버튼이 켜집니다 — 저장 단계에서 막히는 대신 그 자리에서 막습니다.</li>
-      <li><b>표는 읽기용</b>입니다. 한 행이 한두 줄로 끝나서 413행을 훑기 쉽고, Tab 도 행마다 한 번만 멈춥니다.
-        고칠 때는 행을 눌러 상세 패널을 엽니다. 패널에는 <b>그 항목의 판단 이력</b>이 시간순으로 쌓여 보입니다.</li>
-      <li><b>매핑 모드</b>를 켜면 매핑 칸이 입력칸으로 바뀌고 매핑 진척이 보입니다. 매핑은 처음 세팅할 때 몰아서 하는 일이라 평소에는 숨깁니다.</li>
-      <li>「결과 보기」에서 지난 실행을 고르면 <b>어두운 띠</b>가 뜨고 표가 빗금으로 바뀝니다. 그 상태에서는 아무것도 고칠 수 없습니다.</li>
-      <li>「엑셀에 저장」은 <b>바뀌는 칸 목록</b>과 <b>I9 = Android Result 확인</b>을 먼저 보여줍니다. 매핑은 엑셀이 아니라 저장소로 갑니다.</li>
-    </ol>
+<div class="modal" id="savem" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sv-h">
+  <div class="modal-box">
+    <header><span id="sv-h">엑셀에 저장 — 미리보기</span>
+      <button class="x" type="button" data-close="savem" aria-label="닫기">×</button></header>
+    <div class="okline" id="sv-i9"></div>
+    <div class="note">아래 칸만 <b>PATCH</b> 합니다. 나머지는 건드리지 않습니다.</div>
+    <table><thead><tr><th style="width:92px">셀</th><th style="width:88px">ID</th>
+      <th>지금 값 → 넣을 값</th><th style="width:76px">출처</th></tr></thead>
+      <tbody id="sv-rows"></tbody></table>
+    <div class="exline" id="sv-ex"></div>
+    <footer>
+      <button class="ghost" type="button" data-close="savem">닫기</button>
+      <button class="primary" type="button" data-close="savem">이대로 저장</button>
+    </footer>
   </div>
-</dialog>
+</div>
+
+<div class="modal" id="helpm" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="hp-h">
+  <div class="modal-box">
+    <header><span id="hp-h">이 화면 읽는 법</span>
+      <button class="x" type="button" data-close="helpm" aria-label="닫기">×</button></header>
+    <div class="note">
+      <b>「확인할 것」이 출발점입니다.</b> 413행을 훑는 게 아니라 손이 필요한 것부터 봅니다. 0건이면 회색 ✓ 입니다.<br><br>
+      <b>표는 읽기 전용입니다.</b> 행을 누르면 오른쪽 패널이 열려 거기서 고칩니다 —
+      413행짜리 표에 입력칸을 깔면 어디를 고쳤는지 알 수 없게 됩니다.<br><br>
+      <b>자동 <code>Fail</code> 은 바로 기입하지 않습니다.</b> 외부 요인·셋팅 불량으로 난 Fail 이
+      릴리스 판단에 그대로 실리면 안 되고, 조용히 묻혀서도 안 됩니다 →
+      <b>확정</b>하거나 <b>사유를 적고 덮습니다.</b> 덮으면 원래 자동값이 이력에 남습니다.<br><br>
+      <b>매핑</b>은 「매핑 모드」를 켰을 때만 고칠 수 있습니다. 실수로 바꾸면 커버리지가 통째로 틀어집니다.
+      <code>run_suite -DumpJson</code> 목록에 없는 시나리오·케이스는 <b>매핑 오류</b>로 잡습니다.
+    </div>
+    <table><thead><tr><th style="width:86px">값</th><th>뜻</th><th style="width:160px">누가 넣나</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pass</b></td><td>확인했고 정상</td><td>자동 / 수동</td></tr>
+        <tr><td><b>Fail</b></td><td>확인했고 결함</td><td>수동 <span class="muted">(자동 Fail 은 확인 대기)</span></td></tr>
+        <tr><td><b>Not Test</b></td><td>확인하지 못함</td><td>수동만</td></tr>
+        <tr><td><b>NA</b></td><td>해당 없음 — 확인할 화면·기능이 없음</td><td>자동 / 수동</td></tr>
+        <tr><td><b>(비움)</b></td><td>아직 아무도 확인하지 않음 — 자동화 불가 행의 기본</td><td>—</td></tr>
+      </tbody></table>
+    <div class="note">⚠️ <b>Not Test</b> = 못 했다(언젠가 해야 함) · <b>NA</b> = 할 것이 없다(영영 없음).
+      섞이면 남은 일이 몇 건인지 셀 수 없습니다.</div>
+  </div>
+</div>
 
 <script>
-(function () {
-  // ── 데이터 (v4 와 같은 14행. CRD-001 · HOM-006 만 비교용으로 상태를 바꿨다) ──
-  var KNOWN = { '18_Telecom': 8, '09_Home': 12, '21_Card': 22 };   // -DumpJson 대신
-  var SCEN = {
-    '18_Telecom': { area: 'Telecom', cases: 8, mins: 1, last: '2026-09-29 16:48' },
-    '09_Home':    { area: 'HOME', cases: 1, mins: 6, note: '이 영역에 걸린 케이스 1' },
-    '21_Card':    { area: 'Card', cases: 2, mins: 4, note: '이 영역에 걸린 케이스 2' }
-  };
-  function A(v, src, stamp, extra) { var o = { v: v, src: src, stamp: stamp || '' }; for (var k in extra || {}) o[k] = extra[k]; return o; }
-  var rows = [
-    { id: 'TEL-001', pri: 'Low', d1: 'GME Mobile', d2: 'Home', text: '홈화면 이동 확인', map: '18_Telecom [01]', scen: '18_Telecom', a: A('Pass', 'auto', '2026-09-29 16:48', { written: false }) },
-    { id: 'TEL-002', pri: 'Low', d1: 'GME Mobile', d2: 'Contact us', text: 'CS 팝업 발생 확인', map: '18_Telecom [02]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }), reason: '(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동' },
-    { id: 'TEL-003', pri: 'Medium', d1: 'GME Mobile', d2: 'GME Mobile', text: 'Mobile SIM 선택 시 요금제 선택 페이지 발생 확인', map: '18_Telecom [03]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'TEL-004', pri: 'Medium', d1: 'GME Mobile', d2: 'GME Mobile', text: 'Apply for line sim / Pre-paid 상품 선택시 요금제 발생 확인', map: '18_Telecom [04]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'TEL-005', pri: 'Medium', d1: 'GME Mobile', d2: 'GME Mobile', text: '임의의 요금제 선택 시 New Number / Same Number 선택 페이지 발생 확인', textEdited: true, map: '18_Telecom [05]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'TEL-006', pri: 'High', d1: 'GME Mobile', d2: 'GME Mobile', text: 'New Number 상품 요금제 정상신청 동작 확인', map: '18_Telecom [06]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'TEL-007', pri: 'High', d1: 'GME Mobile', d2: 'GME Mobile', text: 'Same Number 상품 요금제 정상신청 동작 확인', map: '18_Telecom [07]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'TEL-008', pri: 'High', d1: 'GME Mobile', d2: 'GME Mobile', text: 'Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인', map: '18_Telecom [08]', scen: '18_Telecom', a: A('NA', 'auto', '2026-09-29 16:48', { written: false, why: '진입 불가' }) },
-    { id: 'HOM-001', pri: 'Low', d1: 'Notification', d2: 'Notification', text: '알림 내역 표시 확인', map: '09_Home [07]', scen: '09_Home', a: A('Pass', 'auto', '2026-09-29 16:48', { written: false }), xmemo: '- ios : 알림 아이콘이 사라지지 않음' },
-    { id: 'HOM-003', pri: 'Medium', d1: 'Notification', d2: 'Notification', text: '알림 삭제 동작 확인', map: '', scen: null, a: A('', '') },
-    { id: 'HOM-006', pri: 'Medium', d1: 'Account', d2: 'GME Wallet', text: 'GME Wallet Number 노출 확인', map: '09_Home [31]', mapEdited: true, scen: null, a: A('', '') },
-    { id: 'CRD-001', pri: 'High', d1: 'View Booking History', d2: 'GME Mobile', text: 'Balance 선택 시 GME PAY 잔액 노출 확인', map: '21_Card [01]', scen: '21_Card', a: A('Fail', 'pending', '2026-09-29 15:36', { failAt: 'assertVisible "Balance" — 10초 대기 후 없음' }) },
-    { id: 'CRD-002', pri: 'High', d1: 'Recharge_Wallet', d2: 'Simple Password', text: '간편비밀번호 일치 시 충전동작 확인', map: '21_Card [21]', scen: '21_Card', a: A('Pass', 'manual', '2026-09-29 15:36', { autoValue: 'Fail', at: '2026-09-30 14:02', unsaved: true }), reason: '(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상' },
-    { id: 'CRD-003', pri: 'High', d1: 'Recharge_Wallet', d2: 'Biometric', text: '생체인식 일치 시 충전동작 확인', map: '', manual: true, scen: null, a: A('', ''), reason: '(aos) 자동화 불가 — 생체인증 필요' }
-  ];
-  // 화면 표시 순서 = v4 와 같은 영역 순서. 시나리오 없는 행은 그 영역 뒤에 묶는다.
-  var GROUPS = [
-    { scen: '18_Telecom', ids: ['TEL-001','TEL-002','TEL-003','TEL-004','TEL-005','TEL-006','TEL-007','TEL-008'] },
-    { scen: '09_Home', ids: ['HOM-001'] },
-    { none: 'HOME', label: '매핑 안 된 2행', ids: ['HOM-003','HOM-006'] },
-    { scen: '21_Card', ids: ['CRD-001','CRD-002'] },
-    { none: 'Card', label: '자동화 불가 1행', ids: ['CRD-003'] }
-  ];
-  var byId = {}; rows.forEach(function (r) { r.i = r.i || { v: '' }; byId[r.id] = r; });
-  var selected = { '18_Telecom': true };
-  var filter = null, readonly = false, current = null, lastFocus = null;
+// ───────────────────────────────────────────────────────────
+// 데이터 — 14행. 화면의 모든 숫자·필터·패널이 여기서만 나온다.
+// Telecom 8행의 확인 문구는 SharePoint 정본에서 읽어온 실제 값이다.
+// ───────────────────────────────────────────────────────────
+const KNOWN={"18_Telecom":8,"09_Home":12,"21_Card":22};  // 시나리오별 케이스 수
+const ROW0=11;                                           // I11 부터
 
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function mapState(r) {
-    if (r.manual) return 'manual';
-    if (!r.map) return 'none';
-    var m = /^(\d\d_\w+) \[(\d\d)\]$/.exec(r.map);
-    if (!m || !KNOWN[m[1]] || +m[2] < 1 || +m[2] > KNOWN[m[1]]) return 'bad';
-    return 'ok';
+function r(id,area,d2,d3,pri,text,map,and,cmt,extra){
+  const o={id,area,d2,d3,pri,text,map:map||"",and:Object.assign({v:""},and||{}),
+           cmt:Object.assign({excel:"",mine:""},cmt||{}),hist:[]};
+  Object.assign(o,extra||{});
+  if(o.and.src==="auto")
+    o.hist.push({t:o.and.stamp,s:"자동 실행 결과 <b>"+o.and.v+"</b>"+(o.and.why?" · "+o.and.why:"")});
+  if(o.and.src==="manual"){
+    o.hist.push({t:o.and.stamp,s:'자동 실행 결과 <b style="color:#c62f2f">'+o.and.over+"</b>"});
+    o.hist.push({t:"2026-09-30 14:02",s:"사람이 <b>"+o.and.v+'</b> 로 덮음<br><span class="muted">'+o.and.reason+"</span>"});
   }
-  function isPending(r) { return r.a.src === 'pending'; }
-  function isUnwritten(r) { return r.a.src === 'auto' && r.a.written === false; }
-  function isHuman(r) { return r.textEdited || r.mapEdited || (r.a.src === 'manual' && r.a.unsaved); }
-  function noReason(r) { return r.a.src === 'manual' && r.a.autoValue && !r.reason; }
+  if(o.textEdited) o.hist.push({t:"2026-09-30 15:10",s:"확인 항목 문구를 사람이 고침"});
+  return o;
+}
+const AUTO=(v,why)=>({v,src:"auto",stamp:"2026-09-29 16:48",pending:true,why});
 
-  var CATS = [
-    { key: 'wait', label: '자동 Fail 확인 대기', cls: 'red', test: isPending },
-    { key: 'pend', label: '엑셀 기입 대기', cls: 'blue', test: isUnwritten },
-    { key: 'bad',  label: '매핑 오류', cls: 'red', test: function (r) { return mapState(r) === 'bad'; } },
-    { key: 'rsn',  label: '덮었는데 사유 없음', cls: 'amber', test: noReason },
-    { key: 'hum',  label: '사람 수정 · 저장 안 됨', cls: 'amber', test: isHuman }
-  ];
+const D=[
+ r("TEL-001","Telecom","GME Mobile","Home","Low","홈화면 이동 확인","18_Telecom [01]",AUTO("Pass")),
+ r("TEL-002","Telecom","GME Mobile","Contact us","Low","CS 팝업 발생 확인","18_Telecom [02]",
+   AUTO("NA","진입 불가"),{mine:"(aos) 진입 불가 — 홈 그리드가 외부 웹으로 이동"}),
+ r("TEL-003","Telecom","GME Mobile","GME Mobile","Medium","Mobile SIM 선택 시 요금제 선택 페이지 발생 확인","18_Telecom [03]",AUTO("NA","진입 불가")),
+ r("TEL-004","Telecom","GME Mobile","GME Mobile","Medium","Apply for line sim / Pre-paid 상품 선택시 요금제 발생 확인","18_Telecom [04]",AUTO("NA","진입 불가")),
+ r("TEL-005","Telecom","GME Mobile","GME Mobile","Medium","임의의 요금제 선택 시 New Number / Same Number 선택 페이지 발생 확인","18_Telecom [05]",AUTO("NA","진입 불가"),null,{textEdited:true}),
+ r("TEL-006","Telecom","GME Mobile","GME Mobile","High","New Number 상품 요금제 정상신청 동작 확인","18_Telecom [06]",AUTO("NA","진입 불가")),
+ r("TEL-007","Telecom","GME Mobile","GME Mobile","High","Same Number 상품 요금제 정상신청 동작 확인","18_Telecom [07]",AUTO("NA","진입 불가")),
+ r("TEL-008","Telecom","GME Mobile","GME Mobile","High","Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인","18_Telecom [08]",AUTO("NA","진입 불가")),
 
-  function rvHtml(v) {
-    if (!v) return '<span class="rv empty">—</span>';
-    var c = { Pass: 'pass', Fail: 'fail', NA: 'na', 'Not Test': 'nt' }[v];
-    return '<span class="rv ' + c + '">' + esc(v) + '</span>';
-  }
-  function androidCell(r) {
-    var a = r.a, h = rvHtml(a.v);
-    if (a.src === 'pending') h = '<span class="rv fail">Fail?</span><span class="mk wait">확인 대기 · 자동 Fail</span>';
-    else if (a.src === 'auto') h += '<span class="mk ' + (a.written === false ? 'pend' : 'auto') + '">자동' + (a.why ? ' · ' + esc(a.why) : '') + (a.written === false ? ' · 미기입' : '') + '</span>';
-    else if (a.src === 'manual') h += '<span class="mk over">수동' + (a.autoValue ? ' · 자동은 ' + esc(a.autoValue) : '') + '</span>';
-    return h;
-  }
-  function mapCell(r) {
-    var st = mapState(r);
-    if (document.body.classList.contains('mapmode') && !readonly) {
-      return '<input class="mapin' + (st === 'bad' ? ' bad' : '') + '" data-map="' + r.id + '" value="' + esc(r.manual ? '' : r.map) + '" placeholder="' + (r.manual ? '자동화 불가' : '예: 09_Home [03]') + '" aria-label="' + r.id + ' 매핑">';
+ r("HOM-001","HOME","Notification","Notification","Low","알림 내역 표시 확인","09_Home [07]",
+   AUTO("Pass"),{excel:"- ios : 알림 아이콘이 사라지지 않음"}),
+ r("HOM-003","HOME","Notification","Notification","Medium","알림 삭제 동작 확인",""),
+ r("HOM-006","HOME","Account","GME Wallet","Medium","GME Wallet Number 노출 확인","09_Home [31]"),
+
+ r("CRD-001","Card","View Booking History","GME Mobile","High","Balance 선택 시 GME PAY 잔액 노출 확인","21_Card [01]",
+   {v:"Fail",src:"auto",stamp:"2026-09-29 15:36",wait:true}),
+ r("CRD-002","Card","Recharge_Wallet","Simple Password","High","간편비밀번호 일치 시 충전동작 확인","21_Card [21]",
+   {v:"Pass",src:"manual",over:"Fail",stamp:"2026-09-29 15:36",pending:true,
+    reason:"(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상"},
+   {mine:"(aos) 자동 Fail — 기기 세션 만료로 진입 실패. 수동 재확인 결과 정상"}),
+ r("CRD-003","Card","Recharge_Wallet","Biometric","High","생체인식 일치 시 충전동작 확인","자동화 불가",
+   null,{mine:"(aos) 자동화 불가 — 생체인증 필요"}),
+];
+
+const isAuto=x=>/^\S+\s*\[\d+\]$/.test(x.map);
+function mapErr(x){
+  if(!isAuto(x)) return null;
+  const m=x.map.match(/^(\S+)\s*\[(\d+)\]$/), n=KNOWN[m[1]];
+  if(n===undefined) return "시나리오 "+m[1]+" 가 목록에 없습니다";
+  if(+m[2]<1||+m[2]>n) return m[1]+" 에 케이스 ["+m[2]+"] 가 없습니다 (1~"+n+")";
+  return null;
+}
+const isFailWait=x=>!!x.and.wait;
+const isPending =x=>!!x.and.pending;
+const isMine    =x=>x.and.src==="manual"||!!x.textEdited;
+const noReason  =x=>x.and.src==="manual"&&!(x.and.reason||"").trim();
+const TODO={failwait:isFailWait,pending:isPending,badmap:x=>!!mapErr(x),noreason:noReason,mine:isMine};
+
+let activeTodo=null, selected=null, readonly=false, lastFocus=null, modalBack=null;
+const $=s=>document.querySelector(s);
+const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+$("#f-area").innerHTML='<option value="all">전체 (28개 영역 · 413행)</option>'+
+  [...new Set(D.map(x=>x.area))].map(a=>"<option>"+a+" ("+D.filter(x=>x.area===a).length+")</option>").join("");
+
+function visible(){
+  const area=$("#f-area").value,pri=$("#f-pri").value,res=$("#f-res").value,run=$("#f-run").value;
+  return D.filter(x=>{
+    if(activeTodo&&!TODO[activeTodo](x)) return false;
+    if(area!=="all"&&!area.startsWith(x.area)) return false;
+    if(pri!=="all"&&x.pri!==pri) return false;
+    if(res!=="all"){ if(res==="none"){ if(x.and.v) return false; } else if(x.and.v!==res) return false; }
+    if(run==="in"&&!x.and.src) return false;
+    if(run==="out"&&x.and.src) return false;
+    return true;
+  });
+}
+function resCell(x){
+  if(!x.and.v) return '<span class="v none">—</span>';
+  const tag = x.and.wait?'<span class="tag wait">확인 대기</span>'
+    : x.and.src==="manual"?'<span class="tag man">직접 수정</span>'
+    : x.and.src==="auto"?'<span class="tag auto">자동</span>':"";
+  return '<span class="v '+x.and.v.replace(" ","")+'">'+esc(x.and.v)+"</span>"+tag+
+         (x.and.pending?'<span class="tag pend">미기입</span>':"");
+}
+function mapCell(x){
+  if(!x.map) return '<span class="map none">매핑 안 됨</span>';
+  if(!isAuto(x)) return '<span class="map none">매핑 안 됨 ('+esc(x.map)+")</span>";
+  const e=mapErr(x);
+  return '<span class="map '+(e?"bad":"")+'"'+(e?' title="'+esc(e)+'"':"")+">"+esc(x.map)+"</span>";
+}
+function render(){
+  const rows=visible(),groups=[];
+  rows.forEach(x=>{
+    const key=isAuto(x)?x.map.split(" ")[0]:"__none";
+    let g=groups.find(g=>g.key===key);
+    if(!g) groups.push(g={key,area:x.area,items:[]});
+    g.items.push(x);
+  });
+  // 「시나리오 없음」(미매핑·자동화 불가)은 언제나 맨 뒤로 — 실행 대상 묶음 사이에 끼면 읽기 나쁘다
+  groups.sort((a,b)=>(a.key==="__none")-(b.key==="__none"));
+  let html="";
+  for(const g of groups){
+    const ok=g.items.filter(x=>x.and.v==="Pass"||(x.and.v==="Fail"&&!x.and.wait)).length;
+    const na=g.items.filter(x=>x.and.v==="NA").length;
+    const head = g.key==="__none"
+      ? '<span class="noscen">시나리오 없음 — 실행 대상 아님</span>'
+      : '<label style="cursor:pointer"><input type="checkbox"'+(g.key==="18_Telecom"?" checked":"")+
+        ' aria-label="'+g.key+' 시나리오 선택"> <span class="mono">'+g.key+"</span></label>"+
+        '<span class="muted" style="font-weight:400"> · '+esc(g.area)+" 영역</span>";
+    html+='<tr class="scenhead"><td colspan="7">'+head+
+      '<span class="sum">확인 '+ok+" · NA "+na+" · 미확인 "+(g.items.length-ok-na)+"</span></td></tr>";
+    for(const x of g.items){
+      const c=x.cmt.mine||x.cmt.excel||"";
+      html+='<tr class="row" tabindex="0" role="button" data-id="'+x.id+'" aria-selected="'+(selected===x.id)+
+        '" aria-label="'+esc(x.id)+" "+esc(x.text)+' — 상세 열기">'+
+        '<td><span class="id">'+x.id+"</span></td><td>"+x.pri+"</td>"+
+        '<td><span class="txt">'+esc(x.text)+'</span><span class="sub">'+esc(x.d2)+" › "+esc(x.d3)+
+          (x.textEdited?' · <b style="color:#5b3a93">문구 수정됨</b>':"")+"</span></td>"+
+        "<td>"+mapCell(x)+"</td><td>"+resCell(x)+
+          (x.and.wait?'<div class="failbtns"><button class="small" type="button" data-fail="ok" data-id="'+x.id+
+            '">Fail 확정</button><button class="small" type="button" data-fail="over" data-id="'+x.id+
+            '">덮기…</button></div>':"")+"</td>"+
+        '<td><span class="v none">—</span></td>'+
+        '<td><span class="muted" style="font-size:11px">'+esc(c.slice(0,28))+(c.length>28?"…":"")+"</span></td></tr>";
     }
-    if (st === 'manual') return '<span class="mapv manual">자동화 불가</span>';
-    if (st === 'none') return '<span class="mapv none">매핑 안 됨</span>';
-    return '<span class="mapv' + (st === 'bad' ? ' bad' : '') + '">' + esc(r.map) + '</span>';
   }
-  function cmtCell(r) {
-    var out = '';
-    if (r.reason) out += esc(r.reason);
-    if (r.xmemo) out += (out ? '<br>' : '') + esc(r.xmemo) + ' <span class="src">(엑셀 원본)</span>';
-    return out ? '<span class="cmtv" title="' + esc((r.reason || '') + ' ' + (r.xmemo || '')) + '">' + out + '</span>' : '<span class="muted">—</span>';
+  $("#tbody").innerHTML=html;
+  $("#empty").hidden=rows.length>0;
+  counts();
+}
+function counts(){
+  for(const k in TODO){
+    const n=D.filter(TODO[k]).length, b=document.querySelector('[data-todo="'+k+'"]');
+    b.querySelector(".n").textContent = n===0?"✓":n;
+    b.classList.toggle("zero",n===0); b.disabled=n===0;
   }
-  function scenSummary(ids) {
-    var c = { Pass: 0, NA: 0, Fail: 0, none: 0 };
-    ids.forEach(function (id) { var a = byId[id].a; if (a.src === 'pending') c.Fail++; else if (a.v === 'Pass') c.Pass++; else if (a.v === 'NA') c.NA++; else if (a.v === 'Fail') c.Fail++; else c.none++; });
-    var p = ['확인 <b>' + c.Pass + '</b>', 'NA <b>' + c.NA + '</b>'];
-    if (c.Fail) p.push('<span style="color:#a02c2c">Fail <b>' + c.Fail + '</b></span>');
-    p.push('미확인 <b>' + c.none + '</b>');
-    return p.join(' · ');
-  }
+  $("#sv-pend").innerHTML='<b style="color:#2f5bb7">기입 대기 '+D.filter(isPending).length+"건</b>";
+  $("#sv-mine").innerHTML="사람 수정 "+D.filter(isMine).length+"건";
+}
 
-  function render() {
-    var tb = document.getElementById('tb'), html = '', shown = 0;
-    var cat = filter && CATS.filter(function (c) { return c.key === filter; })[0];
-    GROUPS.forEach(function (g) {
-      var ids = g.ids.filter(function (id) { return !cat || cat.test(byId[id]); });
-      if (!ids.length) return;
-      if (g.scen) {
-        var s = SCEN[g.scen];
-        html += '<tr class="areahead"><td colspan="8"><label class="scen"><input type="checkbox" data-scen="' + g.scen + '"' + (selected[g.scen] ? ' checked' : '') + (readonly ? ' disabled' : '') + '> ' + g.scen + '</label>' +
-          '<span class="sum">' + scenSummary(g.ids) + '</span>' +
-          '<span class="right">' + (s.note ? s.note + ' · ' : '케이스 ' + s.cases + ' · ') + '예상 ' + s.mins + '분' + (s.last ? ' · 최근 ' + s.last : '') + '</span></td></tr>';
-      } else {
-        html += '<tr class="areahead"><td colspan="8"><span class="noscen">시나리오 없음 — 실행 대상 아님</span><span class="sum">' + g.none + ' · ' + g.label + '</span></td></tr>';
-      }
-      ids.forEach(function (id) {
-        var r = byId[id]; shown++;
-        html += '<tr class="row' + (current === id ? ' sel' : '') + '" data-id="' + id + '">' +
-          '<td><button type="button" class="rowbtn" data-open="' + id + '" aria-label="' + id + ' 상세 열기">' + id + '</button></td>' +
-          '<td>' + r.pri + '</td>' +
-          '<td class="depth"><b>' + esc(r.d1) + '</b>' + esc(r.d2) + '</td>' +
-          '<td><span class="txt">' + esc(r.text) + (r.textEdited ? '<span class="tag-edit">· 수정됨</span>' : '') + '</span></td>' +
-          '<td>' + mapCell(r) + '</td>' +
-          '<td>' + androidCell(r) + '</td>' +
-          '<td>' + rvHtml(r.i.v) + '</td>' +
-          '<td>' + cmtCell(r) + '</td></tr>';
-      });
-    });
-    if (!shown) html = '<tr class="emptyrow"><td colspan="8">✓ 처리할 행이 없습니다. <button type="button" class="linkbtn" data-clear>전체 413행 보기</button></td></tr>';
-    tb.innerHTML = html;
-    renderChips(); renderSums();
-  }
-
-  function renderChips() {
-    var el = document.getElementById('chips'), h = '';
-    CATS.forEach(function (c) {
-      var n = rows.filter(c.test).length;
-      if (!n) { h += '<span class="chip done" aria-label="' + c.label + ' 없음">✓ ' + c.label + ' 0</span> '; return; }
-      h += '<button type="button" class="chip ' + c.cls + '" data-cat="' + c.key + '" aria-pressed="' + (filter === c.key) + '">' + c.label + ' <span class="n">' + n + '</span></button> ';
-    });
-    el.innerHTML = h;
-    document.getElementById('clearf').hidden = !filter;
-  }
-
-  function renderSums() {
-    var sc = Object.keys(selected).filter(function (k) { return selected[k]; });
-    var cases = 0, mins = 0; sc.forEach(function (k) { cases += SCEN[k].cases; mins += SCEN[k].mins; });
-    document.getElementById('selsum').innerHTML = sc.length
-      ? '선택 <b>시나리오 ' + sc.length + '개</b> · 케이스 <b>' + cases + '</b> · 예상 <b>' + mins + '분</b><br><code>' + sc.join(', ') + '</code>'
-      : '<span class="muted">표의 시나리오 머리줄에서 고릅니다.</span>';
-    var pend = rows.filter(isUnwritten).length, wait = rows.filter(isPending).length;
-    var nt = rows.filter(function (r) { return r.textEdited; }).length,
-        nm = rows.filter(function (r) { return r.mapEdited; }).length,
-        nr = rows.filter(function (r) { return r.a.src === 'manual' && r.a.unsaved; }).length;
-    document.getElementById('xlsum').innerHTML =
-      '<b class="pend">기입 대기 ' + pend + '건</b>(자동)<br>사람 수정 ' + rows.filter(isHuman).length + '건 <span class="muted">(문구 ' + nt + ' · 매핑 ' + nm + ' · 결과 ' + nr + ')</span>' +
-      (wait ? '<br><span style="color:#a02c2c;font-weight:600">확인 대기 ' + wait + '건은 저장 대상이 아닙니다</span>' : '');
-  }
-
-  // ── 상세 패널 ──
-  function openDrawer(id) {
-    current = id; lastFocus = document.activeElement;
-    var r = byId[id];
-    document.getElementById('drid').textContent = id + ' · ' + r.pri;
-    document.getElementById('drcrumb').textContent = r.d1 + ' › ' + r.d2 + (r.scen ? ' · ' + r.scen : ' · 시나리오 없음');
-    var dis = readonly ? ' disabled' : '';
-    var st = mapState(r), h = '';
-
-    // 결과
-    h += '<div class="dr-sec"><h3>Android 결과</h3>';
-    if (r.a.src === 'pending') {
-      h += '<div class="decide"><div class="q">자동 Fail — 사람의 판단이 필요합니다</div>' +
-        '<div class="why">' + esc(r.a.stamp) + ' 실행 · 실패 지점 <code>' + esc(r.a.failAt) + '</code> · <a href="/history.html">로그 보기</a><br>' +
-        '외부 요인(세션 만료·셋팅 불량)일 수 있습니다. 확정하기 전에는 엑셀로 나가지 않습니다.</div>' +
-        '<div class="btns"><button type="button" class="danger" id="dfail"' + dis + '>Fail 확정</button>' +
-        '<button type="button" id="dover" aria-expanded="false" aria-controls="overform"' + dis + '>다른 값으로 덮기…</button></div>' +
-        '<div class="overform" id="overform"><div class="two-col"><div><label for="ovv">덮을 값</label>' +
-        '<select id="ovv"><option>Pass</option><option>Not Test</option><option>NA</option></select></div><div></div></div>' +
-        '<label for="ovr" style="display:block;font-size:11px;color:#5f6873;margin:8px 0 4px">사유 <b style="color:#a02c2c">필수</b> — 3개월 뒤 같은 Fail 이 났을 때 읽을 한 줄</label>' +
-        '<textarea id="ovr" placeholder="(aos) 자동 Fail — … 수동 재확인 결과 …"></textarea>' +
-        '<div class="row2"><button type="button" class="primary" id="ovok" disabled>적용</button><button type="button" class="ghost" id="ovcancel">취소</button></div>' +
-        '<div class="err" id="ovhint" aria-live="polite">사유를 적어야 적용할 수 있습니다.</div></div></div>';
-    } else {
-      h += '<div class="two-col"><div><label for="ra">Android</label><select id="ra"' + dis + '>' +
-        ['', 'Pass', 'Fail', 'Not Test', 'NA'].map(function (v) { return '<option value="' + v + '"' + (r.a.v === v ? ' selected' : '') + '>' + (v || '—') + '</option>'; }).join('') +
-        '</select></div><div><label for="ri">iOS <span class="muted">(수동)</span></label><select id="ri"' + dis + '>' +
-        ['', 'Pass', 'Fail', 'Not Test', 'NA'].map(function (v) { return '<option value="' + v + '"' + (r.i.v === v ? ' selected' : '') + '>' + (v || '—') + '</option>'; }).join('') +
-        '</select></div></div>';
-      var pv = '';
-      if (r.a.src === 'auto') pv = '자동 · ' + r.a.stamp + (r.a.why ? ' · ' + r.a.why : '') + (r.a.written === false ? ' · <b style="color:#2559c9">엑셀 미기입</b>' : '');
-      else if (r.a.src === 'manual') pv = '수동' + (r.a.autoValue ? ' · 자동은 <b>' + r.a.autoValue + '</b>(' + r.a.stamp + ')' : '') + (r.a.at ? ' · ' + r.a.at : '');
-      else pv = r.manual ? '자동화 불가 — 결과는 비워 둡니다. 사람이 확인하면 그때 고릅니다.' : '아직 아무 실행도 이 항목을 덮지 않았습니다.';
-      h += '<div class="provbox">' + pv + '</div>';
-      if (r.a.src === 'auto') h += '<div class="hint">자동값을 다른 값으로 바꾸면 아래 사유가 필수가 됩니다.</div>';
-    }
-    h += '</div>';
-
-    // 확인 문구
-    h += '<div class="dr-sec"><h3><label for="dtx">확인 항목</label></h3><textarea id="dtx"' + dis + '>' + esc(r.text) + '</textarea>' +
-      (r.textEdited ? '<div class="hint" style="color:#2559c9">수정됨 · 저장 안 됨 — 저장하면 엑셀 F열에 나갑니다</div>' : '') + '</div>';
-
-    // 매핑
-    h += '<div class="dr-sec"><h3><label for="dmp">매핑</label> <span class="muted" style="font-weight:500">시나리오 [케이스] · 저장소에 저장</span></h3>' +
-      '<input type="text" class="mono" id="dmp" value="' + esc(r.manual ? '' : r.map) + '" placeholder="' + (r.manual ? '자동화 불가' : '예: 09_Home [03]') + '"' + dis + '>' +
-      (st === 'bad' ? '<div class="err">「' + esc(r.map) + '」 은 run_suite 목록에 없습니다(09_Home 은 [01]~[12]).</div>' : '') +
-      (r.manual ? '<div class="hint">자동화 불가로 표시된 행입니다.</div>' : '') + '</div>';
-
-    // Comment
-    h += '<div class="dr-sec"><h3><label for="drs">Comment · 사유</label></h3>';
-    if (r.xmemo) h += '<div class="xmemo">' + esc(r.xmemo) + '<span class="src">엑셀 J열에 원래 있던 메모 · 읽기 전용</span></div>';
-    h += '<textarea id="drs" placeholder="(aos) / - ios : / - aos/ios : 접두사 관례"' + dis + '>' + esc(r.reason || '') + '</textarea>' +
-      '<div class="hint">정본은 저장소입니다. 엑셀 J열에는 이 한 줄이 <b>덧붙여</b>집니다(기존 메모는 지우지 않음).</div></div>';
-
-    // 이력
-    h += '<div class="dr-sec"><h3>판단 이력</h3><ul class="hist">' + histHtml(r) + '</ul></div>';
-
-    document.getElementById('drbody').innerHTML = h;
-    var d = document.getElementById('drawer'); d.classList.add('open');
-    bindDrawer(r);
-    render();
-    setTimeout(function () { document.getElementById('drclose').focus(); }, 30);
-  }
-  function histHtml(r) {
-    var L = [];
-    if (r.a.src === 'auto') L.push(['', r.a.stamp, '자동 ' + r.a.v + (r.a.why ? ' (' + r.a.why + ')' : '')]);
-    if (r.a.src === 'pending') L.push(['f', r.a.stamp, '자동 Fail — 확인 대기']);
-    if (r.a.src === 'manual') {
-      if (r.a.autoValue) L.push(['f', r.a.stamp, '자동 ' + r.a.autoValue]);
-      L.push(['m', r.a.at || '방금', '수동 ' + r.a.v + (r.reason ? ' · “' + r.reason + '”' : '') + (r.a.unsaved ? ' · 저장 안 됨' : '')]);
-    }
-    if (r.mapEdited) L.push(['m', '2026-09-30 11:20', '매핑 입력 「' + r.map + '」' + (mapState(r) === 'bad' ? ' · 목록에 없음' : '')]);
-    if (r.textEdited) L.push(['m', '2026-09-30 10:41', '확인 문구 수정 · 저장 안 됨']);
-    if (!L.length) return '<li>기록 없음</li>';
-    return L.map(function (x) { return '<li class="' + x[0] + '"><span class="t">' + esc(x[1]) + '</span>' + esc(x[2]) + '</li>'; }).join('');
-  }
-  function bindDrawer(r) {
-    var $ = function (id) { return document.getElementById(id); };
-    if ($('dfail')) $('dfail').onclick = function () {
-      r.a = { v: 'Fail', src: 'manual', stamp: r.a.stamp, autoValue: 'Fail', at: '방금', unsaved: true, confirmed: true };
-      if (!r.reason) r.reason = '(aos) 자동 Fail 확인 — 결함으로 확정';
-      openDrawer(r.id); announce(r.id + ' Fail 확정');
-    };
-    if ($('dover')) $('dover').onclick = function () {
-      var f = $('overform'); f.classList.add('on'); this.setAttribute('aria-expanded', 'true'); $('ovr').focus();
-    };
-    if ($('ovr')) $('ovr').oninput = function () {
-      var ok = this.value.trim().length >= 5; $('ovok').disabled = !ok;
-      $('ovhint').textContent = ok ? '' : '사유를 적어야 적용할 수 있습니다.';
-    };
-    if ($('ovcancel')) $('ovcancel').onclick = function () { $('overform').classList.remove('on'); $('dover').setAttribute('aria-expanded', 'false'); $('dover').focus(); };
-    if ($('ovok')) $('ovok').onclick = function () {
-      r.reason = $('ovr').value.trim();
-      r.a = { v: $('ovv').value, src: 'manual', stamp: r.a.stamp, autoValue: 'Fail', at: '방금', unsaved: true };
-      openDrawer(r.id); announce(r.id + ' ' + r.a.v + ' 로 덮음');
-    };
-    if ($('ra')) $('ra').onchange = function () {
-      var v = this.value;
-      if (r.a.src === 'auto' && v !== r.a.v) r.a = { v: v, src: 'manual', stamp: r.a.stamp, autoValue: r.a.v, at: '방금', unsaved: true };
-      else if (r.a.src === 'manual' && r.a.autoValue === v) r.a = { v: v, src: 'auto', stamp: r.a.stamp, written: false };
-      else { r.a.v = v; if (r.a.src !== 'auto') { r.a.src = 'manual'; r.a.unsaved = true; } }
-      openDrawer(r.id);
-    };
-    if ($('ri')) $('ri').onchange = function () { r.i.v = this.value; render(); };
-    if ($('dtx')) $('dtx').onchange = function () { if (this.value !== r.text) { r.text = this.value; r.textEdited = true; openDrawer(r.id); } };
-    if ($('dmp')) $('dmp').onchange = function () { r.map = this.value.trim(); r.manual = false; r.mapEdited = true; openDrawer(r.id); };
-    if ($('drs')) $('drs').onchange = function () { r.reason = this.value.trim(); render(); };
-  }
-  function closeDrawer() {
-    document.getElementById('drawer').classList.remove('open');
-    var id = current; current = null; render();
-    var b = id && document.querySelector('[data-open="' + id + '"]');
-    (b || lastFocus || document.body).focus();
-  }
-  var live = document.createElement('div'); live.className = 'sr-only'; live.setAttribute('role', 'status'); document.body.appendChild(live);
-  function announce(t) { live.textContent = t; }
-
-  // ── 이벤트 ──
-  document.getElementById('tb').addEventListener('click', function (e) {
-    if (e.target.closest('[data-clear]')) { filter = null; render(); return; }
-    if (e.target.matches('input, label, select') || e.target.closest('label.scen')) return;
-    var tr = e.target.closest('tr.row'); if (tr) openDrawer(tr.dataset.id);
-  });
-  document.getElementById('tb').addEventListener('change', function (e) {
-    if (e.target.dataset.scen) { selected[e.target.dataset.scen] = e.target.checked; renderSums(); }
-    if (e.target.dataset.map) { var r = byId[e.target.dataset.map]; r.map = e.target.value.trim(); r.manual = false; r.mapEdited = true; render(); }
-  });
-  document.getElementById('chips').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-cat]'); if (!b) return;
-    filter = filter === b.dataset.cat ? null : b.dataset.cat; render();
-    var nb = document.querySelector('[data-cat="' + b.dataset.cat + '"]'); if (nb) nb.focus();
-  });
-  document.getElementById('clearf').onclick = function () { filter = null; render(); };
-  document.getElementById('drclose').onclick = closeDrawer;
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && document.getElementById('drawer').classList.contains('open') && !document.querySelector('dialog[open]')) closeDrawer();
-  });
-  document.getElementById('mapmode').onchange = function () { document.body.classList.toggle('mapmode', this.checked); render(); };
-
-  var basis = document.getElementById('basis');
-  basis.onchange = function () {
-    readonly = basis.value !== 'latest';
-    var band = document.getElementById('pastband');
-    band.classList.toggle('on', readonly);
-    document.getElementById('clpanel').classList.toggle('readonly-view', readonly);
-    document.getElementById('pasttxt').textContent = basis.value === 'excel'
-      ? '엑셀 I열 현재값을 보는 중 · 읽기 전용 — 여기서는 아무것도 고칠 수 없습니다'
-      : basis.value + ' 실행 기록을 보는 중 · 읽기 전용 — 지난 기록은 고치지 않습니다';
-    if (current) openDrawer(current); else render();
-  };
-  document.getElementById('backlatest').onclick = function () { basis.value = 'latest'; basis.onchange(); basis.focus(); };
-
-  // 저장 미리보기
-  var savedlg = document.getElementById('savedlg');
-  document.getElementById('savebtn').onclick = function () {
-    var xl = [], repo = [], blocked = [];
-    rows.forEach(function (r) {
-      if (isUnwritten(r)) xl.push([r.id, 'Android 결과', '(빈칸)', r.a.v, '자동 ' + r.a.stamp]);
-      if (r.a.src === 'manual' && r.a.unsaved) {
-        if (!r.reason && r.a.autoValue) blocked.push(r.id + ' — 자동값을 덮었는데 사유가 없음');
-        else { xl.push([r.id, 'Android 결과', '(빈칸)', r.a.v, '수동 · 자동은 ' + (r.a.autoValue || '—')]); if (r.reason) xl.push([r.id, 'Comment J열', '기존 내용', '+ 한 줄 덧붙임', '']); }
-      }
-      if (r.textEdited) xl.push([r.id, '확인 문구 F열', '이전 문구', '수정 문구', '']);
-      if (r.mapEdited) { if (mapState(r) === 'bad') blocked.push(r.id + ' — 매핑 「' + r.map + '」 이 run_suite 목록에 없음'); else repo.push([r.id, '매핑', r.map]); }
-      if (r.reason && r.a.src === 'manual') repo.push([r.id, '판단 기록', r.a.v + ' · ' + r.reason.slice(0, 28) + (r.reason.length > 28 ? '…' : '')]);
-    });
-    var wait = rows.filter(isPending).map(function (r) { return r.id; });
-    var h = '<div class="guard">✓ <span><b>I9 = Android Result</b> 확인됨 — 저장 직전에 한 번 더 읽고, 대상 셀이 그 사이 바뀌었으면 멈춥니다.</span></div>';
-    if (blocked.length) h += '<div class="warnbox"><b>저장에서 빠지는 것 ' + blocked.length + '건</b><br>' + blocked.map(esc).join('<br>') + '</div>';
-    if (wait.length) h += '<div class="warnbox" style="background:#fff7f7"><b>확인 대기 ' + wait.length + '건은 나가지 않습니다</b> — ' + wait.join(', ') + ' (Fail 확정 또는 덮기를 먼저)</div>';
-    h += '<h4>엑셀 — 바뀌는 칸 ' + xl.length + '개</h4><table class="diff"><thead><tr><th>ID</th><th>칸</th><th>지금</th><th></th><th>저장 후</th><th>출처</th></tr></thead><tbody>' +
-      xl.map(function (x) { return '<tr><td class="mono">' + x[0] + '</td><td>' + x[1] + '</td><td class="muted">' + esc(x[2]) + '</td><td class="arrow">→</td><td><b>' + esc(x[3]) + '</b></td><td class="muted">' + esc(x[4]) + '</td></tr>'; }).join('') + '</tbody></table>';
-    h += '<h4>저장소(git) — ' + repo.length + '건</h4><table class="diff"><tbody>' +
-      (repo.length ? repo.map(function (x) { return '<tr><td class="mono">' + x[0] + '</td><td>' + x[1] + '</td><td>' + esc(x[2]) + '</td></tr>'; }).join('') : '<tr><td class="muted">없음</td></tr>') + '</tbody></table>';
-    h += '<p class="note" style="margin-top:12px">엑셀에 이미 같은 값이 있는 칸은 건너뜁니다. 실패한 칸은 3번까지 다시 보내고, 그래도 남으면 어느 칸인지 보여줍니다.</p>';
-    document.getElementById('savebody').innerHTML = h;
-    document.getElementById('saveok').textContent = xl.length + '칸 저장';
-    savedlg.showModal();
-  };
-  document.getElementById('saveok').onclick = function () { savedlg.close(); announce('목업이라 실제로 저장하지 않았습니다'); };
-
-  var helpdlg = document.getElementById('helpdlg');
-  document.getElementById('helpopen').onclick = function () { helpdlg.showModal(); };
-  [savedlg, helpdlg].forEach(function (d) {
-    d.addEventListener('click', function (e) { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
-  });
-
+document.querySelectorAll("[data-todo]").forEach(b=>b.addEventListener("click",()=>{
+  activeTodo = activeTodo===b.dataset.todo ? null : b.dataset.todo;
+  document.querySelectorAll("[data-todo]").forEach(o=>
+    o.setAttribute("aria-pressed",String(o.dataset.todo===activeTodo)));
   render();
-})();
+}));
+["f-area","f-run","f-pri","f-res"].forEach(id=>$("#"+id).addEventListener("change",render));
+
+$("#tbody").addEventListener("click",e=>{
+  const fb=e.target.closest("[data-fail]");
+  if(fb){ e.stopPropagation(); openRow(fb.dataset.id); if(fb.dataset.fail==="over") showOver(true); return; }
+  const tr=e.target.closest("tr.row"); if(tr) openRow(tr.dataset.id);
+});
+$("#tbody").addEventListener("keydown",e=>{
+  if(e.key!=="Enter"&&e.key!==" ") return;
+  const tr=e.target.closest("tr.row"); if(tr){ e.preventDefault(); openRow(tr.dataset.id); }
+});
+
+function openRow(id){
+  const x=D.find(v=>v.id===id); if(!x) return;
+  if(document.activeElement && !$("#drawer").contains(document.activeElement)) lastFocus=document.activeElement;
+  selected=id;
+  $("#dw-id").textContent=x.id;
+  $("#dw-depth").textContent=x.area+" › "+x.d2+" › "+x.d3;
+  $("#dw-text").value=x.text;
+  $("#dw-map").value=x.map;
+  $("#dw-cmt").value=x.cmt.mine;
+  $("#dw-xlcmt").innerHTML = x.cmt.excel
+    ? '엑셀 J열에 원래 있던 메모 — 고치지 않습니다:<br><span class="mono">'+esc(x.cmt.excel)+"</span>" : "";
+  const me=mapErr(x), mm=$("#mapmode").checked;
+  $("#dw-maphint").innerHTML = me ? '<b style="color:#c62f2f">매핑 오류 — '+esc(me)+"</b>"
+    : (mm ? "매핑 모드가 켜져 있어 고칠 수 있습니다." : "고치려면 <b>매핑 모드</b>를 켜세요.");
+  $("#dw-map").disabled = !mm || readonly;
+  const wait=!!x.and.wait;
+  $("#dw-resfld").hidden=wait; $("#dw-failfld").hidden=!wait;
+  $("#dw-res").value=x.and.v||"";
+  $("#dw-res").disabled=readonly; $("#dw-text").disabled=readonly; $("#dw-cmt").disabled=readonly;
+  $("#dw-prov").innerHTML = x.and.src==="manual"
+    ? '직접 수정 · 자동은 <b style="color:#c62f2f">'+x.and.over+"</b> · "+x.and.stamp
+    : x.and.src==="auto" ? "자동 · "+x.and.stamp+(x.and.pending?" · <b>미기입</b>":"")
+    : "아직 실행 결과가 없습니다.";
+  showOver(false);
+  $("#dw-hist").innerHTML = x.hist.length
+    ? x.hist.map(h=>'<li><span class="when">'+h.t+"</span>"+h.s+"</li>").join("")
+    : '<li class="muted">아직 기록이 없습니다.</li>';
+  $("#drawer").setAttribute("aria-hidden","false");
+  render(); $("#dw-close").focus();
+}
+function closeDrawer(){
+  $("#drawer").setAttribute("aria-hidden","true"); selected=null; render();
+  if(lastFocus&&lastFocus.focus) lastFocus.focus();
+}
+["dw-close","dw-cancel","dw-apply"].forEach(id=>$("#"+id).addEventListener("click",closeDrawer));
+
+function showOver(on){
+  $("#dw-overbox").hidden=!on;
+  if(on){ $("#dw-overwhy").value=""; $("#dw-overapply").disabled=true;
+          $("#dw-whyhint").textContent="사유를 적어야 덮을 수 있습니다."; $("#dw-overval").focus(); }
+}
+$("#dw-failover").addEventListener("click",()=>showOver(true));
+$("#dw-overcancel").addEventListener("click",()=>showOver(false));
+$("#dw-overwhy").addEventListener("input",e=>{
+  const ok=e.target.value.trim().length>0;
+  $("#dw-overapply").disabled=!ok;
+  $("#dw-whyhint").textContent = ok ? "덮을 수 있습니다." : "사유를 적어야 덮을 수 있습니다.";
+});
+$("#dw-failok").addEventListener("click",()=>{
+  const x=D.find(v=>v.id===selected);
+  x.and.wait=false; x.and.pending=true;
+  x.hist.push({t:"지금",s:"사람이 <b>Fail 확정</b>"});
+  openRow(x.id);
+});
+$("#dw-overapply").addEventListener("click",()=>{
+  const x=D.find(v=>v.id===selected);
+  x.and.over=x.and.v; x.and.v=$("#dw-overval").value; x.and.src="manual";
+  x.and.wait=false; x.and.pending=true; x.and.reason=$("#dw-overwhy").value.trim();
+  x.cmt.mine=x.and.reason;
+  x.hist.push({t:"지금",s:"사람이 <b>"+esc(x.and.v)+'</b> 로 덮음<br><span class="muted">'+esc(x.and.reason)+"</span>"});
+  openRow(x.id);
+});
+$("#mapmode").addEventListener("change",()=>{ if(selected) openRow(selected); });
+
+$("#basis").addEventListener("change",e=>{
+  readonly = e.target.value!=="latest";
+  document.body.classList.toggle("ro",readonly);
+  if(readonly) closeDrawer();
+});
+$("#btn-back-latest").addEventListener("click",()=>{
+  $("#basis").value="latest"; readonly=false; document.body.classList.remove("ro"); $("#basis").focus();
+});
+
+$("#btn-save").addEventListener("click",()=>{
+  const put=D.filter(x=>isPending(x)&&x.and.v&&!mapErr(x));
+  $("#sv-i9").innerHTML='✓ <b>I9</b> 가 <span class="mono">Android Result</span> 입니다 — 기입 대상 열이 맞습니다.';
+  $("#sv-rows").innerHTML = put.map(x=>
+    '<tr><td class="mono">I'+(ROW0+D.indexOf(x))+'</td><td class="mono">'+x.id+"</td>"+
+    '<td><span class="muted">(비어 있음)</span> → <b>'+esc(x.and.v)+"</b></td><td>"+
+    (x.and.src==="manual"?"직접 수정":"자동")+"</td></tr>").join("")
+    || '<tr><td colspan="4" class="muted">보낼 칸이 없습니다.</td></tr>';
+  const ex=[], fw=D.filter(isFailWait), bm=D.filter(x=>mapErr(x)), em=D.filter(x=>!x.and.v);
+  if(fw.length) ex.push("자동 Fail <b>확인 대기 "+fw.length+"건</b> — 사람이 정할 때까지 안 보냅니다 ("+fw.map(x=>x.id).join(", ")+")");
+  if(bm.length) ex.push("<b>매핑 오류 "+bm.length+"건</b> — 어느 행인지 믿을 수 없어 뺍니다 ("+bm.map(x=>x.id).join(", ")+")");
+  if(em.length) ex.push("결과 <b>비어 있음 "+em.length+"건</b> — 넣을 값이 없습니다");
+  $("#sv-ex").innerHTML = ex.length ? "<b>저장에서 빠지는 것</b><br>"+ex.map(t=>"· "+t).join("<br>") : "빠지는 항목이 없습니다.";
+  openModal("savem");
+});
+
+function openModal(id){ modalBack=document.activeElement; const m=$("#"+id);
+  m.setAttribute("aria-hidden","false"); (m.querySelector(".x")||m).focus(); }
+function closeModal(id){ $("#"+id).setAttribute("aria-hidden","true");
+  if(modalBack&&modalBack.focus) modalBack.focus(); }
+$("#btn-help").addEventListener("click",()=>openModal("helpm"));
+document.querySelectorAll("[data-close]").forEach(b=>
+  b.addEventListener("click",()=>closeModal(b.dataset.close)));
+document.querySelectorAll(".modal").forEach(m=>
+  m.addEventListener("click",e=>{ if(e.target===m) closeModal(m.id); }));
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  const op=[...document.querySelectorAll('.modal[aria-hidden="false"]')];
+  if(op.length) return closeModal(op[op.length-1].id);
+  if($("#drawer").getAttribute("aria-hidden")==="false") closeDrawer();
+});
+
+render();
 </script>
 </body>
 </html>
