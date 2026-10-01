@@ -58,20 +58,8 @@ appId: ${APP_ID}
           id: "button1"
       - waitForAnimationToEnd
 
-# 서비스 이용 안내 화면 (앱 최초 실행 / clearState 후 조건부 노출)
-- runFlow:
-    when:
-      visible: "${INIT_SERVICE_GUIDE}"
-    commands:
-      - tapOn:
-          id: "btnConfirm"
-      - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "허용"
-          commands:
-            - tapOn: "허용"
-            - waitForAnimationToEnd
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env에만 적용)
 - runFlow:

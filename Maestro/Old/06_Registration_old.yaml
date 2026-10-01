@@ -64,6 +64,8 @@ appId: ${APP_ID}
       text: "Server Override|언어 선택|신규 회원"
     timeout: 20000
 - runFlow: "_server_override_old.yaml"
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
 - runFlow:
     when:
@@ -279,6 +281,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -304,6 +309,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -325,6 +333,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -460,8 +471,15 @@ appId: ${APP_ID}
 # [20] [Medium] Personal Information - 상세주소 GPS 동작 확인 (Address)
 # ※ GPS 아이콘 2회 탭으로 주소 자동입력
 # ----------------------------------------------------------------
+# ⚠️ 2026-09-23 실측: GPS 아이콘을 누르면 **앱 자체 다이얼로그**(DialogFragment)가 뜨고
+#   **정확히 10초 뒤 스스로 닫힌다**(17:20:27→37 / 17:20:47→57, 그 사이 터치 전달 0건).
+#   `waitForAnimationToEnd` 뒤에 찍으면 이미 사라진 뒤라 문구가 안 남는다
+#   → **탭 직후 즉시** 캡처한다. 위치 서비스 OFF 안내인지 조회 실패 안내인지가 여기서 갈린다.
+#   ※ OS 권한 다이얼로그는 아니었다 — permissioncontroller 프로세스는 동결 상태였고
+#     창 포커스도 앱 내부(PersonalInfo1Activity)에서만 오갔다.
 - tapOn:
     id: "prefixImage"
+- takeScreenshot: "[20-1a]_GPS1차탭_직후_다이얼로그"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -472,8 +490,22 @@ appId: ${APP_ID}
 - takeScreenshot: "[20-1]_GPS1차탭_상태확인"
 - tapOn:
     id: "prefixImage"
+- takeScreenshot: "[20-2a]_GPS2차탭_직후_다이얼로그"
 - waitForAnimationToEnd
 - takeScreenshot: "[20-2]_GPS2차탭_상태확인"
+# 주소 자동입력 성립 단언 — 실패는 **여기서** 나야 한다.
+#   ⛔ 이 단언이 없으면 주소가 빈 채로 진행하고, `다음`(btnSubmit)이 disabled 라
+#      tapOn 은 COMPLETED 로 찍히면서 화면은 3/4 에 멈춘다 → 3스텝 뒤 4/4 의
+#      emailInputField 에서 엉뚱하게 죽는다(2026-09-23 실제 발생).
+#   ⛔ `assertVisible: {id: formEdTxt, text: ".+"}` 로 쓰면 **거짓 통과**한다 —
+#      Maestro 의 text 셀렉터는 **hintText 도 매칭**하기 때문이다(그래서 빈 필드를
+#      placeholder 문구로 tapOn 할 수 있다. 아래 [23] 주석의 2026-08-26 실측과 같은 근거).
+#      빈 EditText 의 뷰 계층에는 `text` 키가 아예 없고 `hintText` 만 있다(2026-09-23 덤프 확인).
+#   → text 속성만 읽는 `copyTextFrom` 으로 판정한다. 언어에도 안 흔들린다.
+- copyTextFrom:
+    id: "formEdTxt"
+- assertTrue: ${maestro.copiedText != null && maestro.copiedText.trim().length > 0}
+- takeScreenshot: "[20-3]_주소_자동입력_확인"
 
 # ----------------------------------------------------------------
 # [21] [Medium] Personal Information - Occupation 선택 동작 확인
@@ -495,6 +527,12 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: "[22-2]_남성_선택"
 - takeScreenshot: "[22-3]_다음버튼_활성화"
+# 필수값(주소/직업/성별)이 다 찼는지 = `다음` 이 실제로 활성인지 단언한다.
+#   ⛔ text 셀렉터는 활성/비활성을 구분 못 한다 → id + enabled 로 본다(03_Domestic 과 같은 규칙).
+#   이게 없으면 disabled 버튼을 탭해도 COMPLETED 로 찍히고 화면은 3/4 에 멈춘다.
+- assertVisible:
+    id: "btnSubmit"
+    enabled: true
 - tapOn: "${REG_NEXT}"
 - waitForAnimationToEnd
 - takeScreenshot: "[22-4]_다음선택_화면이동"
@@ -669,6 +707,8 @@ appId: ${APP_ID}
       text: "Server Override|언어 선택|신규 회원"
     timeout: 20000
 - runFlow: "_server_override_old.yaml"
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
 # clearState 후 앱 언어가 한국어인 경우 목표 언어로 전환 (en.env: 신규 회원 감지 → English 전환 / ko.env: 조건 미충족 유지)
 - runFlow:
     when:
@@ -776,6 +816,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -911,6 +954,9 @@ appId: ${APP_ID}
 #     포커스 윈도우가 아닌 첫 윈도우를 집을 수 있어 오판한다. 판정은
 #     `adb exec-out screencap -p`의 **바이트 수**로 한다(이 화면 0B / 런처 3.4MB).
 #   → 이미지 증적 대신 카메라 화면 도달을 assert로 확인한다.
+# ⚠️ 카메라 첫 진입에서 **OS 권한 다이얼로그**가 화면을 덮는다(2026-09-28 실측).
+#   이 다이얼로그에는 `허용` 버튼이 없고 `앱 사용 중에만 허용` 뿐이라 문구로는 못 잡는다.
+- runFlow: "_allow_permission_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "captureBtnImageView"
@@ -1039,8 +1085,15 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [20] 상세주소 GPS 동작 확인 (Address)
 # ----------------------------------------------------------------
+# ⚠️ 2026-09-23 실측: GPS 아이콘을 누르면 **앱 자체 다이얼로그**(DialogFragment)가 뜨고
+#   **정확히 10초 뒤 스스로 닫힌다**(17:20:27→37 / 17:20:47→57, 그 사이 터치 전달 0건).
+#   `waitForAnimationToEnd` 뒤에 찍으면 이미 사라진 뒤라 문구가 안 남는다
+#   → **탭 직후 즉시** 캡처한다. 위치 서비스 OFF 안내인지 조회 실패 안내인지가 여기서 갈린다.
+#   ※ OS 권한 다이얼로그는 아니었다 — permissioncontroller 프로세스는 동결 상태였고
+#     창 포커스도 앱 내부(PersonalInfo1Activity)에서만 오갔다.
 - tapOn:
     id: "prefixImage"
+- takeScreenshot: "[S2-20-1a]_GPS1차탭_직후_다이얼로그"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -1051,8 +1104,22 @@ appId: ${APP_ID}
 - takeScreenshot: "[S2-20-1]_GPS1차탭_상태확인"
 - tapOn:
     id: "prefixImage"
+- takeScreenshot: "[S2-20-2a]_GPS2차탭_직후_다이얼로그"
 - waitForAnimationToEnd
 - takeScreenshot: "[S2-20-2]_GPS2차탭_상태확인"
+# 주소 자동입력 성립 단언 — 실패는 **여기서** 나야 한다.
+#   ⛔ 이 단언이 없으면 주소가 빈 채로 진행하고, `다음`(btnSubmit)이 disabled 라
+#      tapOn 은 COMPLETED 로 찍히면서 화면은 3/4 에 멈춘다 → 3스텝 뒤 4/4 의
+#      emailInputField 에서 엉뚱하게 죽는다(2026-09-23 실제 발생).
+#   ⛔ `assertVisible: {id: formEdTxt, text: ".+"}` 로 쓰면 **거짓 통과**한다 —
+#      Maestro 의 text 셀렉터는 **hintText 도 매칭**하기 때문이다(그래서 빈 필드를
+#      placeholder 문구로 tapOn 할 수 있다. 아래 [23] 주석의 2026-08-26 실측과 같은 근거).
+#      빈 EditText 의 뷰 계층에는 `text` 키가 아예 없고 `hintText` 만 있다(2026-09-23 덤프 확인).
+#   → text 속성만 읽는 `copyTextFrom` 으로 판정한다. 언어에도 안 흔들린다.
+- copyTextFrom:
+    id: "formEdTxt"
+- assertTrue: ${maestro.copiedText != null && maestro.copiedText.trim().length > 0}
+- takeScreenshot: "[S2-20-3]_주소_자동입력_확인"
 
 # ----------------------------------------------------------------
 # [21] Occupation 선택 동작 확인
@@ -1074,6 +1141,12 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - takeScreenshot: "[S2-22-2]_남성_선택"
 - takeScreenshot: "[S2-22-3]_다음버튼_활성화"
+# 필수값(주소/직업/성별)이 다 찼는지 = `다음` 이 실제로 활성인지 단언한다.
+#   ⛔ text 셀렉터는 활성/비활성을 구분 못 한다 → id + enabled 로 본다(03_Domestic 과 같은 규칙).
+#   이게 없으면 disabled 버튼을 탭해도 COMPLETED 로 찍히고 화면은 3/4 에 멈춘다.
+- assertVisible:
+    id: "btnSubmit"
+    enabled: true
 - tapOn: "${REG_NEXT}"
 - waitForAnimationToEnd
 - takeScreenshot: "[S2-22-4]_다음선택_화면이동"
