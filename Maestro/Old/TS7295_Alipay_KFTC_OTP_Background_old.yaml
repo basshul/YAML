@@ -1,0 +1,186 @@
+appId: ${APP_ID}
+env:
+  # 현재 로그인 비밀번호 = <비밀번호 앞부분><PW_CUR_LAST>  ("느낌표"=`!` / "골뱅이"=`@`)
+  PW_CUR_LAST: "느낌표"
+  SENDNOW_AMOUNT: "35000"
+---
+# ================================================================
+# TS-7295 재현: Alipay 수취인 + 자동이체(케이뱅크) OTP 화면에서
+#              백그라운드 전환 → 포그라운드 복귀 시 kftcId 유실 확인
+# ================================================================
+# 참고 티켓: https://gmeremit-team.atlassian.net/browse/TS-7295
+#   Alipay/WeChat 수취인에게 자동이체(KFTC)로 송금 시 OTP 요청 단계에서
+#   "Exception tracked: Value cannot be null. Parameter name: s" 발생.
+#   실제 재현 조건(Santosh Bhandary, 2026-05-12): OTP 화면에서 앱이 백그라운드로
+#   전환된 뒤 복귀하면 선택된 funding-source(kftcId)가 유실됨.
+#
+# 전제조건:
+#   - 로그인 상태(seungsoo818) + 수취인 목록에 WeChat/AliPay 수취인이 이미 등록되어 있을 것
+#   - 계좌 목록에 자동이체 연결 은행(케이뱅크)이 있을 것
+#
+# ⛔ 실제 송금 확정(PIN 입력)까지 가지 않는다 — OTP 화면 도달 후 배경 전환까지만 검증한다.
+#   따라서 실계좌 자동충전 리스크가 없다(02_01의 자동이체 확인 시트 "확인" 버튼을 누르지 않음).
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\TS7295_Alipay_KFTC_OTP_Background_old.yaml"
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입 (02_01과 동일한 표준 진입 보일러플레이트)
+- launchApp
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+    timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+      - tapOn: "1"
+      - waitForAnimationToEnd
+      - tapOn: "2"
+      - waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- assertNotVisible:
+    text: "${SESSION_EXPIRED}"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "${REG_LATER}"
+    commands:
+      - tapOn: "${REG_LATER}"
+- runFlow:
+    when:
+      visible:
+        text: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+# ⚠️ 2026-09-22 실측: "증빙 서류 안내 / 문서가 만료되었습니다"(remindLaterBtn) 팝업이
+#   위 체크들보다 늦게(비동기) 떠서 홈 대기가 막힌다. 01_01과 동일하게 공용 헬퍼로 정리한다.
+- runFlow: "_dismiss_popups_stag_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+
+# 해외송금 진입 (실시간 송금 탭)
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+# 수취인 선택: AliPay Wallet (XINHUA SONG) — 화면에 이미 등록되어 있는 수취인
+- tapOn: "AliPay Wallet"
+
+# 계좌 선택: 케이뱅크 (자동이체/KFTC) — 02_01의 "GME Wallet" 탭과 동일한 계좌 선택 화면
+- tapOn:
+    text: "케이뱅크"
+    index: 0
+
+# 송금액
+- inputText: "${SENDNOW_AMOUNT}"
+- hideKeyboard
+- tapOn: "${CALCULATE_TEXT}"
+
+# ---- 1단계: 금액 세부 정보 ----
+# ⚠️ 02_01과 동일하게 도달을 강제한다 — 잔액 부족/한도 초과면 여기서 실패시킨다.
+- extendedWaitUntil:
+    visible:
+      text: ".*(계속|잔액이 부족|최소 송금|한도).*"
+    timeout: 60000
+- assertNotVisible:
+    text: ".*잔액이 부족.*"
+- assertNotVisible:
+    id: "limitErrorMsg"
+- assertVisible:
+    id: "agreeButton"
+- tapOn:
+    id: "agreeButton"
+
+# ---- 2단계: 수취인 정보 / 거래 상세 / 약관 동의 ----
+- extendedWaitUntil:
+    visible:
+      id: "txt_pamount"
+    timeout: 30000
+- swipe:
+    direction: UP
+    duration: 1000
+- waitForAnimationToEnd
+- assertVisible:
+    id: "agreeButton"
+    text: "${MYQR_CONTINUE}"
+- tapOn:
+    id: "agreeButton"
+
+# 약관 브라우저가 열렸으면 되돌아와 재시도 (02_01과 동일 자가복구)
+- runFlow:
+    when:
+      visible:
+        text: "GME Remittance - Terms"
+    commands:
+      - tapOn:
+          id: "iv_back"
+      - waitForAnimationToEnd
+      - swipe:
+          direction: UP
+          duration: 1000
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "agreeButton"
+
+# ---- OTP 화면 도달 대기 ----
+# ⚠️ 2026-09-18 실기기 실측: 화면 제목은 "4자리 OTP 코드 입력"이고, 도달 직후
+#   "정보 / 4자리 OTP 코드가 휴대폰으로 전송되었습니다." 안내 바텀시트가 함께 뜬다(OK 버튼).
+- extendedWaitUntil:
+    visible:
+      text: ".*4자리 OTP 코드.*"
+    timeout: 30000
+- takeScreenshot: "TS7295_01_otp_before_background"
+
+# 안내 바텀시트 닫기 — OK를 눌러야 OTP 입력 화면이 온전히 드러난다
+- runFlow:
+    when:
+      visible:
+        text: "OK"
+    commands:
+      - tapOn: "OK"
+      - waitForAnimationToEnd
+- takeScreenshot: "TS7295_01b_otp_sheet_closed"
+
+# ---- 백그라운드 전환 (1분 대기) ----
+# ⚠️ Maestro에는 "최근 실행 앱" 키가 없다(pressKey 지원 키 목록에 recents/overview 없음).
+#   포그라운드 복귀는 이 yaml이 아니라 run_test.ps1과 같은 방식으로 바깥에서
+#   `adb shell input keyevent 187`(APP_SWITCH) + 좌표 탭으로 처리한다.
+# 2026-09-22: 절전 모드 + 30초 대기로는 재현 안 됨 → 1분으로 늘려 재시도.
+- pressKey: Home
+- extendedWaitUntil:
+    visible:
+      text: "__never_matches__"
+    timeout: 60000
+    optional: true
+- takeScreenshot: "TS7295_02_backgrounded"
+
+# ---- 결과 관찰 ----
+# 버그 재현 시: "Value cannot be null" 노출. 수정 후: 컨트롤된 에러 메시지 또는 OTP 화면 정상 유지.
+# 하드 assert 없이 스크린샷으로 QA가 육안 판단한다(수정 전/후 상태에 따라 기대 결과가 다르므로).
