@@ -1,10 +1,5 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Booking
 # ================================================================
@@ -24,12 +19,7 @@ appId: ${APP_ID}
 # ⚠️ **결제 이후 구간은 en 값이 미확정**이다 — 확정하려면 실제 결제가 필요해 탐색을 결제
 #   직전에서 멈췄다. 해당 줄마다 `# [i18n 미확정]` 을 달아 뒀다.
 
-# 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록)
-# ⚠️ 종전 블록은 개편UI 기준이라 구 UI/stag 빌드에서 **첫 화면부터 죽는다**(2026-08-28 전환):
-#   ① `Server Override` 스플래시 처리가 없어 launchApp 직후 그 화면에 멈춘다.
-#   ② 가드가 `notVisible: text "Home"`인데 구 UI 홈엔 "Home" 텍스트가 **없다** →
-#      항상 참이 되어 PIN 블록에 진입하고, 스플래시엔 키패드가 없어 `tapOn "1"`이 실패한다.
-#   ③ 범용 `tapOn: "닫기"`는 엉뚱한 X를 눌러 앱을 런처로 내보낸 사고 이력이 있다 → 제거.
+# 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록 — docs/ENVIRONMENT.md §7)
 - launchApp
 - extendedWaitUntil:
     visible:
@@ -40,10 +30,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** — 선택값은 앱 데이터에 저장되고
-      #   `clearState`가 **빌드 기본값(stag=STAG)** 으로 초기화한다. 선택을 바꾸면 버튼이
-      #   `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌며 **앱이 종료**된다(둘 다 id는 `button1`).
-      #   Maestro가 `checked:`를 무시해 판별이 불가하므로 **항등 시퀀스**로 처리한다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd

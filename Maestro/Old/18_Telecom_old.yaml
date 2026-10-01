@@ -1,41 +1,18 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Telecom (GME 텔레콤 / GME Mobile) — 구 UI
 # ================================================================
-#  진행: 2026-08-19 구 UI 기준 **전면 재작성**.
-#    ★ 2026-09-29: **앱 기능 변경 — 홈 그리드 "통신 서비스" 가 외부 웹으로 나간다.**
-#      실측(SM-S928N / 7.21.0-stag): 탭 → `com.android.chrome/...customtabs.CustomTabActivity`,
-#      주소 `gmemobile.com` (크롬 커스텀 탭이라 인앱 브라우저처럼 보이지만 **별도 앱**이다).
-#      → 앱 내 텔레콤 화면으로 가는 경로가 사라졌다. **[01]만 웹 이동 검증으로 재작성**하고
-#        **[02]~[08]은 `#| ` 로 주석 보존**했다(되살리는 법은 해당 블록 배너 참조).
-#      ※ 액티비티 클래스는 빌드에 남아 있다(직접 실행 시 "없다"가 아니라 not exported).
-#    2026-09-03: **상품 등록으로 [05] 구현 + [03][04] 수정.** 73스텝 -> **82스텝**.
-#      검증: 1회차 전 구간 통과 / 2회차 USB 끊김으로 중단(코드 결함 아님) / **3회차 EXIT=0, 99 COMPLETED**.
-#      ⚠️ 이 기기는 USB가 자주 끊긴다(이날만 4회 재연결). 중단되면 셀렉터를 의심하기 전에
-#        `adb devices`부터 볼 것 - "device not found"면 환경 문제다.
+# ★ 현재 상태(2026-09-29): **홈 그리드 "통신 서비스" 가 외부 웹으로 나간다.**
+#   실측(SM-S928N / 7.21.0-stag): 탭 → `com.android.chrome/...customtabs.CustomTabActivity`,
+#   주소 `gmemobile.com` (크롬 커스텀 탭이라 인앱 브라우저처럼 보이지만 **별도 앱**이다).
+#   → 앱 내 텔레콤 화면으로 가는 경로가 사라졌다. **[01]만 웹 이동 검증으로 남고
+#     [02]~[08]은 제거**됐다(되살리는 법은 아래 [02]~[08] 배너 참조).
 #
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
-# ---------------------------------------------------------------
-# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-19 실측)
-# ---------------------------------------------------------------
-#   진입 그리드 항목  "GME 모바일" → **"${HOME_TELECOM}"**
-#                     (구 UI 홈 서비스 그리드 11종 중 9번째. 스크롤 필요)
-#   텔레콤 홈 카드    "GME Mobile" → **"Mobile SIM"**
-#                     (`leftlayout`(clickable) + `lefttextview`. 개편UI엔 id가 없어 텍스트로
-#                      잡았지만 구 UI는 id가 있으니 **id로 잡는다**)
-#   요금제 선택 페이지 screenTitle "GME Mobile" → **"Mobile SIM"**
-#   홈 판정          `text: "Home"` → 하단 내비 **id `bottom_item_home`** / 상단 `btnTransfer`
-#   홈 복귀          `repeat while notVisible "Home"` 식 back 루프 → **`homebutton` 1탭**
-#                     (텔레콤 홈의 상단 좌측 홈 아이콘. 즉시 HomeActivityV2로 간다)
+# 진입: 홈 서비스 그리드 **"${HOME_TELECOM}"**(11종 중 9번째 — 스크롤 필요).
+# 홈 판정은 하단 내비 id `bottom_item_home` / 상단 `btnTransfer`.
 #
 # ---------------------------------------------------------------
 # 화면 구조 (2026-08-19 실측)
@@ -107,24 +84,15 @@ appId: ${APP_ID}
 #     신청까지 가지 않고 New/Same Number 페이지 도달만 확인하므로 **자동화 가능하다.**
 #     → BLOCKED가 아니라 **재작업 대상**이다(아래 [05] 절의 셀렉터로 구현 + 실기기 검증 필요).
 #
-# ClickUp 상태: **2026-09-29 정리 완료.**
-#   [01] 커버(웹 이동 검증으로 재작성) / **[02]~[08] 전부 `canceled`**(진입 경로 소멸).
-#   ★ [06][07] 도 `canceled` 다 — 종전 사유 "외부 인증"은 그대로지만 그 이전에 **경로가 없어져서**
-#     나머지와 같은 처지가 됐다. 그래서 BLOCKED 대용이던 `partially completed` 는 걷었고,
-#     **`# CLICKUP-PARTIAL:` 마커도 껐다**(`#x ` 접두사). 살려 두면 리포트가 되밀어 올린다.
-#   ★ `canceled` 는 사용자가 이때 **새로 만든 상태**다 — 종전엔 to do / in progress /
-#     partially completed / complete 넷뿐이라 "경로가 없어져 더는 안 돈다"를 담을 칸이 없었다.
-#     처음엔 **`cancled`**(오타) 로 만들어졌다가 **같은 날 `canceled` 로 이름이 고쳐졌다.**
-#     ※ id `sc901818254784_NEKzXCUZ` 는 **바뀌지 않았다** — ClickUp 은 이름만 갈고 id 를 유지한다.
-#       그래서 id 로 잡는 건 안전하고, **이름 문자열로 비교하는 쪽만** 이런 개명에 깨진다.
-#   ※ type 은 `done` 이라 `partially completed` 와 같은 묶음으로 집계된다(미착수 아님).
+# ClickUp 상태: [01] 커버 / **[02]~[08] 전부 `canceled`**(진입 경로 소멸).
+#   `canceled` 는 상태 id `sc901818254784_NEKzXCUZ`, type 은 `done` 이라
+#   `partially completed` 와 같은 묶음으로 집계된다(미착수 아님).
 #   ⚠️ "ClickUp:" 으로 시작하면 리포트 스크립트가 **커버 완료 마커로 오인**한다
 #     (`# CLICKUP:` 파서가 대소문자를 가리지 않는다) → 산문 주석은 "ClickUp 상태:" 로 쓴다.
-#   ※ 2026-08-19 ClickUp API 레이트 리밋으로 상태 갱신 못 함 → 해제 후 처리.
 #
 # 케이스:
 #   [01] [Low]    통신 서비스 - 홈 그리드 선택 시 **외부 웹(gmemobile.com) 이동** 확인  ← 실행되는 유일한 케이스
-#   ⏸ 아래는 전부 **비활성화**(2026-09-29, 진입 경로 소멸). 주석으로만 남아 있다.
+#   ⏸ 아래는 전부 **제거**됐다(2026-09-29, 진입 경로 소멸). 원본은 git 에 있다.
 #   [02] [Low]    ⏸ GME Mobile - CS 팝업 발생 확인 (Contact us)
 #   [03] [Medium] ⏸ GME Mobile - Mobile SIM 선택 시 요금제 선택 페이지 발생 확인
 #   [04] [Medium] ⏸ GME Mobile - Line SIM / 선불 SIM 선택 시 요금제 목록 발생 확인
@@ -148,15 +116,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -212,10 +172,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:
@@ -295,307 +252,23 @@ appId: ${APP_ID}
 - takeScreenshot: "[01-2]_홈복귀_확인"
 
 # ================================================================
-# ⏸ 2026-09-29 이하 [02]~[08] 전부 **비활성화(주석 보존)**
+# ⏸ [02]~[08] — 2026-09-29 제거됨 (진입 경로 소멸)
 # ================================================================
-# 사유: 홈 그리드 "${HOME_TELECOM}" 이 **외부 웹(gmemobile.com)** 으로 나가도록 바뀌면서
-#   앱 내 텔레콤 화면(`ActivityTelecomHome` → Mobile SIM → 요금제 → 사용량)으로 가는
-#   **경로가 없어졌다.** 화면이 아니라 **진입점이 사라진 것**이다.
+# 사유: 홈 그리드 "${HOME_TELECOM}" 이 **외부 웹(gmemobile.com)** 으로 나가도록
+#   바뀜면서 앱 내 텔레콤 화면(`ActivityTelecomHome` → Mobile SIM → 요금제 →
+#   사용량)으로 가는 **경로가 없어졌다.** 화면이 아니라 **진입점이 사라진 것**이다.
+#   ※ 액티비티 클래스는 아직 빌드에 남아 있다 — 직접 실행하면 "없다"가 아니라
+#     `SecurityException: not exported` 가 난다. 코드가 지워진 게 아니라 안 부를 뿐이다.
 #
-# 실측(2026-09-29, SM-S928N / 7.21.0-stag):
-#   - 홈 그리드 탭 → `com.android.chrome/...customtabs.CustomTabActivity`, 주소 `gmemobile.com`
-#   - 액티비티 클래스는 **아직 빌드에 남아 있다** — 직접 실행을 시도하면 "없다"가 아니라
-#     `SecurityException: not exported` 가 난다. 즉 **코드가 지워진 게 아니라 안 부를 뿐**이다.
-#     → 앱이 진입점을 되살리면 아래 블록을 그대로 되살릴 수 있다. 그래서 지우지 않고 남긴다.
-#
-# 되살리는 법: 아래 명령 줄 맨 앞의 **`#| ` 한 겹만** 벗기면 된다.
-#   (원래부터 주석이던 줄은 `#` 그대로 두었으니 건드릴 게 없다.)
+# 되살리는 법: 종전엔 `#| ` 로 주석 보존했으나 2026-09-30 주석 정리로 걷었다.
+#   원본 305줄은 git 에 그대로 있다:
+#     git show 4dd70d2:Maestro/Old/18_Telecom_old.yaml
+#   → 거기서 [02]~[08] 구간을 꺼내 `#| ` 한 겹만 볗기면 된다.
 #
 # ⚠️ 되살리기 전에 반드시 확인할 것:
 #   ① 홈 그리드 탭이 다시 앱 내 화면으로 가는가(외부 웹이면 [02] 첫 줄부터 죽는다)
-#   ② `[06][07]`의 BLOCKED 사유가 여전히 "외부 인증"인가
+#   ② `[06][07]` 의 BLOCKED 사유가 여전히 "외부 인증"인가
 #     (맞으면 `#x CLICKUP-PARTIAL:` 마커를 되살려 다시 `partially completed` 로 올린다)
 #   ③ ClickUp `[02]`~`[08]` 을 `canceled` → 원래 상태로 되돌렸는가
-#
-# ClickUp 상태: `[02]`~`[08]` **전부 2026-09-29 `canceled` 로 내렸다**(사용자 처리).
-#   → 되살릴 때는 **ClickUp 상태도 함께 되돌려야 한다.** 코드만 살리면 리포트에 안 잡힌다.
-#   → `[06][07]` 은 `#x CLICKUP-PARTIAL:` 마커도 같이 켜야 한다.
+#     → 코드만 살리면 리포트에 안 잡힌다.
 # ================================================================
-
-# ----------------------------------------------------------------
-# [02] [Low] GME Mobile - CS 팝업 발생 확인 (Contact us)
-# ----------------------------------------------------------------
-#| - scrollUntilVisible:
-#|     element:
-#|       text: "${HOME_TELECOM}"
-#|     direction: DOWN
-#|     timeout: 25000
-#|     visibilityPercentage: 20
-#| - tapOn: "${HOME_TELECOM}"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "contactus"
-#|     timeout: 60000
-#| - tapOn:
-#|     id: "contactus"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "btnCancel"
-#|     timeout: 20000
-# 앱 문구의 "궁금한"은 오타지만 실제 텍스트다 — 고쳐 쓰면 매칭이 깨진다.
-# 텍스트는 전체매칭이므로 부분 확인엔 .* 를 붙인다([[feedback_maestro_regex_yaml]]).
-# ⚠️ 2026-09-14: 하드코딩 한국어 패턴이라 en 에서 실패했다 → 기존 키로 교체(en=`How may I help you?`).
-#| - assertVisible: "${SCR_SUPPORT_Q}"
-#| - assertVisible:
-#|     id: "chatView"
-#| - assertVisible: "${SCR_LIVE_CHAT}"
-#| - takeScreenshot: "[02-1]_CS팝업_노출"
-# 🚫 `chatView`(실시간 채팅)는 누르지 않는다 — 실제 상담 채널이 열린다. 취소로 닫는다.
-#| - tapOn:
-#|     id: "btnCancel"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "contactus"
-#|     timeout: 20000
-#| - takeScreenshot: "[02-2]_CS팝업_취소"
-
-# ----------------------------------------------------------------
-# [03] [Medium] GME Mobile - Mobile SIM 선택 시 요금제 선택 페이지 발생 확인
-# ----------------------------------------------------------------
-# 카드는 구 UI에 id가 있다 → 텍스트("Mobile SIM")보다 id로 잡는다.
-# ⚠️ "Mobile SIM"은 카드 라벨(`lefttextview`)과 다음 화면 제목(`screenTitle`)에 **둘 다** 있다.
-#   텍스트로 잡으면 어느 쪽에 걸렸는지 알 수 없어 도달 판정이 흐려진다.
-#| - tapOn:
-#|     id: "leftlayout"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "applylinesimlayout"
-#|     timeout: 30000
-#| - assertVisible: "${TELECOM_SELECT_PACKAGE}"
-#| - assertVisible:
-#|     id: "applyprepaidsimlayout"
-#| - assertVisible:
-#|     id: "chedkmynumerlayout"
-# 2026-09-03 라벨 변경: "Line SIM 요금제" -> "후불 SIM 요금제 신청하기"
-#   id는 `non_face_to_face_delivery_address_title`인데 **다음 화면에서 "새 번호"로도 쓰이는 id**라
-#   단독 판정은 위험하다. 컨테이너 id `applylinesimlayout`는 위에서 이미 단언했다.
-#| - assertVisible: "${APPLY_LINE_SIM_TEXT}"
-#| - assertVisible: "${APPLY_PRE_PAID_SIM}"
-#| - assertVisible: "${CHECK_MY_NUMBER}"
-# 🚫 FLAG_SECURE 화면 — takeScreenshot 금지(헤더 주석). 위 어서션이 증적이다.
-
-# ----------------------------------------------------------------
-# [04] [Medium] GME Mobile - Line SIM / 선불 SIM 선택 시 요금제 목록 발생 확인
-# ----------------------------------------------------------------
-# 2026-09-03: **후불(Line SIM)에 상품이 등록됐다** -> 종전 `noDataAvailable`/"내역 없음" 단언은 실패한다.
-#   선불(prepaid)은 **여전히 비어 있다**(2026-09-14 기준) -> 아래 둘째 블록에서 다룬다.
-#   ⚠️ 선불도 언제든 상품이 등록될 수 있다 -> 둘째 블록은 **빈 목록/상품 목록 둘 다 통과**하게 써 뒀다.
-#     (신청 자체는 상품이 생겨도 외부 인증 때문에 자동화 불가 - [06][07]과 같다.)
-#   금액·상품명은 상품이 바뀌면 달라지므로 **텍스트로 잡지 않고 id로** 존재만 단언한다.
-#| - tapOn:
-#|     id: "applylinesimlayout"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "packagelistRv"
-#|     timeout: 30000
-#| - assertVisible: "${TELECOM_LGU_PACKAGES}"
-#| - assertVisible: "${TELECOM_SELECT_PACKAGE}"
-# 최소 1개 상품이 있어야 성립한다(빈 목록이면 여기서 실패한다)
-#| - assertVisible:
-#|     id: "item_monthlypayment"
-#| - assertVisible:
-#|     id: "payment_title_textview"
-#| - assertNotVisible:
-#|     id: "noDataAvailable"
-# 🚫 FLAG_SECURE 화면 — 스크린샷 대신 어서션으로 남긴다.
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "applyprepaidsimlayout"
-#|     timeout: 20000
-
-# 선불 SIM 신청 -> 같은 "LG U+ 패키지" 목록으로 간다.
-#   2026-09-14 기준 **선불은 아직 상품이 없다**(2026-09-03 실측 이후 변동 없음).
-#   ⚠️ 그렇다고 "비어 있음"을 하드 단언하면 **상품이 등록되는 순간 이 케이스가 깨진다**
-#     - 후불(Line SIM)이 2026-09-03에 실제로 그렇게 깨졌다.
-#     → 빈 목록/상품 목록 **둘 다 통과**하도록 둔다. 이 케이스의 성립 조건은
-#       "선불도 같은 요금제 목록 페이지로 간다"이지 "목록이 비어 있다"가 아니다.
-#   ⛔ 상품이 생겨도 **여기서 더 진행하지 않는다.** 선불 신청도 완료 단계에 외부 인증이 있어
-#     자동화로 완주할 수 없다([06][07]과 같은 제약) → 신청 동작은 수동 테스트 대상이다.
-#| - tapOn:
-#|     id: "applyprepaidsimlayout"
-# 결과 도달을 먼저 강제한다 - 빈 목록(noDataAvailable)이든 상품 목록(packagelistRv)이든 하나는 뜬다.
-#   조건부만 두면 아무것도 안 떠도 통과하므로(거짓 통과) 도달은 조건과 무관하게 강제한다.
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "noDataAvailable|packagelistRv"
-#|     timeout: 30000
-#| - assertVisible: "${TELECOM_LGU_PACKAGES}"
-# 갈래 A - 상품 없음(현재 상태): 빈 상태 문구가 정상 렌더링되는지 확인한다.
-#| - runFlow:
-#|     when:
-#|       visible:
-#|         id: "noDataAvailable"
-#|     commands:
-#|       - assertVisible: "${NO_DATA_AVAILABLE_TEXT}"
-# 갈래 B - 상품이 등록된 뒤: 후불 블록과 같은 형태로 **id로 존재만** 단언한다.
-#   금액·상품명은 상품이 바뀌면 달라지므로 텍스트로 잡지 않는다.
-#| - runFlow:
-#|     when:
-#|       notVisible:
-#|         id: "noDataAvailable"
-#|     commands:
-#|       - assertVisible: "${TELECOM_SELECT_PACKAGE}"
-#|       - assertVisible:
-#|           id: "item_monthlypayment"
-#|       - assertVisible:
-#|           id: "payment_title_textview"
-# 🚫 FLAG_SECURE 화면 — 스크린샷 대신 어서션으로 남긴다.
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "chedkmynumerlayout"
-#|     timeout: 20000
-
-# ----------------------------------------------------------------
-# [05] [Medium] 임의 요금제 선택 -> New Number / Same Number 페이지
-# ----------------------------------------------------------------
-# 2026-09-03 구현(BLOCKED 해제). 종전 사유 "요금제 목록 비어 있음"이 상품 등록으로 해소됐다.
-# 신청까지 가지 않고 **페이지 도달만** 확인하므로 [06][07]의 외부 인증 제약과 무관하다.
-#
-# 실측 경로: 후불 목록 -> 요금제 탭 -> **GME Telecom 서비스 이용약관 바텀시트** -> 확인 -> 신청 페이지
-#   ⚠️ 요금제를 누르면 곧바로 신청 페이지가 아니라 **약관 바텀시트가 먼저** 뜬다.
-#     2026-09-03 실측: **동의해도 다음 실행에서 또 뜬다**(1·2회차 모두 노출).
-#     "최초 1회만 뜬다"고 적었던 종전 주석은 틀렸다. 그래도 **조건부로** 처리하고
-#     결과 도달은 조건과 무관하게 강제한다 - 앱이 언제 건너뛸지 알 수 없고,
-#     조건부만 두면 아무것도 안 떠도 통과하기 때문이다.
-#   ⚠️ 신청 페이지 라벨은 한글이다 - "New Number"/"Same Number"가 아니라 **"새 번호"/"동일한 번호"**.
-#     텍스트는 전체매칭이라 영문으로 잡으면 조용히 SKIP된다 -> **id로 판정한다.**
-#   ⛔ 여기서 더 진행하지 않는다. 신청 완료([06][07])는 **중간에 외부 인증**이 있어 자동화 불가다.
-#| - tapOn:
-#|     id: "applylinesimlayout"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "item_monthlypayment"
-#|     timeout: 30000
-#| - tapOn:
-#|     id: "item_monthlypayment"
-#|     index: 0
-# 약관 동의 바텀시트 - 최초 1회만 뜬다
-#| - runFlow:
-#|     when:
-#|       visible:
-#|         id: "agreeAllContainer"
-#|     commands:
-#|       - assertVisible: "${REG_AGREE_ALL}"
-#|       - tapOn:
-#|           id: "agreeAllContainer"
-#|       - waitForAnimationToEnd
-#|       - tapOn:
-#|           id: "btnConfirm"
-#|       - waitForAnimationToEnd
-# 신청 페이지 도달을 강제한다
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "new_number_usim_layout"
-#|     timeout: 30000
-#| - assertVisible:
-#|     id: "sameNumberSimLayout"
-#| - assertVisible: "${APPLY_FOR_LINE_SIM}"
-#| - assertVisible: "${NEW_NUMBER_TEXT}"
-#| - assertVisible: "${SAME_NUMBER_TEXT}"
-# 🚫 FLAG_SECURE 화면 - takeScreenshot 금지. 위 어서션이 증적이다.
-# 복귀: 신청 페이지 -> 요금제 목록 -> 요금제 선택 페이지
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "item_monthlypayment"
-#|     timeout: 20000
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "chedkmynumerlayout"
-#|     timeout: 20000
-
-# ----------------------------------------------------------------
-# [06] [High] 🚫 BLOCKED — New Number 상품 요금제 정상신청 동작 확인
-# ----------------------------------------------------------------
-# 사유(2026-09-03 변경): **신청 프로세스 중간에 외부 인증이 있어 자동화로 완료할 수 없다**(사용자 확인).
-#   종전 사유 "상품 미등록"은 해소됐으나, 이건 데이터가 아니라 **경로 자체의 제약**이라 풀리지 않는다.
-#   ⚠️ 실제 유심 신청이 발생하는 플로우다(현재 신청 이력이 [08]에 "처리중"으로 남아 있다).
-#   → 수동 테스트 대상.
-#
-# ★ 2026-09-29: ClickUp 을 **`canceled`** 로 내렸다(사용자 처리). 사유가 하나 더 얹혔다 —
-#   외부 인증 이전에 **진입 경로 자체가 없어졌다**([02]~[05],[08]과 같은 사유).
-#
-# ⛔ 그래서 아래 **CLICKUP-PARTIAL 마커를 죽였다**(`#x ` 접두사).
-#   살려 두면 데일리 리포트가 돌 때마다 이 두 건을 **`partially completed` 로 되밀어 올려**
-#   사용자가 손으로 내린 `canceled` 를 덮는다. 마커는 상태를 **밀어 올리는** 장치지
-#   현 상태를 적어 두는 메모가 아니다.
-#   ⚠️ `# CLICKUP-CANCLED:` 같은 마커가 파서에 있는지는 **확인하지 못했다**
-#     (`run_report_old.ps1` 은 이 PC 에 없다 → [[project_clickup_pending_updates]]).
-#     그래서 새 마커를 만들지 않고 **끄기만** 했다. `canceled` 는 수동 상태로 유지된다.
-#   → 되살릴 때는 `#x ` 를 벗겨 마커를 다시 켜고, 사유 문구를 그때 사정에 맞게 고칠 것.
-#
-# [보존] 종전 마커 — BLOCKED 표기용 대용이었다(2026-09-07).
-#   ClickUp 에 BLOCKED 를 담을 상태가 없어 사유가 함께 실리는 partially completed 로 올렸다.
-#   (2026-09-29 `canceled` 가 생겨 이 대용은 더 필요 없다.)
-#   ⛔ 사유 문구에서 **미검증**임을 반드시 밝힌다. 안 그러면 과대 보고다.
-#x CLICKUP-PARTIAL: z8nfn6ma7m | 🚫 자동화 불가(BLOCKED) - 신청 완료 단계의 외부 인증(간편인증)으로 완주 불가. 진입 경로는 [05]에서만 확인했고 신청 동작 자체는 미검증 → 수동 테스트 대상
-
-# ----------------------------------------------------------------
-# [07] [High] 🚫 BLOCKED — Same Number 상품 요금제 정상신청 동작 확인
-# ----------------------------------------------------------------
-# 사유: [06]과 같다(**외부 인증** + **진입 경로 소멸**). 기존 번호 입력 단계가 추가된다는 점만 다르다.
-#   ★ 2026-09-29 ClickUp **`canceled`**(사용자 처리). 마커를 끈 이유는 [06] 주석 참조.
-#x CLICKUP-PARTIAL: z8nfn6ma7n | 🚫 자동화 불가(BLOCKED) - 신청 완료 단계의 외부 인증(간편인증)으로 완주 불가. 기존 번호 입력 단계만 [06]과 다르다. 신청 동작 자체는 미검증 → 수동 테스트 대상
-
-# ----------------------------------------------------------------
-# [08] [High] GME Mobile - 사용량 확인 → 신청한 유심 정보 노출
-# ----------------------------------------------------------------
-#| - tapOn:
-#|     id: "chedkmynumerlayout"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "listview"
-#|     timeout: 30000
-#| - assertVisible: "${AVAILABLE_NUMBERS_TEXT}"
-# 항목 구성: 상태 + 신청일. 날짜·건수는 계정 이력에 따라 달라지므로 **패턴으로** 본다.
-#| - assertVisible:
-#|     id: "status_titleTxt"
-#| - assertVisible: ".*Applied date.*"
-#| - assertVisible: "${TELECOM_STATUS_ANY}"
-# 🚫 FLAG_SECURE 화면 — 스크린샷 대신 어서션으로 남긴다.
-
-# ---------------- 홈 복귀 ----------------
-# 사용량 확인 → btnBack으로 요금제 선택 페이지 → 다시 btnBack으로 텔레콤 홈 → homebutton으로 홈
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "applylinesimlayout"
-#|     timeout: 20000
-#| - tapOn:
-#|     id: "btnBack"
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "homebutton"
-#|     timeout: 30000
-#| - tapOn:
-#|     id: "homebutton"
-#| - waitForAnimationToEnd
-#| - runFlow:
-#|     when:
-#|       visible:
-#|         id: "btnTwo|btnClose"
-#|     commands:
-#|       - tapOn:
-#|           id: "btnTwo|btnClose"
-#|       - waitForAnimationToEnd
-#| - extendedWaitUntil:
-#|     visible:
-#|       id: "btnTransfer"
-#|     timeout: 30000

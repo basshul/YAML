@@ -1,30 +1,21 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: MENU - History (거래/이력 내역)
 # (04_Menu_remaining.yaml에서 분리, 2026-07-16)
 # ================================================================
 
-# 공통 설정 진입 헬퍼:
-# launchApp → (앱은 실행 시마다 간편비밀번호 잠금) PIN <정상 PIN> → 팝업 닫기 → 홈 확인
-# 주의(2026-07-22): launchApp 직후 캐시된 홈이 잠깐 보였다가 잠금화면이 뜨는 레이스가 있어
-#   "홈 notVisible" 가드로는 PIN 입력을 건너뛰어 잠금화면에 갇힘. 잠금화면("4자리 숫자를
-#   입력하세요")을 명시적으로 기다렸다가 PIN 입력하도록 변경. PIN 키패드는 매번 랜덤 배치라
-#   좌표가 아닌 text("1"/"2")로 탭. PIN <정상 PIN>.
-
 # ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 → 내역 탭 → 송금 ----------------
-# ⚠️ 2026-08-18 구 UI로 교체. 개편UI 기준이던 아래 세 군데가 전부 깨져 있었다:
-#   1) 홈 판정 `text: "홈"` → 구 UI 하단 내비 라벨은 **"홈으로"**다. Maestro 텍스트는 전체매칭이라
-#      "홈"으로는 안 걸린다 → **id `btnTransfer`**로 판정한다.
-#   2) 내역 탭 `text: "내역"` → 구 UI 라벨은 **"거래 내역"(공백 포함)** → **id `bottom_item_history`**.
-#   3) 세션만료 처리 `OK → 홈` → 구 UI에서 세션이 만료되면 **초기 화면으로 떨어져 ID/비밀번호
-#      재로그인이 필요하다**(PIN으로 복구 안 됨). 다이얼로그만 닫는 건 의미가 없어서,
-#      뜨면 그대로 실패하게 두고 `01_01_Login_Success_old.yaml`로 복구한 뒤 재실행한다.
+# ⚠️ launchApp 직후 캐시된 홈이 잠깐 보였다가 잠금화면이 뜨는 레이스가 있다. "홈 notVisible"
+#   가드로는 PIN 입력을 건너뛰어 잠금화면에 갇히므로, **잠금화면을 명시적으로 기다린 뒤** PIN을 넣는다.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭한다.
+# ⚠️ 이 화면들의 판정 규칙:
+#   1) 홈 판정은 **id `btnTransfer`**. 하단 내비 라벨이 **"홈으로"**라서 Maestro 전체매칭인
+#      `text: "홈"` 으로는 안 걸린다.
+#   2) 내역 탭은 **id `bottom_item_history`**. 라벨은 **"거래 내역"(공백 포함)**이다.
+#   3) 세션이 만료되면 **초기 화면으로 떨어져 ID/비밀번호 재로그인이 필요하다**(PIN으로 복구 안 됨).
+#      다이얼로그만 닫는 건 의미가 없어서, 뜨면 그대로 실패하게 두고
+#      `01_01_Login_Success_old.yaml`로 복구한 뒤 재실행한다.
 - launchApp
 # ⚠️ **`waitForAnimationToEnd`만으로는 부족하다 (2026-08-19 실측)**
 #   launchApp 직후엔 아직 스플래시라 아래 조건부 블록이 전부 SKIP되고 홈 판정에서 죽는다
@@ -39,15 +30,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -105,10 +88,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:
@@ -547,9 +527,18 @@ appId: ${APP_ID}
       text: "${TRANSACTION_DETAIL_TEXT}"
     timeout: 15000
 - tapOn: "${RECEIPT_TITLE_TEXT}"
-- waitForAnimationToEnd
 # ⚠️ 기기/OS에 따라 결과 화면이 다르다 — 상세는 [05] 주석 참고(구 기기=앱 선택창 / 이 기기=저장 대화상자).
-- assertVisible: '연결 프로그램|DomesticReceipt[\s\S]*'
+#   [05]와 같은 패턴이 여기선 3회 연속 FAIL(2026-09-30·10-01) → 파일명(EditText 값) 매칭에 기대지 않고
+#   "저장" 버튼 문구도 받는다. 거짓 통과 방지로 영수증 버튼이 사라졌는지(=화면 전환)를 함께 단언한다.
+#   (2026-10-01 접근성 트리 미덤프 상태의 수정 — 실기기 재검증 필요)
+- extendedWaitUntil:
+    visible:
+      text: '연결 프로그램|저장|DomesticReceipt[\s\S]*'
+    timeout: 15000
+- assertNotVisible:
+    text: "${RECEIPT_TITLE_TEXT}"
+- assertVisible:
+    text: '연결 프로그램|저장|DomesticReceipt[\s\S]*'
 - pressKey: back
 - waitForAnimationToEnd
 - pressKey: back

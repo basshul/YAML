@@ -1,18 +1,9 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Bill Payment (해외 청구서 결제) — 구 UI
 # ================================================================
-#  진행: 2026-08-25 구 UI 기준 재작성. (원본 개편UI판 백업: `.bak_20260825`)
-#
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\12_BillPayment_old.yaml"
@@ -25,23 +16,15 @@ appId: ${APP_ID}
 #   - KFTC 결제(은행계좌 출금) + 생체인증 경로는 BLOCKED. GME Wallet 경로만.
 #
 # ---------------------------------------------------------------
-# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-25 실측)
+# 진입 경로 (2026-08-25 실측)
 # ---------------------------------------------------------------
-#   진입 그리드 항목  "청구서 결제" → **"모바일 충전 및 청구서 결제"**
-#                     구 UI는 충전과 청구서 결제가 **한 항목으로 합쳐져 있다**.
-#                     라벨이 2줄로 소프트랩되므로 `.*모바일 충전.*` 정규식으로 탭한다.
-#   2단 허브 화면     **이 파일에서는 이게 진짜 변화다.** 개편UI에서는 "청구서 결제"가 홈 그리드의
-#                     **독립 항목**이라 한 번 탭하면 바로 결제 화면이었는데, 구 UI에서는
-#                     충전과 합쳐진 허브 **`MobileTopUpAndBillPaymentActivity`** 안으로 들어갔다.
-#                     (허브 자체는 개편UI에도 있었지만 충전 전용이었다 — 10·11이 쓰던 그 2단이다)
-#                     여기서 **`international_bill_payment`**(해외 청구서 결제 서비스)로 들어간다.
-#                     ⚠️ 10·11·12 세 파일이 모두 이 허브를 통과한다([[project_10_domestictopup]]).
-#   홈 판정          `text: "홈"` → id **`bottom_item_home`**
-#                     (`btnTransfer`는 홈이 스크롤 위치를 유지해 화면 밖일 수 있다 — 아래 참고)
-#   결제 화면 자체    **바뀐 것이 없다.** `OverSeasBillPaymentActivity`의
-#                     `dp_country_selection` / `dp_biller_selection` / `searchEditText` /
-#                     `btnProceed` / `btnOk` / `input_dot_1` 전부 개편UI와 동일하다.
-#                     → [01]~[06] 본문은 셀렉터를 바꿀 필요가 없었다.
+#   홈 그리드 **"모바일 충전 및 청구서 결제"** — 구 UI는 충전과 청구서 결제가
+#     **한 항목으로 합쳐져 있다.** 라벨이 2줄로 소프트랩되므로 `.*모바일 충전.*` 정규식으로 탭한다.
+#   → 2단 허브 `MobileTopUpAndBillPaymentActivity` 에서
+#     **`international_bill_payment`**(해외 청구서 결제 서비스)로 들어간다.
+#     ⚠️ 10·11·12 세 파일이 모두 이 허브를 통과한다([[project_10_domestictopup]]).
+#   홈 판정은 id **`bottom_item_home`** — `btnTransfer`는 홈이 스크롤 위치를 유지해
+#     화면 밖일 수 있다.
 #
 # ---------------------------------------------------------------
 # 화면 구조 (2026-08-25 실측 / Note 9 1080x2220)
@@ -58,7 +41,7 @@ appId: ${APP_ID}
 #   결제내역 확인화면: `btnOk`("${BILL_PAY_USING_WALLET}")
 #   간편비번: `ActivityLockScreen` (`input_dot_1`~`input_dot_4`)
 #
-# ★ 함정(개편UI에서 확인, 구 UI에서도 유효):
+# ★ 함정:
 #   - 국가 검색어와 목록항목이 **동일 텍스트면 검색창이 탭된다** → 부분검색("Nep")으로 회피
 #   - **비고 필드는 필수** → 비워두면 "진행"이 비활성
 #   - maestro `inputText`는 **한글(비ASCII) 미지원** → 한글 청구인명은 검색 불가,
@@ -85,15 +68,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -158,10 +133,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

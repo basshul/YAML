@@ -3,17 +3,13 @@ appId: ${APP_ID}
 # ================================================================
 # 시나리오: MENU (드로어 메뉴) — 구 UI
 # ================================================================
-#  진행: EXIT=0, 198스텝, 20케이스(진입 9 + 내부 동작 11). 2026-08-13 기준 전 케이스 PASS.
-#
 #  ⓘ 케이스 아래의 `# CLICKUP: <케이스ID>` 주석은 데일리 리포트(run_report_old.ps1)가 읽어
 #    해당 ClickUp 케이스 태스크를 complete로 갱신하는 근거다.
 #    **실기기에서 PASS를 확인한 케이스에만 달 것.** 달아두면 매일 자동으로 상태가 맞춰지고,
 #    없는 케이스는 스크립트가 건드리지 않는다.
 # 2026-08-12 작성. 대상 화면 = HomeActivityV2의 좌상단 드로어(DrawerLayout `drawer_home`).
 #
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # 구 UI에서는 지점·GME 소개·개인정보 처리 방침·로그아웃 등이 **프로필 탭이 아니라 드로어**에 있다.
 # (개편 UI는 프로필 탭 경로였고, 구 UI 프로필 탭에는 로그아웃이 아예 없다 — 2026-08-11 실측)
@@ -55,15 +51,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -336,15 +324,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd

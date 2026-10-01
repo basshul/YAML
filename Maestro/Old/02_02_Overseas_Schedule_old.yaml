@@ -1,10 +1,5 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Overseas Transfer - 예약 송금 / 필터 / 수취인 추가
 # 실행: .\run_test.ps1 -lang ko -flow 02_02_Overseas_Schedule.yaml

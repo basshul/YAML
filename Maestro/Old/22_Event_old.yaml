@@ -1,34 +1,22 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Event — 구 UI
 # ================================================================
-#  진행: 2026-08-19 구 UI 기준 **전면 재작성**.
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 데이터 전제 (2026-08-19 실측):
+#   · **"진행 중인 이벤트"에 이벤트가 존재한다**(배너 4개 이상).
+#   · 그중 **"룰렛 돌리기 이벤트"** = TODO 가 말한 **Spin & Win**이다.
+#   · 그 안에 **"공유" 탭 = Share With my Friends**가 있고,
+#     "친구 초대하기" → **Send Link / Share QR** 바텀시트가 뜬다.
+#   ⚠️ 진행 중인 이벤트가 비면 이 케이스들은 성립하지 않는다(과거 그런 시기가 있었다).
 #
-# ★ **2026-07-09 기록이 더 이상 맞지 않는다 — 원래 케이스를 그대로 커버할 수 있게 됐다.**
-#   당시엔 "진행 중인 이벤트: 항상 내역 없음"이라 **지난 이벤트 배너 → 외부 Facebook 링크**로
-#   케이스를 대체했었다. 2026-08-19 실측 결과:
-#     · **"진행 중인 이벤트"에 이벤트가 존재한다**(배너 4개 이상).
-#     · 그중 **"룰렛 돌리기 이벤트"** = 원래 TODO가 말한 **Spin & Win**이다.
-#     · 그 안에 **"공유" 탭 = Share With my Friends**가 있고,
-#       "친구 초대하기" → **Send Link / Share QR** 바텀시트가 뜬다.
-#   → 대체 케이스를 버리고 **원래 정의대로** 재작성했다.
-#
-# 개편UI → 구 UI 전환에서 바뀐 것:
-#   진입    개편UI는 홈 서비스 그리드의 "이벤트"를 탭했지만, **구 UI 홈 그리드에는 "이벤트"가 없다**
-#           (그리드 11종: 해외송금/국내 송금/오늘의 환율/모바일 충전 및 청구서 결제/해외송금 받기/
-#            입금/ATM 출금/GME Wallet 거래내역/통신 서비스/증명서 발급/예약하기).
-#           구 UI는 **하단 내비 `bottom_item_event`** 가 이벤트 탭이다.
-#   홈 판정 `text: "Home"` → 하단 내비 **id `bottom_item_home`**
+# 진입:
+#   **홈 그리드에는 "이벤트"가 없다** — 하단 내비 **`bottom_item_event`** 가 이벤트 탭이다.
+#   (홈 그리드 11종: 해외송금/국내 송금/오늘의 환율/모바일 충전 및 청구서 결제/해외송금 받기/
+#    입금/ATM 출금/GME Wallet 거래내역/통신 서비스/증명서 발급/예약하기)
+#   홈 판정은 하단 내비 **id `bottom_item_home`**
 #
 # 화면 구조 (2026-08-19 실측):
 #   이벤트 목록 — 헤더 "이벤트" / 탭 **"진행 중인 이벤트" / "지난 이벤트"** / 배너 카드들(기간 텍스트 동반)
@@ -77,15 +65,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -141,10 +121,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

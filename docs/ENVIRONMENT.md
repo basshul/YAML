@@ -305,3 +305,66 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 | 가
   → 스크립트로 다시 쓸 때는 **읽은 바이트 그대로 보존**하고(`newline=""`로 읽고 감지한 개행으로 join),
   쓴 뒤 `\r\n` 개수를 원본과 대조해 검산한다. 일괄 변환하면 내용은 그대로인데 **전 줄이 변경으로 잡히고**,
   `.gitattributes`가 `* -text`라 저장소에도 그대로 올라간다.
+
+---
+
+## 7. 공통 진입 블록 규약 — 모든 플로우가 같은 코드를 쓴다
+
+`Old\*.yaml` 은 전부 같은 **공통 진입 블록**(앱 실행 → Server Override → 재로그인 →
+PIN → 팝업 정리 → 홈)으로 시작한다. 종전에는 이 설명이 파일마다 통째로 복사돼
+26~36벌 중복돼 있었다. **설명은 여기 한 곳에만 둔다** — yaml 에는 1줄 포인터만 있다.
+코드 자체는 각 파일에 그대로 있으니 **아래를 읽지 않고 그 블록을 고치지 말 것.**
+
+### 7.1 실행 전 확인 — 이 액티비티가 아니면 파일을 돌리지 말 것
+
+```
+adb shell dumpsys window | Select-String mCurrentFocus
+  → ...homeV2.view.HomeActivityV2
+```
+
+### 7.2 진입 가드는 **id 로 판정한다** (2026-09-14 전환)
+
+종전의 한국어 문구 대안 매칭(`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서
+진입부터 막았다**(영문 UI 는 `Enter the 4-digit number` / `Home`). 이 가드가
+26개 파일 55곳에 있었다. id 는 언어에 흔들리지 않는다:
+
+| 화면 | id |
+|---|---|
+| 잠금화면 · PIN 생성 | `input_dot_1` |
+| 홈 | `bottom_item_home` |
+| Server Override | `button1` |
+
+### 7.3 Server Override — **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정)
+
+1. 선택값은 **앱 데이터에 저장**되고 `clearState` 가 이를 **빌드 기본값으로 초기화**한다
+   (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
+2. 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
+3. 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
+   **앱이 종료된다**. 두 버튼 모두 resource-id 는 `button1` 이다.
+4. Maestro 는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST 인지" 판별이 불가능하다.
+   그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → `button1` → 재실행 → `button1`.
+   이미 LIVETEST 였다면 첫 `button1` 이 CONTINUE 라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+
+⚠️ APPLY & QUIT 로 앱이 죽었을 수 있으므로 **재실행**한다. 이때
+**`clearState` 를 쓰면 방금 저장한 선택이 또 초기화된다 → 절대 쓰지 말 것.**
+
+### 7.4 자동 로그아웃 복구
+
+세션 10분 만료로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+→ `- runFlow: "_relogin_if_autologout_old.yaml"`
+
+### 7.5 PIN 입력
+
+키패드는 **탭마다 재배치**되므로 탭 사이 `waitForAnimationToEnd` 로 정착을 기다린다.
+오입력이 누적되면 **계정이 잠긴다.**
+
+### 7.6 인앱 배너 닫기 id 는 **빌드마다 다르다** (2026-08-27 실측)
+
+| 빌드 | 닫기 id |
+|---|---|
+| 7.19.x | `btnTwo` |
+| 7.20.0 | `btnClose` (+ `btnDontShowToday` "오늘 하루 보지 않기") |
+
+Maestro id 는 정규식이라 `btnTwo|btnClose` 로 둘을 함께 받는다. 배너가 홈 요소를 덮어
+`btnTransfer` assert 가 실패하는 사고가 있었다. **범용 "닫기" 문자열 탭은 금지** —
+다른 X 를 눌러 사고 이력이 있다.

@@ -3,18 +3,10 @@ appId: ${APP_ID}
 # ================================================================
 # 시나리오: 설정 → 언어/Language 변경 (24개 언어 순회) — 구 UI
 # ================================================================
-#  진행: **EXIT=0 / 24개 언어 순회** (2026-08-14 구 UI 기준 재작성 + 실기기 seungsoo818).
-#    마지막에 한국어로 복귀하고 홈의 한국어 문구로 검증까지 통과.
-#    별도 검증 실행에서 English 전환 시 홈이 "GME Wallet Number"로, 한국어 복귀 시 "GME Wallet 번호"로
-#    바뀌는 것을 확인해 **실제 언어 적용 + 헬퍼 변수 치환**이 동작함을 확정했다.
-#    (이전 버전은 개편 UI 기준: `Profile`/`Settings`/`Home` 텍스트 탭이라 구 UI에서 동작 안 함)
-#
 #  ※ 각 언어의 성공 근거: 전환 후 재진입 시 **드로어 "설정" 라벨을 그 언어로 매칭**해야 다음 단계로
 #    넘어간다. 즉 24회 전부 통과했다는 것 자체가 언어가 실제로 바뀌었다는 신호다.
 #
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # 핵심 실측 (2026-08-14):
 #   ⚠️ **언어를 선택하면 앱이 통째로 재시작된다** — SplashScreen + "Server Override" 다이얼로그가 다시 뜨고
@@ -146,15 +138,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd

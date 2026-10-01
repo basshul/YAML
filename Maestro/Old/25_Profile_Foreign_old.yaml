@@ -3,9 +3,9 @@ appId: ${APP_ID}
 # ================================================================
 # 시나리오: Profile 신분증 업로드 — **외국인 계정(test123)** / 구 UI
 # ================================================================
-#  진행: 2026-08-18 신규. ARC(앞면+뒷면) / 여권 업로드 전 구간을 **탐색 중 수동으로 완주**했고
-#    (둘 다 "서류가 정상적으로 접수되었습니다" 도달), 그 업로드 때문에 계정이 심사 대기로 잠겨
-#    **플로우 자체로는 업로드 분기를 아직 못 돌렸다.** 담당자 승인 후 재실행 필요.
+# ⚠️ **업로드 분기는 아직 플로우로 못 돌렸다.** ARC(앞면+뒷면)/여권 업로드 전 구간은
+#   수동으로 완주해 둘 다 "서류가 정상적으로 접수되었습니다"까지 갔지만, 그 업로드 때문에
+#   계정이 **심사 대기로 잠겨** 분기가 SKIP된다. 담당자 승인 후 재실행 필요.
 #
 # 왜 파일을 나눴나 — `25_Profile_old.yaml`은 **seungsoo818(한국인) 전용**이다:
 #   · 공통 진입이 `tv_total_amount`를 기다리는데 **test123 프로필 탭에는 이 뷰가 없다**
@@ -84,15 +84,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -152,10 +144,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

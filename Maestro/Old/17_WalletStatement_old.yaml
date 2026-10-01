@@ -3,25 +3,20 @@ appId: ${APP_ID}
 # ================================================================
 # 시나리오: GME Wallet Statement — 구 UI
 # ================================================================
-#  진행: 2026-08-18 구 UI 기준 **전면 재작성**. 이전 버전은 개편 UI 기준이라 진입부터 깨졌다.
-#
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # ⚠️ **한국인 계정(seungsoo818) 기준.** 이 파일은 한국어 문구를 직접 쓴다(구 UI는 id가 대부분
 #   살아 있어 언어 의존이 적고, 남은 몇 개는 이 화면 고유 문구다). 다국어 순회 대상이 아니다.
 #
-# 개편UI → 구 UI 전환에서 실제로 바뀐 것 (2026-08-18 실측):
-#   진입 경로 **개편UI: 홈 좌표(89%,43%) → "My Wallet" → "내역"(index 0) → 계좌 화면** 3단계였는데,
-#             구 UI는 **홈 서비스 그리드 "GME Wallet 거래내역" 한 번**으로 바로 계좌 화면에 간다.
-#             → 중간의 My Wallet 화면과 좌표 탭이 전부 사라졌다(Compose 좌표 함정도 같이 사라짐).
-#   홈 판정   `text: "Home"` → 하단 내비 **id `bottom_item_home`**
+# 진입 경로·셀렉터 (2026-08-18 실측):
+#   진입 경로 **홈 서비스 그리드 "GME Wallet 거래내역" 한 번**으로 바로 계좌 화면에 간다.
+#             중간 화면도 좌표 탭도 없다.
+#   홈 판정   하단 내비 **id `bottom_item_home`**
 #   화면      `new_history.account.NewAccountHistoryActivity` — toolbar_title "계좌"
 #             `transactionTabLayout`("Wallet 거래내역" / "은행 명세서") / `txvWalletNumber`
 #             / `txvBalance`("잔액") + `txvTranAmount` / `filterView` + `txvDateText` + `imgvFilter`
 #             / `walletStatementHistoryRv` / `downloadLayout` + `download` / `imgvSearchIcon`
-#   필터 시트 **개편UI와 id 체계가 같다**(그대로 재사용): dialog_header("설정") / `dialog_close`
+#   필터 시트 dialog_header("설정") / `dialog_close`
 #             / `tv_period`("조회 기간") / `one_month`("1개월") `three_month` `one_year`
 #             / `date1` `date2` / `tv_search`("Status") / `rb_all`("모든 거래") `rb_deposit`("입금")
 #             `rb_withdrawal`("출금") / `search`("검색")
@@ -67,15 +62,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -128,10 +115,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

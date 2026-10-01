@@ -1,28 +1,17 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: MY QR — 구 UI
 # ================================================================
-#  진행: 2026-08-19 구 UI 기준 **전면 재작성**. 이전 버전은 개편 UI 기준이라 진입부터 깨졌다.
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# ★ **좌표를 쓰지 않는다.** 필요한 요소에 id가 전부 있다 → 해상도 의존이 없다.
+#   남은 좌표는 [03]의 "바텀시트 바깥 탭" 한 종류뿐이고, 이건 좌표 말고 방법이 없다.
+#   (좌표를 늘리지 말 것 — 기기가 S23 1080x2340 → Note 9 1080x2220으로 바뀌었을 때
+#    좌표 탭 6개 중 4개가 어긋난 이력이 있다)
 #
-# ★ 이 재작성의 핵심: **좌표를 거의 다 버렸다.**
-#   종전 파일은 좌표 탭이 11군데였고 "기기 교체 시 재보정 필수"라는 주석까지 달려 있었다
-#   (S23 1080x2340 → Note 9 1080x2220으로 바뀌며 6개 중 4개가 어긋난 이력).
-#   구 UI는 native라 **필요한 요소에 id가 전부 있다** → 해상도 의존이 사라졌다.
-#   (남은 좌표는 [03]의 "바텀시트 바깥 탭" 한 종류뿐이고, 이건 좌표 말고 방법이 없다)
-#
-# 개편UI → 구 UI 구조 차이 (2026-08-19 실측):
-#   진입    개편UI는 홈 우상단 좌표(76%,7%)로 My QR 직행.
-#           구 UI는 **홈 잔액 카드의 아이콘 스위처**를 거친다:
+# 진입 경로·화면 구조 (2026-08-19 실측):
+#   진입    **홈 잔액 카드의 아이콘 스위처**를 거친다:
 #             `qrScan`(카드 상단 QR 아이콘) → 카드가 QR 페이지로 바뀌고 하단 버튼 라벨이
 #             `btnTransfer`="지금 송금하기" / `txvDepositOrViewStatement`="받기" 로 바뀐다
 #             → **"받기"(`txvDepositOrViewStatement`)** 를 눌러야 My QR로 간다.
@@ -32,27 +21,24 @@ appId: ${APP_ID}
 #           customername / qrcard+qrimage / **enteramount**("금액 입력") / receive_to("받을 계좌:")
 #           / **accountinfo**("GME Wallet (…)") / **download**(QR 저장) / **share**(QR 공유하기)
 #           / **scanqr**(우상단 스캔) / back
-#           ⚠️ 구 UI My QR에는 **"글로벌 QR"·"국내 송금" 버튼이 없다**(개편UI에만 있던 것).
-#             종전 [02]는 그 두 버튼을 눌렀는데 구 UI에서는 성립하지 않아 케이스를 재정의했다.
+#           ⚠️ My QR 에는 **"글로벌 QR"·"국내 송금" 버튼이 없다** — 누르는 케이스를 만들지 말 것.
 #   계좌변경 `accountinfo` 탭 → 바텀시트 `txvTitle`("받는 계좌") / `close` / `rvKftcList`
 #           / 행마다 name(은행명) + balance(계좌번호). **은행명 텍스트로 탭**한다
-#           (행 순서는 계정의 연결 계좌에 따라 밀리므로 index·좌표 금지 — 개편UI 시절 실제 사고).
+#           (행 순서는 계정의 연결 계좌에 따라 밀리므로 index·좌표 금지 — 실제 사고 이력).
 #   금액입력 `enteramount` 탭 → 바텀시트에 `amount` 입력칸 하나뿐(확인 버튼 없음).
 #           숫자 입력 후 **시트 바깥을 탭**하면 닫히면서 값이 확정되고, `enteramount` 라벨이
 #           "금액 입력" → "1 원"으로 바뀐다(이 변화로 판정한다).
 #   QR스캔  `scanqr` → **`domesticremit.send.view.DomesticRemitActivity`**(출금 계좌 선택,
 #           행 id `mainlayout`, 하단 `btn_ok`"계속") → **`domestic_qr.DomesticQrScanView`**
-#           (title "QR 스캔" / scanToPay / **galleryImagePick**). 개편UI의 `galleryImagePick`은 그대로다.
+#           (title "QR 스캔" / scanToPay / **galleryImagePick**).
 #
-# ✅ **송금 완주까지 커버한다 (2026-08-20 KFTC 복구 후 추가)**
-#   2026-08-19에는 `btn_ok2`("계속")를 누르면 **"실패 - (06640154622502) / Failed"** 만 떴다.
-#   🚫 원인은 **livetest 환경의 KFTC 서버 연결 불가**였다(환경 이슈 / 앱 결함 아님).
-#      금액·은행을 바꿔도 동일했다(카카오뱅크 1원·1,000원 / 케이뱅크 1,000원) → 조합 문제가 아니었다.
-#   ✅ **2026-08-20 KFTC 복구 확인** → `btn_ok2` 이후 구간(수취인 세부 정보 확인 → 간편비밀번호
-#      1212 → 성공 시트 → 영수증 SUCCESS)을 [05]에 붙였고 **EXIT=0 2회 / 165스텝**으로 검증했다.
-#   💰 금액은 **1원으로 유지**한다(2026-08-20 사용자 지시 — 어제 1,000원으로 올렸던 것을 되돌렸다).
-#      GME Wallet → 카카오뱅크로 실제 1원이 나가지만 **본인 계좌 간 이동이라 손실이 아니다.**
-#   ※ QR 공유(Teams 전송)도 빼지 않았다 — 수신자가 본인이라 안전하다([01] 주석 참고).
+# ✅ **[05]는 송금 완주까지 커버한다** (`btn_ok2` 이후: 수취인 세부 정보 확인 → 간편비밀번호
+#   → 성공 시트 → 영수증 SUCCESS).
+#   🚫 `btn_ok2` 에서 **"실패 - (…) / Failed"** 만 뜨면 **livetest 환경의 KFTC 서버 연결 불가**를
+#      먼저 의심할 것(환경 이슈 / 앱 결함 아님). 금액·은행을 바꿔도 동일하면 조합 문제가 아니다.
+#   💰 금액은 **1원으로 유지**한다(사용자 지시). GME Wallet → 카카오뱅크로 실제 1원이 나가지만
+#      **본인 계좌 간 이동이라 손실이 아니다.**
+#   ※ QR 공유(Teams 전송)도 수신자가 본인이라 안전하다([01] 주석 참고).
 #
 # 케이스 목록:
 #   [01] Receive - QR코드 공유동작 확인            (Teams로 본인에게 전송까지 완주)
@@ -79,15 +65,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -142,10 +120,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

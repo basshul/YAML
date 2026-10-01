@@ -1,10 +1,5 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: Issue Certificate (증명서 발급)
 # 범위(사용자 지시): 각 증명서를 "인증 수단(본인인증) 선택" 화면까지만 진행.
@@ -38,14 +33,13 @@ appId: ${APP_ID}
 # ================================================================
 
 # ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
-# ⚠️ 2026-08-19 구 UI로 교체. 개편UI 기준이던 부분을 전부 고쳤다:
-#   1) `launchApp` 뒤 첫 화면을 **명시적으로 기다린다** — 그냥 waitForAnimationToEnd만 두면
+# ⚠️ 이 블록의 규칙 (docs/ENVIRONMENT.md §7):
+#   1) `launchApp` 뒤 첫 화면을 **명시적으로 기다린다** — waitForAnimationToEnd만 두면
 #      콜드 스타트에서 Server Override가 늦게 떠 아래 조건부 블록이 전부 SKIP되고 홈 판정에서 죽는다.
-#   2) **Server Override 처리 추가** — 종전 파일엔 아예 없었다(livetest 빌드는 매 실행 노출).
-#   3) 홈 판정 `text: "홈"` → 구 UI 하단 내비 라벨은 **"홈으로"**라 전체매칭에 안 걸린다 → id `btnTransfer`.
-#   4) 세션만료 `OK → 홈` 처리 제거 — 구 UI에서 세션이 끊기면 **ID/비밀번호 재로그인**이 필요해
-#      다이얼로그만 닫는 건 무의미하다. 뜨면 실패로 드러내고 `01_01_Login_Success_old.yaml`로 복구한다.
-#   5) 보이스피싱·인앱배너 팝업 처리 추가(구 UI에서 실제로 뜬다).
+#   2) 홈 판정은 id `btnTransfer` — 하단 내비 라벨이 **"홈으로"**라 `text: "홈"` 전체매칭에 안 걸린다.
+#   3) 세션이 끊기면 **ID/비밀번호 재로그인**이 필요하다. 다이얼로그만 닫는 건 무의미하므로
+#      뜨면 실패로 드러내고 `01_01_Login_Success_old.yaml`로 복구한다.
+#   4) 보이스피싱·인앱배너 팝업은 조건부로 처리한다(실제로 뜬다).
 - launchApp
 - extendedWaitUntil:
     visible:
@@ -56,15 +50,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -121,10 +107,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

@@ -1,11 +1,6 @@
 
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 03 국내 송금 테스트
 # 실행:
@@ -32,13 +27,10 @@ appId: ${APP_ID}
 #   [06] KFTC → My Wallet OTP 불일치 시 송금불가 확인
 # ================================================================
 
-# 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록)
-# ⚠️ 종전 블록은 개편UI 기준이라 **구 UI에서 첫 스텝부터 죽었다**(2026-08-27 실측):
-#   ① `Server Override` 스플래시 처리가 없어 launchApp 직후 그 화면에 멈춘다.
-#   ② 가드가 `notVisible: text "Home"`인데 구 UI 홈엔 "Home" 텍스트가 **없다** →
-#      항상 참이 되어 PIN 블록에 진입하고, 스플래시엔 키패드가 없어 `tapOn "1"`이 실패했다.
-#   ③ 범용 `tapOn: "닫기"`는 엉뚱한 X를 눌러 앱을 런처로 내보낸 사고 이력이 있다 → 제거.
-#   → 잠금화면(`input_dot_1`)을 **명시적으로 기다린 뒤** PIN을 넣고, 홈 판정은 `bottom_item_home`으로 한다.
+# 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록 — docs/ENVIRONMENT.md §7)
+#   잠금화면(`input_dot_1`)을 **명시적으로 기다린 뒤** PIN을 넣고, 홈 판정은 `bottom_item_home`으로 한다.
+#   ⚠️ 구 UI 홈엔 "Home" 텍스트가 **없다** — `notVisible: text "Home"` 가드는 항상 참이 되어 깨진다.
+#   ⚠️ 범용 `tapOn: "닫기"`는 엉뚱한 X를 눌러 앱을 런처로 내보낸 사고 이력이 있다 → 쓰지 않는다.
 - launchApp
 - extendedWaitUntil:
     visible:
@@ -49,15 +41,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -105,10 +89,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:
@@ -287,12 +268,23 @@ appId: ${APP_ID}
     timeout: 15000
 - tapOn: "${MYQR_VIEW_RECEIPT}"
 - waitForAnimationToEnd
-# 영수증 다운로드 버튼 탭 → PDF 생성 후 "연결 프로그램" 앱 선택 다이얼로그 노출 확인
+# 영수증 다운로드 버튼 탭 → PDF 생성 후 결과 화면 노출 확인
+# ⚠️ 기기/OS에 따라 결과 화면이 다르다 (2026-09-09 / 2026-10-01 SM-S911N·Android 16 실측).
+#   구 기기: "연결 프로그램"(앱 선택창) / 이 기기: 네이티브 "다운로드" 파일저장 화면(파일명 DomesticReceipt… + "저장" 버튼).
+#   파일명은 EditText 값이라 text 매칭이 안 될 수 있어 "저장" 버튼 문구도 함께 받는다.
+#   "다운로드" 단독은 영수증 화면 자체 문구와 겹칠 수 있어 쓰지 않는다.
+#   거짓 통과 방지: 다운로드 버튼(btn_download)이 사라졌는지 = 영수증 화면을 실제로 벗어났는지 함께 단언한다.
+#   (2026-10-01 접근성 트리 미덤프 상태의 수정 — 실기기 재검증 필요)
 - tapOn:
     id: "btn_download"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: '연결 프로그램|저장|DomesticReceipt[\s\S]*'
+    timeout: 15000
+- assertNotVisible:
+    id: "btn_download"
 - assertVisible:
-    text: "연결 프로그램"
+    text: '연결 프로그램|저장|DomesticReceipt[\s\S]*'
 - pressKey: back
 - pressKey: back
 - runFlow:

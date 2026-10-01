@@ -1,18 +1,9 @@
 appId: ${APP_ID}
 ---
-# ⚠️ 2026-09-14: 진입 가드를 **id 로 바꿨다.** 종전 한국어 문구 대안 매칭
-#   (`"4자리 숫자를 입력하세요|홈으로"`)은 **en 실행에서 진입부터 막았다**(영문 UI 는
-#   `Enter the 4-digit number`/`Home`). 이 가드가 26개 파일 55곳에 있었다.
-#   id 는 언어에 흔들리지 않는다: 잠금화면·PIN 생성=`input_dot_1` / 홈=`bottom_item_home`
-#   / Server Override=`button1`.
 # ================================================================
 # 시나리오: International Topup (국제 선불폰 충전) — 구 UI
 # ================================================================
-#  진행: 2026-08-25 구 UI 기준 재작성. (원본 개편UI판 백업: `.bak_20260825`)
-#
-# 실행 전 확인 — 이 액티비티가 아니면 이 파일을 돌리지 말 것:
-#   adb shell dumpsys window | Select-String mCurrentFocus
-#     → ...homeV2.view.HomeActivityV2
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\11_IntlTopup_old.yaml"
@@ -26,22 +17,18 @@ appId: ${APP_ID}
 #   ⏸ 실제 결제 완주 자동화는 **나중에 별도 작업**(사용자 지시 2026-08-25).
 #
 # ---------------------------------------------------------------
-# 개편UI → 구 UI 전환에서 바뀐 것 (2026-08-25 실측)
+# 진입 경로·셀렉터 (2026-08-25 실측)
 # ---------------------------------------------------------------
-#   진입 그리드 항목  "모바일 충전" → **"모바일 충전 및 청구서 결제"**
-#                     구 UI는 충전과 청구서 결제가 **한 항목으로 합쳐져 있다**.
+#   진입 그리드 항목  **"모바일 충전 및 청구서 결제"** — 충전과 청구서 결제가 한 항목으로 합쳐져 있다.
 #                     라벨이 2줄로 소프트랩되므로 `.*모바일 충전.*` 정규식으로 탭한다.
-#   2단              **경로 구조는 개편UI와 같다.** 개편UI도 "모바일 충전" → "해외 충전 서비스"
-#                     2단이었고 그 2단이 허브 `MobileTopUpAndBillPaymentActivity`다.
-#                     달라진 건 1단 라벨과, 허브에 청구서 결제까지 들어왔다는 것뿐이다.
-#                     "해외 충전 서비스"는 텍스트 대신 id **`international_topUp`** 으로 탭한다.
+#   2단              허브 `MobileTopUpAndBillPaymentActivity` 에서 "해외 충전 서비스"는
+#                     텍스트 대신 id **`international_topUp`** 으로 탭한다.
 #                     ⚠️ 10·11·12 세 파일이 모두 이 허브를 통과한다([[project_10_domestictopup]]).
-#   홈 판정          `text: "홈"` → id **`bottom_item_home`**
+#   홈 판정          id **`bottom_item_home`**
 #                     (`btnTransfer`는 홈이 스크롤 위치를 유지해 화면 밖일 수 있다)
-#   충전 화면 자체    바뀐 것이 없다. `select_county_btn` / `phone_number_input_field` /
-#                     `searchEditText` / `select_carrier_btn` / `select_product_btn` /
-#                     `input_dot_1` 전부 개편UI와 동일 → [01]~[09] 본문은 그대로 둔다.
-#   이탈             없음 → **`bottom_item_home`이 보일 때까지 back 반복** + 거래 취소 확인
+#   충전 화면        `select_county_btn` / `phone_number_input_field` / `searchEditText` /
+#                     `select_carrier_btn` / `select_product_btn` / `input_dot_1`
+#   이탈             **`bottom_item_home`이 보일 때까지 back 반복** + 거래 취소 확인
 #                     다이얼로그(`btn_yes` "예") 처리. back 1탭으로 나간다고 가정하지 않는다.
 #
 # 화면/id:
@@ -72,15 +59,7 @@ appId: ${APP_ID}
       visible:
         text: "Server Override"
     commands:
-      # ⚠️ **서버는 LIVETEST를 코드로 강제한다** (2026-08-27 사고 후 확정).
-      #   ① 선택값은 **앱 데이터에 저장**되고 `clearState`가 이를 **빌드 기본값으로 초기화**한다
-      #      (stag 빌드 기본값 = STAG). 그래서 수동으로 골라둬도 유지되지 않는다.
-      #   ② 실제 사고: 스위트가 gmeuat(STAG)로 돌았다 — logcat 1,113건 / livetest 0건.
-      #   ③ 항목을 탭해 **선택이 바뀌면** 버튼이 `CONTINUE` → **`APPLY & QUIT`** 으로 바뀌고
-      #      **앱이 종료된다**. 두 버튼 모두 resource-id는 `button1`이다.
-      #   ④ Maestro는 `checked:` 셀렉터를 **무시한다**(실측) → "이미 LIVETEST인지" 판별이 불가능하다.
-      #      그래서 판별하지 않고 **항등 시퀀스**로 간다: 탭 → button1 → 재실행 → button1.
-      #      이미 LIVETEST였다면 첫 button1이 CONTINUE라 그냥 닫히고, 재실행 후 한 번 더 닫는다.
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
           text: ".*LIVETEST.*"
       - waitForAnimationToEnd
@@ -144,10 +123,7 @@ appId: ${APP_ID}
 - runFlow:
     when:
       visible:
-        # ⚠️ 인앱 배너 닫기 id는 **빌드마다 다르다**(2026-08-27 실측):
-        #   7.19.x = `btnTwo` / **7.20.0 = `btnClose`**(+ `btnDontShowToday` "오늘 하루 보지 않기").
-        #   Maestro id는 정규식이라 둘을 함께 받는다. 배너가 홈 요소를 덮어
-        #   `btnTransfer` assert가 실패하는 사고가 있었다.
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
         id: "btnTwo|btnClose"
     commands:
       - tapOn:

@@ -19,13 +19,12 @@ appId: ${APP_ID}
 # ================================================================
 
 # 앱 실행 및 홈 진입
-# 주의(2026-08-06): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
-#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘 → 잠금화면을 명시적으로 대기 후 PIN 입력.
+# ⚠️ `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에 매칭돼 PIN 입력을
+#   건너뛰고 잠금화면에 갇힌다 → 잠금화면을 명시적으로 대기한 뒤 PIN을 넣는다.
 - launchApp
-# ⚠️ Server Override 처리가 **이 파일에만 빠져 있었다**(2026-09-03 전수 점검).
-#   livetest 빌드에서는 스플래시가 안 떠서 티가 안 났지만, 기본 빌드가 `.stag`로 바뀌면
-#   서버 기본값이 **STAG**라 이대로면 조용히 gmeuat로 돈다 → 헬퍼로 LIVETEST를 강제한다.
-#   (헬퍼는 스플래시가 없으면 통째로 SKIP되므로 운영 빌드에서도 안전하다.)
+# ⚠️ Server Override 는 **헬퍼로 처리한다** — 빼면 stag 빌드에서 조용히 gmeuat 로 돈다.
+#   (헬퍼는 스플래시가 없으면 통째로 SKIP되므로 운영/livetest 빌드에서도 안전하다.
+#    상세: docs/ENVIRONMENT.md §7.3)
 - runFlow: "_server_override_old.yaml"
 - extendedWaitUntil:
     visible:
