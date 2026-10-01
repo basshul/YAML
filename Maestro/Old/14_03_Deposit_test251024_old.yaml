@@ -195,12 +195,24 @@ appId: ${APP_ID}
 - inputText: "test251024"
 - tapOn:
     id: "securityKeyboardEditText"
-- tapOn: "대문자 키보드 변경"
+# ⚠️ **2026-09-09 기록은 test123/test251024 값이 뒤바뀐 것이었다** — 2026-09-30 사용자 재확인으로 교체.
+#   값은 적지 않는다(정본은 메모리 [[project_01_login]]). 로그인 실패는 5회 제한.
+# ⚠️ 대문자 전환은 **조건부**로 한다 — 이미 대문자 상태에서 누르면 소문자로 바뀌어 오입력이 된다.
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
 - tapOn: "Capital G 히읃"
 - tapOn: "m 으"
 - tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
 - tapOn: "1"
-- tapOn: "2"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
 - tapOn: "${TRANSKEY_INPUT_COMPLETE}"
@@ -472,7 +484,14 @@ appId: ${APP_ID}
 # 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_Login_Success_old` EXIT=0으로 재확인).
 #   ⚠️ 한때 메모리에 `<구 비밀번호(폐기)>`가 맞다고 적혀 있었으나 **틀렸다** — 순서를 바꿨다가
 #   무효한 값을 먼저 시도하게 되어 되돌렸다. 시도 5회 제한이 있으니 순서를 임의로 바꾸지 말 것.
-- tapOn: "대문자 키보드 변경"
+# ⚠️ 대문자 전환은 **조건부**로 한다 — 이미 대문자 상태에서 누르면 소문자로 바뀌어 오입력이 된다.
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
 - tapOn: "Capital G 히읃"
 - tapOn: "m 으"
 - tapOn: "e 디귿"
