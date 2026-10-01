@@ -58,6 +58,13 @@
   .flab{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
   .sidehint{font-size:11px;margin:8px 0 0;line-height:1.6;color:var(--muted);}
 
+  /* 왼쪽 칸은 310px 라 글자 버튼이 쉽게 두 줄로 접힌다 — 접지 말고, 좁은 건 아이콘으로 */
+  .col-left button{white-space:nowrap;}
+  .iconbtn{flex:none;width:36px;height:36px;padding:0;
+    display:inline-flex;align-items:center;justify-content:center;color:#48505a;}
+  .iconbtn svg{display:block;}
+  .iconbtn:hover{border-color:var(--blue);color:var(--blue);}
+
   .runbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
   .runbtns button.primary{flex:1;}
   .sumline{font-size:12px;line-height:1.7;}
@@ -227,7 +234,19 @@
         <label class="flab" for="dev">기기</label>
         <div class="row">
           <select id="dev"><option>SM-S911N · R3CW90MTK9H</option></select>
-          <button class="ghost" type="button">새로고침</button>
+          <button class="ghost iconbtn" type="button"
+            aria-label="기기 목록 새로고침" title="기기 목록 새로고침">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <path d="M3.1 6.6a5.2 5.2 0 0 1 9-1.5" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.9 9.4a5.2 5.2 0 0 1-9 1.5" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.6 2.2v3h-3" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.4 13.8v-3h3" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div class="field">
