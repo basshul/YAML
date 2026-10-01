@@ -105,7 +105,11 @@
   .modetog{display:flex;align-items:center;gap:6px;font-size:12px;color:#3d4550;
     padding:5px 9px;border:1px solid var(--line);border-radius:6px;cursor:pointer;}
   .modetog:has(input:checked){border-color:var(--purple);background:#f7f3ff;color:var(--purple);font-weight:600;}
-  .helpbtn{width:26px;height:26px;flex:none;border-radius:50%;border:1px solid #ccd2d9;
+  /* ⚠️ style.css 의 button{padding:7px 14px} 때문에 패딩을 0 으로 지우지 않으면
+     좌우 패딩이 글자를 오른쪽으로 민다. flex 로 가운데 정렬한다. */
+  .helpbtn{width:26px;height:26px;flex:none;padding:0;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;
+    border-radius:50%;border:1px solid #ccd2d9;
     background:#fff;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;}
   .helpbtn:hover{border-color:var(--blue);color:var(--blue);}
 
