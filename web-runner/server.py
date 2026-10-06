@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import queue
+import threading
 from pathlib import Path
 
 import uvicorn
@@ -17,10 +18,27 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import runner
+from admin import actions as admin_actions
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(title="Maestro Web Runner (demo)")
+
+
+@app.middleware("http")
+async def no_cache_html(request, call_next):
+    """HTML 은 **캐시하지 않는다**.
+
+    css/js 는 `?v=` 로 캐시를 무효화할 수 있지만 **HTML 자신은 그럴 수가 없다.**
+    그래서 화면을 고쳐도 브라우저가 옛 index.html 을 들고 있고, 그게 옛 app.js 를
+    불러 **기능이 통째로 없는 화면**이 뜬다(2026-10-02·10-06 두 번 겪었다).
+    로컬 데모라 HTML 재검증 비용은 무시할 만하다.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path.endswith(".html") or path.endswith("/"):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
 
 
 @app.get("/api/tests")
@@ -74,6 +92,88 @@ def api_history_log(stamp: str, item: str):
         return JSONResponse(status_code=400, content={"error": str(exc)})
     except FileNotFoundError as exc:
         return JSONResponse(status_code=404, content={"error": str(exc)})
+
+
+_admin_lock = threading.Lock()
+
+
+@app.post("/api/admin/preflight")
+def api_admin_preflight():
+    """admin 에 붙어 스위트 사전 조건(계정 5개)을 **조회만으로** 점검한다.
+
+    로그인 → 점검 → 로그아웃을 한 세션으로 처리한다(1분 안팎 걸린다).
+    한 번에 하나만 — admin 세션을 동시에 두 개 열지 않는다.
+    """
+    if not _admin_lock.acquire(blocking=False):
+        return JSONResponse(status_code=409, content={"error": "이미 점검이 돌고 있습니다."})
+    try:
+        return admin_actions.run_preflight()
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
+    finally:
+        _admin_lock.release()
+
+
+class FixRequest(BaseModel):
+    fix: str
+    user_id: str
+    confirm: bool = False
+
+
+@app.post("/api/admin/fix")
+def api_admin_fix(req: FixRequest):
+    """사전 조건의 NG 항목 하나를 처리한다. **되돌릴 수 없다.**
+
+    처리 뒤 **그 항목만 다시 점검해서** 돌려준다(전체 재점검은 1분 걸린다).
+    ⚠️ confirm 없이는 돌지 않는다 — 운영(Live) 실행과 같은 규칙이다.
+    """
+    if not req.confirm:
+        return JSONResponse(status_code=400,
+                            content={"error": "되돌릴 수 없는 처리입니다. 확인이 필요합니다."})
+    if not _admin_lock.acquire(blocking=False):
+        return JSONResponse(status_code=409, content={"error": "admin 작업이 이미 돌고 있습니다."})
+    try:
+        return admin_actions.run_fix(req.fix, req.user_id, confirm=True)
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
+    finally:
+        _admin_lock.release()
+
+
+class FixAllRequest(BaseModel):
+    items: list[dict]
+    confirm: bool = False
+
+
+@app.post("/api/admin/fix-all")
+def api_admin_fix_all(req: FixAllRequest):
+    """NG 여러 건을 **한 세션에서** 처리한다. **되돌릴 수 없다.**
+
+    건별 /api/admin/fix 는 호출마다 로그인·로그아웃을 한 바퀴 돈다 —
+    여러 건이면 로그인만 N 번이다. 이 경로는 한 번만 로그인한다.
+    """
+    if not req.confirm:
+        return JSONResponse(status_code=400,
+                            content={"error": "되돌릴 수 없는 처리입니다. 확인이 필요합니다."})
+    items = []
+    for it in req.items:
+        fix, user_id = it.get("fix"), (it.get("user_id") or "").strip()
+        # 화면이 보낸 값을 그대로 믿지 않는다 — 아는 처리·빈 계정만 통과시킨다
+        if fix not in admin_actions.FIXES or not user_id:
+            return JSONResponse(status_code=400,
+                                content={"error": f"처리할 수 없는 항목입니다: {it}"})
+        items.append({"fix": fix, "user_id": user_id})
+    if not items:
+        return JSONResponse(status_code=400, content={"error": "처리할 항목이 없습니다."})
+
+    if not _admin_lock.acquire(blocking=False):
+        return JSONResponse(status_code=409, content={"error": "admin 작업이 이미 돌고 있습니다."})
+    try:
+        return admin_actions.run_fix_all(items, confirm=True)
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
+    finally:
+        _admin_lock.release()
 
 
 class RunRequest(BaseModel):

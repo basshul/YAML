@@ -5,5 +5,12 @@
   "lang": "ko",
   "default_device": "",
   "pwsh": "pwsh",
-  "adb": "adb"
+  "adb": "adb",
+  "admin": {
+    "_설명": "admin(백오피스) 자동화용. 값은 config.local.json 에만 채운다.",
+    "url": "http://coretest.gmeremit.com:5001/admin/",
+    "username": "",
+    "password": "",
+    "compcode": ""
+  }
 }
