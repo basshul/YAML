@@ -299,3 +299,15 @@ button.small { padding: 3px 9px; font-size: 12px; }
   .summary   { order: 3; }
   .progpanel { order: 4; }
 }
+
+/* 사전 조건 점검 결과 */
+.pf-row { display: grid; grid-template-columns: 2.4rem 9rem auto; gap: .4rem .6rem;
+          align-items: baseline; padding: .25rem 0; border-top: 1px solid #eee; }
+.pf-row code { font-weight: 600; }
+.pf-mark { font-size: .75rem; font-weight: 700; letter-spacing: .02em; }
+.pf-mark.ok { color: #137333; }
+.pf-why { grid-column: 2 / -1; font-size: .8rem; }
+
+/* 사전 조건 — 점검 종류(계정/문서). 칸 수는 건드리지 않는다:
+   v5.css 가 왼쪽 패널(310px)에 맞춰 .pf-row 를 2열로 다시 잡아 둔다. */
+.pf-kind { display: inline-block; min-width: 1.9rem; font-size: .72rem; color: #6b7684; }

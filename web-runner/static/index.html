@@ -1,88 +1,286 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Maestro Web Runner</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maestro Web Runner</title>
+<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="v5.css?v=2">
+<!-- 글꼴: 본문 Pretendard, ID·매핑 JetBrains Mono. 막히면 맑은 고딕·Consolas 로 돌아간다. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
 </head>
 <body>
-  <header class="topbar">
-    <h1>Maestro Web Runner</h1>
-    <span class="tag">데모</span>
-    <span id="connState" class="conn">연결 중…</span>
-    <nav class="topnav">
-      <a href="/" class="on">실행 화면</a>
-      <a href="/history.html">실행 이력</a>
-    </nav>
+
+<header class="topbar">
+  <h1>Maestro Web Runner</h1>
+  <span class="tag">데모</span>
+  <span id="connState" class="conn">연결 중…</span>
+  <nav class="topnav">
+    <a href="/" class="on" aria-current="page">실행 · 체크리스트</a>
+    <a href="/history.html">실행 이력</a>
+  </nav>
+</header>
+
+<div class="shell">
+
+  <div class="col col-left">
+    <section class="panel tight">
+      <h2>실행 환경</h2>
+      <div class="field">
+        <span class="flab" id="lb-srv">서버</span>
+        <div class="choices" id="serverChoices" role="radiogroup" aria-labelledby="lb-srv"></div>
+        <p id="liveWarn" class="warn hidden">
+          운영(Live)은 <strong>실서비스·실자금</strong>입니다. 의도한 실행인지 확인하세요.
+        </p>
+      </div>
+      <div class="field">
+        <label class="flab" for="dev">기기</label>
+        <div class="row">
+          <select id="dev"></select>
+          <button class="ghost iconbtn" type="button" id="refreshDevices"
+            aria-label="기기 목록 새로고침" title="기기 목록 새로고침">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <path d="M3.1 6.6a5.2 5.2 0 0 1 9-1.5" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.9 9.4a5.2 5.2 0 0 1-9 1.5" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.6 2.2v3h-3" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.4 13.8v-3h3" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="flab" id="lb-plat">플랫폼</span>
+        <div class="choices" role="radiogroup" aria-labelledby="lb-plat">
+          <label class="choice"><input type="radio" name="plat" checked> Android</label>
+          <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel tight">
+      <h2>사전 조건
+        <span class="spacer"></span>
+        <button class="small hidden" type="button" id="btn-fixall">NG 전부 처리</button>
+        <button class="small" type="button" id="btn-pf">admin 점검</button>
+      </h2>
+      <div id="pf-out" class="sumline">
+        스위트가 전제하는 계정 상태를 admin 에서 확인합니다. <b>조회만 합니다.</b>
+      </div>
+    </section>
+
+    <section class="panel tight">
+      <h2>실행</h2>
+      <div class="sumline" id="selInfo">선택된 시나리오 없음</div>
+      <div class="runbtns">
+        <button class="primary" type="button" id="runBtn" disabled>실행</button>
+        <button type="button" id="runAllBtn">전체 실행</button>
+        <button class="danger hidden" type="button" id="stopBtn">중단</button>
+      </div>
+      <div class="runprog hidden" id="runProg">
+        <div class="barwrap"><div class="bar" id="progBar"></div></div>
+        <div class="runnow" id="runNow"></div>
+      </div>
+      <p class="sidehint">스텝별 로그와 결과는 <a href="/history.html">실행 이력</a>에서 봅니다.</p>
+    </section>
+
+    <section class="panel tight">
+      <h2>엑셀 <span class="muted" style="font-size:11px">연결 전</span></h2>
+      <div class="sumline"><span id="sv-pend"></span><br><span id="sv-mine"></span></div>
+      <div class="runbtns">
+        <button class="primary ro-hide" type="button" id="btn-save">엑셀에 저장…</button>
+        <button class="ghost" type="button" id="btn-reload">다시 읽기</button>
+      </div>
+      <p class="sidehint">저장 전에 <b>바뀌는 칸을 미리 보여줍니다.</b></p>
+    </section>
+  </div>
+
+  <div class="col col-right">
+    <section class="panel">
+      <h2>시나리오
+        <span class="muted">체크리스트는 아직 연결 전 — 지금은 실행할 시나리오만 고릅니다</span>
+      </h2>
+
+      <div class="basisrow">
+        <label for="basis">결과 보기</label>
+        <select id="basis" aria-describedby="basis-hint">
+          <option value="latest" selected>최신 결과 — 항목마다 가장 최근 실행</option>
+        </select>
+        <span class="muted" id="basis-hint">과거 실행·엑셀 기준으로 보는 기능은 체크리스트 연결 후에 열립니다.</span>
+      </div>
+
+      <div class="roband" role="status">
+        <span><b>읽기 전용</b> — 지난 기록을 보고 있습니다. 고치려면 「결과 보기」를 <b>최신 결과</b>로 되돌리세요.</span>
+        <span class="spacer"></span>
+        <button class="small" type="button" id="btn-back-latest">최신 결과로</button>
+      </div>
+
+      <div class="todo" role="group" aria-label="확인할 것">
+        <span class="lab">확인할 것</span>
+        <button class="tbtn warn" type="button" data-todo="failwait" aria-pressed="false">
+          자동 Fail 확인 대기 <span class="n">0</span></button>
+        <button class="tbtn" type="button" data-todo="pending" aria-pressed="false">
+          엑셀 기입 대기 <span class="n">0</span></button>
+        <button class="tbtn warn" type="button" data-todo="badmap" aria-pressed="false">
+          매핑 오류 <span class="n">0</span></button>
+        <button class="tbtn warn" type="button" data-todo="noreason" aria-pressed="false">
+          덮었는데 사유 없음 <span class="n">0</span></button>
+        <button class="tbtn" type="button" data-todo="mine" aria-pressed="false">
+          사람 수정 <span class="n">0</span></button>
+      </div>
+
+      <div class="filters">
+        <label class="f"><span>영역</span><select id="f-area" aria-label="영역 필터"></select></label>
+        <label class="f"><span>이번 실행</span>
+          <select id="f-run" aria-label="이번 실행 필터">
+            <option value="all">전체</option><option value="in">테스트한 것만</option>
+            <option value="out">빠진 것만</option></select></label>
+        <label class="f"><span>중요도</span>
+          <select id="f-pri" aria-label="중요도 필터">
+            <option value="all">전체</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+        <label class="f"><span>결과</span>
+          <select id="f-res" aria-label="결과 필터">
+            <option value="all">전체</option><option>Pass</option><option>Fail</option>
+            <option>Not Test</option><option>NA</option><option value="none">비어 있음</option></select></label>
+        <label class="modetog ro-hide"><input type="checkbox" id="mapmode"> 매핑 모드</label>
+        <span class="spacer"></span>
+        <button class="helpbtn" type="button" id="btn-help" aria-label="이 화면 설명 열기">?</button>
+      </div>
+
+      <div class="clwrap">
+        <table class="cl">
+          <caption class="sr-only">체크리스트 — 행을 누르면 오른쪽 상세 패널이 열립니다</caption>
+          <thead>
+            <tr><th class="c-id">ID</th><th class="c-pri">중요도</th><th>확인 항목</th>
+                <th class="c-map">매핑</th><th class="c-res">Android</th>
+                <th class="c-ios">iOS</th><th class="c-cmt">Comment</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>조건에 맞는 행이 없습니다.</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-labelledby="dw-id">
+  <header>
+    <span class="id" id="dw-id">—</span>
+    <span class="muted" id="dw-depth" style="font-size:11px"></span>
+    <button class="x" type="button" id="dw-close" aria-label="상세 패널 닫기">×</button>
   </header>
-
-  <main>
-    <div class="col col-left">
-      <section class="panel envpanel">
-        <h2>실행 환경</h2>
-
-        <div class="field">
-          <label>서버</label>
-          <div id="serverChoices" class="choices"></div>
-          <p id="liveWarn" class="warn hidden">
-            운영(Live)은 <strong>실서비스·실자금</strong>입니다. 의도한 실행인지 확인하세요.
-          </p>
-        </div>
-
-        <div class="field">
-          <label for="deviceSel">기기</label>
-          <div class="row">
-            <select id="deviceSel"></select>
-            <button id="refreshDevices" class="ghost" type="button">새로고침</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>플랫폼</label>
-          <div class="choices">
-            <label class="choice"><input type="radio" name="platform" value="android" checked> Android</label>
-            <label class="choice disabled"><input type="radio" name="platform" value="ios" disabled data-always-disabled="1"> iOS <span class="muted">(준비 중)</span></label>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel grow">
-        <h2>
-          테스트 선택
-          <span class="spacer"></span>
-          <button id="stopBtn" class="danger small hidden" type="button">중단</button>
-          <button id="runBtn" class="primary small" type="button" disabled>실행</button>
-          <button id="runAllBtn" class="small" type="button">전체 실행</button>
-          <button id="clearSel" class="ghost small" type="button">전체 해제</button>
-        </h2>
-        <div id="selInfo" class="selinfo">선택된 테스트 없음</div>
-        <div id="testList" class="testlist">불러오는 중…</div>
-      </section>
+  <div class="body">
+    <div class="fld">
+      <label for="dw-text">확인 항목</label>
+      <textarea id="dw-text"></textarea>
     </div>
 
-    <div class="col col-right">
-      <section id="summary" class="panel summary hidden"></section>
-
-      <section class="panel grow progpanel">
-        <h2>진행 상황 <span class="spacer"></span><span id="logMeta" class="muted"></span></h2>
-
-        <div id="progBarWrap" class="barwrap hidden">
-          <div id="progBar" class="bar"></div>
-        </div>
-
-        <div id="progList" class="proglist">
-          <p class="muted">테스트를 고르고 실행하면 진행 상황이 여기에 표시됩니다.</p>
-        </div>
-
-        <details class="logbox">
-          <summary>자세한 로그 보기</summary>
-          <pre id="log" class="log"></pre>
-        </details>
-      </section>
+    <div class="fld" id="dw-resfld">
+      <label for="dw-res">Android 결과</label>
+      <select id="dw-res">
+        <option value="">—</option><option>Pass</option><option>Fail</option>
+        <option>Not Test</option><option>NA</option>
+      </select>
+      <div class="hint" id="dw-prov"></div>
     </div>
-  </main>
 
-  <script src="app.js"></script>
+    <div class="fld" id="dw-failfld" hidden>
+      <span class="lg">자동 결과 <span style="color:var(--red)">Fail</span> — 확인 대기</span>
+      <div class="hint" style="margin:0 0 8px">
+        외부 요인·셋팅 불량일 수 있습니다. <b>확정</b>하거나 <b>다른 값으로 덮으세요.</b>
+      </div>
+      <div class="runbtns" style="margin-top:0">
+        <button class="primary" type="button" id="dw-failok">Fail 확정</button>
+        <button type="button" id="dw-failover">다른 값으로 덮기…</button>
+      </div>
+      <div id="dw-overbox" hidden style="margin-top:12px">
+        <label class="lg" for="dw-overval">덮을 값</label>
+        <select id="dw-overval"><option>Pass</option><option>Not Test</option><option>NA</option></select>
+        <label class="lg" for="dw-overwhy" style="margin:10px 0 5px">
+          사유 <span style="color:var(--red)">(필수)</span></label>
+        <textarea id="dw-overwhy" aria-describedby="dw-whyhint"
+          placeholder="(aos) 자동 Fail — 무엇 때문이었고 사람이 확인한 결과는 무엇인지"></textarea>
+        <div class="hint" id="dw-whyhint">사유를 적어야 덮을 수 있습니다.</div>
+        <div class="runbtns">
+          <button class="primary" type="button" id="dw-overapply" disabled>덮기 적용</button>
+          <button class="ghost" type="button" id="dw-overcancel">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label for="dw-map">매핑 <span class="muted" style="font-weight:400">(시나리오 [케이스])</span></label>
+      <input type="text" class="mono" id="dw-map" aria-describedby="dw-maphint" disabled>
+      <div class="hint" id="dw-maphint"></div>
+    </div>
+
+    <div class="fld">
+      <label for="dw-cmt">Comment <span class="muted" style="font-weight:400">(저장소 정본 · 엑셀엔 한 줄만)</span></label>
+      <textarea id="dw-cmt" aria-describedby="dw-xlcmt"></textarea>
+      <div class="hint" id="dw-xlcmt"></div>
+    </div>
+
+    <div class="fld">
+      <span class="lg">판단 이력</span>
+      <ul class="hist" id="dw-hist"></ul>
+    </div>
+  </div>
+  <footer>
+    <button class="primary" type="button" id="dw-apply">변경 담기</button>
+    <button class="ghost" type="button" id="dw-cancel">되돌리기</button>
+  </footer>
+</aside>
+
+<div class="modal" id="savem" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sv-h">
+  <div class="modal-box">
+    <header><span id="sv-h">엑셀에 저장 — 미리보기</span>
+      <button class="x" type="button" data-close="savem" aria-label="닫기">×</button></header>
+    <div class="okline" id="sv-i9"></div>
+    <div class="note">아래 칸만 <b>PATCH</b> 합니다. 나머지는 건드리지 않습니다.</div>
+    <table><thead><tr><th style="width:92px">셀</th><th style="width:88px">ID</th>
+      <th>지금 값 → 넣을 값</th><th style="width:76px">출처</th></tr></thead>
+      <tbody id="sv-rows"></tbody></table>
+    <div class="exline" id="sv-ex"></div>
+    <footer>
+      <button class="ghost" type="button" data-close="savem">닫기</button>
+      <button class="primary" type="button" data-close="savem">이대로 저장</button>
+    </footer>
+  </div>
+</div>
+
+<div class="modal" id="helpm" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="hp-h">
+  <div class="modal-box">
+    <header><span id="hp-h">이 화면 읽는 법</span>
+      <button class="x" type="button" data-close="helpm" aria-label="닫기">×</button></header>
+    <div class="note">
+      <b>「확인할 것」이 출발점입니다.</b> 413행을 훑는 게 아니라 손이 필요한 것부터 봅니다. 0건이면 회색 ✓ 입니다.<br><br>
+      <b>표는 읽기 전용입니다.</b> 행을 누르면 오른쪽 패널이 열려 거기서 고칩니다 —
+      413행짜리 표에 입력칸을 깔면 어디를 고쳤는지 알 수 없게 됩니다.<br><br>
+      <b>자동 <code>Fail</code> 은 바로 기입하지 않습니다.</b> 외부 요인·셋팅 불량으로 난 Fail 이
+      릴리스 판단에 그대로 실리면 안 되고, 조용히 묻혀서도 안 됩니다 →
+      <b>확정</b>하거나 <b>사유를 적고 덮습니다.</b> 덮으면 원래 자동값이 이력에 남습니다.<br><br>
+      <b>매핑</b>은 「매핑 모드」를 켰을 때만 고칠 수 있습니다. 실수로 바꾸면 커버리지가 통째로 틀어집니다.
+      <code>run_suite -DumpJson</code> 목록에 없는 시나리오·케이스는 <b>매핑 오류</b>로 잡습니다.
+    </div>
+    <table><thead><tr><th style="width:86px">값</th><th>뜻</th><th style="width:160px">누가 넣나</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pass</b></td><td>확인했고 정상</td><td>자동 / 수동</td></tr>
+        <tr><td><b>Fail</b></td><td>확인했고 결함</td><td>수동 <span class="muted">(자동 Fail 은 확인 대기)</span></td></tr>
+        <tr><td><b>Not Test</b></td><td>확인하지 못함</td><td>수동만</td></tr>
+        <tr><td><b>NA</b></td><td>해당 없음 — 확인할 화면·기능이 없음</td><td>자동 / 수동</td></tr>
+        <tr><td><b>(비움)</b></td><td>아직 아무도 확인하지 않음 — 자동화 불가 행의 기본</td><td>—</td></tr>
+      </tbody></table>
+    <div class="note">⚠️ <b>Not Test</b> = 못 했다(언젠가 해야 함) · <b>NA</b> = 할 것이 없다(영영 없음).
+      섞이면 남은 일이 몇 건인지 셀 수 없습니다.</div>
+  </div>
+</div>
+
+<script src="app.js?v=7"></script>
 </body>
 </html>

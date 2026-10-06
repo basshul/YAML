@@ -1,0 +1,225 @@
+/* v5 화면 전용. ★ style.css **뒤에** 실려야 한다 —
+   .row / .modal-box 등 이름이 겹치는 규칙을 덮어쓰는 것이 전제다
+   (docs/CHECKLIST.md 「구현할 때 — style.css 와 class 이름이 충돌한다」). */
+/* v5 전용. 확정되면 style.css 로 옮긴다. */
+  :root{
+    --mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+    --muted:#5f6873;                 /* 흰 배경 대비 4.5:1 이상 */
+    --line:#dfe3e8; --line2:#eceff2;
+    --blue:#2f6feb; --blueDk:#2f5bb7;
+    --red:#c62f2f; --green:#237a37; --amber:#8a5a12; --purple:#5b3a93;
+  }
+  body{font-family:"Pretendard Variable",Pretendard,"Malgun Gothic","Segoe UI",system-ui,sans-serif;
+       letter-spacing:-0.005em;}
+  .muted{color:var(--muted);}
+  code,.mono,.id,.map{font-family:var(--mono);letter-spacing:0;}
+
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,tr:focus-visible{
+    outline:2px solid var(--blue); outline-offset:2px; border-radius:4px;
+  }
+
+  /* ── 틀 ──────────────────────────────────────────────────────
+     넓은 화면: 좌/우 칸이 **따로** 스크롤 (페이지는 안 움직인다)
+     좁은 화면: 칸 분리를 풀고 **페이지 전체**가 스크롤
+     ⚠️ body{overflow:hidden} 을 미디어 쿼리 밖에 두면 좁은 화면에서
+        아무것도 스크롤되지 않는다 — 반드시 min-width 안에서만 건다. */
+  .shell{display:flex;gap:14px;padding:14px;align-items:stretch;}
+  .col{display:flex;flex-direction:column;gap:12px;}
+  .col-left{flex:0 0 310px;min-width:0;}
+  .col-right{flex:1;min-width:0;}
+  @media (min-width:900px){
+    html,body{height:100%;}
+    body{overflow:hidden;display:flex;flex-direction:column;}
+    .shell{flex:1;min-height:0;}
+    .shell>.col{min-height:0;overflow-y:auto;padding-right:2px;}
+  }
+  @media (max-width:899px){
+    .shell{flex-direction:column;}
+    .col-left{flex:none;}
+  }
+
+  .mockbar{background:#fff5e5;color:#6b4a12;font-size:12px;padding:7px 20px;
+    border-bottom:1px solid #f0dfc0;line-height:1.6;}
+  .mockbar a{color:var(--blueDk);display:inline-block;padding:3px 5px;margin:-3px -1px;}
+
+  .panel.tight{padding:12px 14px;}
+  .panel.tight h2{margin-bottom:9px;}
+  .flab{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .sidehint{font-size:11px;margin:8px 0 0;line-height:1.6;color:var(--muted);}
+
+  /* 왼쪽 칸은 310px 라 글자 버튼이 쉽게 두 줄로 접힌다 — 접지 말고, 좁은 건 아이콘으로 */
+  .col-left button{white-space:nowrap;}
+  .iconbtn{flex:none;width:36px;height:36px;padding:0;
+    display:inline-flex;align-items:center;justify-content:center;color:#48505a;}
+  .iconbtn svg{display:block;}
+  .iconbtn:hover{border-color:var(--blue);color:var(--blue);}
+
+  .runbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .runbtns button.primary{flex:1;}
+  .sumline{font-size:12px;line-height:1.7;}
+  .sumline b{color:var(--blueDk);}
+  .runprog{margin-top:16px;padding-top:13px;border-top:1px solid var(--line2);}
+  .runprog .barwrap{margin-bottom:7px;}
+  .runnow{font-size:11px;color:var(--muted);line-height:1.5;}
+
+  /* ── 사전 조건 점검 ──
+     style.css 의 .pf-row 는 3칸(2.4rem · 9rem · auto)이라 310px 왼쪽 칸에서는
+     마지막 칸이 90px 밖에 안 남아 글자가 토막난다 → 2칸으로 줄이고 세로로 쌓는다.
+     ⚠️ style.css 의 .warn 은 핑크 배경 + padding 8px 10px 짜리 **덩어리** 스타일이다.
+        NG 표식(.pf-mark.warn)에 그대로 걸리면 글자가 상자가 되면서 행 높이가
+        OK 행과 어긋난다 — index.html 에서 실제로 어긋나 있다. 여기서 되돌린다. */
+  .pf-row{grid-template-columns:2.4rem auto;gap:.1rem .5rem;padding:7px 0;
+          border-top:1px solid var(--line2);}
+  .pf-row:first-of-type{border-top:0;}
+  .pf-row>span.muted{grid-column:2/-1;font-size:11px;line-height:1.5;}
+  .pf-mark{font-size:11px;font-weight:700;}
+  .pf-mark.ok{color:var(--green);}
+  .pf-mark.warn{margin:0;padding:0;background:none;border-radius:0;
+                font-size:11px;line-height:inherit;color:var(--red);}
+  .pf-head{margin:0 0 2px;font-size:12px;line-height:1.5;}
+  .pf-head.ok{color:var(--green);}
+  .pf-head.warn{margin:0 0 6px;}
+
+  .basisrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 11px;
+    margin-bottom:10px;background:#f5f7fa;border:1px solid #e3e8ee;border-radius:6px;}
+  .basisrow>label{font-size:12px;color:#3d4550;font-weight:600;}
+  .basisrow select{font-size:12px;min-width:280px;}
+  .basisrow .muted{font-size:11px;}
+
+  /* 과거 실행 = 읽기 전용 띠 */
+  .roband{display:none;align-items:center;gap:8px;margin-bottom:10px;padding:10px 12px;
+    background:#fff3e0;border:1px solid #e3b872;border-left:5px solid #b87400;
+    border-radius:6px;font-size:12px;color:#6b4a12;}
+  body.ro .roband{display:flex;}
+  body.ro .ro-hide{display:none !important;}
+
+  .todo{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px 10px;
+    margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:6px;}
+  .todo>.lab{font-size:12px;font-weight:700;color:#3d4550;margin-right:2px;}
+  .tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;font-size:12px;
+    border:1px solid var(--line);border-radius:999px;background:#fff;color:#2c333c;cursor:pointer;}
+  .tbtn .n{font-weight:700;font-variant-numeric:tabular-nums;}
+  .tbtn[aria-pressed="true"]{border-color:var(--blue);background:#eef4ff;color:var(--blueDk);}
+  .tbtn.zero{color:var(--muted);border-color:var(--line2);cursor:default;}
+  .tbtn.warn:not(.zero){border-color:#e3a9a9;background:#fdf0f0;color:var(--red);}
+  .tbtn.warn:not(.zero)[aria-pressed="true"]{border-color:var(--red);background:#fbe3e3;}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:9px;}
+  .filters label.f{display:flex;align-items:center;gap:6px;}
+  .filters label.f>span{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .filters select{padding:6px 9px;border:1px solid #ccd2d9;border-radius:6px;font-size:12px;
+    font-family:inherit;background:#fff;}
+  .modetog{display:flex;align-items:center;gap:6px;font-size:12px;color:#3d4550;
+    padding:5px 9px;border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+  .modetog:has(input:checked){border-color:var(--purple);background:#f7f3ff;color:var(--purple);font-weight:600;}
+  /* ⚠️ style.css 의 button{padding:7px 14px} 때문에 패딩을 0 으로 지우지 않으면
+     좌우 패딩이 글자를 오른쪽으로 민다. flex 로 가운데 정렬한다. */
+  .helpbtn{width:26px;height:26px;flex:none;padding:0;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;
+    border-radius:50%;border:1px solid #ccd2d9;
+    background:#fff;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;}
+  .helpbtn:hover{border-color:var(--blue);color:var(--blue);}
+
+  /* ── 표(읽기 전용) ──
+     ⚠️ 행 class 는 `clrow` 다. `row` 를 쓰면 style.css 의 .row{display:flex}(기기 선택 줄용)에
+        걸려 모든 <tr> 이 flex 박스가 되고 머리글만 table-row 로 남아 표가 통째로 어긋난다. */
+  .clwrap{overflow-x:auto;}
+  table.cl{width:100%;border-collapse:collapse;min-width:760px;}
+  table.cl th,table.cl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line2);
+    font-size:12px;vertical-align:top;}
+  table.cl th{color:var(--muted);font-weight:600;white-space:nowrap;}
+  tr.clrow{cursor:pointer;}
+  tr.clrow:hover td{background:#f6f9fe;}
+  tr.clrow[aria-selected="true"] td{background:#eef4ff;box-shadow:inset 3px 0 0 var(--blue);}
+  .c-id{width:84px;} .c-pri{width:64px;} .c-map{width:150px;}
+  .c-res{width:126px;} .c-ios{width:56px;} .c-cmt{width:150px;}
+  .id{font-size:11px;color:var(--blueDk);font-weight:600;}
+  .txt{line-height:1.45;}
+  .sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
+  .map{font-size:11px;color:#2f4058;}
+  .map.none{font-family:inherit;color:var(--amber);font-style:italic;}
+  .map.bad{color:var(--red);background:#fdf0f0;border-radius:3px;padding:1px 4px;}
+  .v{font-weight:700;}
+  .v.Pass{color:var(--green);} .v.Fail{color:var(--red);}
+  .v.NA{color:var(--muted);} .v.NotTest{color:var(--amber);}
+  .v.none{color:#9aa3ae;font-weight:400;}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:1px;}
+  .tag.auto{background:#eef4ff;color:var(--blueDk);}
+  .tag.man{background:#f3eefc;color:var(--purple);}
+  .tag.pend{background:#e7f1ff;color:var(--blueDk);}
+  .tag.wait{background:#fdf0f0;color:var(--red);}
+  .scenhead td{background:#eef1f5;font-weight:700;font-size:12px;color:#2f4058;
+    border-bottom:1px solid var(--line);}
+  .scenhead .sum{float:right;font-weight:400;color:var(--muted);font-size:11px;}
+  .scenhead .noscen{color:var(--amber);}
+  .failbtns{display:flex;gap:4px;margin-top:5px;}
+  .failbtns button{padding:2px 8px;font-size:11px;}
+
+  /* ── 오른쪽 상세 패널 ── */
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);background:#fff;
+    border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(16,21,28,.12);
+    display:flex;flex-direction:column;z-index:30;transform:translateX(101%);
+    transition:transform .18s ease;}
+  .drawer[aria-hidden="false"]{transform:none;}
+  @media (prefers-reduced-motion:reduce){.drawer{transition:none;}}
+  .drawer>header{display:flex;align-items:center;gap:8px;padding:12px 14px;
+    border-bottom:1px solid var(--line2);}
+  .drawer>header .id{font-size:13px;}
+  .drawer .body{flex:1;overflow-y:auto;padding:14px;}
+  .drawer .x{margin-left:auto;background:none;border:none;font-size:20px;color:var(--muted);
+    cursor:pointer;line-height:1;padding:2px 7px;border-radius:4px;}
+  .drawer .x:hover{background:#f2f4f7;color:#1b1f24;}
+  .fld{margin-bottom:14px;}
+  .fld>label,.fld>.lg{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  .fld textarea,.fld input[type=text],.fld select{width:100%;font-family:inherit;font-size:13px;
+    padding:7px 9px;border:1px solid #ccd2d9;border-radius:6px;background:#fff;}
+  .fld textarea{resize:vertical;min-height:54px;line-height:1.5;}
+  .fld input.mono{font-family:var(--mono);font-size:12px;}
+  .fld input:disabled,.fld textarea:disabled,.fld select:disabled{background:#f5f7fa;color:var(--muted);}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.55;}
+  .hist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line2);}
+  .hist li{padding:8px 0;border-bottom:1px solid var(--line2);font-size:12px;line-height:1.55;}
+  .hist .when{display:block;font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:2px;}
+  .drawer>footer{padding:11px 14px;border-top:1px solid var(--line2);display:flex;gap:7px;}
+  .drawer>footer .primary{flex:1;}
+
+  /* ── 모달 ── */
+  .modal{position:fixed;inset:0;background:rgba(16,21,28,.5);display:none;
+    align-items:center;justify-content:center;padding:28px;z-index:40;}
+  .modal[aria-hidden="false"]{display:flex;}
+  /* ⚠️ style.css 의 .modal-box 는 display:flex 다(로그 모달용) — 반드시 되돌린다 */
+  .modal-box{display:block;background:#fff;border-radius:8px;width:min(720px,100%);
+    max-height:100%;overflow-y:auto;overflow-x:hidden;padding:16px 20px 18px;}
+  .modal-box>header{display:flex;align-items:center;font-size:14px;font-weight:700;
+    color:#3d4550;margin-bottom:10px;}
+  .modal-box .x{margin-left:auto;background:none;border:none;font-size:19px;color:var(--muted);
+    cursor:pointer;line-height:1;padding:2px 7px;border-radius:4px;}
+  .modal-box .x:hover{background:#f2f4f7;color:#1b1f24;}
+  .modal-box .note{font-size:12px;line-height:1.75;color:#2c333c;}
+  .modal-box table{width:100%;border-collapse:collapse;margin:10px 0;}
+  .modal-box th,.modal-box td{font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left;}
+  .modal-box th{color:var(--muted);font-weight:600;}
+  .okline{display:flex;align-items:center;gap:7px;font-size:12px;padding:8px 10px;
+    border-radius:6px;background:#eaf6ec;color:var(--green);margin-bottom:10px;}
+  .exline{font-size:12px;padding:9px 11px;border-radius:6px;background:#fdf0f0;color:#7a2222;line-height:1.7;}
+  .modal-box>footer{display:flex;gap:7px;justify-content:flex-end;margin-top:12px;}
+  .empty{padding:22px;text-align:center;color:var(--muted);font-size:12px;}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+
+  /* 시나리오 펼침 단추 — 선택 체크박스와 나란히 서지만 하는 일이 다르다.
+     ★ button{padding:7px 14px} 를 반드시 덮는다(docs/CHECKLIST.md 경고). */
+  .twisty{display:inline-block;width:18px;height:18px;line-height:16px;padding:0;margin-right:4px;
+          border:1px solid var(--line2);border-radius:4px;background:#fff;color:var(--ink2);
+          font-size:10px;text-align:center;vertical-align:middle;cursor:pointer;}
+  .twisty:hover{background:var(--bg2);color:var(--ink);}
+  .twisty.empty{border-color:transparent;background:none;cursor:default;color:var(--line2);}
+  .cl .clrow .map{font-size:11px;}
+
+  /* 점검 종류 + 계정명은 **한 칸**에 담는다 — 2열 구조라 칸을 더 쪼갤 수 없다 */
+  .pf-name{grid-column:2;min-width:0;}
+  .pf-name code{font-weight:600;}
+
+  /* 사전 조건 — NG 처리 단추. 2열 구조라 이름 칸 아래에 둔다. */
+  .pf-fix{grid-column:2;justify-self:start;margin-top:4px;padding:3px 10px;font-size:11px;}

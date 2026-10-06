@@ -125,6 +125,40 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
+# ── 케이스 목록 ────────────────────────────────────────────────────────────
+# yaml 의 주석에서 케이스를 읽는다. 체크리스트 매핑 단위(`시나리오 [번호]`)가
+# 이것이다(docs/CHECKLIST.md §6). 표기가 두 가지라 우선순위를 둔다:
+#   ① `# [01] [High] 제목`  — 본문의 실제 케이스. **이게 있으면 이것만 쓴다**
+#   ② `#   [01] 제목`       — 파일 머리의 색인 블록. ①이 하나도 없는 파일만
+# ⚠️ 산문 속 참조(`[12]가 … 되돌림`)가 섞이기 쉽다. ②는 `[NN]` 바로 뒤에
+#    또 대괄호가 오면 버린다(`[06][07]은 …` 같은 줄).
+CASE_WITH_PRI = re.compile(r"^\s*#+\s*\[(\d{2})\]\s*\[(High|Medium|Low)\]\s*(\S.*?)\s*$")
+CASE_INDEX = re.compile(r"^\s*#+\s*\[(\d{2})\]\s+(?!\[)(\S.*?)\s*$")
+
+
+def read_cases(rel_path: str) -> list[dict]:
+    """플로우 yaml 에서 케이스 목록을 뽑는다. 못 읽으면 빈 목록."""
+    if not rel_path:
+        return []
+    path = MAESTRO_DIR / rel_path
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+    found = {}
+    for line in lines:
+        m = CASE_WITH_PRI.match(line)
+        if m and m.group(1) not in found:
+            found[m.group(1)] = (m.group(2), m.group(3))
+    if not found:
+        for line in lines:
+            m = CASE_INDEX.match(line)
+            if m and m.group(1) not in found:
+                found[m.group(1)] = ("", m.group(2))
+    return [{"id": n, "pri": found[n][0], "text": found[n][1]} for n in sorted(found)]
+
+
 def list_tests(include_destructive: bool = False) -> list[dict]:
     """run_suite.ps1 -DumpJson 으로 스위트 표를 읽어온다.
 
@@ -167,6 +201,7 @@ def list_tests(include_destructive: bool = False) -> list[dict]:
             "irreversible": bool(item.get("irreversible")),
             "destructive": destructive,
             "push": bool(item.get("push")),
+            "cases": read_cases(item.get("f", "")),
         })
     return tests
 
