@@ -313,6 +313,30 @@ function coverTagOf(cover) {
   return ' <span class="tag ' + cls + '">' + esc(cover) + "</span>";
 }
 
+/* 시트가 「완전」이라고 해놓고 매핑 칸이 비어 있는 행이 있다(2026-10-06 실측 15건).
+   화면이 그냥 '매핑 안 됨' 으로만 그리면 시트와 어긋나 보인다 → 사유를 적는다. */
+function coverMismatch(r) {
+  return r.cover === "완전" && !r.yaml_file;
+}
+
+function mapCellOf(r) {
+  if (r.notInSuite) {
+    // 시트에는 매핑이 있다. 단지 **스위트 목록에 없는 시나리오**일 뿐이다.
+    const label = r.maps.length ? r.maps.join(", ") : (r.mapKey || r.yaml_file);
+    return '<span class="map">' + esc(label) + "</span>" +
+           ' <span class="tag wait">스위트에 없음</span>';
+  }
+  if (!r.yaml_file) {
+    return '<span class="map none">매핑 안 됨</span>' +
+      (coverMismatch(r)
+        ? ' <span class="tag pend" title="시트의 커버 상태는 «완전» 인데 매핑 칸이 비어 있습니다">시트 불일치</span>'
+        : "");
+  }
+  const label = r.maps.length ? r.maps.join(", ") : (r.mapKey || r.yaml_file);
+  return '<span class="map' + (r.mapError ? " bad" : "") + '"' +
+    (r.mapError ? ' title="' + esc(r.mapError) + '"' : "") + ">" + esc(label) + "</span>";
+}
+
 function renderTable() {
   const rows = visibleTests();
   const connected = clConnected();
@@ -385,9 +409,12 @@ function renderTable() {
       if (state.priFilter !== "all" && priOf(r) !== state.priFilter) continue;
       const ids = r.cases.length ? r.cases.map((c) => "[" + c + "]").join(" ") : "—";
       html += '<tr class="clrow">' +
-        caseCell(ids, r.priority, r.text,
-                 r.maps.length ? r.maps.join(", ") : (r.mapKey || r.yaml_file),
-                 r.mapError, coverTagOf(r.cover)) +
+        '<td><span class="id">' + esc(ids) + "</span></td>" +
+        "<td>" + esc(r.priority || "—") + "</td>" +
+        '<td><span class="txt">' + esc(r.text) + "</span></td>" +
+        "<td>" + mapCellOf(r) + coverTagOf(r.cover) + "</td>" +
+        '<td><span class="v none">—</span></td><td><span class="v none">—</span></td>' +
+        '<td><span class="v none">—</span></td>' +
         "</tr>";
     }
     // 덮이지 않은 yaml 케이스 — 커버리지 구멍이 여기서 드러난다
@@ -415,8 +442,14 @@ function renderTable() {
       '<span class="sum">체크리스트 ' + orphan.length + "행</span></td></tr>";
     if (open) {
       for (const r of orphan) {
+        const ids = r.cases.length ? r.cases.map((c) => "[" + c + "]").join(" ") : "—";
         html += '<tr class="clrow">' +
-          caseCell("—", r.priority, r.text, "", null, coverTagOf(r.cover)) + "</tr>";
+          '<td><span class="id">' + esc(ids) + "</span></td>" +
+          "<td>" + esc(r.priority || "—") + "</td>" +
+          '<td><span class="txt">' + esc(r.text) + "</span></td>" +
+          "<td>" + mapCellOf(r) + coverTagOf(r.cover) + "</td>" +
+          '<td><span class="v none">—</span></td><td><span class="v none">—</span></td>' +
+          '<td><span class="v none">—</span></td></tr>';
       }
     }
   }
