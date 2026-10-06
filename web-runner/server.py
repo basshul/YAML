@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import runner
+import checklist as checklist_cache
 from admin import actions as admin_actions
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -48,6 +49,19 @@ def api_tests():
         return {"tests": runner.list_tests()}
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
+
+
+@app.get("/api/checklist")
+def api_checklist():
+    """체크리스트 캐시를 그대로 돌려준다.
+
+    ★ 매핑이 맞는지(시나리오·케이스가 실재하는지)는 **화면이 /api/tests 와 맞춰** 본다.
+      서버가 또 조회하면 pwsh 를 한 번 더 타서 20초가 더 걸린다.
+    """
+    try:
+        return checklist_cache.load()
+    except checklist_cache.ChecklistUnavailable as exc:
+        return JSONResponse(status_code=503, content={"error": str(exc)})
 
 
 @app.get("/api/devices")

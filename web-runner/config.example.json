@@ -12,5 +12,9 @@
     "username": "",
     "password": "",
     "compcode": ""
+  },
+  "checklist": {
+    "_설명": "매핑 완료본의 SharePoint 공유 링크. config.local.json 에만 채운다",
+    "url": ""
   }
 }

@@ -47,3 +47,6 @@ lint_*.md
 web-runner/admin/.browser_profile/
 web-runner/admin/probe_out/
 web-runner/admin/shots/
+
+# web-runner 체크리스트 캐시 — SharePoint 스냅샷이라 저장소에 두지 않는다
+web-runner/checklist_cache.json

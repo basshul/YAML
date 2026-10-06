@@ -18,6 +18,9 @@ const state = {
   groupFilter: "all",
   expanded: new Set(),
   preflight: null,
+  checklist: null,
+  priFilter: "all",
+  onlyBadMap: false,
 };
 
 const $ = (s) => document.getElementById(s);
@@ -47,6 +50,7 @@ async function boot() {
     renderTable();
 
     await loadDevices();
+    await loadChecklist();
     $("connState").textContent = "서버 연결됨";
   } catch (err) {
     $("connState").textContent = "연결 실패: " + err.message;
@@ -57,30 +61,67 @@ async function boot() {
   attachIfRunning();
 }
 
-/* 체크리스트 뒷단이 없어서 꺼 두는 것들. 한곳에 모아 둔다. */
+/* 아직 데이터가 없어 못 쓰는 조작을 한곳에서 끈다.
+   체크리스트가 붙으면 쓸 수 있게 된 것부터 하나씩 켠다. */
 function markOffline() {
-  const NOTE = "체크리스트 데이터가 아직 연결되지 않았습니다.";
+  const connected = clConnected();
+  const NOTE = connected
+    ? "결과 데이터가 아직 없습니다 — 실행 결과를 연결하면 열립니다."
+    : "체크리스트 데이터가 아직 연결되지 않았습니다.";
 
-  for (const id of ["f-run", "f-pri", "f-res", "basis", "mapmode", "btn-save", "btn-reload"]) {
+  // 중요도는 체크리스트가 붙으면 바로 쓸 수 있다(시트의 Priority).
+  // 결과·이번 실행·결과 보기·엑셀은 **실행 결과**가 있어야 하므로 아직 꺼 둔다.
+  const always = ["f-run", "f-res", "basis", "mapmode", "btn-save", "btn-reload"];
+  for (const id of always) {
     const el = $(id);
     if (!el) continue;
     el.disabled = true;
     el.title = NOTE;
   }
-  const mt = document.querySelector(".modetog");
-  if (mt) mt.title = NOTE;
+  const pri = $("f-pri");
+  if (pri) {
+    pri.disabled = !connected;
+    pri.title = connected ? "" : NOTE;
+  }
 
-  // 「확인할 것」 — 셀 수 있는 데이터가 없으니 전부 비활성
+  // 「확인할 것」 — 지금 셀 수 있는 건 **매핑 오류** 뿐이다(결과가 없으니 나머지는 못 센다)
+  const badmap = connected ? countMapErrors() : null;
   for (const b of document.querySelectorAll("[data-todo]")) {
     const n = b.querySelector(".n");
-    if (n) n.textContent = "–";
-    b.disabled = true;
-    b.title = NOTE;
+    const isMap = b.dataset.todo === "badmap";
+    if (isMap && connected) {
+      if (n) n.textContent = String(badmap);
+      b.disabled = badmap === 0;
+      b.classList.toggle("zero", badmap === 0);
+      b.title = badmap ? "누르면 매핑이 잘못된 행만 보여줍니다" : "매핑 오류가 없습니다";
+    } else {
+      if (n) n.textContent = "–";
+      b.disabled = true;
+      b.title = NOTE;
+    }
   }
-  $("sv-pend").innerHTML = '<span class="muted">' + NOTE + "</span>";
-  $("sv-mine").innerHTML = '<span class="muted">결과 기입은 뒷단이 붙은 뒤에 열립니다.</span>';
 
-  // 표 머리글 노출은 renderTable() 이 정한다(케이스를 펼쳤을 때만 뜻이 있다)
+  const info = connected
+    ? "체크리스트 " + state.checklist.data.summary.rows + "행 · 받아온 시각 " +
+      esc(state.checklist.data.fetched_at)
+    : NOTE;
+  $("sv-pend").innerHTML = '<span class="muted">' + info + "</span>";
+  $("sv-mine").innerHTML = '<span class="muted">결과 기입은 실행 결과가 붙은 뒤에 열립니다.</span>';
+
+  const sub = document.querySelector(".col-right h2 .muted");
+  if (sub) {
+    sub.textContent = connected
+      ? "시나리오별로 펼치면 체크리스트 확인 항목이 보입니다"
+      : "체크리스트는 아직 연결 전 — 지금은 실행할 시나리오만 고릅니다";
+  }
+}
+
+function countMapErrors() {
+  let n = 0;
+  for (const rows of state.checklist.byFile.values()) {
+    n += rows.filter((r) => r.mapError).length;
+  }
+  return n;
 }
 
 async function loadDevices() {
@@ -124,6 +165,109 @@ function renderServers() {
 
 /* ------------------------------------------------------------ 체크리스트 표 */
 
+/* 체크리스트 — 캐시가 없으면 화면은 시나리오 선택만 하던 때로 돌아간다(죽지 않는다). */
+async function loadChecklist() {
+  try {
+    const data = await api("/api/checklist");
+    indexChecklist(data);
+  } catch (err) {
+    state.checklist = { error: err.message, byFile: new Map(), orphan: [] };
+  }
+  markOffline();
+  renderTable();
+}
+
+/* 행을 시나리오별로 묶고, 매핑이 실제 케이스를 가리키는지 그 자리에서 검증한다.
+   ★ 검증 기준은 /api/tests 의 케이스 목록이다 — 시트가 혼자 맞다고 할 수 없다. */
+function normFile(name) {
+  // 시트는 'Old\13_01_Rate_Indonesia_old.yaml' 처럼 **파일명**으로 적기도 하고
+  // '02_01_Overseas_Send now' 처럼 **띄어쓰기·대소문자**가 다르기도 하다.
+  // 경로·확장자·_old 를 떼고, 공백을 없애고, 소문자로 맞춘다 — 여기까지는 안전하다.
+  return String(name || "")
+    .replace(/^.*[\\/]/, "")
+    .replace(/\.ya?ml$/i, "")
+    .replace(/_old$/i, "")
+    .replace(/\s+/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/* 그래도 안 맞으면 **접두사가 유일하게 일치할 때만** 붙인다.
+   시트 '14_01_Deposit_seungsoo818' ↔ 스위트 '14_01_Deposit' 같은 경우다.
+   ★ 후보가 둘 이상이면 붙이지 않는다 — 잘못 붙은 매핑은 커버리지를 통째로 속인다. */
+function matchScenario(key, byName) {
+  const exact = byName.get(key);
+  if (exact) return { test: exact, how: "exact" };
+  const cands = [...byName.entries()].filter(([k]) => k.length > 3 && key.startsWith(k));
+  if (cands.length === 1) return { test: cands[0][1], how: "prefix" };
+  return { test: null, how: cands.length > 1 ? "ambiguous" : "none" };
+}
+
+function indexChecklist(data) {
+  const byName = new Map(state.tests.map((t) => [normFile(t.name), t]));
+  const byFile = new Map();
+  const orphan = [];
+
+  for (const row of data.rows || []) {
+    // ★ 한 행이 **파일 여럿**을 덮을 수 있다(13_01·13_02·13_03 를 한 셀에 적은 행).
+    //   짝마다 따로 붙여야 각 시나리오에서 보인다.
+    const pairs = (row.pairs && row.pairs.length)
+      ? row.pairs
+      : [{ file: row.yaml_file, cases: row.cases || [] }];
+
+    for (const pair of pairs) {
+      const r = Object.assign({}, row, {
+        cases: pair.cases || [],
+        pairFile: pair.file,
+      });
+      r.mapError = null;
+      r.notInSuite = false;
+
+      if (!pair.file) {
+        orphan.push(r);
+        continue;
+      }
+      const key = normFile(pair.file);
+      const m = matchScenario(key, byName);
+      const t = m.test;
+      r.matchedBy = m.how;
+      r.mapKey = key;
+      r.maps = r.cases.map((c) => key + " [" + c + "]");
+
+      if (!t) {
+        // 매핑이 틀린 게 아니다 — G9 처럼 **스위트 목록에서 빠진** 시나리오다.
+        r.notInSuite = true;
+      } else if (!r.cases.length) {
+        r.mapError = "케이스 번호가 적혀 있지 않습니다";
+      } else {
+        const have = new Set((t.cases || []).map((c) => c.id));
+        const missing = r.cases.filter((c) => !have.has(c));
+        if (missing.length) {
+          r.mapError = key + " 에 케이스 " +
+            missing.map((c) => "[" + c + "]").join(", ") + " 가 없습니다";
+        }
+      }
+      const bucket = t ? t.name : "__notinsuite";
+      if (!byFile.has(bucket)) byFile.set(bucket, []);
+      byFile.get(bucket).push(r);
+    }
+  }
+  for (const rows of byFile.values()) {
+    rows.sort((a, b) => (a.cases[0] || "99").localeCompare(b.cases[0] || "99") || a.row - b.row);
+  }
+  state.checklist = { data: data, byFile: byFile, orphan: orphan,
+                      notInSuite: byFile.get("__notinsuite") || [], error: null };
+}
+
+function clRowsOf(name) {
+  const cl = state.checklist;
+  return (cl && !cl.error && cl.byFile.get(name)) || [];
+}
+
+function clConnected() {
+  return !!(state.checklist && !state.checklist.error && state.checklist.data);
+}
+
 function renderAreaFilter() {
   const sel = $("f-area");
   const labels = (state.config && state.config.group_labels) || {};
@@ -142,34 +286,75 @@ function renderAreaFilter() {
   sel.setAttribute("aria-label", "그룹 필터");
 }
 
+function priOf(r) { return (r.priority || "").trim(); }
+
 function visibleTests() {
   return state.tests.filter(
     (t) => state.groupFilter === "all" || t.group === state.groupFilter);
 }
 
+function caseCell(idText, pri, text, mapText, mapErr, coverTag) {
+  const map = mapText
+    ? '<span class="map' + (mapErr ? " bad" : "") + '"' +
+      (mapErr ? ' title="' + esc(mapErr) + '"' : "") + ">" + esc(mapText) + "</span>"
+    : '<span class="map none">매핑 안 됨</span>';
+  return '<td><span class="id">' + esc(idText) + "</span></td>" +
+    "<td>" + esc(pri || "—") + "</td>" +
+    '<td><span class="txt">' + esc(text) + "</span></td>" +
+    "<td>" + map + (coverTag || "") + "</td>" +
+    '<td><span class="v none">—</span></td>' +
+    '<td><span class="v none">—</span></td>' +
+    '<td><span class="v none">—</span></td>';
+}
+
+function coverTagOf(cover) {
+  if (!cover || cover === "완전") return "";
+  const cls = cover === "자동화 불가능" ? "pend" : "wait";
+  return ' <span class="tag ' + cls + '">' + esc(cover) + "</span>";
+}
+
 function renderTable() {
   const rows = visibleTests();
+  const connected = clConnected();
   const anyOpen = rows.some((t) => state.expanded.has(t.name));
-  let html =
-    '<tr><td colspan="7" class="muted" style="padding:10px 12px">' +
-    "체크리스트 행은 아직 연결되지 않았습니다 — 아래 케이스는 <b>플로우 yaml 의 주석</b>에서 읽은 것입니다." +
-    "</td></tr>";
+  let html = "";
+
+  if (!connected) {
+    const why = state.checklist && state.checklist.error
+      ? "체크리스트를 불러오지 못했습니다: " + esc(state.checklist.error)
+      : "체크리스트 행은 아직 연결되지 않았습니다 — 아래 케이스는 <b>플로우 yaml 의 주석</b>에서 읽은 것입니다.";
+    html += '<tr><td colspan="7" class="muted" style="padding:10px 12px">' + why + "</td></tr>";
+  }
 
   for (const t of rows) {
-    const cases = t.cases || [];
+    const yamlCases = t.cases || [];
+    const clRows = connected ? clRowsOf(t.name) : [];
     const open = state.expanded.has(t.name);
+    const hasChildren = connected ? (clRows.length || yamlCases.length) : yamlCases.length;
+
     const pills =
       (t.irreversible ? '<span class="tag man">실결제</span>' : "") +
       (t.needs_balance ? '<span class="tag pend">잔액 ' + t.needs_balance.toLocaleString() + "원</span>" : "") +
       (t.push ? '<span class="tag auto">픽스처</span>' : "");
-
-    // 펼침 단추와 선택 체크박스는 **다른 일**을 한다 — 서로의 클릭을 먹지 않게 나눠 둔다
-    const twisty = cases.length
+    const twisty = hasChildren
       ? '<button class="twisty" type="button" data-expand="' + esc(t.name) + '"' +
         ' aria-expanded="' + open + '"' +
         ' aria-label="' + esc(t.name) + (open ? " 케이스 접기" : " 케이스 펼치기") + '">' +
         (open ? "▾" : "▸") + "</button>"
       : '<span class="twisty empty" aria-hidden="true">·</span>';
+
+    // 머리줄 요약 — 연결되면 '덮인 케이스 / 전체' 가 바로 보인다
+    let sum;
+    if (connected) {
+      const covered = new Set();
+      for (const r of clRows) for (const c of r.cases) covered.add(c);
+      const bad = clRows.filter((r) => r.mapError).length;
+      sum = "체크리스트 " + clRows.length + "행 · 케이스 " + covered.size + "/" + yamlCases.length +
+        (bad ? ' · <b style="color:var(--red)">매핑 오류 ' + bad + "</b>" : "");
+    } else {
+      sum = yamlCases.length ? "케이스 " + yamlCases.length
+                             : '<span class="muted">케이스 표기 없음</span>';
+    }
 
     html +=
       '<tr class="scenhead"><td colspan="7">' + twisty +
@@ -179,28 +364,67 @@ function renderTable() {
       "</span></label>" + (pills ? " " + pills : "") +
       '<span class="muted" style="font-weight:400"> · ' + esc(t.group) +
       " · 계정 " + esc(t.account) + "</span>" +
-      '<span class="sum">' +
-      (cases.length ? "케이스 " + cases.length : '<span class="muted">케이스 표기 없음</span>') +
-      " · 약 " + t.est + "분</span></td></tr>";
+      '<span class="sum">' + sum + " · 약 " + t.est + "분</span></td></tr>";
 
     if (!open) continue;
-    for (const c of cases) {
-      html +=
-        '<tr class="clrow">' +
+
+    if (!connected) {
+      for (const c of yamlCases) {
+        html += '<tr class="clrow">' +
+          caseCell("[" + c.id + "]", c.pri, c.text, t.name + " [" + c.id + "]", null, "") +
+          "</tr>";
+      }
+      continue;
+    }
+
+    // 체크리스트 행이 정본이다 — 확인 문구·중요도를 시트에서 가져온다
+    const covered = new Set();
+    for (const r of clRows) {
+      for (const c of r.cases) covered.add(c);
+      if (state.onlyBadMap && !r.mapError) continue;
+      if (state.priFilter !== "all" && priOf(r) !== state.priFilter) continue;
+      const ids = r.cases.length ? r.cases.map((c) => "[" + c + "]").join(" ") : "—";
+      html += '<tr class="clrow">' +
+        caseCell(ids, r.priority, r.text,
+                 r.maps.length ? r.maps.join(", ") : (r.mapKey || r.yaml_file),
+                 r.mapError, coverTagOf(r.cover)) +
+        "</tr>";
+    }
+    // 덮이지 않은 yaml 케이스 — 커버리지 구멍이 여기서 드러난다
+    for (const c of yamlCases) {
+      if (covered.has(c.id)) continue;
+      html += '<tr class="clrow gap">' +
         '<td><span class="id">[' + esc(c.id) + "]</span></td>" +
         "<td>" + esc(c.pri || "—") + "</td>" +
-        '<td><span class="txt">' + esc(c.text) + "</span></td>" +
-        '<td><span class="map">' + esc(t.name) + " [" + esc(c.id) + "]</span></td>" +
-        '<td><span class="v none">—</span></td>' +
-        '<td><span class="v none">—</span></td>' +
+        '<td><span class="txt muted">' + esc(c.text) + "</span>" +
+        '<span class="sub">체크리스트에 매핑된 행이 없습니다</span></td>' +
+        '<td><span class="map none">매핑 안 됨</span></td>' +
+        '<td><span class="v none">—</span></td><td><span class="v none">—</span></td>' +
         '<td><span class="v none">—</span></td></tr>';
     }
   }
+
+  // 어느 시나리오에도 속하지 않는 행 — 언제나 맨 뒤
+  if (connected && state.groupFilter === "all") {
+    const orphan = state.checklist.orphan.concat(state.checklist.notInSuite);
+    const open = state.expanded.has("__none");
+    html += '<tr class="scenhead"><td colspan="7">' +
+      '<button class="twisty" type="button" data-expand="__none" aria-expanded="' + open + '">' +
+      (open ? "▾" : "▸") + "</button>" +
+      '<span class="noscen">시나리오 없음 · 스위트에 없는 시나리오 — 실행 대상 아님</span>' +
+      '<span class="sum">체크리스트 ' + orphan.length + "행</span></td></tr>";
+    if (open) {
+      for (const r of orphan) {
+        html += '<tr class="clrow">' +
+          caseCell("—", r.priority, r.text, "", null, coverTagOf(r.cover)) + "</tr>";
+      }
+    }
+  }
+
   $("tbody").innerHTML = html;
   $("empty").hidden = rows.length > 0;
-  // 열이 뜻을 갖는 건 케이스 행이 보일 때뿐이다
   const thead = document.querySelector("table.cl thead");
-  if (thead) thead.hidden = !anyOpen;
+  if (thead) thead.hidden = !anyOpen && !state.expanded.has("__none");
   renderSelection();
 }
 
@@ -591,6 +815,18 @@ $("f-area").addEventListener("change", (ev) => {
   state.groupFilter = ev.target.value;
   renderTable();
 });
+$("f-pri").addEventListener("change", (ev) => {
+  state.priFilter = ev.target.value;
+  renderTable();
+});
+for (const b of document.querySelectorAll("[data-todo]")) {
+  b.addEventListener("click", () => {
+    if (b.dataset.todo !== "badmap") return;
+    state.onlyBadMap = !state.onlyBadMap;
+    b.setAttribute("aria-pressed", String(state.onlyBadMap));
+    renderTable();
+  });
+}
 $("tbody").addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-expand]");
   if (!btn) return;

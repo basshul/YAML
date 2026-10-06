@@ -223,3 +223,7 @@
 
   /* 사전 조건 — NG 처리 단추. 2열 구조라 이름 칸 아래에 둔다. */
   .pf-fix{grid-column:2;justify-self:start;margin-top:4px;padding:3px 10px;font-size:11px;}
+
+  /* 체크리스트에 매핑되지 않은 yaml 케이스 — 커버리지 구멍 */
+  tr.clrow.gap>td{background:#fcfcfd;}
+  tr.clrow.gap .sub{display:block;font-size:11px;color:#96631a;margin-top:2px;}
