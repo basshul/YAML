@@ -126,14 +126,91 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
 
 
 # ── 케이스 목록 ────────────────────────────────────────────────────────────
-# yaml 의 주석에서 케이스를 읽는다. 체크리스트 매핑 단위(`시나리오 [번호]`)가
-# 이것이다(docs/CHECKLIST.md §6). 표기가 두 가지라 우선순위를 둔다:
-#   ① `# [01] [High] 제목`  — 본문의 실제 케이스. **이게 있으면 이것만 쓴다**
-#   ② `#   [01] 제목`       — 파일 머리의 색인 블록. ①이 하나도 없는 파일만
-# ⚠️ 산문 속 참조(`[12]가 … 되돌림`)가 섞이기 쉽다. ②는 `[NN]` 바로 뒤에
-#    또 대괄호가 오면 버린다(`[06][07]은 …` 같은 줄).
-CASE_WITH_PRI = re.compile(r"^\s*#+\s*\[(\d{2})\]\s*\[(High|Medium|Low)\]\s*(\S.*?)\s*$")
-CASE_INDEX = re.compile(r"^\s*#+\s*\[(\d{2})\]\s+(?!\[)(\S.*?)\s*$")
+# yaml 주석에서 케이스를 읽는다. 체크리스트 매핑 단위(`시나리오 [번호]`)가 이것이다.
+#
+# ★ 표기가 한 가지가 아니다(2026-10-06 실측):
+#     # [01] [High] Card Apply - …      중요도 태그가 붙은 줄
+#     #   [01] 초기 화면 요소 노출 확인   파일 머리의 색인 블록(태그 없음)
+#     # [06][07][08] 현재/새/확인 입력   한 줄이 케이스 **여럿**을 덮는다
+#     # [07-1] 몽골 송금인 등록          접미사가 붙은 번호
+#   ⛔ 예전에는 "중요도 태그가 있는 줄만 쓴다" 로 했는데, **한 파일에 두 표기가 섞이면**
+#      태그 없는 케이스를 통째로 버렸다(04_02 에서 [06]~[11] 6개가 사라져 체크리스트
+#      매핑이 "yaml 에 없는 케이스" 로 잘못 잡혔다). 이제 둘 다 읽고 **번호로 합친다.**
+#
+# ⚠️ 산문 속 참조와 구분하는 열쇠는 **닫는 대괄호 뒤의 공백**이다:
+#      `# [12]가 카드 PIN을 …`  → `]` 뒤가 바로 글자 → 케이스가 아니다
+#      `#   [06][07]은 …`       → `]` 뒤가 `[` 로 이어지다 글자 → 케이스가 아니다
+COMMENT_HEAD_RE = re.compile(r"^\s*#+\s*")
+# 구분선 안에 마커를 둔 파일이 있다: `# ── [07-2] 베트남 송금인 등록 … ──`
+# ★ 진짜 선 문자만 넣는다. `·` 같은 글머리표를 넣었더니
+#   `#   · [01-2] 직업 …` 같은 **산문**이 케이스로 새어들어왔다.
+DIVIDER_CHARS = "-─━–—="
+PRIORITIES = {"high": "High", "medium": "Medium", "low": "Low"}
+# 글자 접두 번호: [F-01] 처럼 파일 안에서만 쓰는 네임스페이스 (25_Profile_Foreign)
+ALPHA_ID_RE = re.compile(r"^([A-Za-z]{1,3})-?(\d{1,3})$")
+
+
+def case_id(token: str) -> str:
+    """케이스 토큰을 **조인 키**로 바꾼다.
+
+    ★ 체크리스트 쪽(`checklist_sync.py`)과 **같은 규칙**이어야 한다.
+      한쪽만 바꾸면 매핑이 조용히 어긋난다.
+        01      → 01
+        07-1    → 07      (분할 파일의 하위 번호 — 같은 yaml 케이스를 가리킨다)
+        16a     → 16
+        F-01    → F01     (글자 접두는 그대로 살린다 — 숫자로 바꾸면 충돌한다)
+    """
+    t = (token or "").strip()
+    if not t:
+        return ""
+    if t[0].isdigit():
+        num = t.split("-")[0].rstrip("abcdefABCDEF")
+        return num.zfill(2) if num.isdigit() else ""
+    m = ALPHA_ID_RE.match(t)
+    if m:
+        return m.group(1).upper() + m.group(2).zfill(2)
+    return ""
+
+
+def _parse_case_line(line: str):
+    """주석 한 줄에서 (케이스 토큰들, 중요도, 설명) 을 뽑는다. 아니면 None.
+
+    ★ 산문 속 참조와 가르는 기준은 **대괄호 묶음 뒤에 공백이 오는가** 다:
+         `# [06][07][08] 현재/새/확인 …`  → 묶음 뒤 공백 → 케이스
+         `# [01] [High] Card Apply …`     → 묶음 뒤 공백 → 케이스
+         `# ── [07-2] 베트남 송금인 등록 …` → 구분선을 벗겨내면 같은 꼴 → 케이스
+         `#   [10]~[12]·[14]가 이것을 …`  → 묶음 뒤가 `~`  → 아니다
+         `#   [12]가 카드 PIN을 …`        → 묶음 뒤가 글자 → 아니다
+    """
+    m = COMMENT_HEAD_RE.match(line)
+    if not m:
+        return None
+    rest = line[m.end():].lstrip(DIVIDER_CHARS + " 	")
+
+    tokens, saw_space = [], False
+    while rest.startswith("["):
+        close = rest.find("]")
+        if close < 0:
+            return None
+        tokens.append(rest[1:close].strip())
+        rest = rest[close + 1:]
+        trimmed = rest.lstrip(" 	")
+        if len(trimmed) < len(rest):
+            saw_space = True
+        rest = trimmed
+    if not tokens or not saw_space:
+        return None            # 묶음 뒤에 공백이 없었다 = 산문 속 참조
+
+    pri, ids = "", []
+    for tok in tokens:
+        if tok.lower() in PRIORITIES:
+            pri = PRIORITIES[tok.lower()]
+        elif case_id(tok):
+            ids.append(tok)
+    if not ids:
+        return None
+    text = rest.rstrip(DIVIDER_CHARS + " 	").strip()
+    return ids, pri, text
 
 
 def read_cases(rel_path: str) -> list[dict]:
@@ -146,17 +223,21 @@ def read_cases(rel_path: str) -> list[dict]:
     except OSError:
         return []
 
-    found = {}
+    found: dict[str, dict] = {}
     for line in lines:
-        m = CASE_WITH_PRI.match(line)
-        if m and m.group(1) not in found:
-            found[m.group(1)] = (m.group(2), m.group(3))
-    if not found:
-        for line in lines:
-            m = CASE_INDEX.match(line)
-            if m and m.group(1) not in found:
-                found[m.group(1)] = ("", m.group(2))
-    return [{"id": n, "pri": found[n][0], "text": found[n][1]} for n in sorted(found)]
+        parsed = _parse_case_line(line)
+        if not parsed:
+            continue
+        ids, pri, text = parsed
+        for raw in ids:
+            num = case_id(raw)
+            if not num:
+                continue
+            prev = found.get(num)
+            # 중요도가 붙은 줄을 우선한다(색인 블록보다 본문이 정확하다)
+            if prev is None or (pri and not prev["pri"]):
+                found[num] = {"id": num, "raw": raw, "pri": pri, "text": text}
+    return [found[k] for k in sorted(found)]
 
 
 def list_tests(include_destructive: bool = False) -> list[dict]:
