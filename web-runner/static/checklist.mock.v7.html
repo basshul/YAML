@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>목업 v7 — 저장이 중심</title>
+<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="v5.css?v=1">
+<link rel="stylesheet" href="v6.css?v=1">
+<link rel="stylesheet" href="v7.css?v=1">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+</head>
+<body class="cl-off">
+
+<header class="topbar">
+  <h1>Maestro Web Runner</h1>
+  <span class="tag">목업</span>
+  <span class="conn">서버 연결됨</span>
+  <nav class="topnav">
+    <a href="/" class="on" aria-current="page">실행 · 체크리스트</a>
+    <a href="/history.html">실행 이력</a>
+  </nav>
+</header>
+
+<div class="mockbar">
+  <strong>목업 v7 · v6 기반</strong> — <b>「확인할 것」 영역을 없애고 「엑셀 기입」으로 바꿨습니다.</b>
+  그 영역은 필터 모음이 아니라 <b>"지금 저장할 수 있는가"에 답하는 자리</b>였습니다 —
+  <code>자동 Fail 확인 대기</code>·<code>매핑 오류</code>는 필터가 아니라 <b>저장에서 빠지는 조건</b>이고
+  (§8), <code>기입 대기 N건</code>은 저장 버튼이 처리할 숫자입니다. 숫자와 버튼을 한자리에 뒀고
+  <b>왼쪽 엑셀 패널은 중복이라 없앴습니다.</b> 「사람 수정」은 할 일이 아니라 정보라 <b>출처 필터</b>로 내렸습니다.<br>
+  → <a href="checklist.mock.v1.html">v1</a> · <a href="checklist.mock.v2.html">v2</a> ·
+  <a href="checklist.mock.v3.html">v3</a> · <a href="checklist.mock.v4.html">v4</a> ·
+  <a href="checklist.mock.v5.html">v5 (현재 구현)</a> · <a href="checklist.mock.v6.html">v6</a> · <b>v7</b>
+  <div class="mockctl">
+    <span class="muted">보기:</span>
+    <button type="button" id="mk-off">체크리스트 연결 전</button>
+    <button type="button" id="mk-on">연결됨</button>
+    <span class="muted">·</span>
+    <button type="button" id="mk-idle">대기</button>
+    <button type="button" id="mk-run">실행 중</button>
+    <button type="button" id="mk-done">끝난 뒤</button>
+  </div>
+</div>
+
+<div class="shell">
+
+  <div class="col col-left">
+
+    <section class="panel tight runpanel">
+      <h2>실행 <span class="spacer"></span><span class="muted" id="runCount"></span></h2>
+      <div class="sumline" id="selInfo">선택된 시나리오 없음</div>
+      <div class="runbtns">
+        <button class="primary" type="button" id="runBtn" disabled>실행</button>
+        <button type="button" id="runAllBtn">전체 실행</button>
+        <button class="danger hidden" type="button" id="stopBtn">중단</button>
+      </div>
+      <div class="runprog hidden" id="runProg">
+        <div class="barwrap"><div class="bar" id="progBar"></div></div>
+        <div class="runnow" id="runNow"></div>
+      </div>
+      <p class="envline" id="envLine"></p>
+    </section>
+
+    <section class="panel tight">
+      <h2>실행 환경</h2>
+      <div class="field">
+        <span class="flab" id="lb-srv">서버</span>
+        <div class="choices" role="radiogroup" aria-labelledby="lb-srv">
+          <label class="choice"><input type="radio" name="srv" checked> LiveTest</label>
+          <label class="choice live"><input type="radio" name="srv"> 운영(Live)</label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="flab" for="dev">기기</label>
+        <div class="row">
+          <select id="dev"><option>SM-S911N (R3CW90MTK9H)</option></select>
+          <button class="ghost iconbtn" type="button" aria-label="기기 목록 새로고침" title="기기 목록 새로고침">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+              <path d="M3.1 6.6a5.2 5.2 0 0 1 9-1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.9 9.4a5.2 5.2 0 0 1-9 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M12.6 2.2v3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.4 13.8v-3h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="flab" id="lb-plat">플랫폼</span>
+        <div class="choices" role="radiogroup" aria-labelledby="lb-plat">
+          <label class="choice"><input type="radio" name="plat" checked> Android</label>
+          <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel tight">
+      <h2>사전 조건
+        <span class="spacer"></span>
+        <button class="small" type="button" id="btn-fixall">NG 2건 전부 처리</button>
+        <button class="small" type="button" id="btn-pf">admin 점검</button>
+      </h2>
+      <div id="pf-out" class="sumline">
+        스위트가 전제하는 계정 상태를 admin 에서 확인합니다. <b>조회만 합니다.</b>
+      </div>
+    </section>
+
+    
+  </div>
+
+  <div class="col col-right">
+    <section class="panel">
+      <h2 id="rightTitle">시나리오</h2>
+
+      <div class="offnote">
+        <span><b>체크리스트는 아직 연결 전입니다.</b>
+          확인 문구·결과·매핑이 붙으면 「확인할 것」·결과 필터·엑셀 저장이 함께 열립니다.</span>
+      </div>
+
+      <div class="basisrow cl-only">
+        <label for="basis">결과 보기</label>
+        <select id="basis">
+          <optgroup label="자동 실행 (suite_logs)">
+            <option value="latest" selected>최신 결과 — 항목마다 가장 최근 실행</option>
+            <option value="past1">2026-09-29 16:48 · 5항목 · SM-S928N · 7.21.0-stag</option>
+          </optgroup>
+          <optgroup label="엑셀">
+            <option value="excel">엑셀 현재값 — I열에 지금 적혀 있는 것</option>
+          </optgroup>
+        </select>
+        <span class="muted">과거 실행·엑셀을 고르면 읽기 전용이 됩니다.</span>
+      </div>
+
+      <div class="savebar cl-only">
+        <span class="lead">엑셀 기입 대기 <b id="sv-n">12건</b></span>
+        <button class="primary" type="button" id="btn-save">엑셀에 저장…</button>
+        <span class="hint"><span class="mono">I11:I423</span> · 저장 전에 바뀌는 칸을 보여줍니다</span>
+        <span class="sep"></span>
+        <span class="blockgrp" id="blockgrp">
+          <span class="lab">저장에서 빠지는 것</span>
+          <button class="tbtn warn" type="button" data-todo="failwait">자동 Fail 확인 대기 <span class="n">1</span></button>
+          <button class="tbtn warn" type="button" data-todo="badmap">매핑 오류 <span class="n">1</span></button>
+          <button class="tbtn warn" type="button" data-todo="noreason">덮었는데 사유 없음 <span class="n">0</span></button>
+        </span>
+      </div>
+
+      <div class="filters">
+        <label class="f"><span>그룹</span><select id="f-area" aria-label="그룹 필터"></select></label>
+        <label class="f"><span>상태</span>
+          <select id="f-st" aria-label="실행 상태 필터">
+            <option value="all">전체</option>
+            <option value="fail">실패만</option>
+            <option value="run">진행 중</option>
+            <option value="wait">대기</option>
+          </select></label>
+        <label class="f cl-only"><span>중요도</span>
+          <select><option>전체</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+        <label class="f cl-only"><span>결과</span>
+          <select><option>전체</option><option>Pass</option><option>Fail</option>
+            <option>Not Test</option><option>NA</option></select></label>
+        <label class="f cl-only"><span>출처</span>
+          <select><option>전체</option><option>자동</option><option>사람 수정 (3)</option></select></label>
+        <label class="modetog cl-only"><input type="checkbox"> 매핑 모드</label>
+        <span class="spacer"></span>
+        <button class="helpbtn" type="button" id="btn-help" aria-label="이 화면 설명 열기">?</button>
+      </div>
+
+      <div class="clwrap">
+        <table class="cl">
+          <caption class="sr-only">시나리오 목록 — 삼각형을 누르면 케이스가 펼쳐집니다</caption>
+          <thead hidden>
+            <tr><th class="c-id">ID</th><th class="c-pri">중요도</th><th>확인 항목</th>
+                <th class="c-map">매핑</th><th class="c-res">Android</th>
+                <th class="c-ios">iOS</th><th class="c-cmt">Comment</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="helpm" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="hp-h">
+  <div class="modal-box">
+    <header><span id="hp-h">이 화면 읽는 법</span>
+      <button class="x" type="button" data-close="helpm" aria-label="닫기">×</button></header>
+    <div class="note">
+      <b>실행이 맨 위에 고정되어 있습니다.</b> 왼쪽을 아무리 내려도 실행 버튼과 진행 상황은 제자리입니다 —
+      v5 에서는 사전 조건 결과가 뜨면 실행 버튼이 화면 밖으로 밀렸습니다.<br><br>
+      <b>실행 중에는 표가 진행판이 됩니다.</b> 고른 그 줄에 <b>대기 · 진행 중 · PASS · FAIL</b> 이 붙고,
+      FAIL 은 줄 전체가 표시되어 <b>끝나기 전에</b> 보입니다. 스텝별 로그는 여전히
+      <a href="/history.html">실행 이력</a>에 있습니다.<br><br>
+      <b>「엑셀 기입」이 저장의 모든 것을 한자리에 둡니다.</b> 몇 건을 보낼지, 무엇이 빠지는지,
+      그리고 보내는 버튼이 같은 줄에 있습니다. 빠지는 것이 없으면 그 칩들은 사라집니다.<br><br>
+      <b>아직 못 쓰는 것은 보이지 않습니다.</b> 체크리스트가 붙으면 「확인할 것」·결과 필터·매핑 모드·엑셀이
+      한꺼번에 돌아옵니다 — 위 배너의 <b>연결됨</b>으로 미리 볼 수 있습니다.
+    </div>
+  </div>
+</div>
+
+<script>
+/* 목업 전용 표본 — 실제 화면은 /api/tests 의 39개를 쓴다 */
+const T = [
+  {name:"05_InitialScreen", group:"G1", account:"-", est:5, cases:[
+    {id:"01", pri:"", text:"초기 화면 요소 노출 확인 (하단 앱 버전 표시 포함)"},
+    {id:"02", pri:"", text:"언어 변경 (전환 → 복귀)"},
+    {id:"03", pri:"", text:"환율 탭 전환 (계좌 입금 / 현금 지급 / 모바일 월렛)"}]},
+  {name:"06_Registration", group:"G1", account:"-", est:20, push:true, cases:[
+    {id:"01", pri:"High", text:"모두동의 체크박스 선택 시 체크박스 체크 동작 확인"},
+    {id:"02", pri:"High", text:"필수동의사항 Uncheck 시 Confirm 버튼 비활성화"}]},
+  {name:"01_01_Login_Success", group:"G1", account:"-", est:3, cases:[
+    {id:"01", pri:"High", text:"로그인 성공 확인"}]},
+  {name:"09_Home", group:"G2", account:"seungsoo818", est:12, cases:[
+    {id:"01", pri:"High", text:"홈 화면 기본 요소 노출 확인"},
+    {id:"02", pri:"Medium", text:"잔액 마스킹 토글(눈 아이콘) 동작 확인"}]},
+  {name:"21_Card", group:"G2", account:"seungsoo818", est:25, needs_balance:5000, cases:[
+    {id:"01", pri:"High", text:"Card Apply - 카드선택페이지 정상 진입 확인 및 Apply 동작 확인"},
+    {id:"02", pri:"Medium", text:"Card Apply - Select Pay service 선택 동작 확인"},
+    {id:"03", pri:"Medium", text:"Card Apply - 영문이름 수정 및 입력 동작 확인"}]},
+  {name:"18_Telecom", group:"G2", account:"seungsoo818", est:4, cases:[
+    {id:"01", pri:"Medium", text:"GME Mobile 선택 시 요금제 선택 페이지 발생 확인"}]},
+  {name:"02_01_Overseas_Send now", group:"G2", account:"seungsoo818", est:18, irreversible:true, cases:[
+    {id:"01", pri:"High", text:"수취인 선택 후 송금액 입력 동작 확인"}]},
+  {name:"04_06_Settings_Change languages", group:"G4", account:"seungsoo818", est:6, cases:[]},
+];
+/* 체크리스트가 붙었을 때 케이스 행에 얹히는 것 (연결됨 보기에서만) */
+const CL = {
+  "21_Card [01]": {res:"Pass",  src:"auto", cmt:""},
+  "21_Card [02]": {res:"Fail",  src:"auto", wait:true, cmt:"자동 Fail — 사람 확인 대기"},
+  "21_Card [03]": {res:"",      src:"",     cmt:""},
+  "09_Home [01]": {res:"Pass",  src:"auto", cmt:""},
+  "09_Home [02]": {res:"NA",    src:"manual", cmt:"(aos) 자동화 불가 — 생체인증 필요"},
+};
+
+const state = {selected:new Set(["21_Card","09_Home","18_Telecom"]), expanded:new Set(["21_Card"]),
+               groupFilter:"all", stFilter:"all", phase:"idle", st:{}};
+const $ = (s) => document.getElementById(s);
+const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const connected = () => !document.body.classList.contains("cl-off");
+
+function renderAreaFilter(){
+  const labels = {G1:"로그인 불필요", G2:"한국인 계정 (seungsoo818)",
+                  G3:"외국인 계정 (test123 → test251024)", G4:"설정 변경 — 반드시 맨 뒤"};
+  const groups = [...new Set(T.map(t=>t.group))].sort();
+  $("f-area").innerHTML = '<option value="all">전체 ('+T.length+"개 시나리오)</option>"+
+    groups.map(g=>'<option value="'+g+'">'+g+" · "+labels[g]+" ("+T.filter(t=>t.group===g).length+")</option>").join("");
+}
+
+const ST_LABEL = {wait:"대기", run:"진행 중", pass:"PASS", fail:"FAIL", skip:"SKIP"};
+
+function renderTable(){
+  const rows = T.filter(t=>{
+    if (state.groupFilter!=="all" && t.group!==state.groupFilter) return false;
+    if (state.stFilter!=="all" && state.st[t.name]!==state.stFilter) return false;
+    return true;
+  });
+  const anyOpen = rows.some(t=>state.expanded.has(t.name));
+  let html = "";
+  if (!connected()) {
+    html += '<tr><td colspan="7" class="muted" style="padding:10px 12px">'+
+      "케이스는 <b>플로우 yaml 의 주석</b>에서 읽은 것입니다.</td></tr>";
+  }
+  for (const t of rows) {
+    const cases = t.cases || [];
+    const open = state.expanded.has(t.name);
+    const st = state.st[t.name] || "";
+    const pills = (t.irreversible?'<span class="tag man">실결제</span>':"")+
+      (t.needs_balance?'<span class="tag pend">잔액 '+t.needs_balance.toLocaleString()+"원</span>":"")+
+      (t.push?'<span class="tag auto">픽스처</span>':"");
+    const twisty = cases.length
+      ? '<button class="twisty" type="button" data-expand="'+esc(t.name)+'" aria-expanded="'+open+'">'+(open?"▾":"▸")+"</button>"
+      : '<span class="twisty empty" aria-hidden="true">·</span>';
+    const badge = st ? '<span class="st '+st+'">'+ST_LABEL[st]+"</span>" : "";
+    const why = st==="fail"
+      ? '<span class="failwhy">세션 만료로 진입 실패 — 상세는 실행 이력</span>' : "";
+    html += '<tr class="scenhead'+(st==="fail"?" is-fail":st==="run"?" is-run":"")+'"><td colspan="7">'+
+      twisty+'<label style="cursor:pointer"><input type="checkbox" data-test="'+esc(t.name)+'"'+
+      (state.selected.has(t.name)?" checked":"")+'> <span class="mono">'+esc(t.name)+"</span></label>"+
+      badge+(pills?" "+pills:"")+
+      '<span class="muted" style="font-weight:400"> · '+esc(t.group)+" · 계정 "+esc(t.account)+"</span>"+
+      '<span class="sum">'+(cases.length?"케이스 "+cases.length:'<span class="muted">케이스 표기 없음</span>')+
+      " · 약 "+t.est+"분</span>"+why+"</td></tr>";
+    if (!open) continue;
+    for (const c of cases) {
+      const key = t.name+" ["+c.id+"]";
+      const d = connected() ? (CL[key] || {res:"", cmt:""}) : {res:"", cmt:""};
+      const resCell = d.res
+        ? '<span class="v '+d.res+'">'+d.res+"</span>"+
+          (d.wait?'<span class="tag wait">확인 대기</span>':d.src==="manual"?'<span class="tag man">직접 수정</span>':
+           d.src==="auto"?'<span class="tag auto">자동</span>':"")
+        : '<span class="v none">—</span>';
+      html += '<tr class="clrow"><td><span class="id">['+esc(c.id)+"]</span></td>"+
+        "<td>"+esc(c.pri||"—")+"</td>"+
+        '<td><span class="txt">'+esc(c.text)+"</span></td>"+
+        '<td><span class="map">'+esc(key)+"</span></td>"+
+        "<td>"+resCell+"</td>"+
+        '<td><span class="v none">—</span></td>'+
+        '<td><span class="muted" style="font-size:11px">'+esc(d.cmt||"")+"</span></td></tr>";
+    }
+  }
+  $("tbody").innerHTML = html || '<tr><td colspan="7" class="muted" style="padding:14px">조건에 맞는 행이 없습니다.</td></tr>';
+  document.querySelector("table.cl thead").hidden = !anyOpen;
+  $("rightTitle").textContent = connected() ? "체크리스트" : "시나리오";
+  renderSelection();
+}
+
+function renderSelection(){
+  const picked = T.filter(t=>state.selected.has(t.name));
+  const minutes = picked.reduce((s,t)=>s+t.est,0);
+  const money = picked.filter(t=>t.irreversible).length;
+  let text = picked.length===0 ? "선택된 시나리오 없음"
+    : "선택 <b>시나리오 "+picked.length+"개</b> · 예상 <b>"+Math.floor(minutes/60)+"시간 "+(minutes%60)+"분</b>";
+  if (money) text += ' · <b style="color:var(--red)">실결제 '+money+"건</b>";
+  if (picked.length) text += "<br>"+picked.map(t=>"<code>"+esc(t.name)+"</code>").join(" ");
+  $("selInfo").innerHTML = text;
+  $("runBtn").disabled = picked.length===0 || state.phase==="run";
+  $("envLine").innerHTML = "LiveTest · <code>SM-S911N</code> · Android";
+  const done = Object.values(state.st).filter(v=>v==="pass"||v==="fail"||v==="skip").length;
+  $("runCount").textContent = state.phase==="idle" ? "" : done+" / "+picked.length;
+}
+
+/* ── 목업 상태 전환 ───────────────────────────────────────────────── */
+function setPhase(p){
+  state.phase = p;
+  document.body.classList.toggle("running", p==="run");
+  $("stopBtn").classList.toggle("hidden", p!=="run");
+  $("runProg").classList.toggle("hidden", p==="idle");
+  if (p==="idle") { state.st = {}; }
+  if (p==="run") {
+    state.st = {"21_Card":"pass", "09_Home":"run", "18_Telecom":"wait"};
+    $("progBar").style.width = "40%";
+    $("runNow").innerHTML = "<b>2 / 3</b> · <code>09_Home</code> 진행 중 · 02:10 경과";
+  }
+  if (p==="done") {
+    state.st = {"21_Card":"pass", "09_Home":"fail", "18_Telecom":"pass"};
+    $("progBar").style.width = "100%";
+    $("runNow").innerHTML = '<b style="color:var(--red)">실패 있음</b> · PASS 2 · FAIL 1 · SKIP 0 · '+
+      '<a href="/history.html">실행 이력에서 상세 보기</a>';
+  }
+  renderTable();
+}
+
+$("mk-off").addEventListener("click",()=>{ document.body.classList.add("cl-off"); renderTable(); });
+$("mk-on").addEventListener("click",()=>{ document.body.classList.remove("cl-off"); renderTable(); });
+$("mk-idle").addEventListener("click",()=>setPhase("idle"));
+$("mk-run").addEventListener("click",()=>setPhase("run"));
+$("mk-done").addEventListener("click",()=>setPhase("done"));
+
+$("tbody").addEventListener("click",(ev)=>{
+  const b = ev.target.closest("[data-expand]"); if(!b) return;
+  const n = b.dataset.expand;
+  if (state.expanded.has(n)) state.expanded.delete(n); else state.expanded.add(n);
+  renderTable();
+});
+$("tbody").addEventListener("change",(ev)=>{
+  const cb = ev.target.closest("[data-test]"); if(!cb) return;
+  if (cb.checked) state.selected.add(cb.dataset.test); else state.selected.delete(cb.dataset.test);
+  renderSelection();
+});
+$("f-area").addEventListener("change",(ev)=>{ state.groupFilter = ev.target.value; renderTable(); });
+$("f-st").addEventListener("change",(ev)=>{ state.stFilter = ev.target.value; renderTable(); });
+
+const PF = [
+  {kind:"account", user_id:"seungsoo818", want:"exists", why:"G1·G2·G4 기본 계정 (한국인·은행 연결)", found:true, customer_id:"527451"},
+  {kind:"account", user_id:"test123", want:"exists", why:"외국인·은행 미연결 (14_02 · 25_Profile_Foreign)", found:true, customer_id:"123058"},
+  {kind:"account", user_id:"test251024", want:"exists", why:"외국인·GMEPay 신청완료 (14_03)", found:true, customer_id:"630266"},
+  {kind:"account", user_id:"test006", want:"absent", why:"06_Registration 이 소모 — 남아 있으면 재실행 불가", found:false, customer_id:""},
+  {kind:"account", user_id:"test007", want:"absent", why:"06_Registration 이 소모 — 남아 있으면 재실행 불가", found:true, customer_id:"748107", fix:"remove_customer", fix_label:"계정 삭제"},
+  {kind:"documents", user_id:"seungsoo818", want:"absent", why:"승인 대기 문서가 남아 있으면 신분증 업로드 플로우가 기존 건에 걸린다", found:false, detail:""},
+  {kind:"documents", user_id:"test123", want:"absent", why:"승인 대기 문서가 남아 있으면 신분증 업로드 플로우가 기존 건에 걸린다", found:true, detail:"ARC, Passport", fix:"clear_documents", fix_label:"대기 문서 삭제"},
+];
+$("btn-pf").addEventListener("click",()=>{
+  const b = $("btn-pf"), out = $("pf-out");
+  b.disabled = true; b.textContent = "점검 중… 0초";
+  out.textContent = "admin 에 로그인해 계정을 확인하는 중입니다… (30초쯤 걸립니다)";
+  setTimeout(()=>{
+    const checks = PF.map(c=>({...c, ok: c.want==="exists" ? c.found : !c.found}));
+    out.innerHTML = '<p class="pf-head warn">사전 조건이 충족되지 않았습니다 — NG 항목을 해결해야 합니다.</p>'+
+      checks.map(c=>'<div class="pf-row"><span class="pf-mark '+(c.ok?"ok":"warn")+'">'+(c.ok?"OK":"NG")+
+        "</span>" + '<span class="pf-name"><span class="pf-kind">' + (c.kind==="documents"?"문서":"계정") + "</span> <code>"+esc(c.user_id)+"</code></span>"+
+        '<span class="muted">'+(c.want==="exists"?"있어야 함":"없어야 함")+" / "+(c.found?"있음":"없음")+
+        (c.detail?" · "+esc(c.detail):c.customer_id?" · #"+esc(c.customer_id):"")+"</span>"+
+        '<span class="pf-why muted">'+esc(c.why)+"</span>"+(!c.ok&&c.fix?'<button class="small pf-fix" type="button">'+esc(c.fix_label)+"</button>":"")+"</div>").join("");
+    b.disabled = false; b.textContent = "admin 점검";
+  }, 900);
+});
+
+$("btn-help").addEventListener("click",()=>$("helpm").setAttribute("aria-hidden","false"));
+for (const b of document.querySelectorAll("[data-close]"))
+  b.addEventListener("click",()=>$(b.dataset.close).setAttribute("aria-hidden","true"));
+
+/* 0 건인 칩은 내보내지 않는다 — 「0」을 보여 줄 이유가 없다 */
+function renderSave(){
+  const grp = document.getElementById("blockgrp");
+  let live = 0;
+  for (const b of grp.querySelectorAll("[data-todo]")) {
+    const n = parseInt(b.querySelector(".n").textContent, 10) || 0;
+    b.classList.toggle("zero", n === 0);
+    if (n) live++;
+  }
+  grp.classList.toggle("clean", live === 0);
+  grp.querySelector(".lab").textContent = live ? "저장에서 빠지는 것" : "빠지는 것 없음";
+}
+
+document.getElementById("btn-save").addEventListener("click", ()=>{
+  alert("저장 미리보기 — 바뀌는 칸 12개 · 빠지는 것 2건 (목업이라 여기까지만 보여줍니다)");
+});
+
+renderAreaFilter();
+renderSave();
+renderTable();
+</script>
+</body>
+</html>

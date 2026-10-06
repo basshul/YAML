@@ -1,0 +1,47 @@
+/* v6 전용. ★ style.css · v5.css **뒤에** 실린다 — 이름이 겹치는 규칙을 덮는 것이 전제다
+   (docs/CHECKLIST.md 「구현할 때 — style.css 와 class 이름이 충돌한다」). */
+
+/* ── ① 실행 패널을 맨 위에 고정 ──────────────────────────────────────────
+   v5 에서 왼쪽 열이 677→1050px 로 늘어나 **사전 조건을 쓰면 실행 버튼이
+   화면 밖으로 밀려났다**(실측 2026-10-06: 493px → 866px, 보이지 않음).
+   보조 기능을 썼다고 주 동작이 사라지면 안 된다. */
+.col-left .runpanel { position: sticky; top: 0; z-index: 3; }
+.runpanel { border-color: #b9ccea; box-shadow: 0 2px 8px rgba(20, 40, 80, .07); }
+.runpanel .runbtns { margin-top: 9px; }
+.runpanel .envline { font-size: 11px; color: var(--muted); margin-top: 7px; }
+.runpanel .envline code { font-size: 11px; }
+
+/* ── ② 실행 상태를 표에서 바로 본다 ────────────────────────────────────
+   v5 는 진행을 왼쪽 한 줄로만 보여줬고 상세는 「실행 이력」에 맡겼는데,
+   이력은 suite_logs 를 읽어 **스위트가 끝나야** 생긴다 → 3시간짜리 실행 중에
+   무엇이 FAIL 났는지 알 길이 없었다. 고른 그 표가 그대로 진행판이 된다. */
+.st { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; vertical-align: middle; }
+.st.wait { background: #f1f3f5; color: #6b7684; }
+.st.run  { background: #e7f0ff; color: #2f5bb7; }
+.st.pass { background: #e7f6ec; color: #137333; }
+.st.fail { background: #fdecec; color: #c62f2f; }
+.st.skip { background: #fff4e5; color: #96631a; }
+
+tr.scenhead.is-run > td  { background: #f5f9ff; box-shadow: inset 3px 0 0 #2f5bb7; }
+tr.scenhead.is-fail > td { background: #fff7f7; box-shadow: inset 3px 0 0 var(--red); }
+
+.failwhy { display: block; margin: 3px 0 0 26px; font-size: 11px; color: #c62f2f; }
+
+/* 실행 중에는 선택 체크박스를 잠근다 — 도는 중에 고르면 다음 실행과 헷갈린다 */
+body.running tr.scenhead input[type="checkbox"] { pointer-events: none; opacity: .45; }
+
+/* ── ③ 꺼진 조작은 숨긴다 ──────────────────────────────────────────────
+   비활성 컨트롤은 "왜 안 되지?" 를 만든다. 체크리스트가 붙기 전에는
+   아예 보이지 않는 편이 낫고, 붙으면 .cl-only 가 통째로 돌아온다. */
+body.cl-off .cl-only { display: none !important; }
+
+.offnote { display: flex; align-items: center; gap: 8px; padding: 8px 11px; margin-bottom: 10px;
+           background: #f5f7fa; border: 1px solid #e3e8ee; border-radius: 6px;
+           font-size: 11.5px; color: #5b6472; }
+.offnote b { color: #3d4550; }
+body:not(.cl-off) .offnote { display: none; }
+
+/* 목업 전용 — 상태를 바꿔 보는 조작줄 */
+.mockctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.mockctl button { padding: 3px 10px; font-size: 11px; }

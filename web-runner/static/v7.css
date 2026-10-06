@@ -1,0 +1,26 @@
+/* v7 전용. ★ style.css → v5.css → v6.css → v7.css 순서가 전제다. */
+
+/* ── 「확인할 것」을 「엑셀 기입」으로 바꾼다 ────────────────────────────
+   v6 까지의 .todo 는 필터 칩 다섯 개였는데, 바로 아래 필터 줄이 이미 같은 일을
+   했고 「사람 수정」은 할 일이 아니라 정보였다.
+   남는 둘(자동 Fail 확인 대기 · 매핑 오류)은 사실 **저장을 막는 조건**이고
+   (docs/CHECKLIST.md §8 — 기입에서 빠진다), 「기입 대기 N건」은 저장 버튼이
+   처리할 숫자다. → 숫자와 버튼을 한자리에 둔다. 왼쪽 엑셀 패널은 없앴다. */
+.savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+           padding: 10px 12px; margin-bottom: 10px;
+           background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+.savebar .lead { font-size: 13px; color: #2c333c; }
+.savebar .lead b { color: #2f5bb7; }
+.savebar .hint { font-size: 11px; color: var(--muted); }
+.savebar .sep { width: 1px; align-self: stretch; background: var(--line2); }
+
+.blockgrp { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.blockgrp > .lab { font-size: 11.5px; font-weight: 700; color: #b03030; }
+.blockgrp.clean > .lab { color: #137333; font-weight: 600; }
+
+/* 0 건이면 칩 자체를 내보내지 않는다 — 「0」을 보여 줄 이유가 없다 */
+.savebar .tbtn.zero { display: none; }
+
+@media (max-width: 1100px) {
+  .savebar .sep { display: none; }
+}
