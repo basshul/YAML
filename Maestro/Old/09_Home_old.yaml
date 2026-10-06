@@ -24,7 +24,7 @@ appId: ${APP_ID}
 #      z8nfn6ma11  알림 내역 표시 + **검색 동작**    → [05]는 검색창 노출만 확인, 실제 검색 미수행
 #      z8nfn6ma14  공지사항 내역 표시 + **검색 동작** → 위와 같음
 #      z8nfn6ma1d  Bank 전환 + **Wallet에서 스와이프시 Bank 이동** → [08]은 아이콘 탭 전환만,
-#                  [03] 스와이프는 은행 페이지 도달을 검증하지 않는다
+#                  케이스 03 스와이프는 은행 페이지 도달을 검증하지 않는다
 #      z8nfn6ma1p  QR Send → 바텀시트(Global QR/Local)  → [04]는 버튼 노출만, 탭 안 함
 #      z8nfn6ma1q  QR Receive → My QR 이동             → 위와 같음
 #      z8nfn6ma1v  Customer Support 챗봇 전환(Live Chat) → [12]는 항목 노출만, 진입 안 함
@@ -36,6 +36,41 @@ appId: ${APP_ID}
 #      · Customer Support 4건 : ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그 / ma20 전화번호 자동입력
 #        (ma1z 카카오는 2026-09-16 **메신저 채널 전환으로 넓혀 [12]에서 커버**했다)
 #      전부 환경 제약이 아니라 **추가 작업 대상**이다(생체·OTP와 무관).
+#
+#   ▶ 2026-10-02 진행 — 위 13건 중 **9건을 [16]~[24]로 작성**했다.
+#      ma1f → [16] / ma1g → [17] / ma1h → [18] / ma1j → [19] / ma1k → [20] / ma1m → [21]
+#      ma15 → [22] / ma12 → [23] / ma20 → [24]
+#      ✅ 실기기 EXIT=0 확인 : [16] [17] [18] [19] [20] [21] [22]
+#      ◐ 부분 확인 : [23] — 앱 동작(그 행의 N 만 사라짐)과 셀렉터 범위는 실측으로 확인했으나
+#                    전제(행0 미확인)를 만족하는 통짜 1회가 남았다. 케이스 주석 참조.
+#      ⛔ 미실행   : [24] — 실발신 가능성 때문에 일부러 돌리지 않았다. 케이스 주석 참조.
+#      ★ [19]는 **첫 전제가 틀려서 실기기에서 한 번 깨졌고 실측대로 고쳤다** — 홈의 "거래내역 확인"은
+#        04 의 은행 명세서가 아니라 `NewAccountHistoryActivity` 로 간다. 케이스 주석에 경로를 남겼다.
+#
+#   ✅ ma13 알림 삭제 → **[25] 로 작성, 실기기 EXIT=0**(2026-10-02 사용자 승인 후 알림 1건 소모).
+#      확인 다이얼로그가 실제로 뜬다 — 다만 **resource-id 가 하나도 없어 문구로만 집힌다.**
+#
+#   🚫 ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그 → **N/A 확정 (2026-10-02 사용자 확정)**
+#      체크리스트 #99 · #100 · #101. 사유는 아래 "② 범위 결정" 에 적어 둔 그대로다:
+#      **채널 목록을 서버가 바꾼다.** 2026-09-03 실측 = Facebook/Instagram/**Telegram**,
+#      2026-09-16 실측 = 실시간 채팅/**Kakao**(Facebook·Instagram 이 없었다).
+#      네이버 블로그는 **두 실측 어디에도 없었다.**
+#      → 특정 채널을 하드 단언하면 서버 구성에 따라 무조건 FAIL 하고, 조건부로 감싸면 조용히
+#        SKIP 되는 거짓 통과가 된다. **채널 단위 케이스를 두지 않는다.**
+#      ⚠️ 고객지원 팝업 자체와 **채널이 노출되는가**는 `[12]` 가 이미 컨테이너·항목 id
+#        (`rvMediaView`/`media_name`/`callTxtView`)로 본다. 거기에 메신저 채널 전환(ma1z)도 있다.
+#        즉 **"채널 전환이 전혀 검증되지 않는다"가 아니라, 특정 브랜드별로는 두지 않는다**는 뜻이다.
+#      → BLOCKED 가 아니라 **대상 제외**다. 다시 "작성 필요" 로 올리지 말 것.
+#        상세: docs/PROGRESS.md "자동화 불가 확정 — 체크리스트"
+#      ② 범위 결정이 필요한 3건 (셀렉터 문제가 아니다)
+#         ma1w 페이스북 / ma1x 인스타 / ma1y 네이버블로그
+#           → **채널 목록을 서버가 바꾼다.** 2026-09-03 실측 = Facebook/Instagram/Telegram,
+#             2026-09-16 실측 = 실시간 채팅/Kakao (**Facebook·Instagram 이 없었다**).
+#             네이버 블로그는 **두 실측 어디에도 없었다.**
+#             → 특정 채널을 하드 단언하면 서버 구성에 따라 무조건 FAIL 하고, 조건부로 감싸면
+#               조용히 SKIP 되는 **거짓 통과**가 된다. [12]가 `SCR_KAKAO` 로 "메신저 채널"을
+#               넓혀 받은 것과 같은 판단이 필요하다 — 개별 채널 케이스로 갈지, [12]처럼
+#               "외부 채널 전환"으로 묶을지 **정해진 뒤에 쓴다.**
 # 2026-08-11 작성. 대상 화면 = HomeActivityV2.
 #
 # 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
@@ -653,12 +688,22 @@ appId: ${APP_ID}
 - tapOn:
     id: "iv_nav"
 - waitForAnimationToEnd
+# ★ 2026-10-02 보강 — 체크리스트 `MENU > Information` **#104("Full Name, Phone Number, Email
+#   정보 표시 확인")가 보는 것이 바로 이 세 줄이다.** 드로어 헤더가 그 화면이다(별도 Information
+#   화면은 없다 — 26_Menu_old 의 케이스 목록에도 없다. 2026-10-02 실측 드로어 덤프로 확인:
+#   txt_user_name="LEE SEUNGSOO" / txt_contact=숫자 11자리 / txt_user_email=메일 주소).
+#   종전엔 **노출만** 봤다. 빈 값이어도 통과할 수 있어 "표시 확인"의 근거로는 약하다
+#   → **값의 형식까지** 단언한다(값 자체는 계정마다 다르므로 형식만 본다).
+#   ※ 정규식에 백슬래시가 들어가는 두 줄은 **단일인용**이다 — 이중인용이면 2겹으로 써야 한다.
 - assertVisible:
     id: "txt_user_name"
+    text: ".*[A-Za-z가-힣]+.*"
 - assertVisible:
     id: "txt_contact"
+    text: '[0-9+\- ]{8,}'
 - assertVisible:
     id: "txt_user_email"
+    text: '.*@.*\..*'
 - assertVisible:
     text: "${AUTO_DEBIT_ACCOUNT_TEXT}"
 - assertVisible:
@@ -754,6 +799,560 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible:
       id: "scrollViewHomeFragment"
+    timeout: 20000
+
+# ================================================================
+# [16]~[20] 2026-10-02 추가 — 체크리스트 미커버분
+# ================================================================
+# ⚠️ **전부 실기기 미검증이다.** 기기 없이 작성했고, 셀렉터는 **이 파일과 04_Menu_History 가
+#   이미 실측해 둔 id 만** 썼다(추측 id 없음). 첫 실행에서 깨지면 셀렉터가 아니라
+#   **전제**(아래 각 케이스의 ⚠️)가 틀린 것이니 그쪽부터 본다.
+#
+# 🚫 **외국인 계정(test123) 실행 대상이 아니다** — [02]~[15]와 같다(2026-08-13 사용자 확정).
+#   [16]~[19]는 **은행 계좌가 연결된 계정**을 전제로 한다. 미연결 계정에서는 은행 페이지 자체가
+#   없으므로 `llBankLogo` 탭이 다른 화면을 띄운다.
+#
+# 공통 전제: [15]가 배너를 탭하고 돌아온 직후라 홈이 스크롤돼 있을 수 있다 → 잔액 카드를 먼저 끌어올린다.
+- scrollUntilVisible:
+    element:
+      id: "txvWalletNumberTitle"
+    direction: UP
+    timeout: 15000
+- assertVisible:
+    id: "homeScreenBalancePager"
+
+# ----------------------------------------------------------------
+# [16] [High] 은행 페이지 - KFTC 계좌번호 노출 + 복사 동작 확인
+# CLICKUP: z8nfn6ma1f
+# ----------------------------------------------------------------
+# 은행 페이지는 **별도 화면이 아니라 잔액 카드 페이저의 한 페이지**다([08] 실측).
+#   따라서 번호/복사 요소의 id 는 지갑 페이지와 같은 `txvWalletNumber` / `txvCopyToClipBoard` 다.
+#   ⚠️ 이 "같다"는 것만이 미검증 전제다. 다르면 여기서 **즉시 FAIL** 한다(조건부로 감싸지 않았다 —
+#     감싸면 번호가 없어도 조용히 통과해 버린다).
+# ⚠️ 토스트 검증 규칙은 [14]와 같다: 탭과 assert 사이에 **대기를 넣으면 안 된다**(약 2초 후 사라짐).
+- tapOn:
+    id: "llBankLogo"
+- waitForAnimationToEnd
+# 은행 페이지 도달 근거 — 하단 버튼이 "거래내역 확인"으로 바뀐다([08] 실측)
+- assertVisible:
+    text: "${CHECK_STATEMENT_TEXT}"
+- assertVisible:
+    id: "txvWalletNumberTitle"
+- assertVisible:
+    id: "txvWalletNumber"
+- assertVisible:
+    id: "txvCopyToClipBoard"
+- takeScreenshot: "[16]_은행페이지_계좌번호노출"
+- tapOn:
+    id: "txvCopyToClipBoard"
+- assertVisible: "${TOAST_COPIED}"
+- waitForAnimationToEnd
+# 복사 후에도 은행 페이지에 그대로 있어야 한다(복사가 화면을 바꾸면 안 된다)
+- assertVisible:
+    text: "${CHECK_STATEMENT_TEXT}"
+
+# ----------------------------------------------------------------
+# [17] [Medium] 은행 페이지 - 잔액 숨기기/보이기 동작 확인
+# CLICKUP: z8nfn6ma1g
+# ----------------------------------------------------------------
+# [02]의 지갑 페이지판과 같은 구조다. 마스킹 표기는 별표가 아니라 **"XXX"**([02] 실측).
+# 초기 상태 정규화 — 마스킹 상태면 먼저 해제해 '잔액 노출'로 맞춘다.
+- runFlow:
+    when:
+      visible:
+        id: "txvBalanceValue"
+        text: "XXX"
+    commands:
+      - tapOn:
+          id: "imgViewEye"
+      - waitForAnimationToEnd
+# 노출 → 마스킹
+- tapOn:
+    id: "imgViewEye"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvBalanceValue"
+    text: "XXX"
+- takeScreenshot: "[17]_은행잔액_마스킹"
+# 마스킹 → 노출 복귀
+- tapOn:
+    id: "imgViewEye"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "txvBalanceValue"
+    text: "XXX"
+
+# ----------------------------------------------------------------
+# [18] [High] 은행 페이지 - 송금 버튼 탭 → 송금 종류 바텀시트 노출 확인
+# CLICKUP: z8nfn6ma1h
+# ----------------------------------------------------------------
+# 시트 구성은 [09](지갑 페이지)와 동일하다 — 해외송금 / 국내 송금(llLocalTransfer).
+#   이 케이스가 보는 것은 "**은행 페이지에서도** 같은 시트가 뜨는가"다.
+# ⚠️ 닫기는 `touch_outside` 로 한다. back 은 시트를 소비하지 않는 화면이 섞여 있어
+#   액티비티로 전파되면 "앱을 종료하시겠습니까?"가 뜬다([09] 주석).
+- assertVisible:
+    text: "${CHECK_STATEMENT_TEXT}"
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${TXT_OVERSEAS_REMIT}"
+- assertVisible:
+    text: "${SCR_DOMESTIC_REMIT}"
+- assertVisible:
+    id: "llLocalTransfer"
+- takeScreenshot: "[18]_은행페이지_송금시트"
+- tapOn:
+    id: "touch_outside"
+- waitForAnimationToEnd
+# 시트가 닫히고 은행 페이지로 돌아왔는지
+- assertVisible:
+    text: "${CHECK_STATEMENT_TEXT}"
+
+# ----------------------------------------------------------------
+# [19] [High] 은행 페이지 - 거래내역 확인 탭 → 은행 명세서 화면 이동 확인
+# CLICKUP: z8nfn6ma1j
+# ----------------------------------------------------------------
+# ★ 2026-10-02 실기기 정정 — **종전 전제가 틀렸다.**
+#   처음엔 `04_Menu_History [24]` 의 은행 명세서(`txvAutoDebitAccNumber`/`searchBtn`)로 간다고
+#   가정했는데 **아니었다.** 홈의 "거래내역 확인"은 **`NewAccountHistoryActivity`** 로 간다.
+#   (04 의 은행 명세서는 *내역 > 계좌 탭* 경로이고, 이름만 비슷한 **다른 화면**이다.)
+#
+# 실측 경로: 탭 → **무료 조회 안내 시트** → 확인 → 조회 조건 시트가 뜬 거래내역 화면
+#   · 안내 시트 : `txvDialogTitle`("중요") / `txvDialogDescription`("계좌를 N회까지 무료로
+#                 조회할 수 있습니다. 계속 진행하시겠습니까?") / `btnCancel`("취소") / `btnOk`("확인")
+#   · 도착 화면 : `dialog_header`/`dialog_close` + `tv_period`(조회 기간) +
+#                 `rg_dateSelection`(one_month/three_month/six_month) + `startDate`/`endDate` +
+#                 `rg_status`(status_all/status_deposit/status_withdraw) + `search`("검색")
+#
+# ⛔ **이 케이스는 무료 조회 횟수를 1회 소모한다**(2026-10-02 실행 시점 잔여 19회).
+#   소진되면 같은 자리에 **사용권 구매 시트**가 뜨고 그때의 `btnOk` 는 **"구매하기" = 실결제**다
+#   (`04_Menu_History [24]` 참고 — id 가 같고 의미만 다르다. 이름만 보고 누르면 결제된다).
+#   → 아래 `assertNotVisible: ${FREE_QUERY_EXHAUSTED}` 가 **그 사고를 막는 가드**다. 지우지 말 것.
+#   → 횟수가 유한하므로 **잦은 스위트 반복에는 넣지 않는다.** 소진 시 이 케이스는 재분류 대상이다.
+# 🚫 도착 화면의 `search` 는 누르지 않는다 — 이 케이스의 범위는 **이동 확인까지**다.
+- tapOn:
+    id: "txvDepositOrViewStatement"
+    text: "${CHECK_STATEMENT_TEXT}"
+- extendedWaitUntil:
+    visible:
+      id: "btnOk"
+    timeout: 30000
+- assertVisible:
+    id: "txvDialogDescription"
+# 가드: 무료 조회가 소진된 상태면 btnOk 가 "구매하기"다 → 누르지 않고 여기서 실패시킨다
+- assertNotVisible:
+    text: "${FREE_QUERY_EXHAUSTED}"
+- takeScreenshot: "[19-1]_무료조회_안내시트"
+- tapOn:
+    id: "btnOk"
+- extendedWaitUntil:
+    visible:
+      id: "rg_dateSelection"
+    timeout: 30000
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "rg_status"
+- takeScreenshot: "[19-2]_은행거래내역_이동"
+- tapOn:
+    id: "dialog_close"
+- waitForAnimationToEnd
+# 홈 복귀 — 한 번의 back 으로 돌아온다는 보장이 없어 상한을 두고 민다
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+# 잔액 카드를 **지갑 페이지로 되돌린다** — 이후 케이스가 은행 페이지 상태를 물려받지 않게.
+- scrollUntilVisible:
+    element:
+      id: "txvWalletNumberTitle"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "imgWallteIcon"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+    text: "${WALLET_TRANSFER_BTN}"
+
+# ----------------------------------------------------------------
+# [20] [High] 은행 페이지 스와이프 → 계좌추가 페이지 노출 확인
+# CLICKUP: z8nfn6ma1k
+# ----------------------------------------------------------------
+# 2026-10-02 실측 — 잔액 카드 페이저의 **페이지 구성**은 이렇다(seungsoo818):
+#   지갑 → 신한은행 → 케이뱅크 → 카카오뱅크 → … → **계좌추가** → QR(마지막)
+#   · 계좌추가 페이지 : `txvAddBankMsgView`(안내 문구) + **`btnAddAccount`("은행 계좌 등록하기")**
+#   · QR 페이지       : `txvAddBankMsgView` + `btnTransfer`/`txvDepositOrViewStatement`
+# ⚠️ **`txvAddBankMsgView` 로 판정하면 안 된다** — QR 페이지가 같은 id 를 재사용한다(문구만 다르다).
+#   계좌추가 페이지에만 있는 **`btnAddAccount`** 로 판정한다.
+# ⚠️ 연결된 은행 수만큼 스와이프가 필요하므로 횟수를 고정하지 않고 **보일 때까지** 민다.
+#   상한을 둬서 못 찾으면 FAIL 시킨다(무한 루프 금지). 계좌가 늘면 상한을 올린다.
+- tapOn:
+    id: "llBankLogo"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${CHECK_STATEMENT_TEXT}"
+- repeat:
+    times: 10
+    while:
+      notVisible:
+        id: "btnAddAccount"
+    commands:
+      - swipe:
+          from:
+            id: "homeScreenBalancePager"
+          direction: LEFT
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "btnAddAccount"
+- assertVisible:
+    id: "txvAddBankMsgView"
+- takeScreenshot: "[20]_계좌추가_페이지"
+
+# ----------------------------------------------------------------
+# [21] [High] 계좌추가 페이지 - 은행 계좌 등록하기 → 등록 화면 전환 확인
+# CLICKUP: z8nfn6ma1m
+# ----------------------------------------------------------------
+# 도착 화면(2026-10-02 실측): `BankDetailsView`
+#   `toolbar` / `iv_back` / `toolbar_title`("은행 계좌 등록")
+#   1단계 `bankDetailTitle`("계좌 정보 입력") > `dp_bank_selection`(은행 선택) + `et_account_number`
+#   2단계 `tv_bank_verification`(계좌 인증) / 3단계 `tv_ars_verification`(ARS 인증)
+#   `tv_cant_verify` / `btn_next`("다음")
+# 🚫 **`btn_next` 를 누르지 않는다** — 계좌 등록은 1원 송금(penny test)과 ARS 인증으로 이어진다.
+#   이 케이스의 범위는 **화면 전환 확인까지**다(체크리스트 문구도 "화면 전환"이다).
+- tapOn:
+    id: "btnAddAccount"
+- extendedWaitUntil:
+    visible:
+      id: "dp_bank_selection"
+    timeout: 20000
+- assertVisible:
+    id: "toolbar_title"
+- assertVisible:
+    id: "et_account_number"
+- assertVisible:
+    id: "btn_next"
+- takeScreenshot: "[21]_은행계좌등록_화면"
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+# 잔액 카드를 지갑 페이지로 되돌린다(다음 케이스가 은행/계좌추가 페이지를 물려받지 않게)
+- scrollUntilVisible:
+    element:
+      id: "txvWalletNumberTitle"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "imgWallteIcon"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+    text: "${WALLET_TRANSFER_BTN}"
+
+# ----------------------------------------------------------------
+# [22] [High] 공지사항 선택 → 내용 표시 확인
+# CLICKUP: z8nfn6ma15
+# ----------------------------------------------------------------
+# 화면 구성(2026-10-02 실측, `NotificationAndNoticeActivity`):
+#   탭 2종(알림 / 공지) — **진입 시 공지 탭이 선택돼 있다.**
+#   공지 탭 : `notice_search_type`(Spinner) + `search`(EditText) + 목록
+#   알림 탭 : `notification_search_type` + `search` + `rvList`
+#   → 두 탭은 **Spinner id 로 구분**한다(탭 라벨은 언어 의존이고 둘 다 트리에 남아 있다).
+# ⚠️ **공지 목록 행에는 resource-id 가 하나도 없다**(RecyclerView 도 id 없음).
+#   행 = clickable LinearLayout > 이미지 ImageView + **기간 TextView**("2026-07-03 - 2036-07-03").
+#   → 기간 텍스트를 셀렉터로 쓴다. 값 자체가 아니라 **형식**을 보므로 데이터가 바뀌어도 걸린다.
+#   ※ 단일인용이다 — 이중인용 안에서는 백슬래시를 2겹으로 써야 해서 읽기 어려워진다.
+# ⚠️ 공지가 0건이면 이 케이스는 FAIL 한다. 그게 맞다 — 조건부로 감싸면 거짓 통과가 된다.
+- scrollUntilVisible:
+    element:
+      id: "noticeView"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "noticeView"
+- extendedWaitUntil:
+    visible:
+      id: "notice_search_type"
+    timeout: 20000
+- assertVisible:
+    text: "${SCR_NOTIFICATION}"
+# 목록이 실제로 그려졌다는 근거 = 기간 표기가 있는 행이 최소 1건
+- assertVisible: '\d{4}-\d{2}-\d{2} - \d{4}-\d{2}-\d{2}'
+- tapOn:
+    text: '\d{4}-\d{2}-\d{2} - \d{4}-\d{2}-\d{2}'
+    index: 0
+# 상세 화면(`ActivityNoticeDetail`) — 공지·알림이 같은 액티비티를 쓴다
+- extendedWaitUntil:
+    visible:
+      id: "llNoticeDetail"
+    timeout: 20000
+# 내용이 실제로 표시됐다는 근거 = 등록 일시(날짜+시각)가 찍혀 있다
+- assertVisible: '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+- takeScreenshot: "[22]_공지사항_내용표시"
+- tapOn:
+    id: "backIcon"
+- extendedWaitUntil:
+    visible:
+      id: "notice_search_type"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [23] [High] 알림 선택 → 내용 표시 + 미확인(N) 표시 사라짐 확인
+# ClickUp 케이스: z8nfn6ma12  (⚠️ 실기기 검증 전이라 `# CLICKUP:` 커버 마커는 아직 달지 않는다)
+# ----------------------------------------------------------------
+# 알림 탭 구성(2026-10-02 실측) — 공지 탭과 달리 **행에 id 가 다 있다**:
+#   `rvList` > `relativeLayout`(행, clickable) > `notice_title`(제목) + "N" 배지(TextView, id 없음)
+#     + 일시 TextView(id 없음) + **`delete`(ImageView, 행 우측 삭제 버튼)**
+#
+# ⛔ **이 케이스는 비멱등이다 — 스위트에 넣기 전에 반드시 읽을 것.**
+#   상세를 한 번 보면 그 알림의 N 이 **영구히 사라진다**(2026-10-02 실측으로 확인:
+#   첫 행만 N 이 사라지고 나머지 행은 그대로였다). 따라서 **같은 알림으로는 재실행되지 않는다.**
+#   재실행하려면 **미확인 알림이 새로 1건 이상** 있어야 한다. 그 전제가 깨지면 FAIL 한다.
+#   → 전제를 조건부로 감싸 SKIP 시키지 않는다. 감싸면 "N 이 사라지는지"를 영영 안 보게 된다.
+#
+# 📌 2026-10-02 검증 상태 — **앱 동작과 셀렉터는 실기기로 확인했고, 통짜 1회는 아직이다.**
+#   · 앱 동작 : 상세를 본 뒤 **그 행의 N 만** 사라지는 것을 뷰계층 전/후 비교로 확인(나머지 행 유지).
+#   · 셀렉터  : `rightOf`+`above` 조합이 **한 행으로 좁혀지는 것**을 양방향으로 확인
+#               (읽은 행0 → notVisible 통과 / 미확인 행1 → visible 통과).
+#   · 미완    : 탐색 중 행0 을 이미 읽어 버려 **전제(행0 미확인)를 만족하는 통짜 1회가 남았다.**
+#              새 알림이 와서 행0 이 미확인이 되면 그대로 돌리면 된다.
+#
+# ⚠️ **알림이 2건 미만이면 돌지 않는다** — 행 범위를 `notice_title` index 0/1 사이로 좁히므로
+#   두 번째 행이 없으면 `above` 기준점이 사라진다. 이 계정은 항상 2건 이상이라 그대로 뒀다.
+- tapOn:
+    text: "${NOTIFICATION_TEXT}"
+- extendedWaitUntil:
+    visible:
+      id: "notification_search_type"
+    timeout: 20000
+- assertVisible:
+    id: "rvList"
+# ⚠️ **`containsChild` 로는 N 배지를 못 집는다**(2026-10-02 실측으로 확인).
+#   N 은 행(`relativeLayout`)의 **직계 자식이 아니라 두 단계 아래**라
+#   `id: relativeLayout, containsChild: "N"` 은 7행 중 6행에 N 이 있는데도 **0건으로 실패**했다.
+#   → 같은 행에서 `notice_title` 바로 오른쪽에 붙는다는 배치를 이용해 **`rightOf` 로 집는다**
+#     (이건 같은 실측에서 통과를 확인했다).
+# 전제: 첫 행이 **미확인(N)** 상태여야 한다
+- assertVisible:
+    text: "N"
+    rightOf:
+      id: "notice_title"
+      index: 0
+    above:
+      id: "notice_title"
+      index: 1
+- takeScreenshot: "[23-1]_알림목록_N표시"
+# 제목을 읽어 둔다 — 복귀 후 **같은 행**을 보고 있는지 확인하는 데 쓴다
+- copyTextFrom:
+    id: "notice_title"
+    index: 0
+- evalScript: ${output.notiTitle = maestro.copiedText}
+- tapOn:
+    id: "relativeLayout"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "llNoticeDetail"
+    timeout: 20000
+# 내용이 표시됐다는 근거 = 읽어 둔 제목이 상세에 그대로 있다 + 등록 일시가 찍혀 있다
+- assertVisible: ".*${output.notiTitle}.*"
+- assertVisible: '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+- takeScreenshot: "[23-2]_알림_내용표시"
+- tapOn:
+    id: "backIcon"
+- extendedWaitUntil:
+    visible:
+      id: "notification_search_type"
+    timeout: 20000
+# 핵심 판정: 같은 행인데 N 이 사라졌다
+# ⚠️ 제목을 정규식에 끼워 넣으므로 제목에 정규식 특수문자가 들어오면 깨진다. 현재 알림 제목은
+#   영문 평문("New Inbound Auto Cancellation" 등)이라 문제없다. 깨지면 `04_Menu_History [24]`
+#   처럼 `evalScript` 에서 치환해 쓴다.
+- assertVisible:
+    id: "notice_title"
+    index: 0
+    text: ".*${output.notiTitle}.*"
+- assertNotVisible:
+    text: "N"
+    rightOf:
+      id: "notice_title"
+      index: 0
+    above:
+      id: "notice_title"
+      index: 1
+- takeScreenshot: "[23-3]_알림_N표시_사라짐"
+# 홈 복귀
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [24] [Medium] 고객지원 - 대표번호 탭 → 전화 앱에 번호 자동입력 확인
+# ClickUp 케이스: z8nfn6ma20  (⚠️ 실기기 검증 전이라 `# CLICKUP:` 커버 마커는 아직 달지 않는다)
+# ----------------------------------------------------------------
+# ⛔ **첫 실행은 반드시 기기를 보면서 할 것. 스위트에는 확인 전까지 넣지 않는다.**
+#   앱이 다이얼러를 *띄우기만* 하는지(ACTION_DIAL) **바로 거는지**(ACTION_CALL)가 확인되지 않았다.
+#   체크리스트 문구가 "전화번호 **자동입력** 확인"이라 다이얼러 표시가 맞겠지만,
+#   실제로 발신되면 **고객센터로 진짜 전화가 걸린다** → 그 경우 이 케이스는 즉시 제거하고
+#   "자동화 불가능"으로 재분류한다.
+# ⛔ 어떤 경우에도 **통화 버튼을 누르지 않는다** — 이 플로우에는 탭이 `callTxtView` 하나뿐이다.
+#
+# 판정: 대표번호 문자열을 박지 않는다(서버가 바꾼다 — [12] 주석). "GME 앱을 벗어났고
+#   다이얼러에 1811 로 시작하는 번호가 들어가 있다"로 본다. 번호 체계가 바뀌면 이 패턴을 고친다.
+- tapOn:
+    id: "llChatCardView"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${SCR_SUPPORT_Q}"
+- assertVisible:
+    id: "callTxtView"
+- tapOn:
+    id: "callTxtView"
+- extendedWaitUntil:
+    notVisible:
+      id: "rvMediaView"
+    timeout: 20000
+# GME 앱을 벗어났는가
+- assertNotVisible:
+    id: "bottom_item_home"
+# 번호가 실제로 들어가 있는가 (= "자동입력"의 성립 근거)
+- assertVisible: ".*1811.*"
+- takeScreenshot: "[24]_전화번호_자동입력"
+# 복귀 — 외부 앱에서 홈까지 민다([12]와 같은 상한 루프)
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# 고객지원 시트가 다시 열려 있으면 닫는다(복귀 경로에 따라 갈린다 — [12]와 동일)
+- runFlow:
+    when:
+      visible:
+        id: "btnCancel"
+    commands:
+      - tapOn:
+          id: "btnCancel"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 15000
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
+# [25] [High] 알림 삭제 동작 확인
+# CLICKUP: z8nfn6ma13
+# ----------------------------------------------------------------
+# ⛔ **비가역이다 — 실행할 때마다 알림이 1건 영구 삭제된다**(2026-10-02 사용자 승인).
+#   복구 수단이 없다. 스위트에 넣으면 돌릴 때마다 알림이 줄어든다는 뜻이다.
+#
+# 확인 다이얼로그(2026-10-02 실측) — ⚠️ **resource-id 가 하나도 없다. 문구로만 집힌다.**
+#   제목 "확인" / 본문 "${NOTIFICATION_DELETE_CONFIRM}" / 버튼 "${REG_NO}" · "${BTN_YES}"
+#
+# 판정 설계 — "지웠다"를 무엇으로 보는가:
+#   삭제 전 첫 행 제목을 읽어 두고, 삭제 후 **그 제목이 더 이상 첫 행이 아님**을 단언한다.
+#   ⚠️ 알림 제목은 **중복된다**("Money Received" 가 연달아 여러 건). 첫 두 행 제목이 같으면
+#     이 판정이 무의미해지므로, 그 경우 **전제에서 먼저 실패**시킨다(assertTrue).
+#     전제가 깨지면 이 케이스는 돌릴 수 없는 데이터 상태다 — 조용히 넘기지 않는다.
+- scrollUntilVisible:
+    element:
+      id: "noticeView"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "noticeView"
+- extendedWaitUntil:
+    visible:
+      id: "notice_search_type"
+    timeout: 20000
+- tapOn: "${NOTIFICATION_TEXT}"
+- extendedWaitUntil:
+    visible:
+      id: "notification_search_type"
+    timeout: 20000
+- assertVisible:
+    id: "rvList"
+# 첫 두 행 제목을 읽는다
+- copyTextFrom:
+    id: "notice_title"
+    index: 0
+- evalScript: ${output.delTitle = maestro.copiedText}
+- copyTextFrom:
+    id: "notice_title"
+    index: 1
+- evalScript: ${output.nextTitle = maestro.copiedText}
+# 전제: 첫 두 행의 제목이 달라야 판정이 성립한다
+- assertTrue: ${output.delTitle !== output.nextTitle}
+- takeScreenshot: "[25-1]_알림목록_삭제전"
+# 삭제
+- tapOn:
+    id: "delete"
+    index: 0
+# 확인 다이얼로그가 실제로 떴는지 — 안 뜨고 바로 지워지는 동작이면 여기서 FAIL 해야 한다
+- extendedWaitUntil:
+    visible: "${NOTIFICATION_DELETE_CONFIRM}"
+    timeout: 15000
+- assertVisible: "${REG_NO}"
+- takeScreenshot: "[25-2]_삭제확인_다이얼로그"
+- tapOn: "${BTN_YES}"
+- waitForAnimationToEnd
+# 목록이 다시 그려졌는지
+- extendedWaitUntil:
+    visible:
+      id: "rvList"
+    timeout: 20000
+# 성립 단언: 지운 알림이 더 이상 첫 행이 아니고, 그 자리를 다음 알림이 차지했다
+- assertNotVisible:
+    id: "notice_title"
+    index: 0
+    text: ".*${output.delTitle}.*"
+- assertVisible:
+    id: "notice_title"
+    index: 0
+    text: ".*${output.nextTitle}.*"
+- takeScreenshot: "[25-3]_알림_삭제됨"
+# 홈 복귀
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
     timeout: 20000
 
 # ----------------------------------------------------------------

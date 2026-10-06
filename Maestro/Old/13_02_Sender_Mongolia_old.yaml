@@ -116,7 +116,7 @@ appId: ${APP_ID}
 - runFlow: "_enter_receive_overseas_old.yaml"
 - runFlow: "_inbound_goto_sender_list_old.yaml"
 
-# ── [07-1] 몽골 송금인 등록 (2026-08-07 추가 / 2026-09-07 즉시 삭제 폐지 — 끝에서 일괄 삭제) ──
+# ── [07-1] [High] 몽골 송금인 등록 (2026-08-07 추가 / 2026-09-07 즉시 삭제 폐지 — 끝에서 일괄 삭제) ──
 # 몽골 폼은 인도네시아와 **완전히 다름**: 필드 14개(드롭다운 5 + 날짜피커 3).
 #   인도네시아처럼 input_edittext index로만 다루면 화면 밖 필드를 못 눌러 실패하므로
 #   각 필드의 **힌트 텍스트**(= input_edittext의 text 속성)로 scrollUntilVisible 후 탭한다.

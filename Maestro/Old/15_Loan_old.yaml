@@ -41,11 +41,13 @@ appId: ${APP_ID}
 #   → **to do 유지.** 커버 불가 사유는 앱 결함이 아니라 **계정/상품 노출 조건**이다.
 #   ※ 종전의 "2026-08-19 레이트 리밋으로 케이스 ID 확인 못 함" 은 **해소됐다**(2026-09-07 확인, 위 참조).
 #     상태가 `to do` 인 것은 갱신을 못 해서가 아니라 **커버하지 않기로 한 결과**다.
+#   ※ 2026-10-02: 이 항목은 **Android N/A 로 확정**됐다(하단 🚫 블록). ClickUp 상태 반영은 미처리.
 #
 # 케이스:
 #   [01] [High] Loan - **개인 금융 메뉴 미노출 확인** (조건 미충족 계정에서의 정상 동작)
-#   ⏸ 보류: Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
-#      → 조건을 갖춘 계정이 준비되면 추가한다(셀렉터는 아래 주석에 보존).
+#   🚫 Android N/A: Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
+#      → **Android 는 N/A 로 확정**(2026-10-02 사용자 결정). **iOS 는 확인 가능한 항목**이다.
+#        사유·셀렉터·iOS 전환 메모는 파일 하단 "🚫 [Android N/A]" 블록에 있다.
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\15_Loan_old.yaml"
@@ -174,9 +176,20 @@ appId: ${APP_ID}
 - takeScreenshot: "[01-2]_개인금융_미노출확인"
 
 # ----------------------------------------------------------------
-# ⏸ [보류] Loan - Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
+# 🚫 [Android N/A] Loan - Personal Finance 진입 → GME Finance 타이틀·아이콘 확인
+#    (체크리스트 Checklist(Livetest) #370 — 원문 "iOS: Loan / Android: Personal Finance
+#     Title & icon Check", 즉 **플랫폼별 표기를 비교하는 항목**이다)
 # ----------------------------------------------------------------
-# 조건을 갖춘 계정이 준비되면 아래를 케이스로 되살린다(2026-07-15 실측 셀렉터).
+# **2026-10-02 사용자 결정 — Android 는 N/A 로 확정한다.**
+#   사유: **Android 에서는 Loan 아이콘이 노출되는 것을 확인하는 것이 거의 불가능하다.**
+#   여기에 메뉴 자체가 조건 미충족으로 노출되지 않는다는 선행 제약이 겹친다(파일 상단 🚫 블록).
+#   → 미완료가 아니라 **플랫폼 제약으로 닫은 항목**이다. 다시 "작성 대상"으로 올리지 말 것.
+#
+# ✅ **iOS 에서는 확인 가능한 항목이다 — 추후 yaml 컨버트 시 케이스로 살린다.**
+#   iOS 플로우를 만들 때 이 블록을 출발점으로 쓴다. 아래 Android 셀렉터는 **"무엇을 보는
+#   케이스였는지"의 참고**이지 그대로 옮길 대상이 아니다(패키지·id 체계가 다르다).
+#
+# 2026-07-15 Android 실측 셀렉터 — 참고용 보존:
 #   - tapOn: "개인 금융"
 #   - extendedWaitUntil: visible: id "…livetest.loan_module:id/titleText"
 #   - assertVisible: "GME Finance"

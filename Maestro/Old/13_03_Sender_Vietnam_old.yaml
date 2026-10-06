@@ -123,7 +123,7 @@ appId: ${APP_ID}
 - runFlow: "_enter_receive_overseas_old.yaml"
 - runFlow: "_inbound_goto_sender_list_old.yaml"
 
-# ── [07-2] 베트남 송금인 등록(신분증 사진 업로드 포함) — 등록만 하고 남긴다([14]가 쓴다) ──
+# ── [07-2] [High] 베트남 송금인 등록(신분증 사진 업로드 포함) — 등록만 하고 남긴다([14]가 쓴다) ──
 # 베트남 폼 필드 8개(드롭다운 4). 몽골과 또 다름 - 국가마다 폼이 완전히 다르다는 점에 주의.
 #   드롭다운 옵션(실기기 확인): Bank=Ngan hang A Chau (ACB) 외 다수(검색창 있음),
 #   Purpose Of Transaction=Living Expenses…, Relationship With Receiver=본인…, Id Type=현지 신분증…

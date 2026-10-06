@@ -1144,13 +1144,142 @@ appId: ${APP_ID}
 
 # ================================================================
 # [History - Coupon Box / Reward Point / Bill Payment]
-# 진입: 선불폰 충전 화면에서 back → 내역 메인 → "청구서"(BillPaymentHistoryActivity).
+# 진입: 선불폰 충전 화면에서 back → 내역 메인 → 쿠폰함 / 리워드 포인트 / "청구서".
 # ※ 내역>청구서는 Bill Payment 내역만 제공(단일 "청구서 내역", 현재 데이터 없음).
-#   쿠폰박스/리워드포인트는 내역(History)에서 접근 불가한 별도 메뉴 → [36][37][38] N/A(범위 밖).
+#
+# ★ 2026-10-02 정정 — 종전 기재 **"쿠폰박스/리워드포인트는 내역에서 접근 불가 → N/A(범위 밖)"**
+#   는 **틀렸다.** 실기기에서 내역 메인 목록을 덤프하니 둘 다 거기 있었다:
+#     송금 / 계좌 / GME Pay / 선불폰 충전 / **쿠폰함** / **리워드 포인트** / 청구서
+#   (행 구성: `rvMainHistory` > `txvHistoryTitle` + `txvHistoryDescription`)
+#   → `[36] [37] [38]` 을 N/A 에서 되살려 케이스로 작성했다(체크리스트 #166 · #167 · #168).
+#   ⚠️ 행 요소는 전부 `clickable=false` 다 — 기존 `${SCR_BILL}` 처럼 **제목 텍스트를 탭**한다
+#     (탭 좌표가 행 안에 떨어져 행 클릭으로 전달된다).
 # ================================================================
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [36] [Medium] History - Coupon Box - 쿠폰 리스트 확인
+# ----------------------------------------------------------------
+# 화면 `NewCouponBoxHistoryActivity`(2026-10-02 실측):
+#   `toolBar` / `iv_back` / `toolbar_title`("쿠폰함")
+#   `transactionTabLayout` — 탭 3종 **사용 가능 / 사용 완료 / 기간 만료** (⚠️ 탭에 id 가 없다 → 문구)
+#   `transactionHistoryViewPager` > `rvCouponCategories`
+#     행 = `imgvCategoryImage` + `txvTitle`(카테고리명) + `txvItemCount`(건수)
+#     실측 카테고리: "모바일 상품권"(0) / **"서비스 쿠폰"**(1)
+# ⚠️ 체크리스트 문구는 "사용가능/사용한/만료된/**서비스쿠폰** 리스트 확인"이다 —
+#   앞 셋은 **탭**, 서비스쿠폰은 **카테고리 행**이라 성격이 다르다. 둘 다 본다.
+# ⚠️ 건수는 계정 데이터에 따라 달라지므로 **값은 보지 않고** 목록이 그려지는 것까지만 본다.
+- assertVisible: "${SCR_COUPON_BOX}"
+- tapOn:
+    text: "${SCR_COUPON_BOX}"
+- extendedWaitUntil:
+    visible:
+      id: "rvCouponCategories"
+    timeout: 20000
+- assertVisible:
+    id: "toolbar_title"
+    text: "${SCR_COUPON_BOX}"
+- assertVisible:
+    id: "transactionTabLayout"
+- assertVisible: "${COUPON_TAB_AVAILABLE}"
+- assertVisible: "${COUPON_TAB_USED}"
+- assertVisible: "${COUPON_TAB_EXPIRED}"
+- assertVisible: "${COUPON_CATEGORY_SERVICE}"
+- takeScreenshot: "[36]_쿠폰함"
+- tapOn:
+    id: "iv_back"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [37] [Medium] History - Reward Point - 필터 **노출** 확인
+# ----------------------------------------------------------------
+# ★ 범위: **필터가 노출되는 것까지만**(2026-10-02 사용자 지시). 기간을 바꿔 검색한 결과까지는
+#   보지 않는다 → 🚫 **`search`("검색")를 누르지 않는다.**
+# 화면 `RewardPointHistoryActivity`(2026-10-02 실측):
+#   `screenTitle`("리워드 포인트") / `btnBack` /
+#   `txvMyRewardPointsTitle`("보유 포인트") + `txvMyRewardPoints` /
+#   `txvCountDownTitle`("30일 이내 소멸 포인트") + `txvCountDownValue` /
+#   `llGoToShop` + `btnContactSupport`("포인트 사용하기") /
+#   **`rlDate`**(clickable) + `txvDateText`("YYYY-MM-DD ~ YYYY-MM-DD") + `imgvFilter`
+# ⚠️ **`imgvFilter` 는 `clickable=false`** 다 — 누를 수 있는 건 감싸는 행 `rlDate` 다
+#   (`21_Card [30]` 의 `imgvArrow` 와 같은 부류: 탭이 COMPLETED 로 찍히는데 아무 일도 안 일어난다).
+# 필터 시트(실측): `design_bottom_sheet` / `dialog_header`("설정") / `dialog_close` /
+#   `tv_period`("조회 기간") / `rg_dateSelection`(`one_month`/`three_month`/`one_year`) /
+#   `dateFilter`(`date1`/`date2`) / `search`("검색")
+- assertVisible: "${DEBUG_MENU_DEEPLINK_REWARD_POINT}"
+- tapOn:
+    text: "${DEBUG_MENU_DEEPLINK_REWARD_POINT}"
+- extendedWaitUntil:
+    visible:
+      id: "screenTitle"
+    timeout: 20000
+- assertVisible: "${MY_REWARD_POINTS}"
+- assertVisible:
+    id: "txvDateText"
+- tapOn:
+    id: "rlDate"
+- extendedWaitUntil:
+    visible:
+      id: "rg_dateSelection"
+    timeout: 20000
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "search"
+- takeScreenshot: "[37]_리워드포인트_필터노출"
+- tapOn:
+    id: "dialog_close"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "txvDateText"
+
+# ----------------------------------------------------------------
+# [38] [Medium] History - Reward Point - [포인트 사용하기] → GME Shop 이동 확인
+# ----------------------------------------------------------------
+# ⚠️ 버튼 라벨은 `btnContactSupport`("포인트 사용하기")지만 **누를 수 있는 건 감싸는 `llGoToShop`** 이다.
+# 🚫 Shop 에서 **상품을 선택하지 않는다** — 구매는 실결제이고, 잔액 부족 시 자동충전이 걸린다
+#   (`21_Card [33-1]` 주석). 이 케이스의 범위는 **이동 확인까지**다.
+- assertVisible: "${GO_TO_GME_SHOP}"
+- tapOn:
+    id: "llGoToShop"
+- extendedWaitUntil:
+    visible:
+      text: "GME Shop"
+    timeout: 30000
+- takeScreenshot: "[38]_리워드포인트_GMEShop이동"
+# 내역 메인 복귀
+# ⚠️ 2026-10-02 실행에서 배운 것 — **back 으로 되짚으면 내역 메인을 지나쳐 홈으로 떨어진다.**
+#   (`llGoToShop` 탭 후에도 `screenTitle` 이 남아 있어 복귀 루프가 SKIP 되고, 이어지는
+#    `btnBack` 한 번이 리워드 화면과 내역 메인을 함께 빠져나왔다.)
+#   스택 모양을 추측하지 않는다 → **홈 셸까지 back 으로 나온 뒤 하단 내비로 내역에 다시 들어간다.**
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+- tapOn:
+    id: "bottom_item_history"
+- extendedWaitUntil:
+    visible:
+      id: "rvMainHistory"
+    timeout: 20000
+
+# ---- 내역 메인 복귀 확인 후 청구서로 ----
 - assertVisible: "${SCR_BILL}"
 - tapOn:
     text: "${SCR_BILL}"
@@ -1196,9 +1325,8 @@ appId: ${APP_ID}
 - assertVisible: "${BILL_PAYMENT_HISTORY_TEXT}"
 
 # ----------------------------------------------------------------
-# [36] Coupon Box - N/A: 쿠폰박스는 내역(History) 탭에서 접근 불가(별도 메뉴) → 본 파일 범위 밖.
-# [37] Reward Point 필터 - N/A: 리워드포인트도 내역(History)에 없음 → 범위 밖.
-# [38] Reward Point → GME Shop - N/A: 동일(범위 밖).
+# 케이스 36·37·38 은 **N/A 가 아니다** — 2026-10-02 에 케이스로 작성했다.
+#   위치는 이 섹션 **앞**(청구서 진입 전, 내역 메인에서 바로 들어간다). 상세는 그쪽 주석 참조.
 # ----------------------------------------------------------------
 
 # ----------------------------------------------------------------
@@ -1356,152 +1484,132 @@ appId: ${APP_ID}
     id: "label"
 
 # ================================================================
-# ⛔ [43]~[48] 카테고리 선택 — **BLOCKED** (2026-09-04 실측)
+# [43]~[48] 카테고리 선택 — **BLOCKED 해제** (2026-10-06 실측, 7.21.0-stag)
 # ================================================================
-#   사용 내역 화면의 카테고리 행이 **아예 눌리지 않는다.**
-#   · 접근성 덤프: `rv_usages` / `image` / `label` / `value` 모두 **clickable=false**
-#     (클릭 가능한 건 `iv_back` / `previous` / `date_filter` / `next` / `view_pie_chart` 뿐).
-#   · Maestro 탭도, `adb shell input tap`으로 행 중앙을 직접 눌러도 **화면이 바뀌지 않았다**
-#     (`총 지출`이 그대로 남아 있음) → 셀렉터 문제가 아니라 **행이 비활성**이다.
-#   · 2026-08-31 기록에는 `overseas_transfer` 같은 **전용 id가 있었고 탭이 동작**했다.
-#     7.20.0-stag에서는 그 id가 사라지고 제네릭 RecyclerView 행으로 바뀌었다 → **회귀 의심**.
-#   → 아래 6개 케이스를 주석 처리한다. 조건부로 남겨두면 조건이 참이라 실행되고 매번 실패하며,
-#     조건을 좁혀 SKIP시키면 **거짓 통과**가 된다. 앱이 고쳐지면 주석을 풀 것.
-#   ※ 카테고리 **목록이 렌더되는 것**은 위의 `rv_usages` / `label` 단언으로 계속 검증한다.
+#   2026-09-04(7.20.0-stag)에는 전용 id 가 사라지고 제네릭 행만 남아 **전부 clickable=false**,
+#   Maestro 탭도 adb input tap 도 먹지 않아 BLOCKED 처리했다. **7.21.0-stag 에서 복구됐다.**
+#   · 전용 id 6종이 돌아왔다: gme_card / overseas_transfer / domestic_transfer /
+#     bill_payment / atm_withdrawal / international_topup — **모두 clickable=true**(LinearLayout)
+#   · 6개 전부 탭하면 화면이 바뀐다(`총 지출` 사라짐). 도착 액티비티는 제각각이다.
+#   ⚠️ `rv_usages` **목록 행은 여전히 clickable=false** 다 — 카테고리 버튼은 그 목록이 아니라
+#     차트 아래의 **별도 영역**이다. 종전 코드가 `id: label` + 텍스트로 탭하려던 것이 이 혼동이었다.
+#     → 셀렉터를 **전용 id** 로 바꿨다(텍스트 의존도 함께 제거된다).
+#   ⚠️ 카테고리는 **지출 데이터가 있는 것만** 뜬다(2026-08-31 실측) → 조건부 구조는 유지한다.
+#     하나도 못 보고 통과하는 일이 없게 위의 `rv_usages`/`label` 단언이 전제를 세운다.
 
-# # [44] [Low] History - My Usage - Overseas Transfer(해외송금) 선택 시 화면 진입 확인
-# - runFlow:
-#     # 실측 확인(2026-09-04)
-#     when:
-#       visible:
-#         id: "label"
-#         text: "해외송금"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "해외송금"
-#       - extendedWaitUntil:
-#           notVisible:
-#             text: "총 지출"
-#           timeout: 15000
-#       - pressKey: back
-#       - extendedWaitUntil:
-#           visible:
-#             text: "총 지출"
-#           timeout: 15000
-#
-# # [45] [Low] History - My Usage - Domestic Transfer(국내 송금) 선택 시 화면 진입 확인
-# - runFlow:
-#     # 실측 확인(2026-09-04)
-#     when:
-#       visible:
-#         id: "label"
-#         text: "국내 송금"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "국내 송금"
-#       - extendedWaitUntil:
-#           notVisible:
-#             text: "총 지출"
-#           timeout: 15000
-#       - pressKey: back
-#       - extendedWaitUntil:
-#           visible:
-#             text: "총 지출"
-#           timeout: 15000
-#
-# # [46] [Low] History - My Usage - International Bill Payment(청구서) 선택 시 화면 진입 확인
-# - runFlow:
-#     # ⚠️ 라벨 미실측 — 그날 데이터가 없어 확인 못 함
-#     when:
-#       visible:
-#         id: "label"
-#         text: "청구서 결제"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "청구서 결제"
-#       - extendedWaitUntil:
-#           notVisible:
-#             text: "총 지출"
-#           timeout: 15000
-#       - pressKey: back
-#       - extendedWaitUntil:
-#           visible:
-#             text: "총 지출"
-#           timeout: 15000
-#
-# # [47] [Low] History - My Usage - ATM Withdrawal 선택 시 화면 진입 확인
-# - runFlow:
-#     # ⚠️ 라벨 미실측 — 그날 데이터가 없어 확인 못 함
-#     when:
-#       visible:
-#         id: "label"
-#         text: "ATM 출금"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "ATM 출금"
-#       - extendedWaitUntil:
-#           notVisible:
-#             text: "총 지출"
-#           timeout: 15000
-#       - pressKey: back
-#       - extendedWaitUntil:
-#           visible:
-#             text: "총 지출"
-#           timeout: 15000
-#
-# # [48] [Low] History - My Usage - International Top-up 선택 시 화면 진입 확인
-# - runFlow:
-#     # 실측 확인(2026-09-04)
-#     when:
-#       visible:
-#         id: "label"
-#         text: "국제 선불폰 충전"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "국제 선불폰 충전"
-#       - extendedWaitUntil:
-#           notVisible:
-#             text: "총 지출"
-#           timeout: 15000
-#       - pressKey: back
-#       - extendedWaitUntil:
-#           visible:
-#             text: "총 지출"
-#           timeout: 15000
-#
-# # [43] [Low] History - My Usage - GME Card 선택 시 화면 진입 확인 (맨 뒤 배치)
-# #   gme_card는 하단 '카드' 탭으로 전환(back→홈)되어 복귀가 다르므로 마지막에 수행(이후 케이스 없음).
-# # ----------------------------------------------------------------
-# # ⚠️ **구 UI는 도착 화면이 다르다 (2026-08-19 실측)**
-# #   개편UI: 별도 카드 화면 → "카드 관리" 문구
-# #   구 UI : **`HomeActivityV2`의 카드 탭**으로 전환된다. "카드 관리" 문구는 없다.
-# #           실제 마커: 헤더 "GME 카드" / `tvGmeCard`("잔액") + `tv_balance`
-# #           / `card_recyclerview_list` + `card_list_title_textview`("EasyGo 카드")
-# #   → 화면 고유 id로 판정한다(텍스트는 다국어·문구 변경에 약하다).
-# - runFlow:
-#     # ⚠️ 라벨 미실측 — 그날 데이터가 없어 확인 못 함
-#     when:
-#       visible:
-#         id: "label"
-#         text: "GME 카드"
-#     commands:
-#       - tapOn:
-#           id: "label"
-#           text: "GME 카드"
-#       - extendedWaitUntil:
-#           visible:
-#             id: "card_recyclerview_list"
-#           timeout: 20000
-#       - assertVisible:
-#           id: "tvGmeCard"
-#       - assertVisible:
-#           id: "tv_balance"
-#       - assertVisible: "GME 카드"
-#       - takeScreenshot: "[43]_GME카드_화면진입"
-#
-#
+# [44] [Low] History - My Usage - Overseas Transfer(해외송금) 선택 시 화면 진입 확인
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "overseas_transfer"
+    commands:
+      - tapOn:
+          id: "overseas_transfer"
+      - extendedWaitUntil:
+          notVisible:
+            text: "총 지출"
+          timeout: 15000
+      - pressKey: back
+      - extendedWaitUntil:
+          visible:
+            text: "총 지출"
+          timeout: 15000
+
+# [45] [Low] History - My Usage - Domestic Transfer(국내 송금) 선택 시 화면 진입 확인
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "domestic_transfer"
+    commands:
+      - tapOn:
+          id: "domestic_transfer"
+      - extendedWaitUntil:
+          notVisible:
+            text: "총 지출"
+          timeout: 15000
+      - pressKey: back
+      - extendedWaitUntil:
+          visible:
+            text: "총 지출"
+          timeout: 15000
+
+# [46] [Low] History - My Usage - International Bill Payment(청구서) 선택 시 화면 진입 확인
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "bill_payment"
+    commands:
+      - tapOn:
+          id: "bill_payment"
+      - extendedWaitUntil:
+          notVisible:
+            text: "총 지출"
+          timeout: 15000
+      - pressKey: back
+      - extendedWaitUntil:
+          visible:
+            text: "총 지출"
+          timeout: 15000
+
+# [47] [Low] History - My Usage - ATM Withdrawal 선택 시 화면 진입 확인
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "atm_withdrawal"
+    commands:
+      - tapOn:
+          id: "atm_withdrawal"
+      - extendedWaitUntil:
+          notVisible:
+            text: "총 지출"
+          timeout: 15000
+      - pressKey: back
+      - extendedWaitUntil:
+          visible:
+            text: "총 지출"
+          timeout: 15000
+
+# [48] [Low] History - My Usage - International Top-up 선택 시 화면 진입 확인
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "international_topup"
+    commands:
+      - tapOn:
+          id: "international_topup"
+      - extendedWaitUntil:
+          notVisible:
+            text: "총 지출"
+          timeout: 15000
+      - pressKey: back
+      - extendedWaitUntil:
+          visible:
+            text: "총 지출"
+          timeout: 15000
+
+# [43] [Low] History - My Usage - GME Card 선택 시 화면 진입 확인 (맨 뒤 배치)
+#   gme_card 만 하단 '카드' 탭 전환형(HomeActivityV2)이라 back 복귀 경로가 다르다 → 마지막에 둔다.
+#   도착 화면 마커는 2026-10-06 실기기에서 4종 모두 확인했다.
+- runFlow:
+    # 카테고리는 **지출 데이터가 있는 것만** 표시된다 → 조건부로 둔다
+    when:
+      visible:
+        id: "gme_card"
+    commands:
+      - tapOn:
+          id: "gme_card"
+      - extendedWaitUntil:
+          visible:
+            id: "card_recyclerview_list"
+          timeout: 20000
+      - assertVisible:
+          id: "tvGmeCard"
+      - assertVisible:
+          id: "tv_balance"
+      - assertVisible: "GME 카드"
+      - takeScreenshot: "[43]_GME카드_화면진입"
