@@ -1044,12 +1044,15 @@ appId: ${APP_ID}
     visible: ".*${output.accNo}.*"
     timeout: 20000
 - takeScreenshot: "[24]_은행명세서_계좌선택"
-# 검색 실행 → 무료 조회 횟수 소진 상태라 **사용권 충전 유도 다이얼로그**가 뜬다(2026-08-18 실측):
-#   txvDialogTitle("중요") / txvDialogDescription("무료 조회 횟수를 모두 소진했습니다.
-#   지금 사용권을 충전하시겠습니까?") / btnCancel("취소") / btnOk("구매하기") / imgvCross
-# 🚫 **`btnOk`("구매하기")는 실결제다 — 절대 누르지 말 것.** 항상 `btnCancel`로 닫는다.
-# ※ 이 다이얼로그가 뜨는 것 자체가 "조회 요청이 실제로 나갔다"는 증거라 판정에 쓴다.
-#   사용권이 충전된 계정에서는 대신 명세서 목록이 뜰 것이므로 그때는 이 케이스를 손봐야 한다.
+# 검색 실행 → **무료 조회 확인 다이얼로그**가 뜬다 (2026-10-07 실측, 문구가 바뀌었다)
+#   txvDialogTitle("중요") / txvDialogDescription("계좌를 N회까지 무료로 조회할 수 있습니다.
+#   계속 진행하시겠습니까?") / btnCancel("취소") / btnOk(**"확인"**)
+#   ⚠️ 종전에는 무료 조회가 **소진**돼 "지금 사용권을 충전하시겠습니까?" + btnOk("구매하기")가
+#     떴고 그래서 항상 btnCancel 을 눌렀다. 지금은 **무료 조회가 복구**돼 btnOk 가 "확인"이다.
+#   🚫 문구가 다시 "소진/충전"으로 바뀌면 **btnOk 는 실결제("구매하기")** 다 — 그때는 눌면 안 된다.
+#     그래서 **무료 조회 문구를 단언한 뒤에만** btnOk 를 누른다. 단언이 안전장치다.
+#   ⚠️ 횟수(N)는 쓸수록 줄어든다 → **숫자를 박지 않는다.**
+#   ※ 이 케이스는 실행마다 **무료 조회를 1회 소비**한다.
 - tapOn:
     id: "searchBtn"
 - waitForAnimationToEnd
@@ -1057,19 +1060,70 @@ appId: ${APP_ID}
     visible:
       id: "btnCancel"
     timeout: 20000
-- assertVisible: "${FREE_QUERY_EXHAUSTED}"
+- assertVisible:
+    id: "txvDialogTitle"
+- assertVisible:
+    id: "txvDialogDescription"
+    text: ".*무료로 조회할 수 있습니다.*"
 - assertVisible:
     id: "btnOk"
-- takeScreenshot: "[24]_사용권충전_유도"
+- takeScreenshot: "[24]_무료조회_확인"
 - tapOn:
-    id: "btnCancel"
-- waitForAnimationToEnd
-- assertVisible: "${BANK_STATEMENT_TITLE_TEXT}"
+    id: "btnOk"
+# 확인하면 **필터 바텀시트**(조회 기간/상태)가 열린다 → 기본값 그대로 검색
+- extendedWaitUntil:
+    visible:
+      id: "search"
+    timeout: 20000
+- tapOn:
+    id: "search"
+# 명세서 조회는 서버를 타 느리다
+- extendedWaitUntil:
+    visible:
+      id: "bankStatementHistoryRv"
+    timeout: 90000
+- assertVisible:
+    id: "txvBalance"
+- assertVisible:
+    id: "dataContainer"
+- takeScreenshot: "[24]_은행명세서_조회결과"
 
 # ----------------------------------------------------------------
-# [25] [Medium] History - Account - Bank Statement 검색 동작 확인 - BLOCKED
-#   은행 명세서 조회가 유료(무료 조회 소진)라 명세서 데이터를 로드할 수 없어 검색 대상 없음 → BLOCKED.
+# [25] [Medium] History - Account - Bank Statement 검색 동작 확인
 # ----------------------------------------------------------------
+# ★ BLOCKED 해제 (2026-10-07) — 종전 사유는 "무료 조회 소진으로 명세서를 못 띄운다" 였다.
+#   무료 조회가 복구돼 [24] 가 목록까지 띄우므로 검색을 검증할 수 있다.
+# ⚠️ 검색어는 **ASCII** 만 쓴다 — Maestro inputText 는 한글을 못 넣는다.
+#   행의 사람 이름은 한글이라 매칭 검색을 쓸 수 없다 → **비매칭으로 걸러지는 것**을 본다.
+#   (실측: ZZZZZ + Enter → dataContainer 0개. 검색이 실제로 동작한다.)
+# ⚠️ imgvSearchIcon 은 **토글**이다 — 열어 둔 채 끝내면 다음 케이스의 여는 탭이 닫아버린다.
+- tapOn:
+    id: "imgvSearchIcon"
+- extendedWaitUntil:
+    visible:
+      id: "searchEditText"
+    timeout: 15000
+- inputText: "ZZZZZ"
+- pressKey: Enter
+- extendedWaitUntil:
+    notVisible:
+      id: "dataContainer"
+    timeout: 20000
+- takeScreenshot: "[25]_은행명세서_비매칭검색"
+# ⛔ **여기서 `eraseText` + Enter 로 복귀시키지 말 것** (2026-10-07 실측).
+#   그 Enter 가 화면을 빠져나가 **내역 메인으로 돌아가** 버린다 → 뒤 케이스가 무너진다.
+#   검증은 "비매칭이 걸러진다"로 이미 끝났다. 복귀는 시도하지 않는다.
+# ※ 검색이 열려 있는 동안에는 `imgvSearchIcon` 이 입력칸으로 바뀌어 **사라진다** →
+#   아래 닫기는 대개 SKIP 된다. 다음 구간은 `iv_back`(툴바, 검색 중에도 남아 있다)으로
+#   내역 메인에 복귀하므로 검색이 열린 채 끝나도 전환에는 지장이 없다.
+- runFlow:
+    when:
+      visible:
+        id: "imgvSearchIcon"
+    commands:
+      - tapOn:
+          id: "imgvSearchIcon"
+      - waitForAnimationToEnd
 
 # ================================================================
 # [History - GMEPAY] GME Pay (탭: 모든 거래 / 사용 내역 / 결제 내역)
