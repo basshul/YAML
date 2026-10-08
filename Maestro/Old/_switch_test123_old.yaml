@@ -144,17 +144,14 @@ appId: ${APP_ID}
     commands:
       - tapOn: "대문자 키보드 변경"
       - waitForAnimationToEnd
-# ⚠️ **여기에는 다른 계정(test251024)용 비밀번호 시퀀스가 박혀 있었다** — 2026-09-09 사용자 확인으로 교체.
+# ⚠️ **2026-09-09 기록은 test123/test251024 값이 뒤바뀐 것이었다** — 2026-09-30 사용자 재확인으로 교체.
 #   계정마다 비밀번호가 다르고, 로그인 실패는 5회 제한이라 틀린 값으로 돌리면 계정이 잠긴다.
 #   **값은 여기에 적지 않는다** — 정본은 메모리 [[project_01_login]] 이다.
 - tapOn: "Capital G 히읃"
 - tapOn: "m 으"
 - tapOn: "e 디귿"
-- tapOn: "t 시옫"
-- tapOn: "e 디귿"
-- tapOn: "s 니은"
-- tapOn: "t 시옫"
 - tapOn: "1"
+- tapOn: "2"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
 - tapOn: "${TRANSKEY_INPUT_COMPLETE}"

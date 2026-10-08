@@ -182,8 +182,8 @@ appId: ${APP_ID}
 - inputText: "test123"
 - tapOn:
     id: "securityKeyboardEditText"
-# ⚠️ **비밀번호가 계정마다 다르다** (2026-09-09 사용자 확인):
-#   여기에는 **다른 계정(test251024)용 시퀀스가 박혀 있었다** → test123 로그인이 실패했을 것이다.
+# ⚠️ **비밀번호가 계정마다 다르다** (2026-09-30 사용자 재확인 — 2026-09-09 기록은 뒤바뀐 값이었다):
+#   test123 = <정상 비밀번호> / test251024 = <다른 정상 비밀번호>. 여기는 test123 용 시퀀스다.
 #   값은 적지 않는다(정본은 메모리 [[project_01_login]]).
 #   로그인 실패는 **5회 제한**이라 잘못된 값으로 돌리면 계정이 잠긴다. 값이 바뀌면 여기부터 고칠 것
 #   ([[project_01_login]] 이 정본이다. 저장소 md 에는 값을 적지 않는다).
@@ -198,11 +198,8 @@ appId: ${APP_ID}
 - tapOn: "Capital G 히읃"
 - tapOn: "m 으"
 - tapOn: "e 디귿"
-- tapOn: "t 시옫"
-- tapOn: "e 디귿"
-- tapOn: "s 니은"
-- tapOn: "t 시옫"
 - tapOn: "1"
+- tapOn: "2"
 - tapOn: "특수문자변경"
 - tapOn: "느낌표"
 - tapOn: "${TRANSKEY_INPUT_COMPLETE}"
