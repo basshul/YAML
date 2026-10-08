@@ -21,6 +21,7 @@ const state = {
   checklist: null,
   priFilter: "all",
   onlyBadMap: false,
+  runUser: "",
 };
 
 const $ = (s) => document.getElementById(s);
@@ -38,6 +39,8 @@ async function api(path) {
 }
 
 async function boot() {
+  initRunUser();
+  markAdminReady();
   markOffline();
   try {
     state.config = await api("/api/config");
@@ -59,6 +62,29 @@ async function boot() {
       '<tr><td colspan="7" class="muted">목록을 불러오지 못했습니다: ' + esc(err.message) + "</td></tr>";
   }
   attachIfRunning();
+}
+
+/* 실행자 선택. **브라우저에 기억한다** — 새로고침마다 다시 고르게 하면 금세 안 쓴다.
+   ⚠️ localStorage 는 사생활 보호 창·저장 차단에서 **예외를 던진다** → 읽기·쓰기 모두 감싼다.
+      기억이 없으면 그냥 첫 항목으로 둔다(없는 사람을 지어내지 않는다). */
+const RUN_USER_KEY = "webrunner.runUser";
+
+function initRunUser() {
+  const sel = $("runUser");
+  if (!sel) return;
+  let saved = null;
+  try { saved = localStorage.getItem(RUN_USER_KEY); } catch (e) { /* 막혀 있으면 기본값 */ }
+  // ★ **첫 항목을 자동으로 고르지 않는다.** 기억해 둔 값이 있을 때만 되살린다 —
+  //   고르지 않은 사람이 남의 계정으로 돌리는 것을 막는 것이 이 선택의 목적이다.
+  const known = [...sel.options].map((o) => o.value).filter(Boolean);
+  sel.value = known.includes(saved) ? saved : "";
+  state.runUser = sel.value;
+  sel.addEventListener("change", () => {
+    state.runUser = sel.value;
+    try { localStorage.setItem(RUN_USER_KEY, sel.value); } catch (e) { /* 저장만 안 될 뿐 */ }
+    updateRunState();
+    markAdminReady();
+  });
 }
 
 /* 아직 데이터가 없어 못 쓰는 조작을 한곳에서 끈다.
@@ -104,6 +130,14 @@ function markOffline() {
 /* 매핑 오류 경고(상단 전폭). **오류가 있을 때만** 보인다 — 늘 떠 있으면 경고가 아니다.
    ⚠️ 경고가 사라질 때 `오류만 보기` 가 켜진 채로 남으면 **빈 표**가 되고 끌 수단도
       함께 사라진다 → 숨길 때 반드시 토글도 같이 끈다. */
+/* admin 점검도 사용자를 고른 뒤에만 — 점검 대상 계정이 사람마다 다르다. */
+function markAdminReady() {
+  const b = $("btn-pf");
+  if (!b) return;
+  b.disabled = !state.runUser;
+  b.title = state.runUser ? "" : "먼저 사용자를 선택하세요.";
+}
+
 function renderMapWarn() {
   const bar = $("mapwarn");
   if (!bar) return;
@@ -525,9 +559,15 @@ function renderSelection() {
 function updateRunState() {
   const hasDevice = !!$("dev").value;
   const vis = visibleTests();
-  $("runBtn").disabled = state.running || state.selected.size === 0 || !hasDevice;
+  // 사용자를 고르기 전에는 아무것도 돌리지 않는다 — 계정이 사람마다 다르다.
+  const hasUser = !!state.runUser;
+  const why = !hasUser ? "먼저 사용자를 선택하세요." : "";
+  const runBtn = $("runBtn");
+  runBtn.disabled = state.running || state.selected.size === 0 || !hasDevice || !hasUser;
+  runBtn.title = why;
   const all = $("runAllBtn");
-  all.disabled = state.running || !hasDevice || vis.length === 0;
+  all.disabled = state.running || !hasDevice || vis.length === 0 || !hasUser;
+  all.title = why;
   // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
   all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
 }
@@ -553,7 +593,8 @@ async function onRun() {
   const money = picked.filter((t) => t.irreversible);
   const minutes = picked.reduce((sum, t) => sum + t.est, 0);
 
-  let ask = picked.length + "개 시나리오를 실행합니다. (예상 " +
+  let ask = "실행자: " + (state.runUser || "-") + "\n" +
+    picked.length + "개 시나리오를 실행합니다. (예상 " +
     Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분)\n\n";
   if (isLive) ask += "⚠️ 운영(Live) — 실서비스 계정과 실자금이 움직입니다.\n";
   if (money.length) ask += "⚠️ 실결제 포함: " + money.map((t) => t.name).join(", ") + "\n";
@@ -568,6 +609,7 @@ async function onRun() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tests: picked.map((t) => t.name),
+        user: state.runUser,
         device: $("dev").value,
         server: state.server,
         platform: "android",
@@ -711,7 +753,10 @@ async function onPreflight() {
   }, 1000);
   out.textContent = "admin 에 로그인해 계정을 확인하는 중입니다… (30초쯤 걸립니다)";
   try {
-    const res = await fetch("/api/admin/preflight", { method: "POST" });
+    const res = await fetch("/api/admin/preflight", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user: state.runUser }),
+  });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "점검 실패");
     renderPreflight(data);
@@ -769,7 +814,8 @@ async function onFix(btn) {
     const res = await fetch("/api/admin/fix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fix: fix, user_id: user, confirm: true }),
+      // user_id = 대상 계정, user = 사용자 프로파일. 서버가 '내 프로파일의 계정인지' 대조한다.
+      body: JSON.stringify({ fix: fix, user_id: user, confirm: true, user: state.runUser }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "처리 실패");
@@ -847,7 +893,7 @@ async function onFixAll() {
     const res = await fetch("/api/admin/fix-all", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: items, confirm: true }),
+      body: JSON.stringify({ items: items, confirm: true, user: state.runUser }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "처리 실패");

@@ -21,7 +21,8 @@ param(
     [string]$device = "",
     [ValidateSet("stag","live")][string]$Build = "stag",
     [string]$AppId = "",
-    [string[]]$ExtraEnv = @()
+    [string[]]$ExtraEnv = @(),
+    [string]$User = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -98,7 +99,7 @@ Write-Host ""
 #   env 추리기·빌드 전환·자동 로그아웃 선검사·스크린샷 회수는 전부 저쪽에 있다.
 #   ⚠️ CWD 를 `Maestro\` 로 옮긴다 — `-flow` 가 그 기준의 상대경로이고,
 #     `takeScreenshot` 도 CWD 에 떨어진다(본 러너가 실행 직후 회수한다).
-$inner = @{ lang = $lang; flow = $flow; device = $device; Build = $Build }
+$inner = @{ lang = $lang; flow = $flow; device = $device; Build = $Build; User = $User }
 if ($AppId)            { $inner.AppId    = $AppId }
 if ($ExtraEnv.Count)   { $inner.ExtraEnv = $ExtraEnv }
 

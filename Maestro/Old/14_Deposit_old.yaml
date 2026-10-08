@@ -204,7 +204,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "usernameId"
 - eraseText: 50
-- inputText: "seungsoo818"
+- inputText: "${ACCT_MAIN}"
 - tapOn:
     id: "securityKeyboardEditText"
 # 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_Login_Success_old` EXIT=0으로 재확인).
@@ -1765,7 +1765,7 @@ appId: ${APP_ID}
 - tapOn:
     id: "usernameId"
 - eraseText: 50
-- inputText: "seungsoo818"
+- inputText: "${ACCT_MAIN}"
 - tapOn:
     id: "securityKeyboardEditText"
 # 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_Login_Success_old` EXIT=0으로 재확인).

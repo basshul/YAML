@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from admin.session import AdminSession, AdminError, AdminSessionExpired  # noqa: E402
+import user_profile                              # noqa: E402
 from admin import documents                  # noqa: E402
 
 # 고객을 찾을 수 있는 화면들. (경로, 그리드 접두어, 설명)
@@ -86,19 +87,36 @@ def find_customer(session: AdminSession, user_id: str, screen: str = "setup") ->
 #   exists — 있어야 한다. 없으면 플로우가 진입부터 막힌다
 #   absent — **없어야** 한다. 06_Registration 이 생성·소모하는 계정이라
 #            남아 있으면 같은 ID 로 다시 가입할 수 없어 재실행이 불가능하다
-PREFLIGHT_ACCOUNTS = [
-    {"user_id": "seungsoo818", "want": "exists", "why": "G1·G2·G4 기본 계정 (한국인·은행 연결)"},
-    {"user_id": "test123",     "want": "exists", "why": "외국인·은행 미연결 (14_02 · 25_Profile_Foreign)"},
-    {"user_id": "test251024",  "want": "exists", "why": "외국인·GMEPay 신청완료 (14_03)"},
-    {"user_id": "test006",     "want": "absent", "why": "06_Registration 이 소모 — 남아 있으면 재실행 불가"},
-    {"user_id": "test007",     "want": "absent", "why": "06_Registration 이 소모 — 남아 있으면 재실행 불가"},
+# 점검의 **모양**만 여기 둔다 — 실제 계정 ID 는 사용자 프로파일에서 온다.
+#   (`Maestro\env\user.<이름>.env`. maestro 플로우도 같은 파일을 읽는다 →
+#    계정을 두 군데에 적어 어긋나는 일이 없다.)
+# 키 → (원하는 상태, 왜 그래야 하는가)
+PREFLIGHT_SHAPE = [
+    ("ACCT_MAIN",     "exists", "G1·G2·G4 기본 계정 (한국인·은행 연결)"),
+    ("ACCT_FOREIGN",  "exists", "외국인·은행 미연결 (14_02 · 25_Profile_Foreign)"),
+    ("ACCT_GMEPAY",   "exists", "외국인·GMEPay 신청완료 (14_03)"),
+    ("ACCT_SIGNUP_1", "absent", "06_Registration 이 소모 — 남아 있으면 재실행 불가"),
+    ("ACCT_SIGNUP_2", "absent", "06_Registration 이 소모 — 남아 있으면 재실행 불가"),
 ]
 
-
-# 업로드 문서가 **승인 대기로 남아 있으면 안 되는** 계정들.
+# 업로드 문서가 **승인 대기로 남아 있으면 안 되는** 계정의 키.
 # 남아 있으면 신분증 업로드를 다루는 플로우가 기존 대기 건에 걸려 갈라진다.
-# (2026-10-06 사용자 지시로 seungsoo818·test123 의 대기 문서를 치운 그 전제다)
-PREFLIGHT_DOC_ACCOUNTS = ["seungsoo818", "test123", "test251024"]
+PREFLIGHT_DOC_KEYS = ["ACCT_MAIN", "ACCT_FOREIGN", "ACCT_GMEPAY"]
+
+
+def preflight_plan(user: str) -> tuple[list[dict], list[str]]:
+    """프로파일을 읽어 (계정 점검 목록, 문서 점검 대상) 을 만든다.
+
+    ★ **값이 빈 키는 통째로 뺀다.** 아직 그 역할 계정이 없는 사람에게
+      없는 계정을 찾게 하면 고칠 수도 없는 NG 만 쌓인다.
+    """
+    acct = user_profile.accounts(user)
+    accounts = [
+        {"user_id": acct[key], "want": want, "why": why}
+        for key, want, why in PREFLIGHT_SHAPE if acct.get(key)
+    ]
+    docs = [acct[key] for key in PREFLIGHT_DOC_KEYS if acct.get(key)]
+    return accounts, docs
 
 
 def check_account(session: AdminSession, spec: dict) -> dict:
@@ -137,15 +155,20 @@ def check_documents(session: AdminSession, user_id: str) -> dict:
     }
 
 
-def preflight(session: AdminSession, accounts: list[dict] | None = None) -> dict:
+def preflight(session: AdminSession, user: str, accounts: list[dict] | None = None,
+              docs: list[str] | None = None) -> dict:
     """스위트 사전 조건을 **조회만으로** 점검한다.
 
     한 세션 안에서 차례로 확인한다. 세션이 끊기면 find_customer 안의
     ensure_alive() 가 거기서 멈춘다 — 못 본 항목을 '정상'으로 보고하지 않는다.
     """
-    checks = [check_account(session, spec) for spec in (accounts or PREFLIGHT_ACCOUNTS)]
-    checks += [check_documents(session, u) for u in PREFLIGHT_DOC_ACCOUNTS]
-    return {"checks": checks, "ok": all(c["ok"] for c in checks)}
+    if accounts is None or docs is None:
+        plan_accounts, plan_docs = preflight_plan(user)
+        accounts = plan_accounts if accounts is None else accounts
+        docs = plan_docs if docs is None else docs
+    checks = [check_account(session, spec) for spec in accounts]
+    checks += [check_documents(session, u) for u in docs]
+    return {"checks": checks, "ok": all(c["ok"] for c in checks), "user": user}
 
 
 FIXES = {
@@ -155,7 +178,8 @@ FIXES = {
 }
 
 
-def fix_check(session: AdminSession, fix: str, user_id: str, *, confirm: bool = False) -> dict:
+def fix_check(session: AdminSession, fix: str, user_id: str, user: str, *,
+              confirm: bool = False) -> dict:
     """NG 항목 하나를 처리하고, **그 항목만 다시 점검해서** 돌려준다.
 
     ⚠️ 둘 다 되돌릴 수 없다. confirm=False 면 무엇을 할지만 알려주고 멈춘다.
@@ -173,7 +197,7 @@ def fix_check(session: AdminSession, fix: str, user_id: str, *, confirm: bool = 
         if not confirm:
             return {"done": False, "dry_run": True,
                     "target": r["picked"], "selected": r["selected_value"]}
-        return {"done": True, "check": check_account(session, _spec_of(user_id))}
+        return {"done": True, "check": check_account(session, _spec_of(user, user_id))}
 
     # clear_documents
     r = documents.clear_pending(session, user_id, confirm=confirm)
@@ -184,14 +208,21 @@ def fix_check(session: AdminSession, fix: str, user_id: str, *, confirm: bool = 
             "check": check_documents(session, user_id)}
 
 
-def _spec_of(user_id: str) -> dict:
-    for spec in PREFLIGHT_ACCOUNTS:
+def _spec_of(user: str, user_id: str) -> dict:
+    """처리 뒤 **그 항목만** 다시 점검할 때 쓸 기준. 프로파일에서 찾는다.
+
+    못 찾으면 absent 로 둔다 — 고칠 수 있는 NG 는 '없어야 하는데 있는' 경우뿐이라
+    (remove_customer) 처리 직후의 기대 상태가 absent 다.
+    """
+    accounts, _ = preflight_plan(user)
+    for spec in accounts:
         if spec["user_id"] == user_id:
             return spec
     return {"user_id": user_id, "want": "absent", "why": ""}
 
 
-def fix_all(session: AdminSession, items: list[dict], *, confirm: bool = False) -> dict:
+def fix_all(session: AdminSession, items: list[dict], user: str, *,
+              confirm: bool = False) -> dict:
     """여러 NG 를 **한 세션에서** 처리한다.
 
     건별로 세션을 새로 열면 로그인만 N 번이다(한 번에 15~25초).
@@ -204,7 +235,7 @@ def fix_all(session: AdminSession, items: list[dict], *, confirm: bool = False) 
     for item in items:
         fix, user_id = item.get("fix"), item.get("user_id")
         try:
-            r = fix_check(session, fix, user_id, confirm=confirm)
+            r = fix_check(session, fix, user_id, user, confirm=confirm)
         except AdminSessionExpired:
             results.append({"user_id": user_id, "fix": fix, "done": False,
                             "error": "세션이 끊겨 여기서 멈췄습니다"})
@@ -219,22 +250,40 @@ def fix_all(session: AdminSession, items: list[dict], *, confirm: bool = False) 
             "ok": all(r.get("done") for r in results) if results else True}
 
 
-def run_fix_all(items: list[dict], *, confirm: bool = False, headless: bool = True) -> dict:
+def guard_target(user: str, user_id: str) -> None:
+    """그 사용자의 프로파일에 없는 계정은 건드리지 않는다."""
+    mine = set(user_profile.accounts(user).values())
+    if user_id not in mine:
+        raise AdminError(
+            user_id + " 는 " + user + " 의 프로파일에 없는 계정이다 — 처리하지 않는다."
+            " (화면이 오래됐거나 사용자를 잘못 고른 것이다)")
+
+
+def run_fix_all(items: list[dict], user: str, *,
+                confirm: bool = False, headless: bool = True) -> dict:
     """로그인 → 전부 처리 → 로그아웃. 서버(「NG 전부 처리」)가 부르는 진입점."""
+    for it in items:
+        guard_target(user, it.get("user_id", ""))
     with AdminSession(headless=headless) as session:
-        return fix_all(session, items, confirm=confirm)
+        return fix_all(session, items, user, confirm=confirm)
 
 
-def run_fix(fix: str, user_id: str, *, confirm: bool = False, headless: bool = True) -> dict:
-    """로그인 → 처리 → 재점검 → 로그아웃. 서버(버튼)가 부르는 진입점."""
+def run_fix(fix: str, user_id: str, user: str, *,
+            confirm: bool = False, headless: bool = True) -> dict:
+    """로그인 → 처리 → 재점검 → 로그아웃. 서버(버튼)가 부르는 진입점.
+
+    ⛔ **대상이 그 사용자의 프로파일에 있는 계정인지 먼저 확인한다.** 계정 삭제는
+      되돌릴 수 없는데, 낡은 화면이 남의 계정을 지우라고 보낼 수 있다.
+    """
+    guard_target(user, user_id)
     with AdminSession(headless=headless) as session:
-        return fix_check(session, fix, user_id, confirm=confirm)
+        return fix_check(session, fix, user_id, user, confirm=confirm)
 
 
-def run_preflight(*, headless: bool = True) -> dict:
+def run_preflight(user: str, *, headless: bool = True) -> dict:
     """로그인 → 점검 → 로그아웃 을 한 세션으로. 서버(버튼)가 부르는 진입점."""
     with AdminSession(headless=headless) as session:
-        return preflight(session)
+        return preflight(session, user)
 
 
 REMOVE_CUSTOMER_PAGE = "/AgentPanel/OnlineAgent/DeleteCustomer/DeleteCustomer.aspx"
@@ -330,7 +379,10 @@ def _page_message(page) -> str:
 
 def _main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == "preflight":
-        result = run_preflight()
+        # 두 번째 인자로 사용자를 받는다. 없으면 Basshu — 종전 동작 그대로.
+        who = sys.argv[2] if len(sys.argv) >= 3 else "Basshu"
+        print("사용자: " + who)
+        result = run_preflight(who)
         KIND = {"account": "계정", "documents": "문서"}
         for c in result["checks"]:
             want = "있어야 함" if c["want"] == "exists" else "없어야 함"

@@ -115,6 +115,10 @@
     padding:4px 10px;font-size:12px;border-radius:6px;cursor:pointer;}
   .mapwarn button[aria-pressed="true"]{background:#8c2a2a;border-color:#8c2a2a;color:#fff;}
 
+  /* 실행 환경의 `사용자` — 같은 패널의 `기기` select 와 폭·생김새를 맞춘다 */
+  #runUser{width:100%;padding:7px 9px;border:1px solid #ccd2d9;border-radius:6px;
+    font-size:13px;font-family:inherit;background:#fff;}
+
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:9px;}
   .filters label.f{display:flex;align-items:center;gap:6px;}
   .filters label.f>span{font-size:11px;color:var(--muted);white-space:nowrap;}

@@ -103,7 +103,7 @@ env:
 - tapOn:
     id: "usernameId"
 - eraseText: 50
-- inputText: "seungsoo818"
+- inputText: "${ACCT_MAIN}"
 # ⚠️ securityKeyboardEditText 탭 직후 transKeypad_row4를 누르지 말 것(문자 오입력)
 - tapOn:
     id: "securityKeyboardEditText"

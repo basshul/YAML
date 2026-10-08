@@ -60,7 +60,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
           id: "btn_lgn"
       - tapOn:
           id: "usernameId"
-      - inputText: "seungsoo818"
+      - inputText: "${ACCT_MAIN}"
 
       # 로그인 시도 1: <정상 비밀번호>
       - tapOn:

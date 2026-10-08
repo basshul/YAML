@@ -26,6 +26,13 @@ RUN_LOG_DIR = WEB_RUNNER_DIR / "run_logs"
 PARAM_BLOCK_RE = r"^param\s*\((.*?)^\)"
 VAR_RE = r"\$(\w+)"
 
+# 사용자 프로파일 — `Maestro\env\user.<이름>.env` 와 **이름이 1:1로 맞아야** 한다.
+#   ⚠️ 이 값은 파일 경로이자 명령행 인자가 된다 → **허용 목록으로만** 받는다.
+#      화면에서 온 문자열을 그대로 넘기면 경로·명령 주입이 된다.
+USER_CHOICES = ("Tomas", "Basshu", "Philip")
+#   ⛔ **기본 사용자를 두지 않는다.** "안 골랐다" 를 누군가로 메우면
+#      고르지 않은 사람이 남의 계정으로 돌리게 된다 → 비워 두고 또렷하게 멈춘다.
+
 # 화면에 보이는 "서버" 선택지 → run_*.ps1 의 -Build 값.
 # 사용자 기준은 빌드가 아니라 **어느 서버에 붙는가**다. stag 빌드는 플로우가 서버를
 # LIVETEST 로 강제하고, 운영 빌드는 실서비스에 붙는다.
@@ -354,10 +361,11 @@ _ELAPSED = re.compile(r"(\d{2}:\d{2})")
 class Run:
     """한 번의 실행. 로그 줄을 모아 두고 구독자에게 흘려보낸다."""
 
-    def __init__(self, names: list[str], device: str, server: str):
+    def __init__(self, names: list[str], device: str, server: str, user: str):
         self.names = names
         self.device = device
         self.server = server
+        self.user = user
         self.started_at = datetime.now()
         self.finished = False
         self.stopped = False
@@ -411,20 +419,24 @@ class Run:
         # ⛔ 빈 -Names 는 run_suite.ps1 에서 **전체 스위트**가 된다(실결제 항목 포함).
         if not self.names:
             raise RuntimeError("실행할 테스트를 고르지 않았습니다. 전체 스위트가 도는 것을 막기 위해 중단합니다.")
-        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Lang"])
+        # ★ "User" 도 함께 확인한다 — pwsh 는 **모르는 옵션을 조용히 무시하고**
+        #   기본값으로 본체를 실행한다(스크립트가 낡으면 남의 계정으로 돌 수 있다).
+        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Lang", "User"])
 
         cfg = load_config()
         build = SERVER_CHOICES[self.server]["build"]
         inner = (
             "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "
             f"& '{SUITE_SCRIPT}' -Names '{','.join(self.names)}' "
-            f"-Device '{self.device}' -Build {build} -Lang {cfg['lang']}; "
+            f"-Device '{self.device}' -Build {build} -Lang {cfg['lang']} "
+            f"-User {self.user}; "
             "exit $LASTEXITCODE"
         )
         cmd = [cfg["pwsh"], "-NoProfile", "-Command", inner]
 
         self._emit(f"$ run_suite.ps1 -Names {','.join(self.names)} "
-                   f"-Device {self.device} -Build {build} -Lang {cfg['lang']}")
+                   f"-Device {self.device} -Build {build} -Lang {cfg['lang']} "
+                   f"-User {self.user}")
         self._emit("")
 
         # POSIX 에서는 자식들을 한 묶음으로 끊을 수 있게 프로세스 그룹을 따로 연다(Mac 이전 대비).
@@ -751,7 +763,7 @@ def current_run() -> Run | None:
     return _current
 
 
-def start_run(names: list[str], device: str, server: str) -> Run:
+def start_run(names: list[str], device: str, server: str, user: str) -> Run:
     """실행을 시작한다. 이미 돌고 있으면 거절한다(대기열은 이번 범위 밖)."""
     global _current
 
@@ -764,6 +776,10 @@ def start_run(names: list[str], device: str, server: str) -> Run:
         raise ValueError(f"목록에 없는 테스트입니다: {', '.join(unknown)}")
     if server not in SERVER_CHOICES:
         raise ValueError(f"알 수 없는 서버: {server}")
+    if not user:
+        raise ValueError("먼저 사용자를 선택하세요.")
+    if user not in USER_CHOICES:
+        raise ValueError(f"알 수 없는 사용자: {user}")
     if not _SAFE_SERIAL.match(device or ""):
         raise ValueError("기기 시리얼이 올바르지 않습니다.")
     if not any(d["serial"] == device and d["ready"] for d in list_devices()):
@@ -775,7 +791,7 @@ def start_run(names: list[str], device: str, server: str) -> Run:
         # 스위트 표의 순서대로 돌린다 — 순서가 곧 상태 의존성이다(고른 순서가 아니다).
         order = [t["name"] for t in list_tests()]
         ordered = [n for n in order if n in set(names)]
-        run = Run(ordered, device, server)
+        run = Run(ordered, device, server, user)
         _current = run
     run.start()
     return run

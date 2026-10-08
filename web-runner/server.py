@@ -111,8 +111,13 @@ def api_history_log(stamp: str, item: str):
 _admin_lock = threading.Lock()
 
 
+class PreflightRequest(BaseModel):
+    # 사용자 프로파일. 점검 대상 계정이 사람마다 다르다.
+    user: str = ""
+
+
 @app.post("/api/admin/preflight")
-def api_admin_preflight():
+def api_admin_preflight(req: PreflightRequest):
     """admin 에 붙어 스위트 사전 조건(계정 5개)을 **조회만으로** 점검한다.
 
     로그인 → 점검 → 로그아웃을 한 세션으로 처리한다(1분 안팎 걸린다).
@@ -121,7 +126,10 @@ def api_admin_preflight():
     if not _admin_lock.acquire(blocking=False):
         return JSONResponse(status_code=409, content={"error": "이미 점검이 돌고 있습니다."})
     try:
-        return admin_actions.run_preflight()
+        return admin_actions.run_preflight(_known_user(req.user))
+    except ValueError as exc:
+        # 사용자가 잘못 고른 것이다 — 서버 오류(500)가 아니다.
+        return JSONResponse(status_code=400, content={"error": str(exc)})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
     finally:
@@ -132,6 +140,7 @@ class FixRequest(BaseModel):
     fix: str
     user_id: str
     confirm: bool = False
+    user: str = ""
 
 
 @app.post("/api/admin/fix")
@@ -147,7 +156,10 @@ def api_admin_fix(req: FixRequest):
     if not _admin_lock.acquire(blocking=False):
         return JSONResponse(status_code=409, content={"error": "admin 작업이 이미 돌고 있습니다."})
     try:
-        return admin_actions.run_fix(req.fix, req.user_id, confirm=True)
+        return admin_actions.run_fix(req.fix, req.user_id, _known_user(req.user), confirm=True)
+    except (ValueError, admin_actions.AdminError) as exc:
+        # 잘못 고른 사용자 / 내 프로파일이 아닌 대상 — 서버 오류가 아니다.
+        return JSONResponse(status_code=400, content={"error": str(exc)})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
     finally:
@@ -157,6 +169,7 @@ def api_admin_fix(req: FixRequest):
 class FixAllRequest(BaseModel):
     items: list[dict]
     confirm: bool = False
+    user: str = ""
 
 
 @app.post("/api/admin/fix-all")
@@ -183,11 +196,26 @@ def api_admin_fix_all(req: FixAllRequest):
     if not _admin_lock.acquire(blocking=False):
         return JSONResponse(status_code=409, content={"error": "admin 작업이 이미 돌고 있습니다."})
     try:
-        return admin_actions.run_fix_all(items, confirm=True)
+        return admin_actions.run_fix_all(items, _known_user(req.user), confirm=True)
+    except (ValueError, admin_actions.AdminError) as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
     finally:
         _admin_lock.release()
+
+
+def _known_user(user: str) -> str:
+    """사용자 이름은 **파일 경로**가 된다 → 허용 목록 밖이면 거절한다.
+
+    빈 값은 "아직 안 골랐다" 는 뜻이다. 기본값으로 메우지 않는다 —
+    조용히 누군가로 정해 버리면 **남의 계정을 건드리게 된다.**
+    """
+    if not user:
+        raise ValueError("먼저 사용자를 선택하세요.")
+    if user not in runner.USER_CHOICES:
+        raise ValueError(f"알 수 없는 사용자: {user}")
+    return user
 
 
 class RunRequest(BaseModel):
@@ -196,6 +224,8 @@ class RunRequest(BaseModel):
     server: str
     platform: str = "android"
     confirm_live: bool = False
+    # 사용자 프로파일. 값 검증은 runner.start_run 이 허용 목록으로 한다.
+    user: str = ""
 
 
 @app.post("/api/run")
@@ -207,7 +237,7 @@ def api_run(req: RunRequest):
     if runner.SERVER_CHOICES.get(req.server, {}).get("live") and not req.confirm_live:
         return JSONResponse(status_code=400, content={"error": "운영(Live) 실행은 확인이 필요합니다."})
     try:
-        run = runner.start_run(req.tests, req.device, req.server)
+        run = runner.start_run(req.tests, req.device, req.server, _known_user(req.user))
     except RuntimeError as exc:
         return JSONResponse(status_code=409, content={"error": str(exc)})
     except ValueError as exc:

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maestro Web Runner</title>
 <link rel="stylesheet" href="style.css?v=8">
-<link rel="stylesheet" href="v5.css?v=8">
+<link rel="stylesheet" href="v5.css?v=10">
 <!-- 글꼴: 본문 Pretendard, ID·매핑 JetBrains Mono. 막히면 맑은 고딕·Consolas 로 돌아간다. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -70,6 +70,15 @@
           <label class="choice"><input type="radio" name="plat" checked> Android</label>
           <label class="choice disabled"><input type="radio" name="plat" disabled> iOS <span class="muted">(준비 중)</span></label>
         </div>
+      </div>
+      <div class="field">
+        <label class="flab" for="runUser">사용자</label>
+        <select id="runUser">
+          <option value="" disabled selected>사용자를 선택하세요</option>
+          <option value="Tomas">Tomas</option>
+          <option value="Basshu">Basshu</option>
+          <option value="Philip">Philip</option>
+        </select>
       </div>
     </section>
 
@@ -284,6 +293,6 @@
   </div>
 </div>
 
-<script src="app.js?v=19"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

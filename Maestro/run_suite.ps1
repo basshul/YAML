@@ -65,7 +65,10 @@ param(
     [ValidateSet("stag","live")][string]$Build = "stag",
     [switch]$AutoCharge,        # 잔액이 모자라면 자동 충전한다 — ⚠️ **미검증**(아래 ③ OTP 참고)
     [int]$MaxCharge = 30000,    # 자동 충전 총액 상한(실계좌에서 빠진다). -AutoCharge 없으면 무의미
-    [string]$AppId = ""
+    [string]$AppId = "",
+    # 사용자 프로파일 — 각 run_test.ps1 호출에 그대로 넘긴다.
+    #   ⛔ 기본값 없음. 조회 전용(-List/-DumpJson)일 때만 비어 있어도 된다.
+    [string]$User = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -535,7 +538,7 @@ foreach ($t in $plan) {
                 Write-Host ("  · 잔액 {0:N0}원 → {1:N0}원 필요. 1,000원씩 {2}회 충전합니다(실계좌 출금)" -f $projBal, $t.needs.balance, $wantN) -ForegroundColor Yellow
                 $okN = 0
                 for ($ci = 1; $ci -le $wantN; $ci++) {
-                    $cArgs = @{ lang = $Lang; flow = "Old" + [char]92 + "_suite_charge_old.yaml"; AppId = $EffAppId }
+                    $cArgs = @{ lang = $Lang; flow = "Old" + [char]92 + "_suite_charge_old.yaml"; AppId = $EffAppId; User = $User }
                     if ($Device) { $cArgs['device'] = $Device }
                     $clog = Join-Path $logDir ("_charge_{0}_{1}.log" -f $t.n, $ci)
                     & (Join-Path $root "run_test.ps1") @cArgs *>&1 | Tee-Object -FilePath $clog | Out-Null
@@ -586,7 +589,7 @@ foreach ($t in $plan) {
     #   또 변수명을 `$args`로 쓰는 것도 금지 — PowerShell 자동 변수다.
     #   → **해시테이블 스플래팅**이 이름 있는 파라미터의 정석이다.
     # 빌드는 **항상 명시**해서 넘긴다 — env 파일 기본값에 기대면 로그만 보고는 어느 빌드였는지 모른다.
-    $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId }
+    $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId; User = $User }
     if ($Device) { $flowArgs['device'] = $Device }
     & (Join-Path $root "run_test.ps1") @flowArgs *>&1 | Tee-Object -FilePath $log | Out-Null
     $code = $LASTEXITCODE
@@ -691,7 +694,7 @@ foreach ($t in $plan) {
             Write-Host "`n⛔ 기기가 돌아오지 않아 복구도 할 수 없습니다 — 중단합니다." -ForegroundColor Red
             $aborted = $true; break
         }
-        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml" }
+        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User }
         if ($Device) { $rArgs['device'] = $Device }
         $rArgs['AppId'] = $EffAppId
         & (Join-Path $root "run_test.ps1") @rArgs *>&1 | Tee-Object -FilePath $rlog | Out-Null

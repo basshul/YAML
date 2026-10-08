@@ -21,7 +21,11 @@ param(
     # 자격정보처럼 파일에 적을 수 없는 값을 실행 시 넘긴다. KEY=VALUE 를 쉼표로.
     #   예) -ExtraEnv CVC_1=1,CVC_2=2,CVC_3=3   (21_Card [12] 의 카드 CVC)
     # env 파일에 있는 키와 겹치게 주지 말 것 — maestro 가 어느 쪽을 쓸지 보장되지 않는다.
-    [string[]]$ExtraEnv = @()
+    [string[]]$ExtraEnv = @(),
+    # 사용자 프로파일. `env\user.<이름>.env` 를 언어 파일 **위에** 얹는다.
+    #   ⛔ 기본값을 두지 않는다 — 빼먹으면 남의 계정으로 도는 쪽이 더 위험하다.
+    #      (Mandatory 를 쓰면 값이 없을 때 **대화형으로 물어** 자동 실행이 멈춘다)
+    [string]$User = ""
 )
 
 # -Build → 패키지명. `-AppId`를 직접 준 경우에는 그쪽이 이긴다.
@@ -30,6 +34,20 @@ $BuildMap = @{
     live = "com.gmeremit.online.gmeremittance_native"
 }
 if (-not $AppId) { $AppId = $BuildMap[$Build] }
+
+# ── 사용자 프로파일 — **가장 먼저** 확인한다 ─────────────────────
+# 사람마다 다른 테스트 데이터(계정 ID 등)를 담는 `env\user.<이름>.env` 다.
+# ⚠️ 없는 이름을 조용히 넘기면 기본값(Basshu)으로 돌아 **남의 계정을 건드린다** → 즉시 멈춘다.
+# ★ 기기 검사보다 앞에 둔다 — 인자가 틀렸는데 하드웨어부터 보면 원인이 가려진다.
+if (-not $User) {
+    Write-Error "사용자를 지정하세요:  -User Tomas|Basshu|Philip"
+    exit 1
+}
+$userFile = "env\user.$User.env"
+if (-not (Test-Path $userFile)) {
+    Write-Error "user profile not found: $userFile  (Maestro\env\user.*.env 를 확인하세요)"
+    exit 1
+}
 
 # 기기 자동 감지 (-device 미지정 시)
 #
@@ -104,6 +122,9 @@ function Add-EnvFile([string]$path) {
     }
 }
 Add-EnvFile $envFile
+# 사용자 프로파일을 언어 파일 **뒤에** 얹는다(존재 검사는 맨 앞에서 이미 했다)
+Add-EnvFile $userFile
+
 
 
 # -AppId 로 빌드를 바꿀 때는 env 파일의 APP_ID 항목을 **교체**한다.
