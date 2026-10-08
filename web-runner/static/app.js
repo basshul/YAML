@@ -67,21 +67,21 @@ async function boot() {
 /* 실행자 선택. **브라우저에 기억한다** — 새로고침마다 다시 고르게 하면 금세 안 쓴다.
    ⚠️ localStorage 는 사생활 보호 창·저장 차단에서 **예외를 던진다** → 읽기·쓰기 모두 감싼다.
       기억이 없으면 그냥 첫 항목으로 둔다(없는 사람을 지어내지 않는다). */
-const RUN_USER_KEY = "webrunner.runUser";
+const RUN_USER_KEY = "webrunner.runUser";   // 지난 판에서 쓰던 저장 키 — 지우기 위해 남겨 둔다
 
+/* 사용자 선택. **기억하지 않는다 — 열 때마다 미선택에서 시작한다.**
+   한 번 고른 값을 되살리면 그 뒤로는 다시 미선택이 되지 않아,
+   "고르지 않은 사람이 남의 계정으로 돌리는 것을 막는다" 는 목적이 첫 1회 뒤로 사라진다.
+   실송금·계정삭제가 걸린 화면이라 편의보다 확인이 먼저다. 고르는 건 한 번의 클릭이다. */
 function initRunUser() {
   const sel = $("runUser");
   if (!sel) return;
-  let saved = null;
-  try { saved = localStorage.getItem(RUN_USER_KEY); } catch (e) { /* 막혀 있으면 기본값 */ }
-  // ★ **첫 항목을 자동으로 고르지 않는다.** 기억해 둔 값이 있을 때만 되살린다 —
-  //   고르지 않은 사람이 남의 계정으로 돌리는 것을 막는 것이 이 선택의 목적이다.
-  const known = [...sel.options].map((o) => o.value).filter(Boolean);
-  sel.value = known.includes(saved) ? saved : "";
-  state.runUser = sel.value;
+  // 예전 판이 남겨 둔 저장값을 치운다. 안 지우면 그게 계속 기본값처럼 되살아난다.
+  try { localStorage.removeItem(RUN_USER_KEY); } catch (e) { /* 막혀 있으면 그만 */ }
+  sel.value = "";
+  state.runUser = "";
   sel.addEventListener("change", () => {
     state.runUser = sel.value;
-    try { localStorage.setItem(RUN_USER_KEY, sel.value); } catch (e) { /* 저장만 안 될 뿐 */ }
     updateRunState();
     markAdminReady();
   });
