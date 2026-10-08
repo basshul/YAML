@@ -177,6 +177,23 @@ appId: ${APP_ID}
 #   ② 수취인이 활성이면 그 단계가 없고 **`출금 계좌를 선택하세요` 바텀시트로 직행**한다.
 #   → 종전엔 ①만 30초 기다려 죽었다(그날 첫 행이 오늘 실송금한 스리랑카 건이라 수취인이 활성이었다).
 #     이 케이스가 보는 건 "재송금 버튼이 동작하는가"이므로 **둘 중 어느 화면이든 도달로 인정**하고 닫는다.
+# ★ 2026-10-07 추가 — 위 ②(활성이면 시트로 직행)가 **그대로는 안 맞는다.** 수취인이
+#   활성이어도 "수취인의 세부 정보가 변경되었습니다."(btnOk="확인") 안내가 먼저 끼어든다
+#   (저장된 수취인 정보가 거래 당시와 다르면 뜬다). 종전 가드는 아니요/출금계좌 둘만
+#   기다려 **여기서 30초 타임아웃으로 죽는다.**
+#   ⚠️ 이 안내와 ①의 활성화 확인창은 **같은 `txvDialogDescription`** 을 쓴다 → 문구(언어별)가
+#      아니라 **`btnCancel` 유무**로 가른다: 활성화 확인창은 아니요/예 두 개, 이 안내는 확인 하나뿐.
+#      활성화 확인창에서 btnOk 를 누르면 **수취인을 활성화**해 버린다 — 이 케이스는 그걸 하지 않는다.
+- runFlow:
+    when:
+      visible:
+        id: "txvDialogDescription"
+      notVisible:
+        id: "btnCancel"
+    commands:
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "${NO_OR_SELECT_WITHDRAW}"
@@ -202,10 +219,317 @@ appId: ${APP_ID}
 - assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
-# [02] [Medium] History - Remittance - 해외송금 Wallet 송금내역 재송금 - BLOCKED
-#   KFTC vs Wallet 결제수단이 History 상세에서 관찰되지 않음(송금방법=Bank Transfer만 표시).
-#   [01]과 동일 동작밖에 재현되지 않아 결제수단별 구분 검증 불가 → BLOCKED.
+# [02] [High] History - Remittance - 해외송금 Wallet 송금내역 재송금 동작 확인 (Send Money)
+#   체크리스트 #133 과 함께 **#226·#227·#228 을 이 한 케이스로 덮는다**(2026-10-07 통합).
+#   왜 여기로 모았나: 재송금은 수취인 추가·국가/은행/금액 입력을 전부 건너뛴다 →
+#     **같은 커버리지를 훨씬 짧은 경로로** 얻는다. 그래서 `02_01 [02]` 의 송금 구간은
+#     주석 처리해 두고(수취인 추가까지만 남김) **실송금 1회를 여기서 치른다.**
+#
+# ★ 종전 BLOCKED 사유는 **해소됐다**(2026-10-07 실측, 7.21.0-stag).
+#   종전: "KFTC vs Wallet 이 History 상세에 안 보인다(송금 방법=Bank Transfer 만 표시)".
+#   실제: 구분은 **상세가 아니라** 재송금 뒤 뜨는 `출금 계좌를 선택하세요` 시트에서 한다
+#         — GME Wallet / 신한은행 / 카카오뱅크 / 케이뱅크(= KFTC 계좌). 여기서 Wallet 을 고른다.
+#
+# 실측 흐름(2026-10-07):
+#   상세 → `txvResendButton` → **정보 다이얼로그 최대 2개** → 출금계좌 시트 → GME Wallet
+#   → `SendMoneyV2Activity`(= `02_01 [02]` 와 **같은 화면으로 수렴**) → 1·2단계 → PIN → 성공 → 영수증
+#   다이얼로그 ① "현재 수취인이 활성화되어 있지 않습니다 / 활성화하시겠습니까?" (btnCancel=아니요, btnOk=예)
+#              ② "수취인의 세부 정보가 변경되었습니다." (btnOk=확인)
+#   ★ ①은 수취인이 이미 활성이면 건너뛴다. ②는 저장된 수취인 정보가 거래 당시와 다르면 뜬다.
+#     → **문구가 아니라 다이얼로그 id(`txvDialogDescription`) 로 잡는다** — 영문 문구가 미확인이라
+#       env 에 추측값을 넣지 않는다.
+#
+# ✅ **2026-10-07 실송금 완주 확인** — PIN 오입력 → PIN 재요구 → 정상 입력 → 성공 → 영수증 PDF 저장까지.
+#   (영수증 구간의 셀렉터는 같은 날 기기에서 **직접 떠서** 넣었다. 플로우로 재실행하지는 못했다 —
+#    지갑을 다시 충전해야 하기 때문이다. 다음 충전 때 한 번 더 돌려 확인하면 좋다.)
+#
+# ⛔ **잔액 의존** — GME Wallet 잔액이 최소 송금액(수수료 5,000 포함, 환율 연동으로 매일 바뀐다)보다
+#   적으면 "거래를 진행하기 위한 잔액이 부족합니다." 에서 막힌다. 그 팝업에 붙은
+#   **`btnVerifyBankAccount`("확인") = 실계좌 자동충전**이다 — 절대 자동으로 누르지 말 것.
+#   스위트는 잔액을 선검사해 부족하면 이 파일을 SKIP 한다(잔액부족을 Pass 로 적지 말 것).
+#   ⚠️ 충전해도 **홈은 캐시로 0 을 계속 보여준다** — 당겨서 새로고침해야 반영된다(사람이 볼 때 주의).
 # ----------------------------------------------------------------
+- tapOn:
+    id: "tv_gme_control_no"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${PAY_MODE_TEXT}"
+    timeout: 15000
+- tapOn: "${TXT_RESEND}"
+- waitForAnimationToEnd
+
+# 정보 다이얼로그 ①② 를 닫는다. 둘 다 `btnOk` 가 진행 버튼이다(①=예, ②=확인).
+# ⚠️ 엉뚱한 다이얼로그를 눌러도 **바로 아래 출금계좌 시트 단언에서 걸린다** → 조용히 통과하지 않는다.
+- repeat:
+    times: 2
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: "txvDialogDescription"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+
+# ---- 출금 계좌 선택: **여기가 Wallet / KFTC 가 갈리는 지점이다** (체크리스트 #133) ----
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_WITHDRAW}"
+    timeout: 30000
+- assertVisible:
+    id: "rvKftcList"
+- tapOn:
+    id: "txvAccountTitle"
+    text: "GME Wallet"
+- waitForAnimationToEnd
+
+# ---- 송금액: 앱이 알려주는 **최소 송금액**을 읽어 그대로 쓴다 ----
+# 이유는 `02_01 [02]` 와 같다 — 최소 송금액은 환율 연동이라 매일 바뀌어 고정값은 근본적으로 낡는다.
+# 일부러 낮은 값을 넣어 `limitErrorMsg` 를 띄우고 거기 적힌 숫자를 그대로 재입력한다.
+# ★ 재송금은 금액이 원 거래 값이 아니라 **기본값(100,000)** 으로 채워져 온다(2026-10-07 실측)
+#   → 반드시 지우고 다시 넣는다. 아래 5000 은 **미끼값**이지 송금액이 아니다.
+- extendedWaitUntil:
+    visible:
+      id: "sendAmountEdTxt"
+    timeout: 30000
+- tapOn:
+    id: "sendAmountEdTxt"
+- eraseText
+- inputText: "5000"
+- hideKeyboard
+- tapOn: "${CALCULATE_TEXT}"
+# ⛔ 잔액이 부족하면 최소금액 안내 **대신** "거래를 진행하기 위한 잔액이 부족합니다." 가 먼저 뜬다
+#   (2026-10-07 실측: 지갑 잔액 0). 이 판정이 없으면 아래 `limitErrorMsg` 대기가 60초 타임아웃 나서
+#   **원인이 로그에서 가려진다** — 세션 만료 가드를 홈 대기보다 앞에 둔 것과 같은 이유다.
+#   ⚠️ 이 팝업에 함께 뜨는 `btnVerifyBankAccount` 는 **실계좌 자동충전**이다. 닫고 진행하지 말 것.
+- assertNotVisible:
+    text: "${SEND_INSUFFICIENT_BALANCE}"
+- extendedWaitUntil:
+    visible:
+      id: "limitErrorMsg"
+    timeout: 60000
+- copyTextFrom:
+    id: "limitErrorMsg"
+- evalScript: ${output.minAmt = maestro.copiedText.replace(/[^0-9]/g, '')}
+- tapOn:
+    id: "sendAmountEdTxt"
+- eraseText
+- inputText: ${output.minAmt}
+- hideKeyboard
+- tapOn: "${CALCULATE_TEXT}"
+
+# ---- 1단계: 금액 세부 정보 ----
+- extendedWaitUntil:
+    visible:
+      text: "${SEND_CALC_RESULT_ANY}"
+    timeout: 60000
+# ⛔ 잔액 부족이면 **여기서 실패시킨다.** 닫고 진행하지 말 것 —
+#   이 팝업에 함께 뜨는 `자동이체 계좌 선택` 시트의 `btnVerifyBankAccount` 는 실계좌 자동충전이다.
+- assertNotVisible:
+    text: "${SEND_INSUFFICIENT_BALANCE}"
+- assertVisible:
+    id: "agreeButton"
+    text: "${MYQR_CONTINUE}"
+- assertNotVisible:
+    id: "limitErrorMsg"
+- assertVisible:
+    id: "transferFeeTxtView"
+- tapOn:
+    id: "agreeButton"
+
+# ---- 2단계: 수취인 정보 / 약관 동의 ----
+# ⚠️ 재송금은 2단계 제목이 **`인증 처리 중`** 으로 표시된다(2026-10-07 실측). `02_01` 의
+#   `수취인 정보` 와 달라 **2단계를 건너뛰고 PIN 으로 직행할 가능성**이 있다.
+#   → 어느 쪽이든 받도록 **둘 중 먼저 오는 것**을 기다리고, 2단계는 조건부로만 처리한다.
+- extendedWaitUntil:
+    visible:
+      id: "txt_pamount|input_dot_1"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "txt_pamount"
+    commands:
+      - assertVisible:
+          id: "txt_bankAcNo"
+      # ⛔ 스크롤 없이 `agreeButton` 을 누르면 **약관 브라우저가 열린다**(`02_01 [02]` 실측):
+      #   버튼이 화면 밖인데 접근성 트리에는 bounds 가 남아, 그 좌표의 "송금 사기 주의" 링크가 눌린다.
+      - swipe:
+          direction: UP
+          duration: 1000
+      - waitForAnimationToEnd
+      - assertVisible:
+          id: "agreeButton"
+          text: "${MYQR_CONTINUE}"
+      - tapOn:
+          id: "agreeButton"
+      # 그래도 약관 브라우저가 열렸으면 되돌아와 재시도한다(자가복구)
+      - runFlow:
+          when:
+            visible:
+              text: "GME Remittance - Terms"
+          commands:
+            - tapOn:
+                id: "iv_back"
+            - waitForAnimationToEnd
+            - swipe:
+                direction: UP
+                duration: 1000
+            - waitForAnimationToEnd
+            - tapOn:
+                id: "agreeButton"
+
+# ---- PIN 1회 오입력 (체크리스트 #226: 간편 비밀번호 틀릴 시 송금불가) ----
+# ⚠️ 잠금화면 판정은 **`id: input_dot_1`** 로 한다 — 문구(`간편 비밀번호를 입력하세요`)로 잡으면
+#   전체매칭에 걸려 **가드가 통째로 SKIP** 된다(`02_01 [02]` 에서 실제로 거짓 통과했다).
+# ⚠️ PIN 키패드는 **탭마다 배치가 재섞인다.** 탭 사이 `waitForAnimationToEnd` 가 없으면
+#   stale 좌표를 눌러 오입력이 누적된다 = 계정 잠금.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 60000
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "3"
+- waitForAnimationToEnd
+# 오입력 안내 팝업을 닫는다
+- runFlow:
+    when:
+      visible:
+        id: "btn_diaog_ok|btnOk"
+    commands:
+      - tapOn:
+          id: "btn_diaog_ok|btnOk"
+      - waitForAnimationToEnd
+
+# ---- PIN 정상 입력 (체크리스트 #227: 간편 비밀번호 일치 시 송금동작) ----
+# ★ 오입력으로는 송금이 성립하지 않아야 한다 — PIN 을 **다시 요구**하고 성공 화면이
+#   떠 있지 않은 것으로 #226 을 단언한다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- assertNotVisible:
+    text: "${SEND_SUCCESS}"
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+- tapOn: "1"
+- waitForAnimationToEnd
+- tapOn: "2"
+- waitForAnimationToEnd
+
+# ---- 송금 결과 ----
+# ⚠️ 결과 도달을 **먼저 강제한다.** 조건부 처리만 두면 아무것도 안 떠도 EXIT=0 이 된다(거짓 통과).
+- extendedWaitUntil:
+    visible:
+      text: "${SEND_RESULT_ANY}"
+    timeout: 120000
+- takeScreenshot: "[02]_재송금_결과"
+# ⚠️ 앱은 **PIN 입력 전까지 잔액을 재검증하지 않는다** → 잔액부족 팝업은 여기서도 뜰 수 있다.
+#   그 경우 송금이 일어나지 않았으므로 닫고 진행하지 말고 **실패시킨다.**
+- assertNotVisible:
+    text: "${SEND_RESULT_INSUFFICIENT}"
+- assertVisible:
+    text: "${SEND_SUCCESS}"
+
+# ---- 영수증 및 영수증 다운로드 (체크리스트 #228) ----
+# ⚠️⚠️ **성공 시트의 「영수증 보기」 id 는 `btnVerifyBankAccount` 다**(2026-10-07 실측).
+#   하필 **잔액부족 팝업의 자동충전 「확인」과 같은 id** 다 — 같은 바텀시트 레이아웃을 재사용한다.
+#   id 만 보고 누르면 상황에 따라 **실계좌 자동충전**을 누르게 된다.
+#   → 아래처럼 **`txvDialogTitle` 이 성공인지 확정한 뒤에만** 누른다. 잔액부족 팝업의 제목은 `정보` 라
+#     `${SEND_SUCCESS}`(= 성공|완료) 에 걸리지 않는다.
+#   ※ 짝 버튼 `btnContactSupport1` 은 "다시 보내기" 다 — 누르면 송금 화면으로 되돌아간다.
+- assertVisible:
+    id: "txvDialogTitle"
+    text: "${SEND_SUCCESS}"
+- tapOn:
+    id: "btnVerifyBankAccount"
+
+# 영수증 화면 = `SendMoneyV2TransactionCompleteActivity` (History 상세의 영수증과 **다른 화면**이다)
+#   `transfer_label`="송금 성공" / `tv_gme_control_no`="GME 거래번호 …" / `btn_pdf_down`="영수증 다운로드"
+- extendedWaitUntil:
+    visible:
+      id: "transfer_label"
+    timeout: 30000
+- assertVisible:
+    id: "tv_gme_control_no"
+- takeScreenshot: "[02]_영수증_화면"
+
+# ⚠️ `btn_pdf_down` 은 **화면 아래라 스크롤해야 닿는다**(2026-10-07 실측).
+- swipe:
+    direction: UP
+    duration: 800
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btn_pdf_down"
+- tapOn:
+    id: "btn_pdf_down"
+# 시스템 파일 저장 화면(DocumentsUI)이 뜬다. 파일명 접두사는 **`OverseasTransaction_`**,
+# 저장 버튼은 **`button1`("저장")**. 저장하면 기기 기본 PDF 뷰어가 열린다(기기마다 다르다).
+# ★ 파일명으로 도달을 판정하면 **이 송금의 영수증**이라는 것까지 함께 확인된다.
+- extendedWaitUntil:
+    visible:
+      text: "OverseasTransaction_[0-9]*"
+    timeout: 30000
+- takeScreenshot: "[02]_영수증_저장화면"
+- tapOn:
+    id: "button1"
+- waitForAnimationToEnd
+# 저장이 끝나면 저장 화면이 사라진다 — 거짓 통과 방지로 **사라진 것**까지 본다
+- extendedWaitUntil:
+    notVisible:
+      id: "button1"
+    timeout: 30000
+- takeScreenshot: "[02]_영수증_다운로드"
+
+# ---- 해외송금 목록으로 복귀 ----
+# ⚠️ 송금 완료 후 스택이 깊다(`02_01 [02]` 실측) → back 으로 홈까지 민 뒤
+#   **파일 진입부와 같은 경로**로 목록에 다시 들어간다. back 횟수에 기대지 않는다.
+# ⚠️ `${TXT_OVERSEAS_REMIT}`(해외송금) 는 **홈 타일에도 있다** → 그걸로 목록 도달을 판정하면
+#   홈에서 멈춘 채 통과하고, 다음 [03] 이 송금 화면으로 들어가 버린다.
+- repeat:
+    times: 10
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- tapOn:
+    id: "bottom_item_history"
+- waitForAnimationToEnd
+- tapOn: "${TAB_REMITTANCE}"
+- waitForAnimationToEnd
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
 
 # ----------------------------------------------------------------
 # [03] [Medium] History - Remittance - 해외송금 검색동작 확인
