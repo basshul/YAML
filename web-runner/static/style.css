@@ -14,6 +14,11 @@ body {
   flex-direction: column;
 }
 
+/* 스크롤바 자리를 **늘 비워 둔다.** 이력 화면은 페이지가 스크롤돼 스크롤바가 생기고
+   실행 화면은 body{overflow:hidden} 이라 없다 → 화면을 옮길 때마다 상단 버튼이
+   스크롤바 너비(약 15px)만큼 튄다. 자리를 고정하면 두 화면의 오른쪽 끝이 같아진다. */
+html { scrollbar-gutter: stable; }
+
 .topbar {
   display: flex;
   align-items: center;
@@ -27,7 +32,12 @@ body {
   font-size: 11px; padding: 2px 7px; border-radius: 10px;
   background: #3d4d61; color: #cfe0f5;
 }
-.conn { margin-left: auto; font-size: 12px; color: #9fb3c8; }
+/* 오른쪽 묶음을 미는 것은 **왼쪽 묶음의 끝**이 한다.
+   종전엔 `.conn{margin-left:auto}` 가 그 일을 했는데 `.conn` 은 index 에만 있어
+   history 에서는 내비가 제목 옆에 붙었다(화면마다 버튼 위치가 달라 보인 원인).
+   ⚠️ `.tag` 는 표 안의 알약에도 쓰이므로 **topbar 직계 자식만** 잡는다. */
+.topbar > .tag { margin-right: auto; }
+.conn { font-size: 12px; color: #9fb3c8; }
 .conn.bad { color: #ff9d9d; }
 
 .topnav { margin-left: 12px; display: flex; gap: 4px; }

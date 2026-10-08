@@ -33,6 +33,16 @@
     body{overflow:hidden;display:flex;flex-direction:column;}
     .shell{flex:1;min-height:0;}
     .shell>.col{min-height:0;overflow-y:auto;padding-right:2px;}
+
+    /* 오른쪽은 **칸이 아니라 표가** 스크롤한다.
+       칸(.col-right)이 스크롤하면 필터 줄과 열 머리글이 통째로 밀려 올라간다.
+       표만 움직이게 하면 둘 다 늘 보이고, 머리글 sticky 도 비로소 먹는다
+       (sticky 는 **가장 가까운 스크롤 컨테이너**를 기준으로 붙는데,
+        `.clwrap{overflow-x:auto}` 탓에 .clwrap 이 이미 그 컨테이너다 —
+        overflow 한 축이 visible 이 아니면 **나머지 축도 auto 로 계산된다**). */
+    .shell>.col-right{overflow-y:hidden;}
+    .col-right>.panel{flex:1;min-height:0;display:flex;flex-direction:column;}
+    .col-right>.panel>.clwrap{flex:1;min-height:0;overflow:auto;}
   }
   @media (max-width:899px){
     .shell{flex-direction:column;}
@@ -94,16 +104,16 @@
   body.ro .roband{display:flex;}
   body.ro .ro-hide{display:none !important;}
 
-  .todo{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px 10px;
-    margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:6px;}
-  .todo>.lab{font-size:12px;font-weight:700;color:#3d4550;margin-right:2px;}
-  .tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;font-size:12px;
-    border:1px solid var(--line);border-radius:999px;background:#fff;color:#2c333c;cursor:pointer;}
-  .tbtn .n{font-weight:700;font-variant-numeric:tabular-nums;}
-  .tbtn[aria-pressed="true"]{border-color:var(--blue);background:#eef4ff;color:var(--blueDk);}
-  .tbtn.zero{color:var(--muted);border-color:var(--line2);cursor:default;}
-  .tbtn.warn:not(.zero){border-color:#e3a9a9;background:#fdf0f0;color:var(--red);}
-  .tbtn.warn:not(.zero)[aria-pressed="true"]{border-color:var(--red);background:#fbe3e3;}
+  /* 매핑 오류 경고 — 상단 전폭. 「확인할 것」 묶음을 대신한다.
+     ⚠️ `display:flex` 가 `[hidden]` 의 기본 `display:none` 을 이긴다 →
+        숨김 규칙을 **명시적으로** 적어야 한다. 안 그러면 hidden 인데 보인다. */
+  .mapwarn{display:flex;align-items:center;gap:10px;padding:9px 20px;
+    background:#fdf0f0;border-bottom:1px solid #e3a9a9;color:#8c2a2a;font-size:12px;}
+  .mapwarn[hidden]{display:none;}
+  .mapwarn b{font-variant-numeric:tabular-nums;}
+  .mapwarn button{border:1px solid #d99;background:#fff;color:#8c2a2a;
+    padding:4px 10px;font-size:12px;border-radius:6px;cursor:pointer;}
+  .mapwarn button[aria-pressed="true"]{background:#8c2a2a;border-color:#8c2a2a;color:#fff;}
 
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:9px;}
   .filters label.f{display:flex;align-items:center;gap:6px;}
@@ -128,7 +138,14 @@
   table.cl{width:100%;border-collapse:collapse;min-width:760px;}
   table.cl th,table.cl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line2);
     font-size:12px;vertical-align:top;}
-  table.cl th{color:var(--muted);font-weight:600;white-space:nowrap;}
+  /* 열 머리글은 **상시 노출**이다(종전엔 시나리오를 펼쳐야 나타났다).
+     목록이 길어 스크롤하면 머리글이 밀려 올라가므로 `sticky` 로 붙여 둔다 —
+     '항상 보인다'는 건 스크롤 중에도 보인다는 뜻이다.
+     ⚠️ `border-collapse:collapse` 인 표에서는 **th 의 테두리가 sticky 를 따라오지 않는다**
+        (테두리 소유자가 표로 넘어간다) → 아래쪽 경계선은 box-shadow 로 그린다. */
+  table.cl th{color:var(--muted);font-weight:600;white-space:nowrap;
+    position:sticky;top:0;z-index:2;background:#fff;
+    border-bottom:0;box-shadow:inset 0 -1px 0 var(--line);}
   tr.clrow{cursor:pointer;}
   tr.clrow:hover td{background:#f6f9fe;}
   tr.clrow[aria-selected="true"] td{background:#eef4ff;box-shadow:inset 3px 0 0 var(--blue);}
@@ -149,9 +166,25 @@
   .tag.man{background:#f3eefc;color:var(--purple);}
   .tag.pend{background:#e7f1ff;color:var(--blueDk);}
   .tag.wait{background:#fdf0f0;color:var(--red);}
-  .scenhead td{background:#eef1f5;font-weight:700;font-size:12px;color:#2f4058;
+  .scenhead td{background:#eef1f5;font-weight:400;font-size:12px;color:var(--muted);
     border-bottom:1px solid var(--line);}
-  .scenhead .sum{float:right;font-weight:400;color:var(--muted);font-size:11px;}
+
+  /* 시나리오 제목 — **모노를 쓰지 않는다.**
+     이름은 코드가 아니라 라벨이다. 모노로 찍으면 `_` 가 글자만큼 자리를 먹어
+     `01_02_Login_Wrong_SimplePassword` 같은 이름이 과하게 넓어지고, 700 굵기와
+     겹쳐 줄 전체가 시커메진다. 본문 활자(Pretendard)로 바꾸고 크기로 위계를 준다.
+     ★ 다만 앞머리 숫자(`01_02`)는 목록을 훑는 기준점이라 정렬이 깨지면 안 된다
+       → `tabular-nums` 로 숫자 폭만 고정한다(모노 없이 자릿수 정렬이 유지된다). */
+  .scenhead .mono{
+    font-family:inherit;
+    font-variant-numeric:tabular-nums;
+    font-size:13.5px;font-weight:600;color:#1b2735;
+    letter-spacing:-0.012em;
+  }
+  /* 제목 옆 메타(그룹·계정)는 한 단 낮춘다 — 종전엔 제목과 크기가 같아 위계가 없었다 */
+  .scenhead .muted{font-size:11.5px;}
+  .scenhead .sum{float:right;font-weight:400;color:var(--muted);font-size:11px;
+    padding-top:1px;}
   .scenhead .noscen{color:var(--amber);}
   .failbtns{display:flex;gap:4px;margin-top:5px;}
   .failbtns button{padding:2px 8px;font-size:11px;}
@@ -210,11 +243,24 @@
 
   /* 시나리오 펼침 단추 — 선택 체크박스와 나란히 서지만 하는 일이 다르다.
      ★ button{padding:7px 14px} 를 반드시 덮는다(docs/CHECKLIST.md 경고). */
-  .twisty{display:inline-block;width:18px;height:18px;line-height:16px;padding:0;margin-right:4px;
-          border:1px solid var(--line2);border-radius:4px;background:#fff;color:var(--ink2);
-          font-size:10px;text-align:center;vertical-align:middle;cursor:pointer;}
-  .twisty:hover{background:var(--bg2);color:var(--ink);}
-  .twisty.empty{border-color:transparent;background:none;cursor:default;color:var(--line2);}
+  /* 꺾쇠는 **글자가 아니라 테두리로 그린다.** `›`·`⌄` 같은 문자는 폰트마다 크기와
+     중심이 제각각이라 펼침/접힘 두 상태의 굵기·위치가 어긋난다. 테두리 두 변을
+     돌려 그리면 두 상태가 **같은 도형을 회전한 것**이라 어긋날 수가 없다.
+     상태는 `aria-expanded` 하나로 끈다 — 화면과 보조기술이 같은 값을 본다.
+     ⚠️ 종전 `var(--ink2)`/`var(--bg2)`/`var(--ink)` 는 **정의된 적 없는 변수**였다.
+        정의 없는 var() 는 선언이 통째로 무효가 돼 색이 상속으로 떨어진다 → 실제 값으로 적는다. */
+  .twisty{display:inline-flex;align-items:center;justify-content:center;
+          width:18px;height:18px;padding:0;margin-right:4px;
+          border:1px solid var(--line2);border-radius:4px;background:#fff;color:#6b7684;
+          vertical-align:middle;cursor:pointer;}
+  .twisty .chev{width:5px;height:5px;
+          border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;
+          transform:translateX(-1.5px) rotate(-45deg);transition:transform .14s ease;}
+  .twisty[aria-expanded="true"] .chev{transform:translateY(-1.5px) rotate(45deg);}
+  .twisty:hover{background:#f3f5f8;color:#1b2735;}
+  .twisty.empty{border-color:transparent;background:none;cursor:default;color:#c9cfd6;
+          font-size:10px;}
+  @media (prefers-reduced-motion:reduce){ .twisty .chev{transition:none;} }
   .cl .clrow .map{font-size:11px;}
 
   /* 점검 종류 + 계정명은 **한 칸**에 담는다 — 2열 구조라 칸을 더 쪼갤 수 없다 */

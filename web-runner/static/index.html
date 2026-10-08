@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maestro Web Runner</title>
-<link rel="stylesheet" href="style.css?v=6">
-<link rel="stylesheet" href="v5.css?v=3">
+<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="v5.css?v=8">
 <!-- 글꼴: 본문 Pretendard, ID·매핑 JetBrains Mono. 막히면 맑은 고딕·Consolas 로 돌아간다. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -23,6 +23,15 @@
     <a href="/history.html">실행 이력</a>
   </nav>
 </header>
+
+<!-- 매핑 오류 경고 — 오류가 있을 때만 나타난다(늘 떠 있으면 경고가 아니다).
+     role=alert 라서 생길 때 보조기술이 바로 읽는다. -->
+<div class="mapwarn" id="mapwarn" role="alert" hidden>
+  <b>매핑 오류 <span id="mapwarn-n">0</span>건</b>
+  <span>체크리스트가 가리키는 시나리오·케이스를 플로우에서 찾지 못했습니다.</span>
+  <span class="spacer"></span>
+  <button class="small" type="button" id="btn-mapwarn-only" aria-pressed="false">오류만 보기</button>
+</div>
 
 <div class="shell">
 
@@ -94,7 +103,7 @@
       <h2>엑셀 <span class="muted" style="font-size:11px">연결 전</span></h2>
       <div class="sumline"><span id="sv-pend"></span><br><span id="sv-mine"></span></div>
       <div class="runbtns">
-        <button class="primary ro-hide" type="button" id="btn-save">엑셀에 저장…</button>
+        <button class="primary ro-hide" type="button" id="btn-save">엑셀에 저장</button>
         <button class="ghost" type="button" id="btn-reload">다시 읽기</button>
       </div>
       <p class="sidehint">저장 전에 <b>바뀌는 칸을 미리 보여줍니다.</b></p>
@@ -121,19 +130,6 @@
         <button class="small" type="button" id="btn-back-latest">최신 결과로</button>
       </div>
 
-      <div class="todo" role="group" aria-label="확인할 것">
-        <span class="lab">확인할 것</span>
-        <button class="tbtn warn" type="button" data-todo="failwait" aria-pressed="false">
-          자동 Fail 확인 대기 <span class="n">0</span></button>
-        <button class="tbtn" type="button" data-todo="pending" aria-pressed="false">
-          엑셀 기입 대기 <span class="n">0</span></button>
-        <button class="tbtn warn" type="button" data-todo="badmap" aria-pressed="false">
-          매핑 오류 <span class="n">0</span></button>
-        <button class="tbtn warn" type="button" data-todo="noreason" aria-pressed="false">
-          덮었는데 사유 없음 <span class="n">0</span></button>
-        <button class="tbtn" type="button" data-todo="mine" aria-pressed="false">
-          사람 수정 <span class="n">0</span></button>
-      </div>
 
       <div class="filters">
         <label class="f"><span>영역</span><select id="f-area" aria-label="영역 필터"></select></label>
@@ -150,6 +146,8 @@
             <option>Not Test</option><option>NA</option><option value="none">비어 있음</option></select></label>
         <label class="modetog ro-hide"><input type="checkbox" id="mapmode"> 매핑 모드</label>
         <span class="spacer"></span>
+        <button class="small" type="button" id="btn-selvis">보이는 것 모두 선택</button>
+        <button class="small" type="button" id="btn-selnone">선택 해제</button>
         <button class="helpbtn" type="button" id="btn-help" aria-label="이 화면 설명 열기">?</button>
       </div>
 
@@ -259,7 +257,12 @@
     <header><span id="hp-h">이 화면 읽는 법</span>
       <button class="x" type="button" data-close="helpm" aria-label="닫기">×</button></header>
     <div class="note">
-      <b>「확인할 것」이 출발점입니다.</b> 413행을 훑는 게 아니라 손이 필요한 것부터 봅니다. 0건이면 회색 ✓ 입니다.<br><br>
+      <b>손이 필요한 것부터 봅니다.</b> 매핑 오류가 있으면 <b>화면 맨 위에 경고</b>가 뜹니다 —
+      없으면 아무것도 안 보이는 것이 정상입니다. 경고의 <b>「오류만 보기」</b>를 누르면
+      오류가 있는 시나리오만 남기고 펼쳐 보여 줍니다.<br><br>
+      <b>필터는 선택까지 이어집니다.</b> 그룹·중요도로 좁히면 시나리오 목록 자체가 줄고,
+      <b>「보이는 것 모두 선택」</b>과 실행 버튼이 그 범위만 다룹니다. 필터를 바꿔도 선택은
+      남으므로, 화면에 없는 선택이 있으면 왼쪽 요약에 알려 줍니다.<br><br>
       <b>표는 읽기 전용입니다.</b> 행을 누르면 오른쪽 패널이 열려 거기서 고칩니다 —
       413행짜리 표에 입력칸을 깔면 어디를 고쳤는지 알 수 없게 됩니다.<br><br>
       <b>자동 <code>Fail</code> 은 바로 기입하지 않습니다.</b> 외부 요인·셋팅 불량으로 난 Fail 이
@@ -281,6 +284,6 @@
   </div>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

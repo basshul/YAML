@@ -84,22 +84,7 @@ function markOffline() {
     pri.title = connected ? "" : NOTE;
   }
 
-  // 「확인할 것」 — 지금 셀 수 있는 건 **매핑 오류** 뿐이다(결과가 없으니 나머지는 못 센다)
-  const badmap = connected ? countMapErrors() : null;
-  for (const b of document.querySelectorAll("[data-todo]")) {
-    const n = b.querySelector(".n");
-    const isMap = b.dataset.todo === "badmap";
-    if (isMap && connected) {
-      if (n) n.textContent = String(badmap);
-      b.disabled = badmap === 0;
-      b.classList.toggle("zero", badmap === 0);
-      b.title = badmap ? "누르면 매핑이 잘못된 행만 보여줍니다" : "매핑 오류가 없습니다";
-    } else {
-      if (n) n.textContent = "–";
-      b.disabled = true;
-      b.title = NOTE;
-    }
-  }
+  renderMapWarn();
 
   const info = connected
     ? "체크리스트 " + state.checklist.data.summary.rows + "행 · 받아온 시각 " +
@@ -114,6 +99,26 @@ function markOffline() {
       ? "시나리오별로 펼치면 체크리스트 확인 항목이 보입니다"
       : "체크리스트는 아직 연결 전 — 지금은 실행할 시나리오만 고릅니다";
   }
+}
+
+/* 매핑 오류 경고(상단 전폭). **오류가 있을 때만** 보인다 — 늘 떠 있으면 경고가 아니다.
+   ⚠️ 경고가 사라질 때 `오류만 보기` 가 켜진 채로 남으면 **빈 표**가 되고 끌 수단도
+      함께 사라진다 → 숨길 때 반드시 토글도 같이 끈다. */
+function renderMapWarn() {
+  const bar = $("mapwarn");
+  if (!bar) return;
+  const n = clConnected() ? countMapErrors() : 0;
+  if (!n) {
+    bar.hidden = true;
+    if (state.onlyBadMap) {
+      state.onlyBadMap = false;
+      const b = $("btn-mapwarn-only");
+      if (b) b.setAttribute("aria-pressed", "false");
+    }
+    return;
+  }
+  bar.hidden = false;
+  $("mapwarn-n").textContent = String(n);
 }
 
 function countMapErrors() {
@@ -288,9 +293,33 @@ function renderAreaFilter() {
 
 function priOf(r) { return (r.priority || "").trim(); }
 
+/* 이 시나리오가 그 중요도를 **하나라도** 품고 있는가.
+   체크리스트가 붙었으면 시트의 중요도가 정본이고, 덮이지 않은 yaml 케이스도
+   화면에 나오므로 **둘 다** 본다 — 한쪽만 보면 gap 행만 남는 시나리오가 사라진다. */
+function hasPri(t, pri) {
+  const yamlHit = (t.cases || []).some((c) => (c.pri || "").trim() === pri);
+  if (!clConnected()) return yamlHit;
+  const rows = clRowsOf(t.name);
+  if (rows.some((r) => priOf(r) === pri)) return true;
+  const covered = new Set();
+  for (const r of rows) for (const c of r.cases) covered.add(c);
+  return (t.cases || []).some(
+    (c) => !covered.has(c.id) && (c.pri || "").trim() === pri);
+}
+
 function visibleTests() {
-  return state.tests.filter(
+  let list = state.tests.filter(
     (t) => state.groupFilter === "all" || t.group === state.groupFilter);
+  // 「오류만 보기」가 켜지면 **오류가 있는 시나리오만** 남긴다.
+  //   종전엔 펼친 뒤의 케이스 행만 걸러서, 접힌 상태로 누르면 아무 변화가 없었다.
+  if (state.onlyBadMap && clConnected()) {
+    list = list.filter((t) => clRowsOf(t.name).some((r) => r.mapError));
+  }
+  // 중요도 필터도 **시나리오 단위**로 건다 — 그 중요도가 하나도 없는 시나리오는 감춘다.
+  if (state.priFilter !== "all") {
+    list = list.filter((t) => hasPri(t, state.priFilter));
+  }
+  return list;
 }
 
 function caseCell(idText, pri, text, mapText, mapErr, coverTag) {
@@ -340,7 +369,6 @@ function mapCellOf(r) {
 function renderTable() {
   const rows = visibleTests();
   const connected = clConnected();
-  const anyOpen = rows.some((t) => state.expanded.has(t.name));
   let html = "";
 
   if (!connected) {
@@ -353,7 +381,8 @@ function renderTable() {
   for (const t of rows) {
     const yamlCases = t.cases || [];
     const clRows = connected ? clRowsOf(t.name) : [];
-    const open = state.expanded.has(t.name);
+    // 오류만 보는 중에는 **펼친 채로** 보여 준다 — 무엇이 잘못됐는지가 케이스 행에 있다
+    const open = state.onlyBadMap || state.expanded.has(t.name);
     const hasChildren = connected ? (clRows.length || yamlCases.length) : yamlCases.length;
 
     const pills =
@@ -364,7 +393,7 @@ function renderTable() {
       ? '<button class="twisty" type="button" data-expand="' + esc(t.name) + '"' +
         ' aria-expanded="' + open + '"' +
         ' aria-label="' + esc(t.name) + (open ? " 케이스 접기" : " 케이스 펼치기") + '">' +
-        (open ? "▾" : "▸") + "</button>"
+        '<i class="chev"></i></button>'
       : '<span class="twisty empty" aria-hidden="true">·</span>';
 
     // 머리줄 요약 — 연결되면 '덮인 케이스 / 전체' 가 바로 보인다
@@ -394,6 +423,7 @@ function renderTable() {
 
     if (!connected) {
       for (const c of yamlCases) {
+        if (state.priFilter !== "all" && (c.pri || "").trim() !== state.priFilter) continue;
         html += '<tr class="clrow">' +
           caseCell("[" + c.id + "]", c.pri, c.text, t.name + " [" + c.id + "]", null, "") +
           "</tr>";
@@ -420,6 +450,7 @@ function renderTable() {
     // 덮이지 않은 yaml 케이스 — 커버리지 구멍이 여기서 드러난다
     for (const c of yamlCases) {
       if (covered.has(c.id)) continue;
+      if (state.priFilter !== "all" && (c.pri || "").trim() !== state.priFilter) continue;
       html += '<tr class="clrow gap">' +
         '<td><span class="id">[' + esc(c.id) + "]</span></td>" +
         "<td>" + esc(c.pri || "—") + "</td>" +
@@ -433,31 +464,33 @@ function renderTable() {
 
   // 어느 시나리오에도 속하지 않는 행 — 언제나 맨 뒤
   if (connected && state.groupFilter === "all") {
-    const orphan = state.checklist.orphan.concat(state.checklist.notInSuite);
-    const open = state.expanded.has("__none");
-    html += '<tr class="scenhead"><td colspan="7">' +
-      '<button class="twisty" type="button" data-expand="__none" aria-expanded="' + open + '">' +
-      (open ? "▾" : "▸") + "</button>" +
-      '<span class="noscen">시나리오 없음 · 스위트에 없는 시나리오 — 실행 대상 아님</span>' +
-      '<span class="sum">체크리스트 ' + orphan.length + "행</span></td></tr>";
-    if (open) {
-      for (const r of orphan) {
-        const ids = r.cases.length ? r.cases.map((c) => "[" + c + "]").join(" ") : "—";
-        html += '<tr class="clrow">' +
-          '<td><span class="id">' + esc(ids) + "</span></td>" +
-          "<td>" + esc(r.priority || "—") + "</td>" +
-          '<td><span class="txt">' + esc(r.text) + "</span></td>" +
-          "<td>" + mapCellOf(r) + coverTagOf(r.cover) + "</td>" +
-          '<td><span class="v none">—</span></td><td><span class="v none">—</span></td>' +
-          '<td><span class="v none">—</span></td></tr>';
+    // 이 묶음도 **같은 필터를 탄다** — 중요도를 걸었는데 여기만 그대로 남으면 앞뒤가 안 맞는다
+    let orphan = state.checklist.orphan.concat(state.checklist.notInSuite);
+    if (state.priFilter !== "all") orphan = orphan.filter((r) => priOf(r) === state.priFilter);
+    if (orphan.length) {
+      const open = state.expanded.has("__none");
+      html += '<tr class="scenhead"><td colspan="7">' +
+        '<button class="twisty" type="button" data-expand="__none" aria-expanded="' + open + '">' +
+        '<i class="chev"></i></button>' +
+        '<span class="noscen">시나리오 없음 · 스위트에 없는 시나리오 — 실행 대상 아님</span>' +
+        '<span class="sum">체크리스트 ' + orphan.length + "행</span></td></tr>";
+      if (open) {
+        for (const r of orphan) {
+          const ids = r.cases.length ? r.cases.map((c) => "[" + c + "]").join(" ") : "—";
+          html += '<tr class="clrow">' +
+            '<td><span class="id">' + esc(ids) + "</span></td>" +
+            "<td>" + esc(r.priority || "—") + "</td>" +
+            '<td><span class="txt">' + esc(r.text) + "</span></td>" +
+            "<td>" + mapCellOf(r) + coverTagOf(r.cover) + "</td>" +
+            '<td><span class="v none">—</span></td><td><span class="v none">—</span></td>' +
+            '<td><span class="v none">—</span></td></tr>';
+        }
       }
     }
   }
 
   $("tbody").innerHTML = html;
   $("empty").hidden = rows.length > 0;
-  const thead = document.querySelector("table.cl thead");
-  if (thead) thead.hidden = !anyOpen && !state.expanded.has("__none");
   renderSelection();
 }
 
@@ -474,6 +507,13 @@ function renderSelection() {
     : "선택 <b>시나리오 " + picked.length + "개</b> · 예상 <b>" +
       Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분</b>";
   if (money > 0) text += ' · <b style="color:var(--red)">실결제 ' + money + "건</b>";
+  // 필터를 바꿔도 선택은 남는다 → **지금 화면에 없는 선택**을 알린다.
+  //   실행 직전 확인창에서야 알면 늦다(개수만 보고 눌러 버린다).
+  const visNames = new Set(visibleTests().map((t) => t.name));
+  const hidden = picked.filter((t) => !visNames.has(t.name)).length;
+  if (hidden > 0) {
+    text += ' · <b style="color:var(--amber)">화면에 없는 선택 ' + hidden + "개</b>";
+  }
   if (picked.length) {
     text += "<br>" + picked.slice(0, 6).map((t) => "<code>" + esc(t.name) + "</code>").join(" ") +
       (picked.length > 6 ? ' <span class="muted">외 ' + (picked.length - 6) + "개</span>" : "");
@@ -484,14 +524,24 @@ function renderSelection() {
 
 function updateRunState() {
   const hasDevice = !!$("dev").value;
+  const vis = visibleTests();
   $("runBtn").disabled = state.running || state.selected.size === 0 || !hasDevice;
-  $("runAllBtn").disabled = state.running || !hasDevice || state.tests.length === 0;
+  const all = $("runAllBtn");
+  all.disabled = state.running || !hasDevice || vis.length === 0;
+  // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
+  all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
 }
 
 /* -------------------------------------------------------------------- 실행 */
 
+/* 필터가 걸려 있는가 — 버튼 이름과 경고 문구가 이 값으로 갈린다 */
+function filterOn() {
+  return state.groupFilter !== "all" || state.priFilter !== "all" || state.onlyBadMap;
+}
+
 function onRunAll() {
-  for (const t of state.tests) state.selected.add(t.name);
+  // ★ **보이는 것만** 고른다. 종전엔 state.tests 전부를 골라 필터가 무의미했다.
+  for (const t of visibleTests()) state.selected.add(t.name);
   renderTable();
   onRun();
 }
@@ -852,14 +902,20 @@ $("f-pri").addEventListener("change", (ev) => {
   state.priFilter = ev.target.value;
   renderTable();
 });
-for (const b of document.querySelectorAll("[data-todo]")) {
-  b.addEventListener("click", () => {
-    if (b.dataset.todo !== "badmap") return;
-    state.onlyBadMap = !state.onlyBadMap;
-    b.setAttribute("aria-pressed", String(state.onlyBadMap));
-    renderTable();
-  });
-}
+$("btn-selvis").addEventListener("click", () => {
+  for (const t of visibleTests()) state.selected.add(t.name);
+  renderTable();
+});
+$("btn-selnone").addEventListener("click", () => {
+  state.selected.clear();
+  renderTable();
+});
+$("btn-mapwarn-only").addEventListener("click", (ev) => {
+  state.onlyBadMap = !state.onlyBadMap;
+  ev.currentTarget.setAttribute("aria-pressed", String(state.onlyBadMap));
+  ev.currentTarget.textContent = state.onlyBadMap ? "전체 보기" : "오류만 보기";
+  renderTable();
+});
 $("tbody").addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-expand]");
   if (!btn) return;
