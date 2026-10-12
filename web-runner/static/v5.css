@@ -127,6 +127,24 @@
   .modetog{display:flex;align-items:center;gap:6px;font-size:12px;color:#3d4550;
     padding:5px 9px;border:1px solid var(--line);border-radius:6px;cursor:pointer;}
   .modetog:has(input:checked){border-color:var(--purple);background:#f7f3ff;color:var(--purple);font-weight:600;}
+
+  /* ── 아직 못 쓰는 조작은 **한눈에** 구분되게 ────────────────────────
+     markOffline() 이 실행 결과·엑셀에 기대는 조작을 꺼둔다. 그런데 select 와
+     체크박스에는 꺼짐 스타일이 없어 멀쩡해 보였고, 눌러봐야 안 된다는 걸 알았다.
+     이유는 title(툴팁)에 있으니 마우스를 올리면 읽을 수 있다. */
+  .filters select:disabled,
+  .basisrow select:disabled{
+    background:#f1f3f6;color:#9aa3ae;border-color:#e3e7ec;cursor:not-allowed;}
+  /* 라벨 글씨도 같이 흐려야 '이 줄이 통째로 꺼졌다'가 읽힌다 */
+  .filters label.f:has(select:disabled)>span,
+  .basisrow:has(select:disabled)>label{color:#aab2bc;}
+
+  /* 체크박스가 가장 헷갈린다 — 생김새만으로는 꺼진 줄 모른다 → 꼬리표를 붙인다 */
+  .modetog:has(input:disabled){
+    color:#9aa3ae;border-color:#e3e7ec;background:#f7f8fa;cursor:not-allowed;}
+  .modetog:has(input:disabled)::after{content:"준비 중";font-size:10px;
+    padding:1px 5px;border-radius:7px;background:#e7eaef;color:#78818d;}
+  .modetog:has(input:disabled) input{cursor:not-allowed;}
   /* ⚠️ style.css 의 button{padding:7px 14px} 때문에 패딩을 0 으로 지우지 않으면
      좌우 패딩이 글자를 오른쪽으로 민다. flex 로 가운데 정렬한다. */
   .helpbtn{width:26px;height:26px;flex:none;padding:0;line-height:1;
