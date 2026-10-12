@@ -30,17 +30,17 @@ REPO_ROOT = WEB_RUNNER_DIR.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 import gme_excel                                   # noqa: E402
+import checklist_layout                            # noqa: E402
 import runner                                      # noqa: E402
 
 CACHE_FILE = WEB_RUNNER_DIR / "checklist_cache.json"
-SHEET = "Checklist(Livetest)"
-FIRST_ROW = 10                 # 8행 머리글 / 9행 빈 줄 / 10행부터 데이터
-RANGE = f"B{FIRST_ROW}:L600"   # 넉넉히 읽고 뒤쪽 빈 행은 잘라낸다
+SHEET = "Checklist(Livetest)"   # config 의 checklist.sheet 로 덮을 수 있다
+MAPPING_FILE = WEB_RUNNER_DIR / "checklist_mapping.json"
 
-# B Priority / C 1Depth / D 2Depth / E 3Depth / F Checklist
-# G 커버 상태 / H YAML 파일 / I YAML 케이스 / J 완료일 / K 커버상태(Old) / L 검토 필요
-COLS = ["priority", "d1", "d2", "d3", "text",
-        "cover", "yaml_file", "yaml_case", "done_date", "cover_old", "review"]
+# ★ 열 위치를 **박지 않는다.** 머리글 글자로 찾는다(`checklist_layout`).
+#   종전엔 `B10:L600` + 배열 순서였는데, 신규 문서(V2.2)는 앞에 `No`·`Case ID` 두 열이
+#   생겨 전부 두 칸 밀린다 → 위치를 박아 두면 **모든 열이 조용히 어긋난다.**
+#   V2.2 는 매핑 열이 없고 대신 고유한 Case ID 가 있다 → 매핑은 저장소 파일에서 읽는다.
 
 # 케이스 표기가 한 가지가 아니다(2026-10-06 실측):
 #   [01] 모두동의→확인 활성화          → 01
@@ -101,17 +101,41 @@ def _cell(row: list, i: int) -> str:
     return str(row[i]).strip()
 
 
-def fetch(link: str) -> list[dict]:
+def load_mapping() -> dict:
+    """Case ID → 매핑 목록. 시트에 매핑 열이 없는 판본이 쓴다."""
+    if not MAPPING_FILE.exists():
+        return {}
+    return json.loads(MAPPING_FILE.read_text(encoding="utf-8")).get("mapping", {})
+
+
+def fetch(link: str, sheet: str = SHEET) -> list[dict]:
     wb, _ = gme_excel.workbook_url(link)
-    url = gme_excel._range(wb, SHEET, RANGE)
-    values = gme_excel._req(url, headers=gme_excel.H())["values"]
+
+    def read(a1):
+        return gme_excel._req(gme_excel._range(wb, sheet, a1), headers=gme_excel.H())["values"]
+
+    lay = checklist_layout.detect(read)
+    lay.sheet = sheet
+    ext = {} if lay.has_sheet_mapping else load_mapping()
+    values = read(lay.range())
 
     rows = []
     for offset, raw in enumerate(values):
-        row_no = FIRST_ROW + offset
-        rec = {COLS[i]: _cell(raw, i) for i in range(len(COLS))}
-        if not any(rec.values()):
+        row_no = lay.first_row + offset
+        rec = {k: lay.get(raw, k) for k in lay.idx}
+        if not rec.get("text"):
             continue
+        # 판본에 없는 열은 빈 값으로 채워 **화면이 한 가지 모양만 다루게** 한다
+        for k in ("priority", "d1", "d2", "d3", "text", "cover",
+                  "yaml_file", "yaml_case", "done_date", "cover_old", "review", "case_id"):
+            rec.setdefault(k, "")
+        # 매핑이 시트에 없으면 저장소 파일에서 Case ID 로 가져온다
+        if ext and rec["case_id"]:
+            got = ext.get(rec["case_id"], [])
+            if got:
+                # 저장 형식은 `파일 [케이스]` 한 줄 — 아래 split_pairs 가 그대로 읽는다
+                rec["yaml_file"] = got[0].rsplit(" [", 1)[0] if " [" in got[0] else got[0]
+                rec["yaml_case"] = " ".join(g[len(rec["yaml_file"]):].strip() for g in got)
         # ★ 케이스 번호를 미리 뽑아 둔다. 한 행이 케이스 **여럿**을 덮는 경우가 있다
         #   (`[02]+[03] …`) — 화면이 매번 파싱하지 않게 여기서 풀어 둔다.
         rec["row"] = row_no                     # 엑셀 행 번호(결과 기입 시 I{row})
@@ -153,9 +177,10 @@ def main(argv: list[str]) -> int:
         print("매핑 완료본의 SharePoint 공유 링크를 넣으세요.", file=sys.stderr)
         return 2
 
-    rows = fetch(link)
+    sheet = (cfg.get("checklist") or {}).get("sheet", SHEET)
+    rows = fetch(link, sheet)
     info = summarize(rows)
-    print(f"{SHEET} — 행 {info['rows']}개 / 매핑된 행 {info['mapped_rows']}개 "
+    print(f"{sheet} — 행 {info['rows']}개 / 매핑된 행 {info['mapped_rows']}개 "
           f"/ 매핑 {info['mappings']}건 / 시나리오 {len(info['scenarios'])}종")
     print("  커버 상태: " + ", ".join(f"{k} {v}" for k, v in sorted(info["cover"].items())))
     miss = info["file_without_case"]
@@ -171,8 +196,8 @@ def main(argv: list[str]) -> int:
 
     payload = {
         "fetched_at": datetime.now().isoformat(timespec="seconds"),
-        "sheet": SHEET,
-        "first_row": FIRST_ROW,
+        "sheet": sheet,
+        "first_row": rows[0]["row"] if rows else 0,
         "summary": info,
         "rows": rows,
     }
