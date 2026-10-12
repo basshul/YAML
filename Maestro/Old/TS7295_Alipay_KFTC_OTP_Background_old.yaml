@@ -39,14 +39,10 @@ env:
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow: "_server_override_old.yaml"
 - assertNotVisible:
     text: "${SESSION_EXPIRED}"

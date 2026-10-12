@@ -104,14 +104,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible: "${REG_VOICE_PHISHING}"
@@ -291,14 +287,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 60000
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 실패 응답 대기 — 시간이 매우 불규칙하다(헤더 참고). 3분까지 기다린다.
 # ⚠️ **실패 문구가 빌드마다 다르다**(2026-08-28 7.20.0-stag 실측):
 #   7.19.x = "인터넷 접속이 원활하지 않습니다"

@@ -166,14 +166,10 @@ appId: ${APP_ID}
       visible:
         id: "input_dot_1"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 # 홈 도달 판정은 `bottom_item_home` — 구 UI 홈은 스크롤 위치를 유지해 상단 카드(`btnTransfer`)가
 #   화면 밖일 수 있다(프로젝트 규칙).
 - extendedWaitUntil:

@@ -641,11 +641,10 @@ appId: ${APP_ID}
 
 # [27-2] 간편 비밀번호 설정: <정상 PIN> 입력
 - takeScreenshot: "[27-2]_간편비밀번호_설정화면"
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # [27-2b] 간편 비밀번호 재입력: <정상 PIN>
 - takeScreenshot: "[27-3]_간편비밀번호_재입력화면"
@@ -654,11 +653,10 @@ appId: ${APP_ID}
     visible:
       text: "${LOCK_REENTER_PROMPT}"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # [27-3] 성공 바텀시트 → [OK]
 - takeScreenshot: "[27-3b]_성공바텀시트_등록완료"
@@ -1220,11 +1218,10 @@ appId: ${APP_ID}
 
 # [27-2] 간편 비밀번호 설정: <정상 PIN> 입력
 - takeScreenshot: "[S2-27-2]_간편비밀번호_설정화면"
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # [27-3] 간편 비밀번호 재입력: <정상 PIN>
 - takeScreenshot: "[S2-27-3]_간편비밀번호_재입력화면"
@@ -1233,11 +1230,10 @@ appId: ${APP_ID}
     visible:
       text: "${LOCK_REENTER_PROMPT}"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # [27-4] 성공 바텀시트 → [OK]
 - takeScreenshot: "[S2-27-4]_성공바텀시트_등록완료"

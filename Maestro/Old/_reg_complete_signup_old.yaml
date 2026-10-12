@@ -249,21 +249,19 @@ appId: ${APP_ID}
             visible:
               id: "input_dot_1"
           commands:
-            - tapOn: "1"
-            - tapOn: "2"
-            - tapOn: "1"
-            - tapOn: "2"
-            - waitForAnimationToEnd
+            - runFlow:
+                file: _enter_pin_old.yaml
+                env:
+                  PIN: ${PIN_NORMAL}
             - runFlow:
                 when:
                   visible:
                     id: "input_dot_1"
                 commands:
-                  - tapOn: "1"
-                  - tapOn: "2"
-                  - tapOn: "1"
-                  - tapOn: "2"
-                  - waitForAnimationToEnd
+                  - runFlow:
+                      file: _enter_pin_old.yaml
+                      env:
+                        PIN: ${PIN_NORMAL}
             - runFlow:
                 when:
                   visible: "OK|${BTN_CONFIRM}"

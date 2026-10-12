@@ -107,14 +107,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible: "${REG_VOICE_PHISHING}"
@@ -188,12 +184,10 @@ appId: ${APP_ID}
             visible:
               id: "input_dot_1"
           commands:
-            - tapOn: "1"
-            - tapOn: "2"
-            - tapOn: "1"
-            - tapOn: "2"
-            - waitForAnimationToEnd
-      - waitForAnimationToEnd
+            - runFlow:
+                file: _enter_pin_old.yaml
+                env:
+                  PIN: ${PIN_NORMAL}
       # 취소 후 홈으로 빠지는 경우가 있다 → ATM 화면으로 다시 들어간다.
       - runFlow:
           when:
@@ -319,14 +313,10 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnApply"
       # 간편비밀번호 <정상 PIN> — 키패드가 매번 재배치되므로 탭 사이 정착 대기 필수
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - extendedWaitUntil:
           visible:
             id: "withdrawalNumber"
@@ -377,14 +367,10 @@ appId: ${APP_ID}
                         - tapOn:
                             id: "btn_yes"
                         # 간편비밀번호 <정상 PIN> — 키패드 재배치 때문에 탭 사이 정착 대기 필수
-                        - tapOn: "1"
-                        - waitForAnimationToEnd
-                        - tapOn: "2"
-                        - waitForAnimationToEnd
-                        - tapOn: "1"
-                        - waitForAnimationToEnd
-                        - tapOn: "2"
-                        - waitForAnimationToEnd
+                        - runFlow:
+                            file: _enter_pin_old.yaml
+                            env:
+                              PIN: ${PIN_NORMAL}
       # 마지막으로 남은 다이얼로그가 있으면 닫는다
       - runFlow:
           when:

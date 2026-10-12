@@ -90,11 +90,10 @@ appId: ${APP_ID}
       visible:
         id: "input_dot_1"
     commands:
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 
 # ---------------------------------------------------------------
 # ⑥ PIN 생성 화면이면 재등록 — 계정 전환이 **기존 PIN을 해지**하면 여기로 떨어진다.
@@ -106,20 +105,18 @@ appId: ${APP_ID}
     when:
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - extendedWaitUntil:
           visible:
             text: "${LOCK_REENTER_PROMPT}"
           timeout: 20000
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - tapOn:
           id: "btnOk"
           optional: true

@@ -49,14 +49,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 # 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
 # 세션 만료 판정 — 실제 문구는 "로그인 세션이 만료되었습니다.
 #   서비스를 이용하려면 다시 로그인해 주세요." 로 **개행이 섞인 두 문장**이다.
@@ -169,10 +165,10 @@ appId: ${APP_ID}
       notVisible:
         id: "bottom_item_home"
     commands:
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
@@ -667,10 +663,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 당일+지난시간 예약 불가 에러 팝업 확인
 - assertVisible:
     text: "${DIALOG_ERROR_TITLE}"
@@ -710,10 +706,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 예약 성공 확인
 - assertVisible:
     text: "${LOGIN_SUCCESS}"
@@ -839,10 +835,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 예약 성공 확인
 - assertVisible:
     text: "${LOGIN_SUCCESS}"

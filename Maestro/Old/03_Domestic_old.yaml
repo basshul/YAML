@@ -82,14 +82,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible:
@@ -152,14 +148,14 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "2"
-- tapOn: "3"
-- tapOn: "2"
-- tapOn: "3"
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_WRONG}
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # similar 에러 발생 시 금액 2원으로 변경 후 재시도
 - runFlow:
     when:
@@ -177,10 +173,10 @@ appId: ${APP_ID}
           visible:
             id: "input_dot_1"
           timeout: 20000
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - extendedWaitUntil:
     visible:
       text: "${MYQR_VIEW_RECEIPT}"
@@ -249,10 +245,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # similar 에러 발생 시 금액 2원으로 변경 후 재시도
 - runFlow:
     when:
@@ -270,10 +266,10 @@ appId: ${APP_ID}
           visible:
             id: "input_dot_1"
           timeout: 20000
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - extendedWaitUntil:
     visible:
       text: "${MYQR_VIEW_RECEIPT}"
@@ -352,10 +348,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 - extendedWaitUntil:
     visible:
       text: "${MYQR_VIEW_RECEIPT}"
@@ -393,10 +389,10 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1"
     timeout: 20000
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 - extendedWaitUntil:
     visible:
       text: "${MYQR_VIEW_RECEIPT}"

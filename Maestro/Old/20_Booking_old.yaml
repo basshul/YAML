@@ -58,14 +58,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible:
@@ -395,10 +391,10 @@ appId: ${APP_ID}
 
 # 간편 비밀번호(PIN) 입력 - 키패드 배열이 매번 랜덤이므로 content-desc(숫자) 기반으로 탭
 - assertVisible: "${ENTER_THE_LOCK}"
-- tapOn: "1"
-- tapOn: "2"
-- tapOn: "1"
-- tapOn: "2"
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # 결제 완료 확인
 # 2026-09-22 en 실측: 제목 `Done` / 안내 `Your ticket purchase successfully completed`(★마침표 없음,
@@ -538,14 +534,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     file: _dismiss_popups_stag_old.yaml
 - extendedWaitUntil:

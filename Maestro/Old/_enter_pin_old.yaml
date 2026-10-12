@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+---
+# 간편 비밀번호(PIN) 4자리 입력 — **호출자가 `PIN` 을 넘긴다.**
+#
+#   - runFlow:
+#       file: _enter_pin_old.yaml
+#       env:
+#         PIN: ${PIN_NORMAL}
+#
+# 값은 사용자 프로파일에서 온다(`env\user.<이름>.local.env`, 저장소에 올리지 않는다):
+#   PIN_NORMAL  정상 / PIN_WRONG  의도적 오답 / PIN_ALT1·PIN_ALT2  변경 테스트용
+#
+# ⚠️⚠️ **키패드는 탭마다 배치가 재섞인다.** 탭 사이 `waitForAnimationToEnd` 가 없으면
+#   maestro 가 직전 스냅샷의 stale 좌표를 눌러 오입력이 누적된다 = **계정 잠금.**
+#   그 규칙이 53개 파일에 흩어져 있던 것을 여기 한 군데로 모은 것이 이 헬퍼의 핵심이다.
+#
+# ⚠️ 헤더에 `env:` 기본값을 두지 않는다 — 플로우 레벨 기본값은 `--env` 를 **덮어쓴다**.
+#   기본값이 있으면 호출자가 넘긴 값이 무시돼 엉뚱한 PIN 이 들어간다.
+#
+# ★ 잠금화면 **도달 대기는 호출자 몫**이다(`extendedWaitUntil: id: input_dot_1` 등).
+#   화면마다 도달 조건이 다르고, 조건부(`runFlow: when:`) 안에서 불리는 자리도 많다.
+- tapOn: ${PIN[0]}
+- waitForAnimationToEnd
+- tapOn: ${PIN[1]}
+- waitForAnimationToEnd
+- tapOn: ${PIN[2]}
+- waitForAnimationToEnd
+- tapOn: ${PIN[3]}
+- waitForAnimationToEnd

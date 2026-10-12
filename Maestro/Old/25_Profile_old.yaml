@@ -118,14 +118,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible: "${REG_VOICE_PHISHING}"
@@ -342,14 +338,10 @@ appId: ${APP_ID}
     visible:
       text: "${ENTER_THE_LOCK}"
     timeout: 20000
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible: "확인|예|OK"

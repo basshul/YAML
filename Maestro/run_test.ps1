@@ -125,6 +125,17 @@ Add-EnvFile $envFile
 # 사용자 프로파일을 언어 파일 **뒤에** 얹는다(존재 검사는 맨 앞에서 이미 했다)
 Add-EnvFile $userFile
 
+# 자격정보(PIN·로그인 비밀번호)는 **저장소에 올리지 않는 파일**에 둔다.
+#   2026-09-01 에 평문 자격정보를 전부 걷어냈다(ENVIRONMENT.md §3.10) — 되돌리지 말 것.
+#   없을 수 있다(새 PC, 아직 안 만든 사람) → 막지 않는다. 그 변수를 쓰는 플로우가 돌면
+#   maestro 가 미해결 변수로 또렷하게 죽으므로 조용히 틀리지는 않는다.
+$userLocal = "env\user.$User.local.env"
+if (Test-Path $userLocal) {
+    Add-EnvFile $userLocal
+} else {
+    Write-Host "  (자격정보 파일 없음: $userLocal — PIN/비밀번호를 쓰는 플로우는 실패한다)" -ForegroundColor DarkYellow
+}
+
 
 
 # -AppId 로 빌드를 바꿀 때는 env 파일의 APP_ID 항목을 **교체**한다.

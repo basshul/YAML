@@ -31,14 +31,10 @@ appId: ${APP_ID}
       text: "${PIN_ENTER_4DIGIT}"
     timeout: 30000
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
 - extendedWaitUntil:
     visible:
@@ -490,15 +486,10 @@ appId: ${APP_ID}
 - assertVisible: "${ENTER_YOUR_CARD_PIN_TEXT}"
 - assertVisible: "${PIN_ENTER_4DIGIT}"
 # 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 # 자가복구(2026-08-06): [12]가 카드 PIN을 <정상 PIN> → <대체 PIN> → <정상 PIN>로 되돌리는데, 과거 실행이
 #   [12] 중간에 끊기면 카드 PIN이 **<대체 PIN>으로 남아** 이후 모든 실행이 여기서 막힘
 #   (실제로 발생 — <정상 PIN>가 거부되고 "PIN 코드가 유효하지 않습니다."). 로그인 비밀번호의
@@ -509,15 +500,10 @@ appId: ${APP_ID}
       visible:
         text: ".*PIN 코드가 유효하지 않습니다.*"
     commands:
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "3"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "3"
-      - waitForAnimationToEnd
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_WRONG}
 - assertVisible: "${CARD_NUMBER_TEXT}"
 - assertVisible: "${CVC_NUMBER_TEXT}"
 - assertVisible: "${REG_EXPIRY_DATE}"

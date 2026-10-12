@@ -44,11 +44,10 @@ appId: com.gmeremit.online.gmeremittance_native.stag
           visible:
             id: "input_dot_1"
           timeout: 20000
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 
 # 로그아웃 상태: 아이디/비밀번호 로그인
 - runFlow:
@@ -100,21 +99,19 @@ appId: com.gmeremit.online.gmeremittance_native.stag
     when:
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       # PIN 재입력 화면 도달 확정 — 이전 화면에도 input_dot_1이 있어 id로는 전환을 판정할 수 없다
       - extendedWaitUntil:
           visible:
             text: "${LOCK_REENTER_PROMPT}"
           timeout: 20000
-      - tapOn: "1"
-      - tapOn: "2"
-      - tapOn: "1"
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - tapOn:
           id: "btnOk"
       - waitForAnimationToEnd

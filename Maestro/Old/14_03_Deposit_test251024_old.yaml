@@ -62,14 +62,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 # ⚠️ 이전 실행이 `loginpwidhidpass` 경로(= 기존 PIN 해지)로 끝났으면 계정에 PIN이 없어
 #   잠금화면 대신 "앱에서 사용할 간편 비밀번호를 생성해 주세요"가 뜬다 → <정상 PIN>로 재등록한다.
 #   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
@@ -77,22 +73,14 @@ appId: ${APP_ID}
     when:
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - runFlow:
           when:
             visible:
@@ -219,22 +207,14 @@ appId: ${APP_ID}
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
       # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - tapOn:
           id: "btnOk"
       - waitForAnimationToEnd
@@ -511,22 +491,14 @@ appId: ${APP_ID}
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
       # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
       - tapOn:
           id: "btnOk"
       - waitForAnimationToEnd

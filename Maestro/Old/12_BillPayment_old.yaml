@@ -97,14 +97,10 @@ appId: ${APP_ID}
       visible:
         text: "${PIN_ENTER_4DIGIT}"
     commands:
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
-      - tapOn: "1"
-      - waitForAnimationToEnd
-      - tapOn: "2"
-      - waitForAnimationToEnd
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
 - runFlow:
     when:
       visible: "${REG_VOICE_PHISHING}"
@@ -279,14 +275,10 @@ appId: ${APP_ID}
 # 결제 취소 → 홈 복귀 (실제 결제 없음)
 # ================================================================
 # PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
 
 # 결제 결과 확인 — 성공/실패 어느 쪽이든 응답 화면을 먼저 기다린다.
 #   ⚠️ 앱은 PIN 입력 전까지 잔액을 검증하지 않으므로, 부족하면 여기서 서버가 거부한다.

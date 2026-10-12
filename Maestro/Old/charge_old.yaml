@@ -48,9 +48,9 @@ appId: ${APP_ID}
         visible:
           id: "input_dot_1"
         timeout: 20000
-    - tapOn: "1"
-    - tapOn: "2"
-    - tapOn: "1"
-    - tapOn: "2"
+    - runFlow:
+        file: _enter_pin_old.yaml
+        env:
+          PIN: ${PIN_NORMAL}
     - tapOn:
         id: "btn_diaog_ok"

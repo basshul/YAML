@@ -19,6 +19,10 @@ Maestro/suite_logs/*/*
 !Maestro/suite_logs/*/result.json
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
+#   user.<이름>.env       = 계정 ID 등 비밀 아닌 값 → **저장소에 올린다**
+#   user.<이름>.local.env = PIN·로그인 비밀번호     → **올리지 않는다**
+#   2026-09-01 에 평문 자격정보를 전부 걷어냈다(ENVIRONMENT.md §3.10). 되돌리지 말 것.
+Maestro/env/user.*.local.env
 
 # web-runner (브라우저 실행 데모)
 #   config.local.json 은 이 PC 전용 설정 + 비밀정보 자리다 — 저장소에 올리지 않는다.
