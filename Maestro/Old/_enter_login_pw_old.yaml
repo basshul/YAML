@@ -1,0 +1,79 @@
+appId: ${APP_ID}
+---
+# 로그인 비밀번호를 **보안 키보드(transkey)** 로 입력한다.
+#
+# 쓰는 법 — 입력칸을 **호출자가 먼저 탭한 뒤** 부른다(칸 id 가 화면마다 다르다):
+#   - tapOn:
+#       id: "securityKeyboardEditText"
+#   - runFlow: "_enter_login_pw_old.yaml"
+#
+# 값은 사용자 프로파일에서 온다(`env\user.<이름>.local.env`, 저장소에 올리지 않는다).
+#   PW_K1 … PW_K8  글자별 키보드 라벨(앞에서부터). 빈 값이면 건너뛴다.
+#   PW_KS          마지막 특수문자 라벨(예: 느낌표)
+#
+# ── 라벨 규칙 (2026-10-12 실기기 확인) ────────────────────────────────────
+#   라벨은 `<글자> <2벌식 자모 이름>` 이다: e 디귿 · t 시옫 · m 으 · s 니은 · g 히읃
+#   · a 미음 · r 기역 … 대문자는 `Capital G 히읃` 처럼 앞에 Capital 이 붙는다.
+#   ⚠️ 추측으로 넣지 말 것 — 틀린 라벨은 **로그인 실패**로 이어지고 5회면 계정이 잠긴다.
+#     새 글자가 필요하면 비밀번호 변경 화면에서 키보드를 띄워 `assertVisible` 로 먼저 확인한다.
+#
+# ── 키보드 동작 (기존 플로우 실측분) ──────────────────────────────────────
+#   · 대문자는 **한 글자만** 적용된다 — 누르고 나면 소문자로 돌아온다.
+#     그래서 `대문자 키보드 변경` 은 **첫 글자 앞에서 한 번만** 누른다.
+#     이미 대문자 모드면 그 라벨이 보이므로, 보일 때는 누르지 않는다(토글이라 꺼진다).
+#   · 숫자는 소문자 자판에 함께 있다 → 모드 전환이 필요 없다.
+#   · 특수문자는 `특수문자변경` 으로 넘어간다. 마지막 글자라 되돌릴 필요가 없다.
+#   ⚠️ `securityKeyboardEditText` 탭 직후 `transKeypad_row4` 를 누르지 말 것(문자 오입력).
+
+# 첫 글자(대문자) — 라벨이 아직 안 보이면 대문자 모드로 바꾼다
+- runFlow:
+    when:
+      notVisible:
+        text: ${PW_K1}
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: ${PW_K1}
+
+# 2~8번째 글자 — 빈 값이면 건너뛴다(비밀번호 길이가 사람마다 다를 수 있다)
+- runFlow:
+    when:
+      true: ${PW_K2 !== ''}
+    commands:
+      - tapOn: ${PW_K2}
+- runFlow:
+    when:
+      true: ${PW_K3 !== ''}
+    commands:
+      - tapOn: ${PW_K3}
+- runFlow:
+    when:
+      true: ${PW_K4 !== ''}
+    commands:
+      - tapOn: ${PW_K4}
+- runFlow:
+    when:
+      true: ${PW_K5 !== ''}
+    commands:
+      - tapOn: ${PW_K5}
+- runFlow:
+    when:
+      true: ${PW_K6 !== ''}
+    commands:
+      - tapOn: ${PW_K6}
+- runFlow:
+    when:
+      true: ${PW_K7 !== ''}
+    commands:
+      - tapOn: ${PW_K7}
+- runFlow:
+    when:
+      true: ${PW_K8 !== ''}
+    commands:
+      - tapOn: ${PW_K8}
+
+# 마지막 특수문자
+- tapOn: "특수문자변경"
+- tapOn: ${PW_KS}
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd

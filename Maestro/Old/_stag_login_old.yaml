@@ -65,18 +65,9 @@ appId: com.gmeremit.online.gmeremittance_native.stag
       - tapOn:
           id: "securityKeyboardEditText"
       # ⚠️ transKeypad_row4 탭 제거(2026-09-02) — 행 컨테이너를 누르면 문자가 하나 잘못 들어가 로그인이 실패한다.
-      - tapOn: "대문자 키보드 변경"
-      - tapOn: "Capital G 히읃"
-      - tapOn: "m 으"
-      - tapOn: "e 디귿"
-      - tapOn: "t 시옫"
-      - tapOn: "e 디귿"
-      - tapOn: "s 니은"
-      - tapOn: "t 시옫"
-      - tapOn: "1"
-      - tapOn: "특수문자변경"
-      - tapOn: "느낌표"
-      - tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+      # 비밀번호는 사용자 프로파일에서 온다(라벨은 `env\user.<이름>.local.env`).
+      #   ⚠️ 여기 하드코딩으로 되돌리지 말 것 — 사람마다 비밀번호가 다르다.
+      - runFlow: "_enter_login_pw_old.yaml"
       - waitForAnimationToEnd
 
       # ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
