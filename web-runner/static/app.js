@@ -277,7 +277,9 @@ function indexChecklist(data) {
         // 매핑이 틀린 게 아니다 — G9 처럼 **스위트 목록에서 빠진** 시나리오다.
         r.notInSuite = true;
       } else if (!r.cases.length) {
-        r.mapError = "케이스 번호가 적혀 있지 않습니다";
+        // ⛔ 커버가 `NA`·`자동화 불가능` 이면 **선언**이다(위 isDeclared 주석 참고).
+        //   케이스 칸의 사유를 번호로 읽으려 들면 안 된다 — 고칠 것이 없는 경고가 된다.
+        r.mapError = isDeclared(r.cover) ? null : "케이스 번호가 적혀 있지 않습니다";
       } else {
         const have = new Set((t.cases || []).map((c) => c.id));
         const missing = r.cases.filter((c) => !have.has(c));
@@ -368,6 +370,16 @@ function caseCell(idText, pri, text, mapText, mapErr, coverTag) {
     '<td><span class="v none">—</span></td>' +
     '<td><span class="v none">—</span></td>' +
     '<td><span class="v none">—</span></td>';
+}
+
+/* 커버 상태가 **선언**인 행 — 자동화할 생각이 없다고 시트가 밝힌 것이다.
+   이런 행은 케이스 칸에 **번호 대신 사유**를 적는 관례가 있다(2026-10-13 실측:
+   `NA` / `14_01_Deposit_seungsoo818` / `KJ 가상계좌 발급 확인 가능 계정 없음`).
+   → '케이스 번호가 없다' 를 매핑 오류로 세면 **고칠 것이 없는 경고**가 상시로 뜬다. */
+const DECLARED_COVER = new Set(["NA", "자동화 불가능"]);
+
+function isDeclared(cover) {
+  return DECLARED_COVER.has(String(cover || "").trim());
 }
 
 function coverTagOf(cover) {
