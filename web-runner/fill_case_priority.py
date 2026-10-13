@@ -70,6 +70,7 @@ def plan() -> tuple[dict, list]:
         except OSError:
             continue
         text = raw.decode("utf-8", errors="replace")
+        real = runner.real_cases(rel)          # 이 파일이 실제로 가진 케이스 id (접미사 포함)
         eol = "\r\n" if "\r\n" in text else "\n"
         lines = text.split(eol)
 
@@ -83,7 +84,15 @@ def plan() -> tuple[dict, list]:
             if not parsed:
                 continue
             ids, pri, text = parsed
-            keys = [runner.case_id(i) for i in ids if runner.case_id(i)]
+            # ★ 키 규칙은 `checklist_sync` 와 같아야 한다 — 접미사를 살릴지는 **yaml 이 정한다**
+            #   (`[16a] [High] …` 은 별개 케이스, `[27-1] 지문인증…` 은 `[27]` 의 본문 단계).
+            #   그냥 접으면 `[01-2]` 가 `[01]` 의 중요도를 받아 **엉뚱한 값**이 박힌다.
+            keys = []
+            for i in ids:
+                kept = runner.case_id(i, keep_suffix=True)
+                k = kept if kept in real else runner.case_id(i)
+                if k:
+                    keys.append(k)
             parsed_lines.append((lineno, keys, pri, text))
             for k in keys:
                 last_for_id[k] = lineno

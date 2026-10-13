@@ -72,27 +72,38 @@ def _is_empty(v: str) -> bool:
 PAIR_RE = re.compile(r"([^/()]+?)\s*\(([^)]*)\)")
 
 
+def _cases_for(file_name: str, text: str) -> list[str]:
+    """그 파일 기준으로 케이스 토큰을 키로 바꾼다.
+
+    ⛔ 접미사(`16a`·`08-3`)를 **무조건 살리거나 무조건 접으면** 둘 다 틀린다.
+       `[16a] [High] ARC 촬영` 은 별개 케이스고, `[27-1] 지문인증…` 은 `[27]` 의 본문 단계다.
+       → 판단은 **yaml 이 한다**(`runner.real_cases`). 시트는 그 결과를 따른다.
+         그래야 양쪽 키가 어긋나지 않는다.
+    ⚠️ 그 파일을 못 찾으면(스위트 밖·G9 등) 빈 집합이 와서 **종전대로 접는다** — 안전한 쪽이다.
+    """
+    real = runner.real_cases(file_name)
+    cases = []
+    for tok in CASE_TOKEN_RE.findall(text or ""):
+        kept = runner.case_id(tok, keep_suffix=True)
+        num = kept if kept in real else runner.case_id(tok)
+        if num and num not in cases:
+            cases.append(num)
+    return cases
+
+
 def split_pairs(file_cell: str, case_cell: str) -> list[dict]:
     """(파일, 케이스들) 짝의 목록을 만든다. 보통 1개, 합쳐 적힌 셀이면 여러 개."""
     groups = PAIR_RE.findall(file_cell or "")
     pairs = []
     for name, inside in groups:
-        cases = []
-        for tok in CASE_TOKEN_RE.findall(inside):
-            num = runner.case_id(tok)
-            if num and num not in cases:
-                cases.append(num)
+        cases = _cases_for(name, inside)
         if cases:
             pairs.append({"file": name.strip(), "cases": cases})
     if len(pairs) >= 2:
         return pairs
     # 평범한 셀 — 파일은 H, 케이스는 I 에서 읽는다
-    cases = []
-    for tok in CASE_TOKEN_RE.findall(case_cell or ""):
-        num = runner.case_id(tok)
-        if num and num not in cases:
-            cases.append(num)
-    return [{"file": (file_cell or "").strip(), "cases": cases}]
+    return [{"file": (file_cell or "").strip(),
+             "cases": _cases_for(file_cell, case_cell)}]
 
 
 def _cell(row: list, i: int) -> str:

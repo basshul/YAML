@@ -157,22 +157,32 @@ PRIORITIES = {"high": "High", "medium": "Medium", "low": "Low"}
 ALPHA_ID_RE = re.compile(r"^([A-Za-z]{1,3})-?(\d{1,3})$")
 
 
-def case_id(token: str) -> str:
+def case_id(token: str, *, keep_suffix: bool = False) -> str:
     """케이스 토큰을 **조인 키**로 바꾼다.
 
     ★ 체크리스트 쪽(`checklist_sync.py`)과 **같은 규칙**이어야 한다.
-      한쪽만 바꾸면 매핑이 조용히 어긋난다.
+      한쪽만 바꾸면 매핑이 조용히 어긋난다. (두 쪽이 이 함수를 함께 쓴다.)
         01      → 01
-        07-1    → 07      (분할 파일의 하위 번호 — 같은 yaml 케이스를 가리킨다)
-        16a     → 16
+        07-1    → 07      (접어서 부모로)      / keep_suffix → 07-1
+        16a     → 16                           / keep_suffix → 16a
         F-01    → F01     (글자 접두는 그대로 살린다 — 숫자로 바꾸면 충돌한다)
+
+    ⛔ **접미사를 무조건 살리면 안 된다.** 접미사에는 두 종류가 섞여 있다(2026-10-13 전수 조사):
+         `[16a] [High] ARC 촬영동작 확인`  중요도 있음 → **별개 케이스**
+         `[27-1] 지문인증 사용 여부 → …`   중요도 없음 → `[27]` 의 **본문 단계**
+       뒤엣것까지 케이스로 세면 시트에 행이 없는 케이스가 쏟아져 커버리지가 거짓으로 떨어진다.
+       → 살릴지 말지는 **중요도를 아는 호출부**가 정한다(`read_cases` / `real_cases`).
     """
     t = (token or "").strip()
     if not t:
         return ""
     if t[0].isdigit():
-        num = t.split("-")[0].rstrip("abcdefABCDEF")
-        return num.zfill(2) if num.isdigit() else ""
+        head = t.split("-")[0].rstrip("abcdefABCDEF")
+        if not head.isdigit():
+            return ""
+        if keep_suffix and t != head:
+            return head.zfill(2) + t[len(head):].lower()
+        return head.zfill(2)
     m = ALPHA_ID_RE.match(t)
     if m:
         return m.group(1).upper() + m.group(2).zfill(2)
@@ -230,14 +240,21 @@ def read_cases(rel_path: str) -> list[dict]:
     except OSError:
         return []
 
+    parsed_lines = [(p, line) for line in lines if (p := _parse_case_line(line))]
+
+    # ★ 1차 — **중요도 태그가 붙은 접미사 토큰**을 모은다. 그것만 별개 케이스다.
+    #   `[16a] [High] ARC 촬영동작 확인`   → 케이스
+    #   `[27-1] 지문인증 사용 여부 → …`    → `[27]` 의 본문 단계 (중요도 없음)
+    #   가르는 기준이 이것 하나로 전체 yaml 에 깨끗이 들어맞는다(2026-10-13 전수 조사).
+    standalone = {
+        raw for (ids, pri, _), _ in parsed_lines if pri
+        for raw in ids if case_id(raw, keep_suffix=True) != case_id(raw)
+    }
+
     found: dict[str, dict] = {}
-    for line in lines:
-        parsed = _parse_case_line(line)
-        if not parsed:
-            continue
-        ids, pri, text = parsed
+    for (ids, pri, text), _ in parsed_lines:
         for raw in ids:
-            num = case_id(raw)
+            num = case_id(raw, keep_suffix=raw in standalone)
             if not num:
                 continue
             prev = found.get(num)
@@ -245,6 +262,32 @@ def read_cases(rel_path: str) -> list[dict]:
             if prev is None or (pri and not prev["pri"]):
                 found[num] = {"id": num, "raw": raw, "pri": pri, "text": text}
     return [found[k] for k in sorted(found)]
+
+
+# 파일 이름 → 케이스 id 집합. 시트 쪽(`checklist_sync`)이 **같은 판단**을 쓰려고 부른다.
+#   시트는 `26_Menu` · `02_01_Overseas_Send now` · `Old_01_..._old.yaml` 처럼 제각각 적는다
+#   → 화면(`app.js normFile`)과 같은 방식으로 맞춘다: 경로·확장자·`_old`·공백 제거 후 소문자.
+_REAL_CASES: dict[str, set[str]] = {}
+
+
+def norm_flow_name(name: str) -> str:
+    s = re.sub(r"^.*[\\/]", "", str(name or ""))   # ⚠️ 역슬래시도 — 시트는 `Old\13_01_...` 로도 적는다
+    s = re.sub(r"\.ya?ml$", "", s, flags=re.I)
+    s = re.sub(r"_old$", "", s, flags=re.I)
+    return re.sub(r"\s+", "", s).lower().strip()
+
+
+def real_cases(name: str) -> set[str]:
+    """그 플로우가 실제로 가진 케이스 id 집합. 못 찾으면 빈 집합."""
+    key = norm_flow_name(name)
+    if not key:
+        return set()
+    if not _REAL_CASES:
+        for f in sorted((MAESTRO_DIR / "Old").glob("*.yaml")):
+            _REAL_CASES[norm_flow_name(f.stem)] = {
+                c["id"] for c in read_cases(str(Path("Old") / f.name))
+            }
+    return _REAL_CASES.get(key, set())
 
 
 def list_tests(include_destructive: bool = False) -> list[dict]:
