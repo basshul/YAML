@@ -38,6 +38,8 @@ appId: ${APP_ID}
 #   `individualRemittanceRow`("개인 송금" — 청구서 없이 개인 은행 계좌로 받기)
 #   `invoicePaymentRow`("청구서 지급" — 인보이스로 대학·병원·기업 계좌에 지급)
 #   → 13_ReceiveOverseas의 케이스들은 인바운드 환율계산·송금인 등록 흐름이므로 **개인 송금**이다.
+#     청구서 지급(`invoicePaymentRow`) 쪽은 외부 웹(GME biz)으로 나가며, 그 검증은
+#     `13_01_Rate_Indonesia_old.yaml` 의 **[21]** 이 담당한다 — 여기서는 다루지 않는다.
 #     통과하면 `newInboundType.view.InsertPinAndRecieveActivity`("송금 받기")로 간다.
 #   ⚠️ 시트가 없는 경로(이미 목적 화면인 경우)도 있을 수 있어 **조건부**로 처리한다.
 - extendedWaitUntil:
