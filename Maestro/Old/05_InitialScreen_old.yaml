@@ -250,6 +250,20 @@ appId: ${APP_ID}
 - takeScreenshot: "[08-3]_고객센터_팝업_재노출"
 - tapOn: "${INIT_CHAT_YES}"
 - waitForAnimationToEnd
+# ★ 성립 단언 — 종전엔 '예' 를 누르고 **스크린샷만** 남겨 이동을 보지 않았다(커버리지 착시).
+#   체크리스트 `INI-006` 이 묻는 것이 이 이동이고, 이웃 [06][07] 은 이동 후를 단언한다.
+# 채팅은 외부 브라우저가 아니라 **앱 안에서 열리는 채널톡**이다(2026-10-13 실측):
+#   `…gmeremittance_native.stag/io.channel.plugin.android.feature.lounge.LoungeActivity`
+# ⚠️ 이 화면 글자('문의하기'·'채널톡 이용중'·'홈/대화/설정')가 앱 언어(`--env`)를 따르는지
+#   **확인하지 않았다** — 채널톡이 제 로케일로 그릴 수 있다 → 글자 말고 `ch_` id 로 잡는다.
+#   채널 이름만 브랜드 문자열이라 언어에 안 흔들린다.
+- extendedWaitUntil:
+    visible:
+      id: "ch_textDefaultTypeChannelName"
+    timeout: 20000
+- assertVisible:
+    id: "ch_textDefaultTypeChannelName"
+    text: "Global Money Express"
 - takeScreenshot: "[08-4]_고객센터_연결"
 - pressKey: Back
 - waitForAnimationToEnd
