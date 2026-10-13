@@ -57,7 +57,10 @@ def main(argv: list[str]) -> int:
     sheet = CFG.get("next_sheet", "Checklist(Livetest) (2.2)")
 
     # 현재 문서에서 '확인 문구 → (매핑, 커버 상태)' 를 만든다
-    _, cur = M.load(CFG["url"], CFG.get("sheet", "Checklist(Livetest)"))
+    # ⛔ 대조 기준은 **구 문서(V2.1)** 다 → `prev_*` 로 읽는다.
+    #   `url`/`sheet` 는 2026-10-13 전환 이후 **사본(V2.2)** 을 가리킨다 —
+    #   그걸 쓰면 사본을 사본과 대조해 조용히 0건이 된다.
+    _, cur = M.load(CFG["prev_url"], CFG["prev_sheet"])
     by_deep = M.build_index(cur, lambda r: (M.norm(r.get("d1")), M.norm(r.get("d2")),
                                             M.norm(r.get("d3")), M.norm(r.get("text"))))
     by_text = M.build_index(cur, lambda r: M.norm(r.get("text")))

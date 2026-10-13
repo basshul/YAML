@@ -51,7 +51,10 @@ def main(argv: list[str]) -> int:
     dry = "--apply" not in argv
     sheet = CFG["next_sheet"]
 
-    _, cur = M.load(CFG["url"], CFG.get("sheet", "Checklist(Livetest)"))
+    # ⛔ 대조 기준은 **구 문서(V2.1)** 다 → `prev_*` 로 읽는다.
+    #   `url`/`sheet` 는 2026-10-13 전환 이후 **사본(V2.2)** 을 가리킨다 —
+    #   그걸 쓰면 사본을 사본과 대조해 조용히 0건이 된다.
+    _, cur = M.load(CFG["prev_url"], CFG["prev_sheet"])
     new = cs.fetch(CFG["copy_url"], sheet)
 
     # ── 1) 이미 안착한 것에서 규칙을 배운다 ───────────────────────────

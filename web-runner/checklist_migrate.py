@@ -82,15 +82,15 @@ def build_index(rows, keyfn):
 def main(argv: list[str]) -> int:
     cfg = json.loads((WEB_RUNNER_DIR / "config.local.json").read_text(encoding="utf-8"))
     cl = cfg.get("checklist", {})
-    cur_link = cl.get("url", "")
+    cur_link = cl.get("prev_url") or cl.get("url", "")   # 구 문서(V2.1). 전환 후엔 prev_*
     new_link = cl.get("next_url", "")
     new_sheet = cl.get("next_sheet", "Checklist(Livetest) (2.2)")
     if not cur_link or not new_link:
-        print("config.local.json 의 checklist.url(현재) 과 checklist.next_url(신규) 이 필요합니다.",
+        print("config.local.json 의 checklist.prev_url(구 문서) 과 checklist.next_url(신규) 이 필요합니다.",
               file=sys.stderr)
         return 2
 
-    cur_lay, cur_rows = load(cur_link, cl.get("sheet", "Checklist(Livetest)"))
+    cur_lay, cur_rows = load(cur_link, cl.get("prev_sheet") or cl.get("sheet", "Checklist(Livetest)"))
     new_lay, new_rows = load(new_link, new_sheet)
     print(f"현재 {len(cur_rows)}행 / 신규 {len(new_rows)}행")
     if not new_lay.has_case_id:

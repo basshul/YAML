@@ -91,8 +91,22 @@
 `checklist_sync.load_mapping()` 을 타지 않는다. 열이 없는 판본을 읽을 때의 **대비책**으로만 남긴다.
 ⚠️ 내용은 사본보다 낡았다. 정본으로 쓰지 말 것.
 
-## 아직 안 넘어갔다
+## 전환 완료 (2026-10-13)
 
-`config.local.json` 의 `checklist.url`·`sheet` 를 `copy_url`·`next_sheet` 로 바꾸면 전환된다.
-코드는 두 판본을 모두 읽는다(`checklist_layout.py` 가 머리글로 열을 찾는다).
+`config.local.json` 의 `checklist.url`·`sheet` 가 **사본(V2.2)** 을 가리킨다.
+`checklist_sync.py` → `checklist_cache.json` → `/api/checklist` 까지 V2.2 로 돈다.
+⚠️ 캐시는 **요청마다 디스크에서 읽는다**(`checklist.py`) → 서버 재기동은 필요 없다.
 
+⛔ 구 문서(V2.1) 포인터를 **지우지 않았다.** `prev_url`·`prev_sheet` 로 남겼다 —
+이관 스크립트(`checklist_migrate`·`fill_copy`·`narrow`·`disambiguate`)가 **대조 기준**으로 읽는다.
+그 스크립트들이 종전처럼 `url` 을 읽으면 **사본을 사본과 대조**해 조용히 0건이 된다.
+
+### 전환 직후 화면에 뜨는 매핑 오류 3건 — 전환 탓이 아니다
+
+314·315·316행(`DEP-002`~`DEP-004`). 구 문서 333~335행에서 그대로 넘어온 값이다.
+커버 `NA`, 파일 칸에 `14_01_Deposit_seungsoo818`, **케이스 칸에 케이스 번호 대신 사유**
+(`KJ 가상계좌 발급 확인 가능 계정 없음`) 가 적혀 있다.
+화면은 '파일은 있는데 케이스 번호가 없다' 를 매핑 오류로 센다(`static/app.js` 의
+`mapError = "케이스 번호가 적혀 있지 않습니다"`).
+→ 데이터가 틀린 게 아니라 **NA 선언**이다. 고치려면 커버가 `NA`·`자동화 불가능` 인 행을
+  그 판정에서 빼면 된다(아직 안 했다).
