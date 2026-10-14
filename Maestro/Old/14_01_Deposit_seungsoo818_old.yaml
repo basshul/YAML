@@ -300,6 +300,8 @@ appId: ${APP_ID}
 #     [닫기] → **back**(이 화면엔 닫기 버튼이 없다).
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
 #   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvDepositOrViewStatement"
@@ -542,6 +544,8 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
 #   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvDepositOrViewStatement"
@@ -592,6 +596,8 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
 #   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvDepositOrViewStatement"

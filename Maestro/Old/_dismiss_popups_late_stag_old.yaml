@@ -1,0 +1,37 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: **늦게 뜨는** 홈 팝업까지 받아내고 정리한다 — 구 UI (2026-10-14 작성)
+# ================================================================
+# 호출:
+#   - runFlow: "_dismiss_popups_late_stag_old.yaml"
+#
+# 왜 따로 있나:
+#   `_dismiss_popups_stag_old.yaml` 은 `repeat while visible` 이라 **호출하는 그 순간**
+#   팝업이 없으면 통째로 SKIP 된다. 그런데 배너는 **홈으로 돌아온 직후 몇 초 뒤에** 뜬다.
+#   → 그 사이에 홈 요소를 스크롤로 찾으면 배너가 화면을 덮어 타임아웃으로 죽는다.
+#
+#   2026-10-14 `14_02` 에서 이 경합으로 **네 번** 죽었다:
+#     · test123 재로그인 뒤 홈 대기 (2회)
+#     · `[28]` 진입 스크롤 `txvDepositOrViewStatement` (2회)
+#   `[14]` 는 `_dismiss_popups_stag_old` 를 부르고 있었는데도 같은 자리에서 위태로웠다.
+#
+# ⛔ 그렇다고 **원래 헬퍼에 대기를 넣으면 안 된다.** 호출이 27곳인데 그중 8곳이
+#   `_easycare_coverage_stag_old` 안에 있고, 그건 **언어 루프**에서 돌아 24개 언어면
+#   192회가 된다 — 팝업이 없는 보통의 경우에도 호출마다 대기를 치르게 된다.
+#   → 대기가 필요한 자리에만 **이 헬퍼**를 부른다.
+#
+# 언제 부르나: **홈으로 돌아온 직후 홈 요소를 찾기 전.**
+#   (예: `scrollUntilVisible txvDepositOrViewStatement`, `tv_easywallet_account_title`)
+#   팝업이 안 뜨면 8초를 그냥 보낸다 — 그 비용을 치를 자리에서만 쓸 것.
+# ================================================================
+
+# ① 배너가 뜰 틈을 준다. optional 이라 안 떠도 죽지 않는다.
+- extendedWaitUntil:
+    visible:
+      id: "btn6MonthsLater|btnCancel|btnDontShowToday|imgvCross|remindLaterBtn|btnClose|btnTwo"
+    timeout: 8000
+    optional: true
+
+# ② 뜬 것(그리고 그 뒤에 줄줄이 따라오는 큐)을 전부 닫는다.
+- runFlow: "_dismiss_popups_stag_old.yaml"

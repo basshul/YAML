@@ -182,6 +182,8 @@ appId: ${APP_ID}
     visible:
       id: "bottom_item_home"
     timeout: 60000
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "btnTransfer"
@@ -809,6 +811,8 @@ appId: ${APP_ID}
 #   없으므로 `llBankLogo` 탭이 다른 화면을 띄운다.
 #
 # 공통 전제: [15]가 배너를 탭하고 돌아온 직후라 홈이 스크롤돼 있을 수 있다 → 잔액 카드를 먼저 끌어올린다.
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvWalletNumberTitle"
@@ -968,6 +972,8 @@ appId: ${APP_ID}
       id: "bottom_item_home"
     timeout: 20000
 # 잔액 카드를 **지갑 페이지로 되돌린다** — 이후 케이스가 은행 페이지 상태를 물려받지 않게.
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvWalletNumberTitle"
@@ -1045,6 +1051,8 @@ appId: ${APP_ID}
       id: "bottom_item_home"
     timeout: 20000
 # 잔액 카드를 지갑 페이지로 되돌린다(다음 케이스가 은행/계좌추가 페이지를 물려받지 않게)
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "txvWalletNumberTitle"
@@ -1257,6 +1265,8 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnCancel"
 - waitForAnimationToEnd
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "btnTransfer"

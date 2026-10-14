@@ -281,6 +281,8 @@ appId: ${APP_ID}
 # 구 UI 홈 배너 실제 텍스트는 "GME Pay 가상 계좌"(GME와 Pay 사이 공백)다 → id로 고정한다.
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 홈 배너는 상단 카드 영역이라 화면 밖일 수 있다.
 #   (2026-08-25 실제 실패: 하단 내비는 보이는데 배너 assert가 죽었다)
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "tv_easywallet_account_title"

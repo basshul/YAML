@@ -377,6 +377,8 @@ appId: ${APP_ID}
     visible:
       id: "bottom_item_home"
     timeout: 30000
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
 - scrollUntilVisible:
     element:
       id: "btnTransfer"
