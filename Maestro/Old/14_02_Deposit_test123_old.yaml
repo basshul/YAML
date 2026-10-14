@@ -266,6 +266,17 @@ appId: ${APP_ID}
                       id: "btnTwo|btnClose"
                   - waitForAnimationToEnd
             - waitForAnimationToEnd
+# ⚠️ **홈 팝업은 큐로, 그리고 뒤늦게 뜬다**(이 파일 [29] 주석에도 같은 현상이 적혀 있다).
+#   바로 위 루프는 `waitForAnimationToEnd` 뿐이라 **배너가 뜨기 전에 4회를 다 돌고 끝난다** —
+#   2026-10-14 실측: 루프 4회 전부 SKIPPED → 직후 `singleBanner`(`btnClose`)가 홈을 덮어
+#   아래 홈 대기가 30초 타임아웃으로 죽었다.
+#   → 늦게 뜨는 배너를 **한 번 더** 기다렸다가 정리한다. optional 이라 안 뜨면 무해하다.
+- extendedWaitUntil:
+    visible:
+      id: "btnTwo|btnClose|btnDontShowToday"
+    timeout: 8000
+    optional: true
+- runFlow: "_dismiss_popups_stag_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
@@ -745,6 +756,15 @@ appId: ${APP_ID}
 # 참고: 실기기 확인 결과 버튼에는 별도 resource-id가 없어(단순 텍스트 "확인")
 # 비활성화 상태를 id로 직접 검증할 수 없음 - 대신 금액 미입력 시 노출되는
 # 빨간 안내 문구("수취 금액을 입력하세요")의 노출 여부로 검증.
+# ⚠️ 홈으로 돌아온 직후엔 **배너가 뒤늦게 떠 홈을 덮는다**(2026-10-14 실측: 여기서 두 번 죽었다).
+#   헬퍼는 `repeat while visible` 이라 그 순간 팝업이 없으면 통째로 SKIP 되므로,
+#   **먼저 기다렸다가** 부른다. optional 이라 배너가 안 뜨면 무해하다.
+- extendedWaitUntil:
+    visible:
+      id: "btnTwo|btnClose|btnDontShowToday"
+    timeout: 8000
+    optional: true
+- runFlow: "_dismiss_popups_stag_old.yaml"
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
 #   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
 - scrollUntilVisible:
@@ -987,6 +1007,15 @@ appId: ${APP_ID}
 # ⚠️ **홈 팝업은 큐로, 그리고 뒤늦게 뜬다.** 2026-09-09 실측(test123 / SM-S911N):
 #   여기까지 250스텝을 진행한 뒤 **EASYCARE 인앱 배너**가 새로 떠서 홈을 덮었고
 #   아래 스크롤이 25초 타임아웃으로 죽었다 → 스크롤 전에 팝업 큐를 비운다.
+# ⚠️ 헬퍼는 `repeat while visible` 이라 **그 순간 팝업이 없으면 통째로 SKIP** 된다.
+#   2026-10-14 실측: 헬퍼가 SKIP 된 직후 `singleBanner`(`btnClose`)가 홈을 덮어
+#   아래 스크롤이 25초 타임아웃으로 죽었다 — 진입 블록에서 고친 것과 같은 경합이다.
+#   → 늦게 뜨는 배너를 먼저 기다렸다가 헬퍼를 부른다. optional 이라 안 뜨면 무해하다.
+- extendedWaitUntil:
+    visible:
+      id: "btnTwo|btnClose|btnDontShowToday"
+    timeout: 8000
+    optional: true
 - runFlow: "_dismiss_popups_stag_old.yaml"
 # ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
 #   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
