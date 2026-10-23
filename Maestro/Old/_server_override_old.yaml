@@ -22,7 +22,7 @@ appId: ${APP_ID}
       #      **선택을 바꾼 경우에 아무 버튼도 누르지 못해 다이얼로그가 남는다**(2026-08-27 실제 사고).
       #   ③ Maestro가 `checked:`를 무시해 "이미 LIVETEST인지" 판별이 불가 → 판별하지 않는다.
       - tapOn:
-          text: ".*LIVETEST.*"
+          text: "${SERVER_PICK}"
       - waitForAnimationToEnd
       - tapOn:
           id: "button1"

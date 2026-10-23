@@ -64,7 +64,7 @@ appId: ${APP_ID}
     commands:
       # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
       - tapOn:
-          text: ".*LIVETEST.*"
+          text: "${SERVER_PICK}"
       - waitForAnimationToEnd
       - tapOn:
           id: "button1"
