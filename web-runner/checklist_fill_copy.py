@@ -54,7 +54,10 @@ def workbook_of_copy() -> str:
 
 def main(argv: list[str]) -> int:
     dry = "--apply" not in argv
-    sheet = CFG.get("next_sheet", "Checklist(Livetest) (2.2)")
+    # 쓰는 대상은 **사본**이다(workbook_of_copy) → 시트명도 사본 것을 쓴다.
+    #   2026-10-23 next_sheet 에서 교정. copy_ids()/workbook_of_copy() 가 next_url 을
+    #   쓰는 건 그대로 둔다 — 거기선 **원본 id 와 같으면 멈추는 가드**에 원본이 필요하다.
+    sheet = CFG["sheet"]
 
     # 현재 문서에서 '확인 문구 → (매핑, 커버 상태)' 를 만든다
     # ⛔ 대조 기준은 **구 문서(V2.1)** 다 → `prev_*` 로 읽는다.

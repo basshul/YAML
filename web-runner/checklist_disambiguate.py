@@ -49,7 +49,8 @@ def scenario_of(yaml_file: str) -> str:
 
 def main(argv: list[str]) -> int:
     dry = "--apply" not in argv
-    sheet = CFG["next_sheet"]
+    # 시트명은 여는 문서의 것 — 아래는 사본(copy_url)을 연다(2026-10-23 next_sheet 에서 교정).
+    sheet = CFG["sheet"]
 
     # ⛔ 대조 기준은 **구 문서(V2.1)** 다 → `prev_*` 로 읽는다.
     #   `url`/`sheet` 는 2026-10-13 전환 이후 **사본(V2.2)** 을 가리킨다 —

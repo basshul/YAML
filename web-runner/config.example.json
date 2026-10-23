@@ -14,7 +14,17 @@
     "compcode": ""
   },
   "checklist": {
-    "_설명": "매핑 완료본의 SharePoint 공유 링크. config.local.json 에만 채운다",
-    "url": ""
+    "_설명": "체크리스트 문서 3종. 값은 config.local.json 에만 채운다.",
+    "_url": "작업 대상 = **사본**. 웹러너가 읽는 곳이고 매핑·결과를 쓰는 곳도 여기다.",
+    "_next_url": "팀이 만든 **V2.2 원본(읽기 전용)**. 사본을 뜰 때와 '사본 id 가 원본과 같으면 멈춘다' 가드에만 쓴다. ⛔ 여기에 쓰지 말 것.",
+    "_prev_url": "그 전 **V2.1**. 매핑 이관 스크립트가 대조용으로만 읽는다.",
+    "_copy_item_id": "사본의 driveItem id. 쓰기는 항상 이 id 로 간다(링크가 아니라).",
+    "url": "",
+    "sheet": "",
+    "next_url": "",
+    "next_sheet": "",
+    "prev_url": "",
+    "prev_sheet": "",
+    "copy_item_id": ""
   }
 }

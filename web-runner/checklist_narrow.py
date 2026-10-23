@@ -33,7 +33,10 @@ import checklist_fill_copy as F      # noqa: E402
 import checklist_guard as guard      # noqa: E402
 
 CFG = json.loads((W / "config.local.json").read_text(encoding="utf-8"))["checklist"]
-S = CFG["next_sheet"]
+# 시트명은 **여는 문서의 것**을 쓴다 — 아래는 사본(copy_url)을 열므로 `sheet` 다.
+#   2026-10-23 까지 `next_sheet`(신규 원본의 시트명)를 섞어 썼다. 두 이름이 같아
+#   동작했을 뿐이고, 사본에서 시트 이름이 바뀌는 순간 조용히 깨진다.
+S = CFG["sheet"]
 PREFIX = re.compile(r"^([A-Za-z]+)")
 
 
