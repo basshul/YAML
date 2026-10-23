@@ -80,8 +80,12 @@ def api_config():
     return {
         "lang": cfg["lang"],
         "default_device": cfg["default_device"],
+        "builds": [
+            {"value": key, "label": val["label"], "pkg": val["pkg"]}
+            for key, val in runner.BUILD_CHOICES.items()
+        ],
         "servers": [
-            {"value": key, "label": val["label"], "live": val["live"]}
+            {"value": key, "label": val["label"], "host": val["host"], "live": val["live"]}
             for key, val in runner.SERVER_CHOICES.items()
         ],
         "group_labels": runner.GROUP_LABELS,
@@ -221,6 +225,9 @@ def _known_user(user: str) -> str:
 class RunRequest(BaseModel):
     tests: list[str]
     device: str
+    # 빌드(어느 APK)와 서버(어느 백엔드)는 **독립**이다. 둘 다 받는다.
+    #   build 를 안 보내는 옛 화면도 받아주되, 종전 동작(stag)으로 간다.
+    build: str = "stag"
     server: str
     platform: str = "android"
     confirm_live: bool = False
@@ -234,10 +241,15 @@ def api_run(req: RunRequest):
     if req.platform != "android":
         return JSONResponse(status_code=400, content={"error": "iOS 실행은 아직 지원하지 않습니다."})
     # 운영(Live)은 실자금이 움직인다 → 화면에서 한 번 더 확인받은 요청만 받는다.
-    if runner.SERVER_CHOICES.get(req.server, {}).get("live") and not req.confirm_live:
+    #   ★ 기준은 **서버**다 — stag 빌드라도 LIVE 서버에 붙으면 실계정·실자금이다.
+    #     운영 빌드는 서버를 고를 수 없어(combo_error) 늘 운영 서버이므로 함께 본다.
+    is_live = (runner.SERVER_CHOICES.get(req.server, {}).get("live")
+               or req.build == "live")
+    if is_live and not req.confirm_live:
         return JSONResponse(status_code=400, content={"error": "운영(Live) 실행은 확인이 필요합니다."})
     try:
-        run = runner.start_run(req.tests, req.device, req.server, _known_user(req.user))
+        run = runner.start_run(req.tests, req.device, req.build, req.server,
+                               _known_user(req.user))
     except RuntimeError as exc:
         return JSONResponse(status_code=409, content={"error": str(exc)})
     except ValueError as exc:

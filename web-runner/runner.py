@@ -33,13 +33,36 @@ USER_CHOICES = ("Tomas", "Basshu", "Philip")
 #   ⛔ **기본 사용자를 두지 않는다.** "안 골랐다" 를 누군가로 메우면
 #      고르지 않은 사람이 남의 계정으로 돌리게 된다 → 비워 두고 또렷하게 멈춘다.
 
-# 화면에 보이는 "서버" 선택지 → run_*.ps1 의 -Build 값.
-# 사용자 기준은 빌드가 아니라 **어느 서버에 붙는가**다. stag 빌드는 플로우가 서버를
-# LIVETEST 로 강제하고, 운영 빌드는 실서비스에 붙는다.
-SERVER_CHOICES = {
-    "livetest": {"label": "LiveTest", "build": "stag", "live": False},
-    "live": {"label": "운영(Live)", "build": "live", "live": True},
+# 빌드와 서버는 **따로 고른다** (2026-10-23 분리).
+#   종전에는 선택지가 하나였다 — "LiveTest" = stag 빌드 + LIVETEST 서버가 한 덩어리였다.
+#   `.*LIVETEST.*` 가 42곳 yaml 에 박혀 있어 서버를 바꿀 수가 없었기 때문이다.
+#   이제 yaml 이 `${SERVER_PICK}` 을 보고, 러너가 `-Build` 와 `-Server` 를 따로 받는다.
+#
+# ⚠️ 값은 그대로 **명령행 인자**가 된다 → 허용 목록으로만 받는다(USER_CHOICES 와 같은 이유).
+BUILD_CHOICES = {
+    "stag": {"label": "stag", "pkg": "com.gmeremit.online.gmeremittance_native.stag"},
+    "livetest": {"label": "livetest", "pkg": "com.gmeremit.online.gmeremittance_native.livetest"},
+    "live": {"label": "운영(Live)", "pkg": "com.gmeremit.online.gmeremittance_native"},
 }
+# 서버 = 앱이 붙는 백엔드. 플로우가 Server Override 에서 이 줄을 누른다.
+#   `live` 만 실서비스다 — **빌드가 아니라 서버가 실자금 여부를 가른다.**
+SERVER_CHOICES = {
+    "livetest": {"label": "LiveTest", "host": "livetest", "live": False},
+    "stag": {"label": "STAG", "host": "gmeuat", "live": False},
+    "live": {"label": "운영(Live)", "host": "mobileapi", "live": True},
+}
+
+
+def combo_error(build: str, server: str) -> str:
+    """고를 수 없는 (빌드, 서버) 조합이면 사람이 읽을 사유를, 괜찮으면 빈 문자열을 준다.
+
+    ⛔ 운영 빌드에는 Server Override 다이얼로그가 **없다**. 서버를 골라도 플로우의
+      조건부 블록이 조용히 SKIP 되고 **고른 것과 다른 서버로 돈다** — 러너도 같은
+      이유로 거부한다(run_suite.ps1 의 가드와 같은 규칙).
+    """
+    if build == "live" and server != "live":
+        return "운영 빌드에는 Server Override 가 없어 서버를 고를 수 없습니다 — 서버도 운영(Live)이어야 합니다."
+    return ""
 
 # 그룹 태그의 사람용 설명. 태그의 뜻(계정·순서 제약)은 run_suite.ps1 주석이 정본이다.
 GROUP_LABELS = {
@@ -404,9 +427,10 @@ _ELAPSED = re.compile(r"(\d{2}:\d{2})")
 class Run:
     """한 번의 실행. 로그 줄을 모아 두고 구독자에게 흘려보낸다."""
 
-    def __init__(self, names: list[str], device: str, server: str, user: str):
+    def __init__(self, names: list[str], device: str, build: str, server: str, user: str):
         self.names = names
         self.device = device
+        self.build = build
         self.server = server
         self.user = user
         self.started_at = datetime.now()
@@ -464,21 +488,23 @@ class Run:
             raise RuntimeError("실행할 테스트를 고르지 않았습니다. 전체 스위트가 도는 것을 막기 위해 중단합니다.")
         # ★ "User" 도 함께 확인한다 — pwsh 는 **모르는 옵션을 조용히 무시하고**
         #   기본값으로 본체를 실행한다(스크립트가 낡으면 남의 계정으로 돌 수 있다).
-        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Lang", "User"])
+        #   "Server" 도 확인한다 — 스크립트가 낡아 -Server 를 모르면 pwsh 가 **조용히 무시하고**
+        #   기본값(livetest)으로 돈다. 고른 서버와 다른 서버로 도는 쪽이 더 위험하다.
+        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Server", "Lang", "User"])
 
         cfg = load_config()
-        build = SERVER_CHOICES[self.server]["build"]
+        build, server = self.build, self.server
         inner = (
             "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "
             f"& '{SUITE_SCRIPT}' -Names '{','.join(self.names)}' "
-            f"-Device '{self.device}' -Build {build} -Lang {cfg['lang']} "
+            f"-Device '{self.device}' -Build {build} -Server {server} -Lang {cfg['lang']} "
             f"-User {self.user}; "
             "exit $LASTEXITCODE"
         )
         cmd = [cfg["pwsh"], "-NoProfile", "-Command", inner]
 
         self._emit(f"$ run_suite.ps1 -Names {','.join(self.names)} "
-                   f"-Device {self.device} -Build {build} -Lang {cfg['lang']} "
+                   f"-Device {self.device} -Build {build} -Server {server} -Lang {cfg['lang']} "
                    f"-User {self.user}")
         self._emit("")
 
@@ -638,6 +664,7 @@ class Run:
             "stopped": self.stopped,
             "names": self.names,
             "device": self.device,
+            "build": self.build,
             "server": self.server,
             "started_at": self.started_at.isoformat(timespec="seconds"),
             "summary": self.summary,
@@ -806,7 +833,7 @@ def current_run() -> Run | None:
     return _current
 
 
-def start_run(names: list[str], device: str, server: str, user: str) -> Run:
+def start_run(names: list[str], device: str, build: str, server: str, user: str) -> Run:
     """실행을 시작한다. 이미 돌고 있으면 거절한다(대기열은 이번 범위 밖)."""
     global _current
 
@@ -817,8 +844,13 @@ def start_run(names: list[str], device: str, server: str, user: str) -> Run:
         raise ValueError("테스트를 하나 이상 고르세요.")
     if unknown:
         raise ValueError(f"목록에 없는 테스트입니다: {', '.join(unknown)}")
+    if build not in BUILD_CHOICES:
+        raise ValueError(f"알 수 없는 빌드: {build}")
     if server not in SERVER_CHOICES:
         raise ValueError(f"알 수 없는 서버: {server}")
+    bad = combo_error(build, server)
+    if bad:
+        raise ValueError(bad)
     if not user:
         raise ValueError("먼저 사용자를 선택하세요.")
     if user not in USER_CHOICES:
@@ -834,7 +866,7 @@ def start_run(names: list[str], device: str, server: str, user: str) -> Run:
         # 스위트 표의 순서대로 돌린다 — 순서가 곧 상태 의존성이다(고른 순서가 아니다).
         order = [t["name"] for t in list_tests()]
         ordered = [n for n in order if n in set(names)]
-        run = Run(ordered, device, server, user)
+        run = Run(ordered, device, build, server, user)
         _current = run
     run.start()
     return run

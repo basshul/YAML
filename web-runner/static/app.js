@@ -13,6 +13,7 @@ const state = {
   config: null,
   tests: [],
   selected: new Set(),
+  build: "stag",
   server: "livetest",
   running: false,
   groupFilter: "all",
@@ -45,7 +46,10 @@ async function boot() {
   try {
     state.config = await api("/api/config");
     state.server = state.config.servers[0].value;
+    state.build = state.config.builds[0].value;
+    renderBuilds();
     renderServers();
+    renderEnvWarnings();
 
     const { tests } = await api("/api/tests");
     state.tests = tests;
@@ -185,18 +189,64 @@ async function loadDevices() {
   updateRunState();
 }
 
+// 고를 수 없는 조합을 화면에서도 막는다. 판정 정본은 runner.combo_error 다 —
+// 여기서 막지 못해도 서버가 400 으로 거절하므로, 이건 **미리 알려주는 쪽**이다.
+//   ⛔ 운영 빌드에는 Server Override 다이얼로그가 없어 서버를 고를 수 없다.
+//     골라도 플로우가 조용히 SKIP 하고 **고른 것과 다른 서버로 돈다.**
+function comboError() {
+  if (state.build === "live" && state.server !== "live") {
+    return "운영 빌드에는 Server Override 가 없어 서버를 고를 수 없습니다 — 서버도 운영(Live)이어야 합니다.";
+  }
+  return "";
+}
+
+function isLivePicked() {
+  const srv = state.config.servers.find((s) => s.value === state.server);
+  // ★ 실자금 여부는 빌드가 아니라 **서버**가 가른다. 운영 빌드는 서버를 고를 수 없어
+  //   늘 운영 서버이므로 함께 본다.
+  return !!(srv && srv.live) || state.build === "live";
+}
+
+function renderEnvWarnings() {
+  const bad = comboError();
+  const box = $("comboWarn");
+  box.textContent = bad;
+  box.classList.toggle("hidden", !bad);
+  $("liveWarn").classList.toggle("hidden", !isLivePicked());
+  updateRunState();
+}
+
+function renderBuilds() {
+  const box = $("buildChoices");
+  box.innerHTML = "";
+  for (const b of state.config.builds) {
+    const label = document.createElement("label");
+    label.className = "choice" + (b.value === "live" ? " live" : "");
+    label.title = b.pkg;
+    label.innerHTML =
+      '<input type="radio" name="bld" value="' + esc(b.value) + '"' +
+      (b.value === state.build ? " checked" : "") + "> " + esc(b.label);
+    label.querySelector("input").addEventListener("change", () => {
+      state.build = b.value;
+      renderEnvWarnings();
+    });
+    box.appendChild(label);
+  }
+}
+
 function renderServers() {
   const box = $("serverChoices");
   box.innerHTML = "";
   for (const s of state.config.servers) {
     const label = document.createElement("label");
     label.className = "choice" + (s.live ? " live" : "");
+    label.title = s.host + ".gmeremit.com";
     label.innerHTML =
       '<input type="radio" name="srv" value="' + esc(s.value) + '"' +
       (s.value === state.server ? " checked" : "") + "> " + esc(s.label);
     label.querySelector("input").addEventListener("change", () => {
       state.server = s.value;
-      $("liveWarn").classList.toggle("hidden", !s.live);
+      renderEnvWarnings();
     });
     box.appendChild(label);
   }
@@ -573,12 +623,16 @@ function updateRunState() {
   const vis = visibleTests();
   // 사용자를 고르기 전에는 아무것도 돌리지 않는다 — 계정이 사람마다 다르다.
   const hasUser = !!state.runUser;
-  const why = !hasUser ? "먼저 사용자를 선택하세요." : "";
+  // 고를 수 없는 빌드·서버 조합이면 아예 못 누르게 한다 — 눌러서 400 을 받는 것보다
+  // **왜 못 누르는지**가 버튼에 붙어 있는 편이 낫다.
+  const bad = state.config.builds ? comboError() : "";
+  const why = !hasUser ? "먼저 사용자를 선택하세요." : bad;
+  const blocked = !hasDevice || !hasUser || !!bad;
   const runBtn = $("runBtn");
-  runBtn.disabled = state.running || state.selected.size === 0 || !hasDevice || !hasUser;
+  runBtn.disabled = state.running || state.selected.size === 0 || blocked;
   runBtn.title = why;
   const all = $("runAllBtn");
-  all.disabled = state.running || !hasDevice || vis.length === 0 || !hasUser;
+  all.disabled = state.running || vis.length === 0 || blocked;
   all.title = why;
   // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
   all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
@@ -600,15 +654,17 @@ function onRunAll() {
 
 async function onRun() {
   const picked = state.tests.filter((t) => state.selected.has(t.name));
-  const srv = state.config.servers.find((s) => s.value === state.server);
-  const isLive = !!(srv && srv.live);
+  const isLive = isLivePicked();
+  const bad = comboError();
+  if (bad) { alert(bad); return; }
   const money = picked.filter((t) => t.irreversible);
   const minutes = picked.reduce((sum, t) => sum + t.est, 0);
 
   let ask = "실행자: " + (state.runUser || "-") + "\n" +
     picked.length + "개 시나리오를 실행합니다. (예상 " +
     Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분)\n\n";
-  if (isLive) ask += "⚠️ 운영(Live) — 실서비스 계정과 실자금이 움직입니다.\n";
+  ask += "빌드 " + state.build + " / 서버 " + state.server + "\n\n";
+  if (isLive) ask += "⚠️ 운영(Live) 서버 — 실서비스 계정과 실자금이 움직입니다.\n";
   if (money.length) ask += "⚠️ 실결제 포함: " + money.map((t) => t.name).join(", ") + "\n";
   ask += "\n계속할까요?";
   if (!confirm(ask)) return;
@@ -623,6 +679,7 @@ async function onRun() {
         tests: picked.map((t) => t.name),
         user: state.runUser,
         device: $("dev").value,
+        build: state.build,
         server: state.server,
         platform: "android",
         confirm_live: isLive,

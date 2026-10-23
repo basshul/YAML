@@ -38,11 +38,19 @@
   <div class="col col-left">
     <section class="panel tight">
       <h2>실행 환경</h2>
+      <!-- 빌드(어느 APK)와 서버(어느 백엔드)는 **따로** 고른다.
+           2026-10-23 이전에는 선택지가 "서버" 하나였고 그게 곧 빌드였다. -->
+      <div class="field">
+        <span class="flab" id="lb-bld">빌드</span>
+        <div class="choices" id="buildChoices" role="radiogroup" aria-labelledby="lb-bld"></div>
+      </div>
       <div class="field">
         <span class="flab" id="lb-srv">서버</span>
         <div class="choices" id="serverChoices" role="radiogroup" aria-labelledby="lb-srv"></div>
+        <!-- 고를 수 없는 조합일 때만 나타난다(늘 떠 있으면 경고가 아니다). -->
+        <p id="comboWarn" class="warn hidden" role="alert"></p>
         <p id="liveWarn" class="warn hidden">
-          운영(Live)은 <strong>실서비스·실자금</strong>입니다. 의도한 실행인지 확인하세요.
+          운영(Live) 서버는 <strong>실서비스·실자금</strong>입니다. 의도한 실행인지 확인하세요.
         </p>
       </div>
       <div class="field">
