@@ -4,19 +4,28 @@
 #   .\run_test.ps1 -lang en -flow 01_Login_screen.yaml
 #   .\run_test.ps1 -lang ko -flow 01_Login_screen.yaml -device 27dbf1ec440d7ece
 #   .\run_test.ps1 -lang ko -flow ... -Build live      # 운영(Live) 빌드로 돌릴 때만
+#   .\run_test.ps1 -lang ko -flow ... -Server stag     # 빌드는 그대로, 서버만 STAG 로
 #
 # -device를 생략하면 연결된 기기를 자동 감지한다. 2대 이상 연결돼 있으면 실행을 거부한다.
 #
-# ★ 빌드 정책 (2026-09-03 사용자 선언)
-#   기본       = `.stag` 빌드 + **서버는 LIVETEST 지정**  → `-Build stag` (기본값)
-#   운영/Live  = `com.gmeremit.online.gmeremittance_native` → `-Build live` (요청이 있을 때만)
-#   `.livetest` 빌드는 **더 이상 쓰지 않는다** — 기기에서 이미 삭제됐다(2026-09-03 adb 확인).
+# ★ 빌드와 서버는 **따로 고른다** (2026-10-23 분리)
+#   -Build  = 어느 **패키지(APK)** 를 띄울지   : stag(기본) | livetest | live
+#   -Server = 그 앱이 **어느 서버에 붙을지** : livetest(기본) | stag | live
+#   종전에는 `.*LIVETEST.*` 가 42곳 yaml 에 박혀 서버를 바꿀 수가 없었다.
+#   이제 `SERVER_PICK` env 하나로 Server Override 다이얼로그의 선택 줄이 정해진다.
+#
+#   ⚠️ **운영 빌드에는 Server Override 다이얼로그가 없다** → 서버를 고를 수 없고 늘 운영이다.
+#     그래서 `-Build live` 에 운영이 아닌 서버를 주면 거부한다(고른 대로 안 돌면 더 위험하다).
+#   ⚠️ `.livetest` 빌드는 2026-09-03 에 폐기했다가 2026-10-23 에 7.22.0 으로 되살아났다.
 
 param(
     [Parameter(Mandatory=$true)][string]$lang,
     [Parameter(Mandatory=$true)][string]$flow,
     [string]$device = "",
-    [ValidateSet("stag","live")][string]$Build = "stag",
+    [ValidateSet("stag","livetest","live")][string]$Build = "stag",
+    # 앱이 붙을 서버. 빌드와 독립이다 — 플로우가 Server Override 에서 이 줄을 누른다.
+    #   기본값을 livetest 로 둔다(실서비스가 아닌 쪽이 안전한 기본값이다).
+    [ValidateSet("stag","livetest","live")][string]$Server = "livetest",
     [string]$AppId = "",     # 임의 패키지 지정. 주면 -Build 보다 우선한다.
     # 자격정보처럼 파일에 적을 수 없는 값을 실행 시 넘긴다. KEY=VALUE 를 쉼표로.
     #   예) -ExtraEnv CVC_1=1,CVC_2=2,CVC_3=3   (21_Card [12] 의 카드 CVC)
@@ -30,8 +39,16 @@ param(
 
 # -Build → 패키지명. `-AppId`를 직접 준 경우에는 그쪽이 이긴다.
 $BuildMap = @{
-    stag = "com.gmeremit.online.gmeremittance_native.stag"
-    live = "com.gmeremit.online.gmeremittance_native"
+    stag     = "com.gmeremit.online.gmeremittance_native.stag"
+    livetest = "com.gmeremit.online.gmeremittance_native.livetest"
+    live     = "com.gmeremit.online.gmeremittance_native"
+}
+# -Server → Server Override 다이얼로그에서 누를 줄(정규식). 근거는 env 의 SERVER_PICK 주석 참고.
+#   이름이 아니라 **호스트**로 고른다 — `.*LIVE.*` 는 `LIVETEST` 줄까지 잡는다.
+$ServerMap = @{
+    stag     = ".*gmeuat.*"
+    livetest = ".*livetest.*"
+    live     = ".*mobileapi.*"
 }
 if (-not $AppId) { $AppId = $BuildMap[$Build] }
 
@@ -151,11 +168,31 @@ if ($AppId) {
     Write-Host "APP_ID = $AppId" -ForegroundColor Yellow
 }
 
-# 운영(Live) 빌드는 **실서비스**다. 조용히 넘어가지 않게 한 번 크게 찍는다.
-if ($AppId -eq $BuildMap.live) {
-    Write-Host "[LIVE] 운영 빌드로 실행합니다 - 실서비스 계정/실자금입니다: $AppId" -ForegroundColor Red
+# ── 서버 선택을 env 에 꽂는다 ──────────────────────
+#   APP_ID 와 같은 이유로 **교체**한다(뒤에 덧붙이면 maestro 가 어느 쪽을 쓸지 보장되지 않는다).
+$serverPick = $ServerMap[$Server]
+$newArgs = @()
+for ($i = 0; $i -lt $envArgs.Count; $i += 2) {
+    if ($envArgs[$i + 1] -like 'SERVER_PICK=*') { continue }
+    $newArgs += $envArgs[$i]; $newArgs += $envArgs[$i + 1]
+}
+$newArgs += "--env"; $newArgs += ('SERVER_PICK="{0}"' -f $serverPick)
+$envArgs = $newArgs
+
+# ⛔ 운영 빌드에는 Server Override 가 없다 → 서버를 고를 수 없다.
+#   헬퍼가 조건부라 조용히 SKIP 되고, 고른 서버와 **다른 서버로 돌다**. 즉시 끊는다.
+if ($AppId -eq $BuildMap.live -and $Server -ne "live") {
+    Write-Error ("운영 빌드에는 Server Override 가 없어 서버를 고를 수 없습니다 " +
+                 "(-Server $Server 는 무시됩니다). -Server live 로 주거나 빌드를 바꾸세요.")
+    exit 1
+}
+
+# 실서비스에 닿는 경우는 조용히 넘어가지 않게 한 번 크게 찍는다.
+#   ★ 위험의 기준은 빌드가 아니라 **서버**다 — stag 빌드라도 LIVE 서버에 붙으면 실자금이다.
+if ($AppId -eq $BuildMap.live -or $Server -eq "live") {
+    Write-Host "[LIVE] 실서비스 서버로 실행합니다 - 실계정/실자금입니다: $AppId (서버 $Server)" -ForegroundColor Red
 } else {
-    Write-Host "빌드: $AppId  (서버는 플로우가 LIVETEST로 강제한다)" -ForegroundColor DarkCyan
+    Write-Host "빌드: $AppId  /  서버: $Server  ($serverPick)" -ForegroundColor DarkCyan
 }
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

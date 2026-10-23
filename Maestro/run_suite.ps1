@@ -62,7 +62,9 @@ param(
     [switch]$List,
     [switch]$DumpJson,          # 스위트 표를 JSON으로 출력만 하고 끝낸다 (web-runner 용)
     [string]$Device = "",
-    [ValidateSet("stag","live")][string]$Build = "stag",
+    [ValidateSet("stag","livetest","live")][string]$Build = "stag",
+    # 앱이 붙을 서버. 빌드와 독립이고 각 run_test.ps1 호출에 그대로 넘긴다.
+    [ValidateSet("stag","livetest","live")][string]$Server = "livetest",
     [switch]$AutoCharge,        # 잔액이 모자라면 자동 충전한다 — ⚠️ **미검증**(아래 ③ OTP 참고)
     [int]$MaxCharge = 30000,    # 자동 충전 총액 상한(실계좌에서 빠진다). -AutoCharge 없으면 무의미
     [string]$AppId = "",
@@ -244,19 +246,31 @@ if ($DumpJson) {
 }
 
 # ----------------------------------------------------------------
-# 빌드 결정 (2026-09-03 사용자 선언)
+# 빌드와 서버 결정 (2026-10-23 분리)
 # ----------------------------------------------------------------
-#   기본       = `.stag` 빌드 + **서버는 LIVETEST 지정**
-#   운영/Live  = 접미사 없는 패키지. **요청이 있을 때만** `-Build live`
-#   `.livetest` 빌드는 더 이상 쓰지 않는다 — 기기에서 이미 삭제됐다(2026-09-03 adb 확인).
-# ⚠️ stag 빌드는 Server Override 기본값이 **STAG**다. 각 플로우가 LIVETEST를 코드로 강제하지만
-#    한 곳이라도 빠지면 **조용히 gmeuat로 돈다** → 아래 P0/조기검사/최종집계 3중으로 본다.
+#   -Build  = 어느 **패키지(APK)** 를 띄울지 : stag(기본) | livetest | live
+#   -Server = 어느 **서버에 붙을지**    : livetest(기본) | stag | live
+#   종전에는 둘이 한 축이었다(stag 빌드 = LIVETEST 서버 고정). 이제 따로 고른다.
+# ⚠️ Server Override 기본값은 빌드 기본값(stag=STAG)이다. 각 플로우가 SERVER_PICK 으로
+#    고른 줄을 누르지만 한 곳이라도 빠지면 **조용히 다른 서버로 돈다**
+#    → 아래 P0/조기검사/최종집계 3중으로 **기대 서버와 실제 트래픽**을 대조한다.
 $BuildMap = @{
-    stag = "com.gmeremit.online.gmeremittance_native.stag"
-    live = "com.gmeremit.online.gmeremittance_native"
+    stag     = "com.gmeremit.online.gmeremittance_native.stag"
+    livetest = "com.gmeremit.online.gmeremittance_native.livetest"
+    live     = "com.gmeremit.online.gmeremittance_native"
 }
-$EffAppId = if ($AppId) { $AppId } else { $BuildMap[$Build] }
-$IsLive   = ($EffAppId -eq $BuildMap.live)
+# 서버 → logcat 에 찍히는 호스트. 판정은 코드가 아니라 **실제 트래픽**으로 한다.
+$ServerHostMap = @{ stag = "gmeuat"; livetest = "livetest"; live = "mobileapi" }
+$EffAppId   = if ($AppId) { $AppId } else { $BuildMap[$Build] }
+# ★ 위험의 기준은 빌드만이 아니다 — stag 빌드라도 LIVE 서버에 붙으면 실자금이다.
+$IsLive     = ($EffAppId -eq $BuildMap.live) -or ($Server -eq "live")
+$ExpectHost = $ServerHostMap[$Server]
+
+# ⛔ 운영 빌드에는 Server Override 가 없다 → 서버를 고를 수 없다(run_test.ps1 과 같은 가드).
+if ($EffAppId -eq $BuildMap.live -and $Server -ne "live") {
+    Write-Host "운영 빌드에는 Server Override 가 없어 서버를 고를 수 없습니다 (-Server $Server 는 무시됩니다)." -ForegroundColor Red
+    exit 1
+}
 
 # ----------------------------------------------------------------
 # 실행 계획
@@ -307,7 +321,7 @@ if ($plan.Count -eq 0) { Write-Error "실행할 항목이 없습니다. -Group/-
 # ----------------------------------------------------------------
 # 계획 출력 (+ 예상 누적 시간)
 # ----------------------------------------------------------------
-$appLabel = if ($IsLive) { "$EffAppId  [운영/Live]" } else { "$EffAppId  (서버 LIVETEST 강제)" }
+$appLabel = if ($IsLive) { "$EffAppId  [서버 $Server — 운영/Live]" } else { "$EffAppId  (서버 $Server 강제)" }
 # -Names 는 그룹 필터를 무시하므로 헤더에 그룹을 찍으면 사실과 다르다.
 $grpLabel = if ($Names.Count -gt 0) { "(-Names 지정 순서)" } else { $Group -join ',' }
 $totalEst = ($plan | Measure-Object -Property est -Sum).Sum
@@ -475,6 +489,7 @@ if ($pkgHit -lt 1) {
 }
 if ($IsLive) {
     Write-Host ("  빌드            {0}  [운영/Live]" -f $EffAppId) -ForegroundColor Red
+    Write-Host ("  서버            {0}" -f $Server) -ForegroundColor Red
     Write-Host "                  실서비스 계정과 실자금이 움직입니다. 의도한 실행인지 확인하세요." -ForegroundColor Red
 } else {
     Write-Host ("  빌드            {0}  (서버는 플로우가 LIVETEST로 강제)" -f $EffAppId) -ForegroundColor Green
@@ -538,7 +553,7 @@ foreach ($t in $plan) {
                 Write-Host ("  · 잔액 {0:N0}원 → {1:N0}원 필요. 1,000원씩 {2}회 충전합니다(실계좌 출금)" -f $projBal, $t.needs.balance, $wantN) -ForegroundColor Yellow
                 $okN = 0
                 for ($ci = 1; $ci -le $wantN; $ci++) {
-                    $cArgs = @{ lang = $Lang; flow = "Old" + [char]92 + "_suite_charge_old.yaml"; AppId = $EffAppId; User = $User }
+                    $cArgs = @{ lang = $Lang; flow = "Old" + [char]92 + "_suite_charge_old.yaml"; AppId = $EffAppId; User = $User; Server = $Server }
                     if ($Device) { $cArgs['device'] = $Device }
                     $clog = Join-Path $logDir ("_charge_{0}_{1}.log" -f $t.n, $ci)
                     & (Join-Path $root "run_test.ps1") @cArgs *>&1 | Tee-Object -FilePath $clog | Out-Null
@@ -589,7 +604,7 @@ foreach ($t in $plan) {
     #   또 변수명을 `$args`로 쓰는 것도 금지 — PowerShell 자동 변수다.
     #   → **해시테이블 스플래팅**이 이름 있는 파라미터의 정석이다.
     # 빌드는 **항상 명시**해서 넘긴다 — env 파일 기본값에 기대면 로그만 보고는 어느 빌드였는지 모른다.
-    $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId; User = $User }
+    $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId; User = $User; Server = $Server }
     if ($Device) { $flowArgs['device'] = $Device }
     & (Join-Path $root "run_test.ps1") @flowArgs *>&1 | Tee-Object -FilePath $log | Out-Null
     $code = $LASTEXITCODE
@@ -656,24 +671,28 @@ foreach ($t in $plan) {
         #   앱이 설정 API `ChangePasswordRule` 하나를 gmeuat 로 호출한다(요청+응답 2줄).
         #   → 그 엔드포인트만 **콜드스타트로 분류**하고, 나머지 gmeuat 는 전부 위반으로 본다.
         #     (항목마다 clearState 가 있으면 실행 중간에도 생기므로 "첫 건만 예외"로는 부족하다)
-        $ehHits = @(adb logcat -d 2>$null | Select-String -Pattern '(?:-->|<--).*?(livetest|gmeuat)\.gmeremit\.com(\S*)' -AllMatches |
+        $ehHits = @(adb logcat -d 2>$null | Select-String -Pattern '(?:-->|<--).*?(livetest|gmeuat|mobileapi)\.gmeremit\.com(\S*)' -AllMatches |
                 ForEach-Object { $_.Matches } |
                 ForEach-Object { [pscustomobject]@{ SrvHost = $_.Groups[1].Value; Path = $_.Groups[2].Value } })
         $ehLive     = @($ehHits | Where-Object { $_.SrvHost -eq 'livetest' }).Count
+        $ehProd     = @($ehHits | Where-Object { $_.SrvHost -eq 'mobileapi' }).Count
         $ehStagAll  = @($ehHits | Where-Object { $_.SrvHost -eq 'gmeuat' })
-        $ehStagCold = @($ehStagAll | Where-Object { $_.Path -match 'ChangePasswordRule' }).Count
+        $ehStagCold = if ($ExpectHost -eq 'gmeuat') { 0 } else { @($ehStagAll | Where-Object { $_.Path -match 'ChangePasswordRule' }).Count }
         $ehStag     = $ehStagAll.Count - $ehStagCold
         if ($ehStagCold -gt 0) {
             Write-Host ("      서버 확인: 콜드스타트 gmeuat {0}건(clearState 직후 설정 API — 무해)" -f $ehStagCold) -ForegroundColor DarkGray
         }
-        if ($IsLive) {
-            Write-Host ("      서버 확인: 운영 빌드 (livetest {0} / gmeuat {1})" -f $ehLive, $ehStag) -ForegroundColor DarkCyan
-        } elseif ($ehStag -gt 0) {
-            Write-Host ("`n[STOP] STAG(gmeuat) 트래픽 {0}건 — Server Override가 LIVETEST로 안 걸렸습니다." -f $ehStag) -ForegroundColor Red
+        # ★ 기대한 서버와 다른 호스트가 보이면 끊는다. 예전에는 "gmeuat 이면 위반" 이었지만,
+        #   이제 -Server 로 STAG 를 고를 수 있어 **고른 값 기준**으로 바뀐다.
+        $ehByHost = @{ livetest = $ehLive; gmeuat = $ehStag; mobileapi = $ehProd }
+        $ehExpect = $ehByHost[$ExpectHost]
+        $ehOther  = ($ehLive + $ehStag + $ehProd) - $ehExpect
+        if ($ehOther -gt 0) {
+            Write-Host ("`n[STOP] 기대한 서버({0}) 밖 트래픽 {1}건 — Server Override 가 고른 줄로 안 걸렸습니다." -f $ExpectHost, $ehOther) -ForegroundColor Red
             Write-Host "       여기서 멈춥니다. 이대로 두면 전 스위트가 엉뚱한 서버로 돕니다." -ForegroundColor Red
             $aborted = $true; break
-        } elseif ($ehLive -gt 0) {
-            Write-Host ("      서버 확인: livetest {0}건 / gmeuat 0건 — 정상" -f $ehLive) -ForegroundColor Green
+        } elseif ($ehExpect -gt 0) {
+            Write-Host ("      서버 확인: {0} {1}건 · 다른 호스트 0건 — 정상" -f $ExpectHost, $ehExpect) -ForegroundColor Green
         } else {
             Write-Host "      서버 확인: 호스트 로그가 안 잡혔습니다(logcat 버퍼) — 종료 시 재집계합니다." -ForegroundColor DarkYellow
         }
@@ -691,7 +710,7 @@ foreach ($t in $plan) {
         Write-Host "  · 복구(_suite_recover_old.yaml)..." -NoNewline -ForegroundColor DarkGray
         $rlog = Join-Path $logDir "$($t.n)_recover.log"
         if (-not (Wait-Device)) {
-            Write-Host "`n⛔ 기기가 돌아오지 않아 복구도 할 수 없습니다 — 중단합니다." -ForegroundColor Red
+        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User; Server = $Server }
             $aborted = $true; break
         }
         $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User }
@@ -722,15 +741,16 @@ $swAll.Stop()
 #   **LIVETEST 응답 본문에 들어 있는 gmeuat 이미지 URL**(예: RIA 파트너 아이콘
 #   `https://gmeuat.gmeremit.com:5022/Images/...`)까지 STAG 트래픽으로 집계했다
 #   → 2026-09-08 실행에서 gmeuat 5건이 찍혀 "서버가 뒤섞였다"는 거짓 경고가 났다.
-$hostHits = @(adb logcat -d 2>$null | Select-String -Pattern '(?:-->|<--).*?(livetest|gmeuat)\.gmeremit\.com(\S*)' -AllMatches |
+$hostHits = @(adb logcat -d 2>$null | Select-String -Pattern '(?:-->|<--).*?(livetest|gmeuat|mobileapi)\.gmeremit\.com(\S*)' -AllMatches |
               ForEach-Object { $_.Matches } |
               ForEach-Object { [pscustomobject]@{ SrvHost = $_.Groups[1].Value; Path = $_.Groups[2].Value } })
-# 위 조기검사와 같은 규칙: `ChangePasswordRule`(override 적용 전 호출)만 콜드스타트로 분류한다.
+# 위 조기검사와 같은 규칙: ChangePasswordRule(override 적용 전 호출)만 콜드스타트로 분류한다.
+#   ⚠️ 콜드스타트 예외는 **빌드 기본값(stag=STAG)** 에만 해당한다 — gmeuat 이 기대 서버면 예외가 필요 없다.
 $hLive     = @($hostHits | Where-Object { $_.SrvHost -eq 'livetest' }).Count
+$hProd     = @($hostHits | Where-Object { $_.SrvHost -eq 'mobileapi' }).Count
 $hStagAll  = @($hostHits | Where-Object { $_.SrvHost -eq 'gmeuat' })
-$hStagCold = @($hStagAll | Where-Object { $_.Path -match 'ChangePasswordRule' }).Count
+$hStagCold = if ($ExpectHost -eq 'gmeuat') { 0 } else { @($hStagAll | Where-Object { $_.Path -match 'ChangePasswordRule' }).Count }
 $hStag     = $hStagAll.Count - $hStagCold
-
 # ----------------------------------------------------------------
 # 상태 저장 (-Resume 용) — **그룹 경계**만 기록한다
 # ----------------------------------------------------------------
@@ -761,13 +781,18 @@ Write-Host "=== 요약 ===" -ForegroundColor Cyan
 $results | Format-Table Group, Name, Status, Steps, Elapsed, Reason -AutoSize
 Write-Host ("항목 {0}개 / PASS {1} / FAIL {2} / SKIP {3}   ·   케이스 BLOCKED {4} / N/A {5}" -f `
     $results.Count, $pass, $fail, $skipN, $blk, $naN)
-Write-Host ("소요 {0}   ·   접속 호스트: livetest {1}건 / gmeuat(STAG) {2}건" -f `
-    $swAll.Elapsed.ToString("hh\:mm\:ss"), $hLive, $hStag)
-if (-not $IsLive -and $hStag -gt 0) {
-    Write-Host "⛔ STAG(gmeuat) 트래픽이 섞였습니다 — 이 실행 결과는 서버가 뒤섞였을 수 있어 신뢰할 수 없습니다." -ForegroundColor Red
+Write-Host ("소요 {0}   ·   접속 호스트: livetest {1} / gmeuat {2} / mobileapi {3}  (기대 {4})" -f `
+    $swAll.Elapsed.ToString("hh\:mm\:ss"), $hLive, $hStag, $hProd, $ExpectHost)
+# ★ 판정 기준은 "livetest 가 맞다" 가 아니라 **고른 서버와 같은가** 다.
+#   -Server stag 로 일부러 STAG 를 고른 실행에서 gmeuat 를 위반으로 찍으면 거짓 경고다.
+$hByHost = @{ livetest = $hLive; gmeuat = $hStag; mobileapi = $hProd }
+$hExpect = $hByHost[$ExpectHost]
+$hOther  = ($hLive + $hStag + $hProd) - $hExpect
+if ($hOther -gt 0) {
+    Write-Host ("⛔ 기대한 서버({0}) 밖 트래픽 {1}건 — 서버가 뒤섞였을 수 있어 이 실행 결과는 신뢰할 수 없습니다." -f $ExpectHost, $hOther) -ForegroundColor Red
     Write-Host "   원인은 대개 Server Override 강제를 빠뜨린 플로우입니다(린터 E08이 잡습니다)." -ForegroundColor DarkYellow
-} elseif (-not $IsLive -and $hLive -eq 0) {
-    Write-Host "⚠️ livetest 호스트 로그가 0건입니다 — logcat 버퍼가 밀렸거나 실제 통신이 없었습니다." -ForegroundColor DarkYellow
+} elseif ($hExpect -eq 0) {
+    Write-Host ("⚠️ 기대한 서버({0}) 호스트 로그가 0건입니다 — logcat 버퍼가 밀렸거나 실제 통신이 없었습니다." -f $ExpectHost) -ForegroundColor DarkYellow
 }
 if ($completed.Count -gt 0) { Write-Host ("완주 그룹: {0} (-Resume 시 건너뜁니다)" -f ($completed -join ',')) -ForegroundColor DarkGray }
 
@@ -780,8 +805,9 @@ $md += "- 케이스 단위 제외: BLOCKED $blk / N/A $naN (알려진 앱버그�
 $md += "- 소요 $($swAll.Elapsed.ToString('hh\:mm\:ss')) / 예상 $totalEst 분"
 $md += "- 기기: ``$devSerial``"
 $md += "- 기기 해상도: ``$devRes``" + $(if ($prevRes -and $wmSize -and $prevRes -ne $devRes) { "  ⚠️ **지난 실행($prevRes)과 다름** — 실패가 몰리면 해상도를 먼저 의심할 것" } else { "" })
-$md += "- 빌드: ``$EffAppId``" + $(if ($IsLive) { "  **[운영/Live]**" } else { "  (서버 LIVETEST 강제)" })
-$md += "- 접속 호스트: livetest **$hLive**건 / gmeuat(STAG) **$hStag**건"
+$md += "- 빌드: ``$EffAppId``" + $(if ($IsLive) { "  **[운영/Live]**" } else { "" })
+$md += "- 서버: ``$Server`` (기대 호스트 ``$ExpectHost``)"
+$md += "- 접속 호스트: livetest **$hLive**건 / gmeuat(STAG) **$hStag**건 / mobileapi(LIVE) **$hProd**건"
 if ($chargeSpent -gt 0) {
     $md += "- 🔴 자동 충전: **$('{0:N0}' -f $chargeSpent)원** (1회 1,000원 × $($chargeSpent/1000)회, 실계좌 출금)"
     $md += "  - 추적 잔액은 **시작 잔액 + 충전액**이다. 각 항목의 실제 소비는 반영하지 않는다(수수료·환율 연동이라 추정하지 않음)."
@@ -827,7 +853,8 @@ $resultObj = [ordered]@{
     aborted    = [bool]$aborted
     counts     = [ordered]@{ total = $results.Count; pass = $pass; fail = $fail; skip = $skipN
                              blocked = $blk; na = $naN }
-    hosts      = [ordered]@{ livetest = $hLive; stag = $hStag }
+    server     = $Server
+    hosts      = [ordered]@{ livetest = $hLive; stag = $hStag; live = $hProd; expected = $ExpectHost }
     items      = @($results | ForEach-Object {
         [ordered]@{ group = $_.Group; name = $_.Name; status = $_.Status
                     steps = $_.Steps; elapsed = $_.Elapsed; reason = $_.Reason
