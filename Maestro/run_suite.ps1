@@ -173,7 +173,10 @@ $Suite = @(
   @{ n="08_MyQR";                 g="G2"; acct="seungsoo818"; est=10; f="Old\08_MyQR_old.yaml"; push=$true
      needs=@{ balance=100 };  note="1원 송금 완주 포함(실측 1원×3=3원 — 2026-09-18 2000→100 정정). 카카오뱅크는 [05][06] 실송금 조합이라 고정" }
   @{ n="10_DomesticTopup";        g="G2"; acct="seungsoo818"; est=4;  f="Old\10_DomesticTopup_old.yaml"
-     needs=@{ balance=0 }     # 실제로 잔액이 차감되지 않는다(2026-09-18 사용자 확인 — 1000→0)
+     # ★ needs.balance 는 '얼마가 빠져나가나' 가 아니라 **'진행하려면 얼마가 있어야 하나'** 다.
+     #   2026-09-18 에 '차감되지 않는다'를 근거로 0 으로 내렸는데 둘을 뒤섞은 것이었다.
+     #   돈은 실제로 안 빠지지만 **결제 요청을 걸려면 10,000원이 있어야 한다**(2026-10-23 사용자 확인).
+     needs=@{ balance=10000 }
      note="[04]는 **거부 동작이 케이스 정의**(테스트 번호가 선불폰 아님) → 실자금 이동 없음. 실패응답 최대 3분" }
   @{ n="03_Domestic";             g="G2"; acct="seungsoo818"; est=12; f="Old\03_Domestic_old.yaml"
      needs=@{ balance=3000 }
@@ -181,8 +184,11 @@ $Suite = @(
   @{ n="16_ATMWithdraw";          g="G2"; acct="seungsoo818"; est=4;  f="Old\16_ATMWithdraw_old.yaml"
      needs=@{ balance=13000 }; note="취소 재시도 루프 필수 + 내역 사후검증" }
   @{ n="02_01_Overseas_SendNow";  g="G2"; acct="seungsoo818"; est=8;  f="Old\02_01_Overseas_Send now_old.yaml"
-     needs=@{ balance=15000 }
-     note="⚠️ 최소 송금액이 **환율 연동**이라 임계값은 추정치다. `GME TEST`를 남겨야 02_02가 성립" }
+     # 2026-10-07 에 송금 구간이 통째로 주석 처리됐다 — 이 파일은 더 이상 실송금을 하지 않는다.
+     #   Wallet 송금 검증은 04_Menu_History [02] 로 이관됐다. 남은 건 수취인 추가·삭제뿐이라
+     #   잔액이 필요 없다(종전 15,000 은 송금하던 시절의 값이라 불필요한 자동충전을 불렀다).
+     needs=@{ balance=0 }
+     note="수취인 추가·삭제만 남았다(송금 구간 주석). `GME TEST`를 남겨야 02_02가 성립" }
   @{ n="02_02_Overseas_Schedule"; g="G2"; acct="seungsoo818"; est=16; f="Old\02_02_Overseas_Schedule_old.yaml"
      note="예약 등록/취소만, 실결제 없음. **02_01 직후여야 한다**" }
   @{ n="20_Booking";              g="G2"; acct="seungsoo818"; est=10; f="Old\20_Booking_old.yaml"
