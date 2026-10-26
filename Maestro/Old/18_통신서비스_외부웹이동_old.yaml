@@ -12,7 +12,9 @@ appId: ${APP_ID}
 # 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
 #
 # 진입: 홈 서비스 그리드 **"${HOME_TELECOM}"**(11종 중 9번째 — 스크롤 필요).
-# 홈 판정은 하단 내비 id `bottom_item_home` / 상단 `btnTransfer`.
+# 홈 판정은 **하단 내비 `bottom_item_home`** 으로만 한다.
+#   ⛔ 상단 `btnTransfer` 는 쓰지 않는다 — 구 UI 홈은 스크롤 위치를 유지해
+#     상단 카드가 화면 밖일 수 있다(2026-10-23·10-26 실행에서 연속 실패).
 #
 # ---------------------------------------------------------------
 # 화면 구조 (2026-08-19 실측)
@@ -62,7 +64,7 @@ appId: ${APP_ID}
 #   → **먼저 세션을 의심할 것.** 잠금화면에 "로그인 세션이 만료되었습니다" 바텀시트가 떠 있었고,
 #     `btnOk` → 01_01_로그인_정상_old.yaml 재로그인 후 같은 화면이 즉시 정상 로드됐다.
 #   ※ 세션 만료 자체는 **하루 단위로 재발**하는 것이 확인됐다(2026-08-19 복구 → 2026-08-20 또 만료).
-#     만료 상태에서는 진입 블록의 `btnTransfer` 어서션이 FAILED로 죽는다(이건 재현 확실).
+#     만료 상태에서는 진입 블록의 홈 어서션이 FAILED로 죽는다(이건 재현 확실).
 #     상세: [[feedback_session_expiry_recovery]]
 #
 # ---------------------------------------------------------------
@@ -174,9 +176,11 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnTwo|btnClose"
       - waitForAnimationToEnd
+# ⛔ 진입 가드도 같은 이유로 `bottom_item_home` 이다 (2026-10-27 수정).
+#   여기서 죽으면 케이스를 하나도 못 돌고 끝난다.
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ----------------------------------------------------------------
@@ -239,12 +243,17 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnTwo|btnClose"
       - waitForAnimationToEnd
+# ⛔ `btnTransfer` 로 홈 복귀를 판정하지 않는다 (2026-10-27 수정).
+#   구 UI 홈은 **스크롤 위치를 유지**해서 상단 송금 카드가 화면 밖에 있을 수 있다.
+#   앱은 멀쩡히 홈으로 돌아왔는데 이 어서션만 죽는다 — SM-S911N(1080x2340)에서
+#   2026-10-23·10-26 실행에 연속으로 그랬다.
+#   하단 내비는 홈에 있으면 **언제나 보인다** → 그걸로 판정한다.
+#   ※ 종전엔 여기 뒤에 `assertVisible: bottom_item_home` 이 또 있었다.
+#     `extendedWaitUntil` 이 이미 단언이라 중복이어서 하나로 합쳤다.
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
-- assertVisible:
-    id: "bottom_item_home"
 - takeScreenshot: "[01-2]_홈복귀_확인"
 
 # ================================================================
