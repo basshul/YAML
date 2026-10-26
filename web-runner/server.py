@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 import runner
 import checklist as checklist_cache
+import checklist_result
 from admin import actions as admin_actions
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -62,6 +63,74 @@ def api_checklist():
         return checklist_cache.load()
     except checklist_cache.ChecklistUnavailable as exc:
         return JSONResponse(status_code=503, content={"error": str(exc)})
+
+
+@app.get("/api/checklist/pending")
+def api_checklist_pending(stamp: str):
+    """실행 하나(`stamp`)를 체크리스트 행별 **자동 기입값**으로 바꿔 돌려준다.
+
+    `aborted` 실행도 그대로 받는다 — 중단 전까지 끝난 시나리오의 결과는 멀쩡한데
+    그걸 못 쓰면 몇 시간짜리 실행이 통째로 버려진다. 실제로 2026-10-23 실행(중단)에서
+    102행이 나온다. 「어느 실행을 볼 것인가」는 화면의 `결과 기준` 셀렉트가 정한다
+    (docs/CHECKLIST.md §7) — 이 엔드포인트는 그 셀렉트의 뒷단이다.
+
+    ⚠️ **`current` 는 아직 전부 빈 값이다.** `pending()` 의 "엑셀에 이미 같은 값이 있으면
+      뺀다"(§8)를 하려면 결과 열의 현재 값이 필요한데, **캐시에 그 열이 없다** —
+      `checklist_layout.HEADER_ALIASES` 가 결과 열을 읽지 않아 `checklist_sync.py` 가
+      받아오지 않는다. 그래서 `column_values={}` 로 돌리며 **pending == derived** 다.
+      응답의 `column_source: null` 이 그 사실을 드러낸다. 열을 캐시에 실으면 여기만 바꾸면 된다.
+      ⛔ 그 전까지는 저장 단계에서 **같은 값을 다시 PATCH 할 수 있다**는 뜻이다.
+    """
+    # ⚠️ try 를 셋으로 나눈 이유: `json.JSONDecodeError` 가 **ValueError 의 하위**라
+    #   한 덩어리로 묶으면 깨진 result.json 이 "잘못된 stamp"(400)로 둔갑한다.
+    try:
+        path = runner.run_result_path(stamp)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except FileNotFoundError as exc:
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+
+    try:
+        run = checklist_result.load_run(path)
+    except checklist_result.NoRun as exc:
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+    except (OSError, ValueError) as exc:
+        return JSONResponse(status_code=500,
+                            content={"error": f"result.json 을 읽지 못했습니다: {exc}"})
+
+    try:
+        rows = checklist_cache.load()["rows"]
+    except checklist_cache.ChecklistUnavailable as exc:
+        return JSONResponse(status_code=503, content={"error": str(exc)})
+
+    try:
+        derived = checklist_result.derive(run, rows)
+    except (TypeError, KeyError, AttributeError) as exc:
+        # 옛 형식 result.json(blocked/na 가 **개수**)이 여기로 들어오면 터진다.
+        #   2026-10-26 수정 전 실행이 그렇다 — 500 으로 숨기지 말고 사유를 그대로 준다.
+        return JSONResponse(status_code=422, content={"error":
+            f"이 실행의 result.json 은 기입값을 만들 수 없는 형식입니다({exc}). "
+            "2026-10-26 이전 실행은 BLOCKED/N/A 를 개수로만 담고 있습니다."})
+
+    items = checklist_result.pending(derived, rows, {})
+    return {
+        # ★ 파일 안의 `stamp` 가 아니라 **요청한 폴더 이름**을 그대로 돌려준다.
+        #   로그·result.json 을 찾는 키가 폴더 이름이라, 둘이 어긋나면 화면이 되물을 때
+        #   404 가 난다. 응답은 요청을 그대로 되비춰야 한다.
+        "stamp": stamp,
+        "aborted": bool(run.get("aborted")),
+        "ran": len(run.get("items") or []),
+        "rows": len(rows),
+        "counts": {
+            "derived": len(derived),
+            "pending": len(items),
+            "pass": sum(1 for d in items if d["value"] == checklist_result.PASS),
+            "na": sum(1 for d in items if d["value"] == checklist_result.NA),
+        },
+        # 현재 엑셀 값의 출처. 지금은 없다(위 ⚠️) — 화면이 "중복 PATCH 가능"을 알 수 있게 내보낸다.
+        "column_source": None,
+        "items": items,
+    }
 
 
 @app.get("/api/devices")

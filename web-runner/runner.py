@@ -825,6 +825,25 @@ def read_item_log(stamp: str, item: str) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def run_result_path(stamp: str) -> Path:
+    """이력 한 건의 `result.json` 경로.
+
+    ⚠️ `read_item_log` 과 같은 이유로 **형식을 먼저 검사한다** — stamp 는 URL 에서 온다.
+    ⛔ `SUMMARY.md` 로 폴백하지 않는다. 거기엔 케이스 단위 BLOCKED/N/A 가 **합계로만**
+      있어서 어느 케이스가 제외인지 알 수 없다(`checklist_result.load_run` 참고).
+      `read_history` 는 목록을 보여주는 게 목적이라 폴백이 맞지만, 기입값 산출은
+      **틀린 값을 만드느니 없다고 하는 편**이 낫다.
+    """
+    if not _STAMP.match(stamp):
+        raise ValueError("잘못된 이력 경로입니다.")
+    path = SUITE_LOGS_DIR / stamp / "result.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{stamp} 에 result.json 이 없습니다 — 2026-09-30 이전 실행이거나, "
+            "프로세스가 강제종료되어 기록이 남지 않은 실행입니다.")
+    return path
+
+
 _current: Run | None = None
 _start_lock = threading.Lock()
 
