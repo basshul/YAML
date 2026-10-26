@@ -23,10 +23,17 @@ FAIL 이라고만 적히면 **어느 케이스에서 깨졌는지** 로그를 �
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
 MAESTRO_DIR = Path(__file__).resolve().parent.parent / "Maestro"
+
+# 이름이 바뀐 플로우를 되짚는 표. 과거 로그에는 **그때의 파일명**이 적혀 있어서
+# (`flow_path_from_log` 참고) 리네임 뒤에는 그 경로가 없다 → 이력의 「케이스별
+# 결과」가 통째로 "경로가 없습니다" 가 된다. 표가 없거나 못 찾으면 종전대로 둔다.
+RENAMES_FILE = MAESTRO_DIR / "flow_renames.json"
+_RENAMES: dict | None = None
 
 # `... COMPLETED` 같은 꼬리. 이 줄이 곧 "그 스텝이 끝났다" 는 뜻이다.
 _STATUS = re.compile(r"\.\.\.\s+(COMPLETED|FAILED|SKIPPED|WARNED|PENDING)\s*$")
@@ -61,6 +68,45 @@ def flow_path_from_log(lines: list[str]) -> Path | None:
         if m:
             return MAESTRO_DIR / m.group(1).replace("\\", "/")
     return None
+
+
+def _renames() -> dict:
+    """`flow_renames.json` 을 한 번만 읽는다. 없으면 빈 표 — 기능이 조용히 꺼질 뿐이다."""
+    global _RENAMES
+    if _RENAMES is None:
+        try:
+            raw = json.loads(RENAMES_FILE.read_text(encoding="utf-8"))
+            _RENAMES = {"renames": dict(raw.get("renames") or {}),
+                        "removed": dict(raw.get("removed") or {})}
+        except Exception:
+            _RENAMES = {"renames": {}, "removed": {}}
+    return _RENAMES
+
+
+def follow_renames(flow: Path) -> Path | None:
+    """이름이 바뀐 파일을 따라간다.
+
+    한 파일이 **여러 번** 바뀌었을 수 있어(한글화 → 번호 정리) 사슬로 따라간다.
+    표가 서로를 가리켜도 멈추도록 방문한 이름을 기억하고 횟수도 제한한다.
+    """
+    table = _renames()["renames"]
+    seen: set[str] = set()
+    name = flow.name
+    for _ in range(10):
+        nxt = table.get(name)
+        if not nxt or nxt in seen:
+            return None
+        seen.add(nxt)
+        cand = flow.with_name(nxt)
+        if cand.exists():
+            return cand
+        name = nxt
+    return None
+
+
+def removed_reason(flow: Path) -> str | None:
+    """지워진 플로우면 그 사유. 「못 찾았다」와 「없애기로 했다」는 다른 이야기다."""
+    return _renames()["removed"].get(flow.name)
 
 
 def log_steps(lines: list[str]) -> tuple[list[tuple[str, str]], str | None]:
@@ -147,8 +193,19 @@ def analyze(log_path: Path, item: dict) -> dict:
     lines = _read(log_path)
 
     flow = flow_path_from_log(lines)
-    if flow is None or not flow.exists():
+    if flow is None:
         raise NoCases("로그에 실행한 yaml 경로가 없습니다 — 케이스를 가를 수 없습니다.")
+    renamed_from = ""
+    if not flow.exists():
+        gone = removed_reason(flow)
+        if gone:
+            raise NoCases(f"`{flow.name}` 은 지금 없습니다 — {gone}")
+        moved = follow_renames(flow)
+        if moved is None:
+            raise NoCases(
+                f"`{flow.name}` 을 찾을 수 없습니다. 이름을 바꿨다면 "
+                "`Maestro\\flow_renames.json` 에 한 줄 추가하세요.")
+        renamed_from, flow = flow.name, moved
 
     per, order, titles = yaml_cases(flow)
     if not order:
@@ -196,6 +253,7 @@ def analyze(log_path: Path, item: dict) -> dict:
 
     return {
         "flow": flow.name,
+        "renamed_from": renamed_from,      # 로그에 적힌 옛 이름(바뀌었을 때만)
         "steps": len(steps),
         "commands": len(per),
         "entry_failed": fail_at is not None and fail_case is None,

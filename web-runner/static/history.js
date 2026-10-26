@@ -149,7 +149,10 @@ async function toggleCases(btn) {
 
   const n = (s) => data.cases.filter((c) => c.status === s).length;
   const head =
-    `<b>${esc(data.flow)}</b> <span class="muted">· 케이스 ${data.cases.length}개 · ` +
+    `<b>${esc(data.flow)}</b>` +
+    // 이름이 바뀐 뒤의 이력이다 — 로그에 적힌 옛 이름을 같이 보여야 헷갈리지 않는다.
+    (data.renamed_from ? ` <span class="muted">(로그: ${esc(data.renamed_from)})</span>` : "") +
+    ` <span class="muted">· 케이스 ${data.cases.length}개 · ` +
     `Pass ${n("PASS")} / Fail ${n("FAIL")} / 미실행 ${n("NOTRUN")}` +
     (n("BLOCKED") ? ` / BLOCKED ${n("BLOCKED")}` : "") +
     (n("NA") ? ` / N/A ${n("NA")}` : "") +
