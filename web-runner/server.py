@@ -20,6 +20,7 @@ from pydantic import BaseModel
 import runner
 import checklist as checklist_cache
 import checklist_result
+import case_result
 from admin import actions as admin_actions
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -179,6 +180,42 @@ def api_history_log(stamp: str, item: str):
         return JSONResponse(status_code=400, content={"error": str(exc)})
     except FileNotFoundError as exc:
         return JSONResponse(status_code=404, content={"error": str(exc)})
+
+
+@app.get("/api/history/{stamp}/cases")
+def api_history_cases(stamp: str, item: str):
+    """항목 하나의 **케이스별 결과**. 시나리오가 FAIL 일 때 어디서 깨졌는지 짚어 준다.
+
+    ⚠️ **추정이다.** 로그의 최상위 스텝 순서를 yaml 의 최상위 커맨드 순서에 맞춰 센다
+      (`case_result` 머리말 참고). 케이스 경계 마커(docs/CHECKLIST.md §10 단계 4)가
+      들어오기 전까지의 다리이므로, 화면도 추정이라고 적어야 한다.
+    ⛔ 가를 수 없는 경우(케이스 헤더 없음·정렬 어긋남 등)는 **지어내지 않고** 422 로
+      사유를 그대로 돌려준다. 엉뚱한 케이스를 지목하는 것이 모르는 것보다 나쁘다.
+    """
+    try:
+        log_path = runner.run_item_log_path(stamp, item)
+        result_path = runner.run_result_path(stamp)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except FileNotFoundError as exc:
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+
+    try:
+        run = checklist_result.load_run(result_path)
+    except (checklist_result.NoRun, OSError, ValueError) as exc:
+        return JSONResponse(status_code=404, content={"error": f"실행 기록을 읽지 못했습니다: {exc}"})
+
+    entry = next((i for i in (run.get("items") or []) if (i.get("name") or "") == item), None)
+    if entry is None:
+        return JSONResponse(status_code=404,
+                            content={"error": f"{stamp} 기록에 {item} 항목이 없습니다."})
+
+    try:
+        data = case_result.analyze(log_path, entry)
+    except case_result.NoCases as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc)})
+
+    return {"stamp": stamp, "item": item, "status": entry.get("status") or "", **data}
 
 
 _admin_lock = threading.Lock()

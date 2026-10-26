@@ -815,14 +815,19 @@ def read_history(limit: int = 50) -> list[dict]:
     return runs
 
 
-def read_item_log(stamp: str, item: str) -> str:
-    """이력에서 항목 하나의 실행 로그를 읽는다(경로 조작 차단을 위해 형식을 검사한다)."""
+def run_item_log_path(stamp: str, item: str) -> Path:
+    """이력에서 항목 하나의 로그 경로(경로 조작 차단을 위해 형식을 검사한다)."""
     if not _STAMP.match(stamp) or not _SAFE_NAME.match(item):
         raise ValueError("잘못된 이력 경로입니다.")
     path = SUITE_LOGS_DIR / stamp / f"{item}.log"
     if not path.exists():
         raise FileNotFoundError(f"로그가 없습니다: {stamp}/{item}.log")
-    return path.read_text(encoding="utf-8", errors="replace")
+    return path
+
+
+def read_item_log(stamp: str, item: str) -> str:
+    """이력에서 항목 하나의 실행 로그를 읽는다."""
+    return run_item_log_path(stamp, item).read_text(encoding="utf-8", errors="replace")
 
 
 def run_result_path(stamp: str) -> Path:
