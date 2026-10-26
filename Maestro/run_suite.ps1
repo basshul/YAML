@@ -8,6 +8,7 @@
 #   .\run_suite.ps1 -Balance 1000 -AutoCharge  # ⚠️ 자동 충전 시도(미검증 — OTP로 막힐 수 있다)
 #   .\run_suite.ps1 -Resume                    # 마지막 실행에서 못 끝낸 그룹부터
 #   .\run_suite.ps1 -Names 08_MyQR,03_Domestic -AppId com.gmeremit.online.gmeremittance_native.stag
+#   .\run_suite.ps1 -NoKeepAwake               # 실행 중 절전 차단을 끈다(기본 켜짐 — `Set-KeepAwake` 주석 참고)
 #
 # ── 축: **계정/로그인 상태** ───────────────────────────────────
 #   기능별로 섞으면 계정 전환이 9회 반복된다. 구 UI 전환은 드로어 로그아웃 → PIN 잠금화면
@@ -58,6 +59,7 @@ param(
     [switch]$Resume,
     [switch]$StopOnFail,
     [switch]$NoRecover,
+    [switch]$NoKeepAwake,       # 실행 중 절전(모던 스탠바이) 차단을 끈다 — 기본은 걸린다
     [switch]$SkipLint,
     [switch]$List,
     [switch]$DumpJson,          # 스위트 표를 JSON으로 출력만 하고 끝낸다 (web-runner 용)
@@ -382,6 +384,61 @@ function Wait-Device([int]$TimeoutSec = 180) {
     return $false
 }
 
+# ── 절전(모던 스탠바이) 차단 ────────────────────────────────────
+#   ⚠️ **스위트가 통째로 얼어붙는 사고가 실제로 났다 — 사흘이 날아갔다**(2026-10-23~26).
+#     금요일 11:49 에 39개를 걸어두고 퇴근 → 13:20:33 에 Windows 가
+#     `Kernel-Power 506 "최신 대기 모드 시작 — 이유: Idle Timeout"` 으로 들어갔고
+#     14:03:29 에 `device 'R3CW90MTK9H' not found` 로 maestro 가 멈췄다.
+#     이 PC는 S3/최대 절전이 없고 **모던 스탠바이(S0 저전력 유휴)만** 지원한다 →
+#     AC 에 꽂아 둬도 무입력 60분이면 들어간다(`powercfg /a`, STANDBYIDLE AC=0xe10=3600초).
+#     들어가면 USB 가 내려가 adb 가 끊기고 DAM 이 Win32 프로세스를 스로틀한다
+#     → **프로세스는 살아 있는데 진행만 안 된다.** `Wait-Device` 도 소용없다 —
+#       기다리는 그 루프까지 같이 멈춘다(그래서 "USB 유실" 경고조차 안 찍혔다).
+#     유지보수로 잠깐 깨는 짬(01:41 · 09:41 …)에만 한두 개씩 돌아서, 월요일 아침
+#     키보드를 건드려 깨울 때까지(10-26 08:35:52 `이유: Input Keyboard`) 33/39 에 머물렀다.
+#   → 전원 설정을 영구히 바꾸지 않는다(이 PC의 다른 용도까지 안 자게 된다).
+#     **실행 중에만** `SetThreadExecutionState` 로 요청하고 끝나면 돌려준다.
+#   ⛔ 막는 건 **유휴 자동 진입뿐**이다. 덮개를 닫거나 전원 버튼을 누르면 그대로 잔다.
+#     디스플레이는 꺼져도 되므로(보는 건 PC 화면이 아니라 폰 화면이다) ES_DISPLAY_REQUIRED 는 안 쓴다.
+#   ※ 요청은 **호출한 스레드**에 묶이고 프로세스가 끝나면 OS 가 알아서 푼다
+#     → 중간의 `exit` 경로를 일일이 손볼 필요가 없다. 대신 **항목마다 다시 건다**
+#       (`Set-KeepAwake` 는 멱등이다) — 요청이 유실된 경우를 다음 항목에서 덮는다.
+#   ※ 실패해도 **스위트를 죽이지 않는다.** 절전이 이미 꺼진 PC면 어차피 무해하고,
+#     keep-awake 때문에 회귀가 안 도는 건 본말전도다. 경고만 찍고 간다.
+$script:keepAwake = $null       # $null=미시도 / $true=걸림 / $false=포기·해제
+function Set-KeepAwake {
+    if ($NoKeepAwake -or $script:keepAwake -eq $false) { return }
+    try {
+        if (-not ('Win32.Power' -as [type])) {
+            Add-Type -Namespace Win32 -Name Power -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true)]
+public static extern uint SetThreadExecutionState(uint esFlags);
+'@
+        }
+        # ES_CONTINUOUS(0x80000000) | ES_SYSTEM_REQUIRED(0x00000001) = 2147483649
+        #   ⛔ `[uint32]0x80000001` 로 쓰면 **안 된다.** PowerShell 은 8자리 hex 리터럴을
+        #     Int32 로 **부호확장**해서 -2147483647 이 되고 uint32 변환이 터진다
+        #     ("Value was either too large or too small for a UInt32"). 10진수로 박는다.
+        # 반환값 0 = 실패. 성공하면 직전 상태 플래그가 돌아온다.
+        if ([Win32.Power]::SetThreadExecutionState([uint32]2147483649) -eq 0) {
+            throw "SetThreadExecutionState 가 0을 돌려줬습니다"
+        }
+    } catch {
+        $script:keepAwake = $false
+        Write-Host ("⚠️ 절전 차단 실패 ({0}) — 자리를 비우면 중간에 멈출 수 있습니다." -f $_.Exception.Message) -ForegroundColor DarkYellow
+        return
+    }
+    if ($script:keepAwake -ne $true) {
+        $script:keepAwake = $true
+        Write-Host "절전 차단: ON — 유휴 자동 대기만 막습니다(덮개/전원 버튼을 누르면 그대로 잡니다)" -ForegroundColor DarkGray
+    }
+}
+function Clear-KeepAwake {
+    if ($script:keepAwake -ne $true) { return }
+    [void][Win32.Power]::SetThreadExecutionState([uint32]2147483648)   # ES_CONTINUOUS(0x80000000) 단독 = 해제
+    $script:keepAwake = $false
+}
+
 # ── 잔액/자동 충전 계획 출력 ────────────────────────────────────
 #   ⚠️ **`-List`에서도 보여야 한다.** 이 계획은 "실계좌에서 얼마가 빠지는가"이고,
 #     그걸 확인하려고 실행부터 해야 한다면 미리보기의 의미가 없다(2026-09-03).
@@ -543,10 +600,12 @@ $recoverFail = 0
 $aborted = $false
 
 Write-Host "로그: $logDir" -ForegroundColor DarkGray
+Set-KeepAwake
 Write-Host ""
 
 $lastG = ""
 foreach ($t in $plan) {
+    Set-KeepAwake   # 항목마다 다시 건다(멱등) — 요청이 유실돼도 여기서 복구된다
     if ($t.g -ne $lastG) { Write-Host ("── {0} ({1}) ──" -f $t.g, $t.acct) -ForegroundColor DarkCyan; $lastG = $t.g }
 
     # ── 잔액이 모자라면 **여기서 채운다** (1회=1,000원, 실계좌 출금) ────────────
@@ -876,4 +935,5 @@ $jsonPath = Join-Path $logDir "result.json"
 $resultObj | ConvertTo-Json -Depth 5 | Out-File $jsonPath -Encoding UTF8
 Write-Host "결과(JSON): $jsonPath" -ForegroundColor DarkGray
 
+Clear-KeepAwake
 if ($fail -gt 0 -or $aborted) { exit 1 } else { exit 0 }
