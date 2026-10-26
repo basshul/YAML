@@ -23,6 +23,11 @@ const state = {
   priFilter: "all",
   onlyBadMap: false,
   runUser: "",
+  runs: [],          // /api/history — 「결과 보기」 셀렉트의 목록
+  runsError: "",
+  basis: "latest",   // "latest" | 실행 stamp
+  pending: null,     // 고른 실행의 기입 대기 목록 {counts,items,...} 또는 {error}
+  pendingBusy: false,
 };
 
 const $ = (s) => document.getElementById(s);
@@ -58,6 +63,7 @@ async function boot() {
 
     await loadDevices();
     await loadChecklist();
+    await loadRuns();          // 「결과 보기」 — 체크리스트 뒤에 와야 기입 대기를 바로 셀 수 있다
     $("connState").textContent = "서버 연결됨";
   } catch (err) {
     $("connState").textContent = "연결 실패: " + err.message;
@@ -100,8 +106,11 @@ function markOffline() {
     : "체크리스트 데이터가 아직 연결되지 않았습니다.";
 
   // 중요도는 체크리스트가 붙으면 바로 쓸 수 있다(시트의 Priority).
-  // 결과·이번 실행·결과 보기·엑셀은 **실행 결과**가 있어야 하므로 아직 꺼 둔다.
-  const always = ["f-run", "f-res", "basis", "mapmode", "btn-save", "btn-reload"];
+  // 결과·이번 실행은 **케이스 단위 결과**가 있어야 하므로 아직 꺼 둔다.
+  // ★ `basis`·`btn-save` 는 여기서 빠졌다 — `/api/history` 와 `/api/checklist/pending` 이
+  //   생겨서 **스스로 켜고 끈다**(`renderBasis`·`updateSaveState`). 두 곳에서 같은 버튼을
+  //   건드리면 어느 쪽이 마지막이냐로 상태가 뒤집힌다.
+  const always = ["f-run", "f-res", "mapmode", "btn-reload"];
   for (const id of always) {
     const el = $(id);
     if (!el) continue;
@@ -116,12 +125,8 @@ function markOffline() {
 
   renderMapWarn();
 
-  const info = connected
-    ? "체크리스트 " + state.checklist.data.summary.rows + "행 · 받아온 시각 " +
-      esc(state.checklist.data.fetched_at)
-    : NOTE;
-  $("sv-pend").innerHTML = '<span class="muted">' + info + "</span>";
-  $("sv-mine").innerHTML = '<span class="muted">결과 기입은 실행 결과가 붙은 뒤에 열립니다.</span>';
+  // 엑셀 패널의 두 줄은 `updateSaveState` 한 곳이 쓴다 — 여기서도 쓰면 호출 순서로 뒤집힌다.
+  updateSaveState();
 
   const sub = document.querySelector(".col-right h2 .muted");
   if (sub) {
@@ -982,6 +987,161 @@ async function onFixAll() {
   }
 }
 
+/* --------------------------------------------------- 결과 기준 · 엑셀 기입 */
+
+/* 「결과 보기」 = 지금 보고 있는 결과가 **어느 실행의 것인지** 정하는 단 하나의 셀렉트
+   (docs/CHECKLIST.md §7). 보는 범위는 `suite_logs/<시각>/result.json` 이고, 고른 실행을
+   `/api/checklist/pending?stamp=` 이 체크리스트 행별 기입값(`Pass`·`NA`)으로 바꿔 준다.
+
+   ⛔ **중단된 실행도 고를 수 있어야 한다.** 중단 전까지 끝난 시나리오의 결과는 멀쩡한데
+     그걸 못 쓰면 몇 시간짜리 실행이 통째로 버려진다 — 이 기능이 생긴 이유가 그것이다
+     (2026-10-23 실행은 사흘 멈췄다 중단됐고, 그래도 102행이 나온다). */
+
+function whenOf(stamp) {
+  // 2026-10-23_114958 → 2026-10-23 11:49
+  const m = /^(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})\d{2}$/.exec(stamp || "");
+  return m ? m[1] + " " + m[2] + ":" + m[3] : String(stamp || "");
+}
+
+function runLabel(r) {
+  // 고를 때 필요한 것만: 언제 · 몇 개 · 어느 기기 · 어느 빌드 · 중단 여부
+  const pkg = r.build ? r.build.split(".").pop() : "";
+  return ["자동 실행 " + whenOf(r.stamp), r.total + "항목", r.device || "기기 미기록",
+          pkg, r.aborted ? "중단됨" : ""].filter(Boolean).join(" · ");
+}
+
+async function loadRuns() {
+  try {
+    const { runs } = await api("/api/history?limit=50");
+    state.runs = runs || [];
+    state.runsError = "";
+  } catch (err) {
+    // 이력이 없어도 화면은 돌아야 한다 — 셀렉트만 잠그고 사유를 적는다.
+    state.runs = [];
+    state.runsError = err.message;
+  }
+  renderBasis();
+}
+
+function renderBasis() {
+  const sel = $("basis");
+  const keep = state.basis;
+  sel.innerHTML = '<option value="latest">최신 결과 — 항목마다 가장 최근 실행</option>';
+  for (const r of state.runs) {
+    const opt = document.createElement("option");
+    opt.value = r.stamp;
+    opt.textContent = runLabel(r);
+    sel.appendChild(opt);
+  }
+  // 목록을 다시 그려도 고른 실행은 유지한다(사라졌으면 최신 결과로 되돌린다).
+  sel.value = [...sel.options].some((o) => o.value === keep) ? keep : "latest";
+
+  const hint = $("basis-hint");
+  if (state.runsError) hint.textContent = "실행 이력을 불러오지 못했습니다: " + state.runsError;
+  else if (!state.runs.length) hint.textContent = "아직 실행 기록이 없습니다.";
+  else hint.textContent = "지난 실행을 고르면 그 실행 결과를 엑셀에 기입할 수 있습니다.";
+  sel.disabled = state.runs.length === 0;
+  sel.title = sel.disabled ? hint.textContent : "";
+
+  onBasisChange();
+}
+
+async function onBasisChange() {
+  const v = $("basis").value;
+  state.basis = v;
+
+  // 과거 실행을 보는 동안에는 **체크리스트 행 편집**을 막는다(§7 "굳은 기록을 고치면
+  // 기록인 의미가 없다"). 엑셀 기입은 막지 않는다 — index.html 의 btn-save 주석 참고.
+  document.body.classList.toggle("ro", v !== "latest");
+
+  state.pending = null;
+  if (v === "latest") {
+    state.pendingBusy = false;
+    updateSaveState();
+    return;
+  }
+
+  state.pendingBusy = true;
+  updateSaveState();
+  let got;
+  try {
+    got = await api("/api/checklist/pending?stamp=" + encodeURIComponent(v));
+  } catch (err) {
+    got = { error: err.message };
+  }
+  // ⚠️ 그 사이에 다른 실행을 골랐으면 **늦게 온 응답은 버린다.** 안 그러면 먼저 보낸 요청이
+  //   나중에 도착해 화면이 엉뚱한 실행을 보여준다(셀렉트를 빠르게 넘기면 실제로 일어난다).
+  if (state.basis !== v) return;
+  state.pending = got;
+  state.pendingBusy = false;
+  updateSaveState();
+}
+
+/* 엑셀 패널의 두 줄과 저장 버튼은 **여기 한 곳만** 쓴다(markOffline 도 이걸 부른다). */
+function updateSaveState() {
+  const btn = $("btn-save");
+  if (!btn) return;
+  const connected = clConnected();
+  const p = state.pending;
+  let why = "";   // 버튼을 끈 이유. 비어 있으면 켠다.
+  let note;       // 윗줄 — 기입 대기
+
+  if (!connected) {
+    why = "체크리스트 데이터가 아직 연결되지 않았습니다.";
+    note = esc(why);
+  } else if (state.basis === "latest") {
+    why = "「결과 보기」에서 실행을 하나 고르면 그 실행의 기입 대기가 나옵니다.";
+    note = "체크리스트 " + esc(state.checklist.data.summary.rows) + "행 · 받아온 시각 " +
+           esc(state.checklist.data.fetched_at);
+  } else if (state.pendingBusy) {
+    why = "기입값을 계산하는 중입니다…";
+    note = esc(why);
+  } else if (p && p.error) {
+    why = p.error;
+    note = '<span class="bad">' + esc(why) + "</span>";
+  } else if (p && p.counts) {
+    note = "기입 대기 <b>" + esc(p.counts.pending) + "건</b>(자동)" +
+           '<span class="muted"> — Pass ' + esc(p.counts.pass) + " · NA " + esc(p.counts.na) +
+           " · " + esc(p.ran) + "항목 실행" + (p.aborted ? " · 중단된 실행" : "") + "</span>";
+    if (!p.counts.pending) why = "이 실행에서 엑셀에 넣을 값이 없습니다.";
+  } else {
+    why = "실행을 고르세요.";
+    note = esc(why);
+  }
+
+  btn.disabled = !!why;
+  btn.title = why || "바뀌는 칸을 먼저 보여 줍니다.";
+  $("sv-pend").innerHTML = note;
+  $("sv-mine").innerHTML =
+    '<span class="muted">사람 수정 0건 — 수동 결과·문구 편집은 아직 붙지 않았습니다.</span>';
+}
+
+/* 저장 미리보기 — **무엇이 바뀌는지 먼저 보여준다**(§8 "저장 전에 바뀌는 칸을 미리 보여줍니다").
+   ⛔ 셀 PATCH 는 아직 없다(단계 4). 「이대로 저장」은 index.html 에서 꺼 둔 상태다. */
+function openSavePreview() {
+  const p = state.pending;
+  if (!p || p.error || !p.counts || !p.counts.pending) return;
+
+  $("sv-h").textContent = "엑셀에 저장 — 미리보기 (" + whenOf(p.stamp) + ")";
+  // ⛔ 셀 주소를 지어내지 않는다. 결과 열이 캐시에 없어서(= `column_source: null`) 어느 열인지
+  //   알 수 없다. 열 문자를 박는 것은 docs/CHECKLIST.md §9 가 막아 둔 바로 그 사고다.
+  $("sv-i9").textContent =
+    "결과 열을 아직 모릅니다 — 캐시가 그 열을 읽지 않아 셀 주소를 만들 수 없어 행 번호로 보여 줍니다.";
+  $("sv-rows").innerHTML = p.items
+    .map((it) => {
+      const cur = String(it.current || "").trim();
+      return "<tr><td>" + esc(it.row) + "행</td><td>" + esc(it.case_id) + "</td><td>" +
+        (cur ? esc(cur) : '<span class="muted">(비어 있음)</span>') +
+        " → <b>" + esc(it.value) + "</b></td>" +
+        '<td><span class="muted">자동</span></td></tr>';
+    })
+    .join("");
+  $("sv-ex").innerHTML =
+    "⚠️ <b>저장은 아직 붙지 않았습니다</b>(단계 4 — 셀 PATCH). 지금은 무엇이 나갈지 확인만 합니다.<br>" +
+    "⚠️ 엑셀의 현재 값을 읽지 못해 <b>이미 같은 값인 칸도 목록에 남아 있습니다.</b>";
+  openModal("savem");
+}
+
 /* ------------------------------------------------------------------ 도움말 */
 
 let modalBack = null;
@@ -1046,6 +1206,12 @@ $("tbody").addEventListener("change", (ev) => {
   else state.selected.delete(cb.dataset.test);
   renderSelection();
 });
+$("basis").addEventListener("change", onBasisChange);
+$("btn-back-latest").addEventListener("click", () => {
+  $("basis").value = "latest";
+  onBasisChange();
+});
+$("btn-save").addEventListener("click", openSavePreview);
 $("btn-help").addEventListener("click", () => openModal("helpm"));
 for (const b of document.querySelectorAll("[data-close]")) {
   b.addEventListener("click", () => closeModal(b.dataset.close));
