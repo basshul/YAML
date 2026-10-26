@@ -514,6 +514,7 @@ function renderTable() {
       '<tr class="scenhead"><td colspan="7">' + twisty +
       '<label style="cursor:pointer"><input type="checkbox" data-test="' + esc(t.name) + '"' +
       (state.selected.has(t.name) ? " checked" : "") +
+      (state.running ? " disabled" : "") +
       ' aria-label="' + esc(t.name) + ' 시나리오 선택"> <span class="mono">' + esc(t.name) +
       "</span></label>" + (pills ? " " + pills : "") +
       '<span class="muted" style="font-weight:400"> · ' + esc(t.group) +
@@ -641,7 +642,17 @@ function updateRunState() {
   all.title = why;
   // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
   all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
-  // 실행 중에는 선택을 갈아끼우지 못하게 같이 잠근다(renderSelection·setRunning 이 여기를 지난다).
+
+  // ── 실행 중에는 **선택을 건드리지 못하게 잠근다** ────────────────────
+  //   실행은 시작할 때 `-Names` 를 넘기고 떠난다. 그 뒤 화면에서 체크를 고쳐도 **도는 목록은
+  //   안 바뀐다** → 화면이 사실과 달라진다. 진행 표시도 떠난 목록 기준이라 같이 어긋난다.
+  //   끝나면(`setRunning(false)`) 여기를 다시 지나며 열린다.
+  const lock = state.running ? "실행 중에는 선택을 바꿀 수 없습니다." : "";
+  for (const cb of document.querySelectorAll("[data-test]")) cb.disabled = state.running;
+  for (const id of ["btn-selvis", "btn-selnone"]) {
+    const b = $(id);
+    if (b) { b.disabled = state.running; b.title = lock; }
+  }
   updateSelFailState();
 }
 
@@ -806,8 +817,15 @@ async function attachIfRunning() {
   try {
     const st = await api("/api/run/status");
     if (!st.running) return;
+    // ★ **돌고 있는 목록을 서버에서 되찾는다.** 선택은 메모리에만 있어서 실행 이력에 갔다
+    //   오면(= 다른 페이지라 app.js 가 다시 뜬다) 빈 채로 돌아온다 → 무엇이 도는 중인지
+    //   화면에서 사라지고, 진행 표시만 덩그러니 남는다(2026-10-26).
+    //   브라우저에 따로 저장하지 않는다 — 정본은 **서버가 들고 있는 `-Names`** 다.
+    //   그래야 다른 탭·다른 브라우저에서 열어도 같은 것이 보인다.
+    state.selected = new Set(st.names || []);
     startProgress(st.names || []);
     setRunning(true);
+    renderTable();   // 되찾은 선택과 잠금을 화면에 반영한다
     setRunNow("실행 중인 작업에 다시 붙었습니다…");
     listen();
   } catch (err) {
@@ -1031,6 +1049,7 @@ function updateSelFailState() {
     !run ? "실행 이력이 없습니다."
     : !names.length ? whenOf(run.stamp) + " 실행에는 FAIL 이 없습니다."
     : !hit.length ? whenOf(run.stamp) + " 의 FAIL 이 모두 지금 목록에 없습니다(이름 변경·G9)."
+    : state.running ? "실행 중에는 선택을 바꿀 수 없습니다."
     : whenOf(run.stamp) + " 실행의 FAIL " + hit.length + "개를 고릅니다" +
       (miss ? " · 목록에 없는 " + miss + "개는 제외" : "") +
       ". 선행 항목은 함께 고르지 않습니다 — 상태 의존을 확인하세요.";
@@ -1262,6 +1281,7 @@ $("tbody").addEventListener("click", (ev) => {
 $("tbody").addEventListener("change", (ev) => {
   const cb = ev.target.closest("[data-test]");
   if (!cb) return;
+  if (state.running) return;   // 잠겨 있어도 한 겹 더 막는다 — 선택은 실행 중 사실과 달라지면 안 된다
   if (cb.checked) state.selected.add(cb.dataset.test);
   else state.selected.delete(cb.dataset.test);
   renderSelection();
