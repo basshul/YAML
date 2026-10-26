@@ -1,0 +1,270 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Telecom (GME 텔레콤 / GME Mobile) — 구 UI
+# ================================================================
+# ★ 현재 상태(2026-09-29): **홈 그리드 "통신 서비스" 가 외부 웹으로 나간다.**
+#   실측(SM-S928N / 7.21.0-stag): 탭 → `com.android.chrome/...customtabs.CustomTabActivity`,
+#   주소 `gmemobile.com` (크롬 커스텀 탭이라 인앱 브라우저처럼 보이지만 **별도 앱**이다).
+#   → 앱 내 텔레콤 화면으로 가는 경로가 사라졌다. **[01]만 웹 이동 검증으로 남고
+#     [02]~[08]은 제거**됐다(되살리는 법은 아래 [02]~[08] 배너 참조).
+#
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
+#
+# 진입: 홈 서비스 그리드 **"${HOME_TELECOM}"**(11종 중 9번째 — 스크롤 필요).
+# 홈 판정은 하단 내비 id `bottom_item_home` / 상단 `btnTransfer`.
+#
+# ---------------------------------------------------------------
+# 화면 구조 (2026-08-19 실측)
+# ---------------------------------------------------------------
+#   텔레콤 홈 `telecom.view.ActivityTelecomHome`
+#     `homebutton`(상단 좌측 홈) / `titleText`("저렴하고 편리하기까지!") / "GME 텔레콤"
+#     `gmeImageSlider`(배너, `title1` "50% Discount", `txvCountLabel` "2/2")
+#     `submenu_list_content` > `leftlayout`(clickable) > `lefttextview` = **"Mobile SIM"**
+#     `contactus`("고객센터 연결하기")
+#   CS 팝업 — "사용 중 궁금한 점이 있으신가요?"(앱 오타 그대로) / `chatView`("실시간 채팅")
+#     / `btnCancel`("취소")   ※ 개편UI와 동일
+#   요금제 선택 페이지 `telecom.view.GmeTelecomPostPaidActivity`, `screenTitle` "Mobile SIM"
+#     `btnBack` / "${TELECOM_SELECT_PACKAGE}"
+#     `applylinesimlayout`("Line SIM 요금제") / `applyprepaidsimlayout`("선불 SIM 신청")
+#     / `chedkmynumerlayout`("GME Mobile 사용량 확인")
+#   요금제 목록 페이지 — 같은 액티비티, `screenTitle` **"LG U+ 패키지"**
+#     `list_sub_container` > **`noDataAvailable`("내역 없음")**
+#     ※ Line SIM / 선불 SIM **둘 다 같은 목록 페이지**로 가고 **둘 다 비어 있다**
+#   사용량 확인 페이지 — 같은 액티비티, `screenTitle` **"사용 가능한 번호"**
+#     `listview` > `container` × N > `status_titleTxt`("상태:") / `status_text`("등록 취소"|"처리중")
+#     / `startDate`("Applied date :2026-04-22")
+#
+# ⚠️ **`GmeTelecomPostPaidActivity`는 FLAG_SECURE다 — 스크린샷을 찍으면 안 된다**
+#   (2026-08-19 실측). 즉 **요금제 선택 / 요금제 목록 / 사용량 확인 세 화면 모두** 해당한다.
+#   `takeScreenshot`이 `INTERNAL: Screenshot returned null`로 죽고 **플로우 전체가 EXIT=1**이 된다
+#   (실제로 [03-1]에서 그렇게 실패했다. 어서션은 전부 통과한 상태였다).
+#   판정 근거 2중: maestro가 null 반환 + `adb exec-out screencap -p` 결과가 **0바이트**.
+#   → 이 세 화면은 **스크린샷 없이 요소 assert만으로** 증적을 남긴다([[feedback_flagsecure_verify]]).
+#   ※ 텔레콤 홈(`ActivityTelecomHome`)과 CS 팝업은 secure가 아니라 스크린샷이 정상 동작한다.
+#   ※ `uiautomator dump`는 secure 화면에서도 읽히므로 셀렉터 조사는 그대로 할 수 있다.
+#
+# ⚠️ **1회 관찰: 텔레콤 홈에서 스피너가 1.5분 이상 멈춰 있었다 (2026-08-19)**
+#   ※ **원인은 확정되지 않았다.** 그 시점에 세션이 만료 상태였고(잠금화면 다이얼로그로 확인)
+#     재로그인 후 같은 화면이 정상 로드된 것까지가 관찰된 사실이다 — **상관관계이지 인과가 아니다.**
+#     사이에 앱 force-stop/재실행과 시간 경과가 끼어 있어, 텔레콤 API 일시 지연이 저절로
+#     회복된 것으로도 같은 결과가 나온다. 2026-08-20 수동 진입 시에는 재현되지 않았다.
+#   → 재발하면 **logcat으로 진입 API 응답을 확인해 확정할 것**
+#     (401/토큰 만료면 세션 원인 확정, 타임아웃만 찍히면 서버 지연).
+#   발생 위치는 **텔레콤 홈 `ActivityTelecomHome` 진입 직후**다. 스피너 다이얼로그가 최상위
+#   윈도우를 잡아 `uiautomator dump`가 **`imageView`(스피너) 하나만** 반환하고
+#   `leftlayout`/`contactus`를 하나도 읽을 수 없다.
+#   ⚠️ **"상품이 없어서 목록이 비어 있는 것"과 혼동하지 말 것 — 다른 화면이다.**
+#     빈 목록은 요금제 목록 페이지의 `noDataAvailable`("내역 없음")로 **정상 렌더링**된다
+#     (덤프에 텍스트까지 다 나온다). 그 화면은 `leftlayout` → `applylinesimlayout`을
+#     두 번 더 탭해야 나오므로, 스피너가 걸린 상태에서는 **도달조차 못 한다.**
+#   네트워크 문제로 오진하기도 쉽다(기기 ping 8.8.8.8/google.com은 정상이었다)
+#   → **먼저 세션을 의심할 것.** 잠금화면에 "로그인 세션이 만료되었습니다" 바텀시트가 떠 있었고,
+#     `btnOk` → 01_01_로그인_정상_old.yaml 재로그인 후 같은 화면이 즉시 정상 로드됐다.
+#   ※ 세션 만료 자체는 **하루 단위로 재발**하는 것이 확인됐다(2026-08-19 복구 → 2026-08-20 또 만료).
+#     만료 상태에서는 진입 블록의 `btnTransfer` 어서션이 FAILED로 죽는다(이건 재현 확실).
+#     상세: [[feedback_session_expiry_recovery]]
+#
+# ---------------------------------------------------------------
+# 🚫 BLOCKED: [06][07] — 신청 완료 단계에 **외부 인증**이 있다 (2026-09-03 사유 변경)
+# ---------------------------------------------------------------
+#   종전 사유는 **상품 데이터 부재**였다(2026-07-09, 2026-08-19 재확인 — 목록이 `noDataAvailable`).
+#   **2026-09-03 상품이 등록되어 그 사유는 해소됐다.**
+#   대신 신청 프로세스를 확인해 보니 **중간에 외부 인증이 있어 자동화로 신청을 완료할 수 없다**
+#   (사용자 확인). 데이터가 생기면 풀리는 종류가 아니라 **경로 자체의 제약 = 영구적 자동화 불가**다.
+#   → [06][07]은 **수동 테스트 대상**으로 남긴다.
+#
+#   ⚠️ **선불(Pre-paid)도 같은 제약이다** (2026-09-14 추가).
+#     현재 선불 목록은 비어 있지만, 상품이 등록돼도 신청은 **같은 외부 인증**에 막혀 완주할 수 없다.
+#     즉 데이터가 생겨도 자동화 범위는 **"요금제 목록 페이지 도달"까지**다.
+#     → 그래서 [04]의 선불 블록은 빈 목록/상품 목록 **둘 다 통과**하도록 써 뒀다
+#       (상품이 등록돼도 파일 수정 없이 그대로 돈다).
+#
+#   ⚠️ **[05]는 사유가 달랐다** — "선택할 상품이 없다"였고 **상품 등록으로 해소됐다.**
+#     신청까지 가지 않고 New/Same Number 페이지 도달만 확인하므로 **자동화 가능하다.**
+#     → BLOCKED가 아니라 **재작업 대상**이다(아래 [05] 절의 셀렉터로 구현 + 실기기 검증 필요).
+#
+# ClickUp 상태: [01] 커버 / **[02]~[08] 전부 `canceled`**(진입 경로 소멸).
+#   `canceled` 는 상태 id `sc901818254784_NEKzXCUZ`, type 은 `done` 이라
+#   `partially completed` 와 같은 묶음으로 집계된다(미착수 아님).
+#   ⚠️ "ClickUp:" 으로 시작하면 리포트 스크립트가 **커버 완료 마커로 오인**한다
+#     (`# CLICKUP:` 파서가 대소문자를 가리지 않는다) → 산문 주석은 "ClickUp 상태:" 로 쓴다.
+#
+# 케이스:
+#   [01] [Low]    통신 서비스 - 홈 그리드 선택 시 **외부 웹(gmemobile.com) 이동** 확인  ← 실행되는 유일한 케이스
+#   ⏸ 아래는 전부 **제거**됐다(2026-09-29, 진입 경로 소멸). 원본은 git 에 있다.
+#   [02] [Low]    ⏸ GME Mobile - CS 팝업 발생 확인 (Contact us)
+#   [03] [Medium] ⏸ GME Mobile - Mobile SIM 선택 시 요금제 선택 페이지 발생 확인
+#   [04] [Medium] ⏸ GME Mobile - Line SIM / 선불 SIM 선택 시 요금제 목록 발생 확인
+#   [05] [Medium] ⏸ 임의 요금제 선택 → New/Same Number 페이지
+#   [06] [High]   ⏸ 🚫 BLOCKED — New Number 신청 (외부 인증)
+#   [07] [High]   ⏸ 🚫 BLOCKED — Same Number 신청 (외부 인증)
+#   [08] [High]   ⏸ GME Mobile - 사용량 확인 → 신청한 유심 정보 노출
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\18_통신서비스_외부웹이동_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+          timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [01] [Low] 통신 서비스 - 홈 그리드 선택 시 외부 웹(GME MOBILE) 이동 확인
+# ----------------------------------------------------------------
+# ⚠️ 2026-09-29 재작성. 종전 [01]은 "앱 내 텔레콤 홈(`ActivityTelecomHome`) 진입"을 봤지만
+#   이제 그리로 가지 않는다. 케이스의 성립 조건이 **"외부 웹으로 나간다"** 로 바뀌었다.
+#
+# 홈 서비스 그리드는 비동기 로딩이다 → scrollUntilVisible로 항목이 실제로 그려질 때까지 기다린다.
+- scrollUntilVisible:
+    element:
+      text: "${HOME_TELECOM}"
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn: "${HOME_TELECOM}"
+# 판정 ① 주소창에 gmemobile.com 이 떴다.
+#   ⛔ 크롬 전용 id(`url_bar`)로 잡지 않는다 — 기본 브라우저가 바뀌면 id가 통째로 달라진다.
+#     주소 문자열은 어느 브라우저든 화면에 있으므로 **텍스트로** 잡는다.
+#   ⛔ 웹 페이지 제목(`새로운 모바일 세상 | GME MOBILE`)으로 잡지 않는다 — 그건 앱이 아니라
+#     **사이트가 정하는 값**이라 앱 언어 설정과 무관하게 바뀔 수 있다.
+#   웹 로딩이 느릴 수 있으니 넉넉히 기다린다.
+- extendedWaitUntil:
+    visible: '.*gmemobile\.com.*'
+    timeout: 60000
+# 판정 ② **GME 앱을 벗어났다.** 커스텀 탭은 앱 위에 덮인 것처럼 보이지만 별도 앱(크롬)이라
+#   앱의 하단 내비가 계층에서 사라진다. "브라우저가 떴다"가 아니라 "앱을 벗어났다"로 보는 건
+#   09_홈화면_요소와진입경로 의 메신저 전환 판정과 같은 규칙이다 — 브라우저 종류에 흔들리지 않는다.
+- assertNotVisible:
+    id: "bottom_item_home"
+- takeScreenshot: "[01-1]_외부웹_이동"
+
+# 브라우저를 닫고 앱으로 복귀한다.
+#   크롬 커스텀 탭의 닫기 버튼 id 는 `close_button`이다.
+#   ⛔ content-desc "탭 닫기"로 잡지 말 것 — 그건 앱 언어가 아니라 **기기 언어**를 따른다.
+#   기본 브라우저가 크롬이 아닌 기기를 대비해, 닫기 버튼이 없으면 back 으로 대체한다.
+#   ⚠️ back 을 먼저 쓰지 않는 이유: 웹에서 페이지를 이동한 뒤라면 back 이 **웹 히스토리**를
+#     되짚어 브라우저가 안 닫힌다.
+- runFlow:
+    when:
+      visible:
+        id: "close_button"
+    commands:
+      - tapOn:
+          id: "close_button"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+# 홈 재진입 시 인앱 배너가 다시 뜰 수 있다
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 30000
+- assertVisible:
+    id: "bottom_item_home"
+- takeScreenshot: "[01-2]_홈복귀_확인"
+
+# ================================================================
+# ⏸ [02]~[08] — 2026-09-29 제거됨 (진입 경로 소멸)
+# ================================================================
+# 사유: 홈 그리드 "${HOME_TELECOM}" 이 **외부 웹(gmemobile.com)** 으로 나가도록
+#   바뀜면서 앱 내 텔레콤 화면(`ActivityTelecomHome` → Mobile SIM → 요금제 →
+#   사용량)으로 가는 **경로가 없어졌다.** 화면이 아니라 **진입점이 사라진 것**이다.
+#   ※ 액티비티 클래스는 아직 빌드에 남아 있다 — 직접 실행하면 "없다"가 아니라
+#     `SecurityException: not exported` 가 난다. 코드가 지워진 게 아니라 안 부를 뿐이다.
+#
+# 되살리는 법: 종전엔 `#| ` 로 주석 보존했으나 2026-09-30 주석 정리로 걷었다.
+#   원본 305줄은 git 에 그대로 있다:
+#     git show 4dd70d2:Maestro/Old/18_통신서비스_외부웹이동_old.yaml
+#   → 거기서 [02]~[08] 구간을 꺼내 `#| ` 한 겹만 볗기면 된다.
+#
+# ⚠️ 되살리기 전에 반드시 확인할 것:
+#   ① 홈 그리드 탭이 다시 앱 내 화면으로 가는가(외부 웹이면 [02] 첫 줄부터 죽는다)
+#   ② `[06][07]` 의 BLOCKED 사유가 여전히 "외부 인증"인가
+#     (맞으면 `#x CLICKUP-PARTIAL:` 마커를 되살려 다시 `partially completed` 로 올린다)
+#   ③ ClickUp `[02]`~`[08]` 을 `canceled` → 원래 상태로 되돌렸는가
+#     → 코드만 살리면 리포트에 안 잡힌다.
+# ================================================================

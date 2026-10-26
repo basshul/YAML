@@ -115,7 +115,7 @@ $envLines = @()
 foreach ($d in $done) {
     $md = Get-Content (Join-Path $d.FullName "SUMMARY.md") -Encoding UTF8
     foreach ($line in $md) {
-        # | G2 | 25_Profile | FAIL | 285 | 10:19 | 사유 |
+        # | G2 | 25_01_프로필_정보수정과공유 | FAIL | 285 | 10:19 | 사유 |
         if ($line -match '^\|\s*(G\d)\s*\|\s*([^\s|]+)\s*\|\s*(PASS|FAIL|SKIP)\s*\|\s*(\d+)\s*\|\s*([\d:]+)\s*\|(.*)\|\s*$') {
             $items[$Matches[2]] = [pscustomobject]@{
                 Group = $Matches[1]; Name = $Matches[2]; Status = $Matches[3]

@@ -1,0 +1,936 @@
+appId: ${APP_ID}
+env:
+  # 현재 비밀번호 = <비밀번호 앞부분><PW_CUR_LAST> / 변경 대상 = <비밀번호 앞부분><PW_NEW_LAST>
+  #   "느낌표" = `!`  /  "골뱅이" = `@`
+  # ✅ [13] 원복 케이스가 있어 이 파일은 **멱등**하다 — 끝나면 다시 PW_CUR로 돌아온다.
+  #    정상 종료하는 한 이 두 줄을 바꿀 필요가 없다.
+  #    (단 [13]이 실패해 PW_NEW 상태로 남았다면 그때만 두 줄을 서로 바꿔서 다음 실행을 맞춘다)
+  PW_CUR_LAST: "느낌표"
+  PW_NEW_LAST: "골뱅이"
+---
+# ================================================================
+# 시나리오: 설정 → 로그인 비밀번호 변경 — 구 UI
+# ================================================================
+# 실행 전 확인(액티비티) · 공통 진입 블록 규약: docs/ENVIRONMENT.md §7
+#
+# 구 UI 화면 구성 (2026-08-14 실측, `UserPasswordChangeV2Activity` / `rootViewChangePassword`):
+#   현재 비밀번호   securityKeyboardCurrentPassword   (에러문구 currentPasswordErrorTxt)
+#   새 비밀번호     securityKeyboardNewPassword       (에러문구 newPasswordErrorTxt)
+#   비밀번호 확인   securityKeyboardConfirmPassword   (에러문구 confirmPasswordErrorTxt)
+#   규칙 체크박스   checkAlphabet(대·소문자 각 1개↑) / checkNumber / checkSpecialChar /
+#                  checkMinCharCount("${PW_MIN_CHAR_COUNT}") / checkPassMatch
+#   저장 btn_submit / 뒤로 iv_back
+#   ※ 세 필드의 자식은 전부 같은 id(`securityKeyboardEditText`)라 **컨테이너 id로 탭**해야 한다.
+#
+# ================================================================
+# 🔑 테스트 계정 비밀번호 정책 (2026-08-14 사용자 확정)
+# ================================================================
+# 자동화가 쓰는 로그인 비밀번호는 **`<정상 비밀번호>` / `<대체 비밀번호>` 두 가지**로 운용한다.
+# (`<구 비밀번호(폐기)>`는 admin에서 임의 발급했던 값이고 표준이 아니다)
+#
+# 이 파일은 **한 번 실행에 왕복**한다: `<정상 비밀번호>` → `<대체 비밀번호>`([12]) → `<정상 비밀번호>`([13]).
+#   끝나면 원래 값으로 돌아오므로 같은 비밀번호를 쓰는 다른 파일
+#   (`04_03_메뉴설정_간편비번변경_old`의 `PW_CUR_LAST` 등)이 계속 유효하다.
+#
+#   ▶ 2026-08-14: <구 비밀번호(폐기)>(admin 발급) → **<정상 비밀번호>** 로 전환 완료. 이후 상시 유효값 = `<정상 비밀번호>`
+#
+# ⚠️ **[12] 중간에 실패하면 현재 비밀번호가 불분명해진다.** 추측 로그인 금지 — 5회 실패면 계정 잠금
+#   (실패 팝업이 "남은 시도 횟수: N번"을 알려준다). 로그·스크린샷으로 어디까지 갔는지 먼저 확인할 것.
+# ⚠️ [11]은 현재 비밀번호를 **일부러 틀리게 제출**하는 음성 케이스다(실패 카운터 소모 가능).
+#
+# 보안 키패드 문자 매핑(content-desc): G→"대문자 키보드 변경"+"Capital G 히읃" / m→"m 으" /
+#   e→"e 디귿" / t→"t 시옫" / s→"s 니은" / 숫자는 값 그대로 /
+#   !→"특수문자변경"+"느낌표" / @→"특수문자변경"+"골뱅이" / 완료→"입력완료"
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\04_04_메뉴설정_로그인비번변경_old.yaml"
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 → 설정 ----------------
+- launchApp
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+# 잠금화면 판정은 문구가 아니라 id로 한다
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# ⚠️ **홈 팝업은 큐로 뜨고 문구가 가드와 다르다**(2026-09-01, 04_02_메뉴_거래내역에서 실측).
+#   "중요 공지사항/최신 신분증을 업로드해 주세요" 팝업의 버튼은 **"다음에 하기"(`btnCancel`)** 라
+#   위 `"나중에 하기"` **전체매칭** 가드로는 잡히지 않고 조용히 SKIP된다.
+#   그러면 팝업이 홈을 덮어 아래 `iv_nav` 대기가 실패한다.
+#   ⛔ 이 파일에서 그 실패가 나면 **[13] 원복이 중단돼 계정이 `<비밀번호 앞부분>${PW_NEW_LAST}` 로 남는다**
+#     → 검증된 공용 헬퍼로 큐를 비운다(전부 조건부라 팝업이 없으면 그냥 통과).
+- runFlow: "_dismiss_popups_stag_old.yaml"
+# ⚠️ **`launchApp` 은 마지막에 보던 화면을 복원한다**(2026-09-15 실측).
+#   21_카드_신청과충전 뒤에는 카드 탭, 그 다음엔 **카드 상세**(하단 탭조차 없는 깊은 화면)로 떴다.
+#   그 화면에는 홈 요소가 없어 진입이 4스텝째에 죽는다 → 홈까지 **빠져나온다**:
+#     하단 탭이 보이면 홈 탭을 누르고, 안 보이면 back 으로 한 겹 올라온다.
+#   판정은 `btnTransfer` 가 아니라 **`iv_nav`**(홈 툴바 드로어) 다 — 홈은 스크롤 위치를 유지해
+#   상단 카드가 화면 밖일 수 있고, 바로 다음 스텝이 그 `iv_nav` 탭이다.
+- repeat:
+    times: 6
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "iv_nav"
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    id: "bottom_item_home"
+                commands:
+                  - tapOn:
+                      id: "bottom_item_home"
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "bottom_item_home"
+                commands:
+                  - pressKey: back
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "iv_nav"
+    timeout: 60000
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 15000
+- tapOn:
+    text: "${CH_COMMON_SETTINGS}"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [06][07][08] [Medium] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인 (저장하지 않음)
+# ----------------------------------------------------------------
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardCurrentPassword"
+    timeout: 20000
+- assertVisible:
+    id: "checkMinCharCount"
+- assertVisible: "${PW_MIN_CHAR_COUNT}"
+# --- PW_CUR 입력 --- <비밀번호 앞부분>${PW_CUR_LAST}
+- tapOn:
+    id: "securityKeyboardCurrentPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+# --- PW_NEW 입력 --- <비밀번호 앞부분>${PW_NEW_LAST} → 규칙 4종 모두 충족
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkAlphabet"
+    checked: true
+- assertVisible:
+    id: "checkNumber"
+    checked: true
+- assertVisible:
+    id: "checkSpecialChar"
+    checked: true
+- assertVisible:
+    id: "checkMinCharCount"
+    checked: true
+# 확인 입력(일치) → checkPassMatch + 저장 활성화
+- tapOn:
+    id: "securityKeyboardConfirmPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkPassMatch"
+    checked: true
+- assertVisible:
+    id: "btn_submit"
+    enabled: true
+- takeScreenshot: pw01_rules_ok
+# 저장하지 않고 이탈
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [09] [Low] 새 비밀번호 규칙 미충족 - 최소 자릿수(9) 미달 시 인디케이터 미체크
+# ----------------------------------------------------------------
+# 새=Gme1!(5자, 고정값) → checkMinCharCount 미체크 / 알파벳·숫자는 체크
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardNewPassword"
+    timeout: 20000
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkMinCharCount"
+    checked: false
+- assertVisible:
+    id: "checkAlphabet"
+    checked: true
+- assertVisible:
+    id: "checkNumber"
+    checked: true
+- takeScreenshot: pw02_rule_minlen
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [10] [Medium] 새 비밀번호와 확인 불일치 → checkPassMatch 미체크
+# ----------------------------------------------------------------
+# 새=<비밀번호 앞부분>${PW_NEW_LAST} / 확인=<비밀번호 앞부분>${PW_CUR_LAST} (마지막 특수문자만 다름)
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardNewPassword"
+    timeout: 20000
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "securityKeyboardConfirmPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkPassMatch"
+    checked: false
+- takeScreenshot: pw03_mismatch
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [11] [Low] 현재 비밀번호 오입력 시 서버 거절
+# ----------------------------------------------------------------
+# ⚠️ 음성 케이스 — 실패 카운터를 깎을 수 있다. 현재=<의도적 오답 비밀번호> (확실히 틀린 고정값)
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardCurrentPassword"
+    timeout: 20000
+- tapOn:
+    id: "securityKeyboardCurrentPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "골뱅이"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "securityKeyboardConfirmPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- takeScreenshot: pw04_wrong_current
+- tapOn: "확인|OK"
+- waitForAnimationToEnd
+- tapOn:
+    id: "iv_back"
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# [12] [High] 실제 변경 (PW_CUR → PW_NEW) → 로그아웃 → 새 비밀번호로 로그인
+# ----------------------------------------------------------------
+# ⚠️ 여기서부터 계정 상태가 실제로 바뀐다.
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardCurrentPassword"
+    timeout: 20000
+# --- PW_CUR 입력 ---
+- tapOn:
+    id: "securityKeyboardCurrentPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+# --- PW_NEW 입력 ---
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "securityKeyboardConfirmPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkPassMatch"
+    checked: true
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- takeScreenshot: pw05_submitted
+- tapOn: "확인|OK"
+- waitForAnimationToEnd
+
+# --- 로그아웃 → 새 비밀번호로 재로그인 검증 ---
+# ⚠️ 로그인 완주(iv_nav) 전에는 범용 "닫기" 같은 dismiss 블록을 두지 말 것
+#   (2026-08-14 로그인이 중간에 깨진 사례).
+- repeat:
+    while:
+      notVisible:
+        id: "iv_nav"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 15000
+- tapOn:
+    text: "${REG_LOGOUT}"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOGOUT_CONFIRM}"
+    commands:
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn:
+    id: "loginpwidhidpass"
+- waitForAnimationToEnd
+# ⚠️ ID/비밀번호 로그인 확인 다이얼로그는 **id 로 판정한다.**
+#   문구·버튼이 언어마다 다르다: ko "…간편 비밀번호는 해지됩니다"/`예` ↔ en
+#   "When you log in with your ID/password, your simple password will be removed."/`YES`.
+#   2026-09-15 en 실행에서 한국어 가드가 SKIP돼 다이얼로그가 안 닫히고 `usernameId` 대기가 죽었다.
+- runFlow:
+    when:
+      visible:
+        id: "btn_diaog_ok"
+    commands:
+      - tapOn:
+          id: "btn_diaog_ok"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 20000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "${ACCT_MAIN}"
+- tapOn:
+    id: "securityKeyboardEditText"
+# --- PW_NEW 로 로그인 ---
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+# ⚠️ 아이디/비밀번호로 로그인하면 **간편 비밀번호를 다시 등록**해야 한다(직전 PIN은 해지됨).
+#   화면 문구는 "앱에서 사용할 간편 비밀번호를 생성해 주세요"다 —
+#   `visible: "간편비밀번호"`(14_입금_분할전원본에서 가져온 값)로는 **매칭되지 않는다**(Maestro 텍스트는 전체매칭).
+#   2026-08-14 이 조건이 SKIP되는 바람에 홈 대기에서 실패했다. 부분매칭 정규식으로 고쳤다.
+- runFlow:
+    when:
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# ⚠️ **홈 팝업은 큐로 뜨고 문구가 가드와 다르다**(2026-09-01, 04_02_메뉴_거래내역에서 실측).
+#   "중요 공지사항/최신 신분증을 업로드해 주세요" 팝업의 버튼은 **"다음에 하기"(`btnCancel`)** 라
+#   위 `"나중에 하기"` **전체매칭** 가드로는 잡히지 않고 조용히 SKIP된다.
+#   그러면 팝업이 홈을 덮어 아래 `iv_nav` 대기가 실패한다.
+#   ⛔ 이 파일에서 그 실패가 나면 **[13] 원복이 중단돼 계정이 `<비밀번호 앞부분>${PW_NEW_LAST}` 로 남는다**
+#     → 검증된 공용 헬퍼로 큐를 비운다(전부 조건부라 팝업이 없으면 그냥 통과).
+- runFlow: "_dismiss_popups_stag_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "iv_nav"
+    timeout: 90000
+- takeScreenshot: pw06_login_with_new
+
+# ----------------------------------------------------------------
+# [13] [High] 원복 (PW_NEW → PW_CUR) → 로그아웃 → 원래 비밀번호로 로그인
+# ----------------------------------------------------------------
+# 이 케이스 덕분에 파일이 **멱등**해진다: 시작도 끝도 `<비밀번호 앞부분>${PW_CUR_LAST}`.
+#   그래서 실행할 때마다 env를 스왑할 필요가 없고, 같은 비밀번호를 쓰는 다른 파일
+#   (`04_03_메뉴설정_간편비번변경_old` 등)도 계속 유효하다.
+# ⚠️ 앱이 "직전 비밀번호 재사용"을 막으면 여기서 거절될 수 있다. 그때는 pw07 스크린샷으로 사유를 확인하고,
+#   **계정은 `<비밀번호 앞부분>${PW_NEW_LAST}` 상태로 남았다는 뜻**이므로 다음 실행 전에 env 두 줄을 스왑할 것.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 15000
+- tapOn:
+    text: "${CH_COMMON_SETTINGS}"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "view_change_password"
+    timeout: 20000
+- tapOn:
+    id: "view_change_password"
+- extendedWaitUntil:
+    visible:
+      id: "securityKeyboardCurrentPassword"
+    timeout: 20000
+# --- 현재 = PW_NEW ---
+- tapOn:
+    id: "securityKeyboardCurrentPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_NEW_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+# --- 새·확인 = PW_CUR (원복 대상) ---
+- tapOn:
+    id: "securityKeyboardNewPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "securityKeyboardConfirmPassword"
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "checkPassMatch"
+    checked: true
+- tapOn:
+    id: "btn_submit"
+- waitForAnimationToEnd
+- takeScreenshot: pw07_restored
+- tapOn: "확인|OK"
+- waitForAnimationToEnd
+
+# --- 로그아웃 → 원복된 비밀번호로 로그인 검증 ---
+- repeat:
+    while:
+      notVisible:
+        id: "iv_nav"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "txt_user_email"
+    commands:
+      - tapOn:
+          id: "iv_nav"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txt_user_email"
+    timeout: 15000
+- tapOn:
+    text: "${REG_LOGOUT}"
+    above:
+      id: "bottom_item_home"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOGOUT_CONFIRM}"
+    commands:
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 30000
+- tapOn:
+    id: "loginpwidhidpass"
+- waitForAnimationToEnd
+# ⚠️ ID/비밀번호 로그인 확인 다이얼로그는 **id 로 판정한다.**
+#   문구·버튼이 언어마다 다르다: ko "…간편 비밀번호는 해지됩니다"/`예` ↔ en
+#   "When you log in with your ID/password, your simple password will be removed."/`YES`.
+#   2026-09-15 en 실행에서 한국어 가드가 SKIP돼 다이얼로그가 안 닫히고 `usernameId` 대기가 죽었다.
+- runFlow:
+    when:
+      visible:
+        id: "btn_diaog_ok"
+    commands:
+      - tapOn:
+          id: "btn_diaog_ok"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 20000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "${ACCT_MAIN}"
+- tapOn:
+    id: "securityKeyboardEditText"
+# --- PW_CUR 로 로그인 ---
+- runFlow:
+    when:
+      notVisible:
+        text: "Capital G 히읃"
+    commands:
+      - tapOn: "대문자 키보드 변경"
+      - waitForAnimationToEnd
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "${PW_CUR_LAST}"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+# 간편 비밀번호 재등록(<정상 PIN>) — 문구는 "앱에서 사용할 간편 비밀번호를 생성해 주세요"
+- runFlow:
+    when:
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# ⚠️ **홈 팝업은 큐로 뜨고 문구가 가드와 다르다**(2026-09-01, 04_02_메뉴_거래내역에서 실측).
+#   "중요 공지사항/최신 신분증을 업로드해 주세요" 팝업의 버튼은 **"다음에 하기"(`btnCancel`)** 라
+#   위 `"나중에 하기"` **전체매칭** 가드로는 잡히지 않고 조용히 SKIP된다.
+#   그러면 팝업이 홈을 덮어 아래 `iv_nav` 대기가 실패한다.
+#   ⛔ 이 파일에서 그 실패가 나면 **[13] 원복이 중단돼 계정이 `<비밀번호 앞부분>${PW_NEW_LAST}` 로 남는다**
+#     → 검증된 공용 헬퍼로 큐를 비운다(전부 조건부라 팝업이 없으면 그냥 통과).
+- runFlow: "_dismiss_popups_stag_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "iv_nav"
+    timeout: 90000
+- takeScreenshot: pw08_login_restored

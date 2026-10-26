@@ -1,8 +1,8 @@
 # run_test.ps1
 # Usage:
-#   .\run_test.ps1 -lang ko -flow 01_Login_screen.yaml
-#   .\run_test.ps1 -lang en -flow 01_Login_screen.yaml
-#   .\run_test.ps1 -lang ko -flow 01_Login_screen.yaml -device 27dbf1ec440d7ece
+#   .\run_test.ps1 -lang ko -flow 01_로그인_분할전원본.yaml
+#   .\run_test.ps1 -lang en -flow 01_로그인_분할전원본.yaml
+#   .\run_test.ps1 -lang ko -flow 01_로그인_분할전원본.yaml -device 27dbf1ec440d7ece
 #   .\run_test.ps1 -lang ko -flow ... -Build live      # 운영(Live) 빌드로 돌릴 때만
 #   .\run_test.ps1 -lang ko -flow ... -Server stag     # 빌드는 그대로, 서버만 STAG 로
 #
@@ -28,7 +28,7 @@ param(
     [ValidateSet("stag","livetest","live")][string]$Server = "livetest",
     [string]$AppId = "",     # 임의 패키지 지정. 주면 -Build 보다 우선한다.
     # 자격정보처럼 파일에 적을 수 없는 값을 실행 시 넘긴다. KEY=VALUE 를 쉼표로.
-    #   예) -ExtraEnv CVC_1=1,CVC_2=2,CVC_3=3   (21_Card [12] 의 카드 CVC)
+    #   예) -ExtraEnv CVC_1=1,CVC_2=2,CVC_3=3   (21_카드_신청과충전 [12] 의 카드 CVC)
     # env 파일에 있는 키와 겹치게 주지 말 것 — maestro 가 어느 쪽을 쓸지 보장되지 않는다.
     [string[]]$ExtraEnv = @(),
     # 사용자 프로파일. `env\user.<이름>.env` 를 언어 파일 **위에** 얹는다.
@@ -92,9 +92,9 @@ if (-not $device) {
 # 보안 키패드(transkey) 화면이다. ★ 이 창은 **접근성 트리에 노출되지 않는다**:
 # `uiautomator dump` 와 Maestro 둘 다 **직전 화면의 트리를 그대로 반환**한다.
 #   → 플로우가 엉뚱한 화면으로 오진하고, 그 좌표의 탭·back 이 **보안 키패드 위에 떨어진다.**
-#     (2026-09-15 실제로 04_02 진입부가 카드 화면으로 오진하고 키패드를 눌렀다)
+#     (2026-09-15 실제로 04_04 진입부가 카드 화면으로 오진하고 키패드를 눌렀다)
 # 자동화로는 풀 수 없는 화면이므로 **여기서 끊고** 사람이 복구 순서를 밟게 한다.
-# ⚠️ 예외: `clearState: true` 플로우(`01_01_Login_Success_old` 등)는 앱 데이터를 지우고
+# ⚠️ 예외: `clearState: true` 플로우(`01_01_로그인_정상_old` 등)는 앱 데이터를 지우고
 #   로그인 화면부터 시작하므로 이 화면과 무관하다 → 막으면 **복구 수단 자체가 막힌다.**
 $isClearState = (Test-Path $flow) -and
                 (Select-String -LiteralPath $flow -Pattern 'clearState:\s*true' -Quiet)
@@ -105,7 +105,7 @@ if ((-not $isClearState) -and $fg -match 'autologout') {
     Write-Host "  ⛔ 앱이 자동 로그아웃 잠금 화면(AutoLogoutActivity)에 있습니다." -ForegroundColor Red
     Write-Host "     이 화면은 접근성 트리에 안 잡혀 Maestro 가 인식하지 못하고," -ForegroundColor Red
     Write-Host "     엉뚱한 탭이 보안 키패드에 떨어집니다 → 실행을 중단합니다." -ForegroundColor Red
-    Write-Host "     복구: .\run_test.ps1 -lang ko -flow `"Old\01_01_Login_Success_old.yaml`"" -ForegroundColor Yellow
+    Write-Host "     복구: .\run_test.ps1 -lang ko -flow `"Old\01_01_로그인_정상_old.yaml`"" -ForegroundColor Yellow
     Write-Host "           (clearState 로 로그인 화면부터 복구한다. 앱 언어는 한국어로 돌아간다)" -ForegroundColor DarkGray
     exit 3
 }

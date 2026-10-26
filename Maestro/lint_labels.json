@@ -5,10 +5,10 @@
     { "bad": "국내송금",            "good": "국내 송금",                              "why": "구 UI 홈 그리드 실측 라벨(공백). 텍스트 전체매칭이라 조용히 SKIP된다" },
     { "bad": "GMEPay 가상 계좌",    "good": "GME Pay 가상 계좌",                      "why": "실제 라벨에 공백. assertNotVisible로 쓰여 아무것도 검증하지 못했다" },
     { "bad": "Apply Virtual Account","good": "가상계좌 신청",                          "why": "실제 라벨과 다름. assertNotVisible이 무조건 통과했다" },
-    { "bad": "간편비밀번호",         "good": "앱에서 사용할 간편 비밀번호를 생성해 주세요", "why": "06_Registration 결함 #1. 조건 블록이 SKIP되어 PIN 화면에 갇혔다" },
+    { "bad": "간편비밀번호",         "good": "앱에서 사용할 간편 비밀번호를 생성해 주세요", "why": "06_회원가입_신규계정생성 결함 #1. 조건 블록이 SKIP되어 PIN 화면에 갇혔다" },
     { "bad": "간편 비밀번호",        "good": "간편 비밀번호를 입력하세요",              "why": "02_01 [02]가 PIN을 입력한 적 없이 통과한 원인" },
     { "bad": "로그인 세션이 만료",   "good": "로그인 세션이 만료 + 개행 대응 패턴",   "why": "문구에 개행이 섞여 있어 .* 로는 부족하다. 단일인용으로 개행 포함 패턴을 쓸 것" },
-    { "bad": "케이뱅크",            "good": "신한은행",   "level": "WARN",            "why": "⚠️ '사라졌다'는 목록마다 다르다. 2026-08-28 QR 받는계좌 목록엔 없었지만(08_MyQR 정지), 2026-09-01 국내송금 출금계좌 목록엔 **있다**. 목록이 다른 것이므로 일괄 치환 금지 — 전제 단언으로 해결할 것(W10)" },
+    { "bad": "케이뱅크",            "good": "신한은행",   "level": "WARN",            "why": "⚠️ '사라졌다'는 목록마다 다르다. 2026-08-28 QR 받는계좌 목록엔 없었지만(08_마이QR_수신과송금 정지), 2026-09-01 국내송금 출금계좌 목록엔 **있다**. 목록이 다른 것이므로 일괄 치환 금지 — 전제 단언으로 해결할 것(W10)" },
     { "bad": "인터넷 접속이 원활하지 않습니다", "good": "실패 - (계좌번호)",           "why": "7.20.0에서 충전 실패 문구가 바뀌었다" }
   ],
 
@@ -25,7 +25,7 @@
   "_accountList": "연동 계좌 목록. 내용이 계정 상태에 따라 바뀌고 **화면마다 목록이 다르다**(2026-09-01 실측: QR 받는계좌엔 케이뱅크가 없는데 국내송금 출금계좌엔 있다) → 은행명 하드코딩 시 전제 단언 필수",
   "accountListMarkers": ["rvKftcList"],
 
-  "_captureBlocked": "⚠️ icon_thumbnail 은 뺐다 — 25_Profile 이 그 화면에서 takeScreenshot으로 EXIT=0을 받았다(캡처 가능). 오탐 4건의 원인이었다",
+  "_captureBlocked": "⚠️ icon_thumbnail 은 뺐다 — 25_01_프로필_정보수정과공유 이 그 화면에서 takeScreenshot으로 EXIT=0을 받았다(캡처 가능). 오탐 4건의 원인이었다",
   "captureBlockedMarkers": [
     "OCRImageCaptureActivity", "NativeCropActivity",
     "DriverIdVerfication", "LoginV2Activity", "captureBtnImageView",

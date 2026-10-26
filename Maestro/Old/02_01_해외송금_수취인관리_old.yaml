@@ -1,0 +1,917 @@
+appId: ${APP_ID}
+# 송금액은 박지 않는다 — **앱이 알려주는 최소 송금액을 읽어 그대로 쓴다**(2026-09-23 전환).
+#   최소 송금액은 환율 연동이라 매일 바뀐다(스리랑카: 08-31 12,017 / 09-23 11,923).
+#   종전엔 그 위 여유값 14,000을 고정으로 넣었는데, 최소치가 오르면 죽고 잔액이 빠듯하면
+#   잔액부족으로 빠져 송금이 성립하지 않았다(09-23 실제 발생: 14,000 vs 잔액 13,303).
+#   ⚠️ 아래 값은 **최소치를 띄우기 위한 미끼**다 — 실제 송금액이 아니다. 충분히 낮기만 하면 된다.
+env:
+  SENDNOW_PROBE_AMOUNT: "5000"
+---
+# ================================================================
+# 시나리오: Overseas Transfer - 수취인 추가 / 수정 / 삭제
+# [01] [High] 수취인 추가 → 수정 → 삭제
+# [02] [High] 수취인 추가 (※ **송금 구간은 주석 처리됨** — 2026-10-07)
+#              ⛔ 이 파일은 더 이상 **실송금을 하지 않는다.** Wallet 송금 검증(#226·#227·#228)은
+#                 `04_02_메뉴_거래내역_old.yaml [02]`(재송금)로 옮겼다 — 재송금은 수취인 추가·국가/은행/
+#                 금액 입력을 건너뛰어 **같은 것을 훨씬 짧은 경로로** 확인하므로 테스트 시간이 줄어든다.
+#              ★ 수취인 추가는 **그대로 남는다** — [04]가 여기서 추가한 GME TEST 에 의존한다.
+#              ✅ 2026-08-31 운영(Live) 빌드 실송금 완주 이력은 주석 처리된 본문에 그대로 보존돼 있다.
+# [03] [Medium] 실시간 송금 탭 - 수취인 화면 필터(설정) 동작 확인
+# [04] [High]   실시간 송금 탭 - 수취인 추가 동작 확인 (Send Now)
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입
+# 주의(2026-08-03): 기존 가드 `"Server Override|4자리 숫자를 입력하세요|홈"`은 launchApp 직후
+#   잠깐 보이는 **캐시된 홈**에 먼저 매칭돼 PIN 입력 블록을 통째로 건너뛰었음 → 이후 실제
+#   잠금화면이 떠서 "해외송금" 탭이 실패. 04_02_메뉴_거래내역.yaml의 검증된 패턴대로 잠금화면을
+#   **명시적으로** 기다렸다가 PIN을 넣도록 변경. PIN 키패드는 매번 랜덤 배치라 좌표가 아닌
+#   text("1"/"2")로 탭. PIN <정상 PIN>.
+- launchApp
+# Server Override(livetest 빌드 서버선택 스플래시)가 먼저 뜨면 처리
+- runFlow: "_server_override_old.yaml"
+# 간편비밀번호 잠금화면을 명시적으로 대기 후 PIN <정상 PIN>
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+    timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+# PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+# ⚠️ **조건부로 감쌌다**(2026-08-28) — 세션이 살아 있으면 잠금화면 없이 홈으로 바로 떨어지는데,
+#   그때 무조건 "1"을 누르면 홈에서 엉뚱한 요소를 탭한다(02_02와 동일한 수정).
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+- runFlow: "_server_override_old.yaml"
+# 세션 만료 판정 — 실제 문구는 "로그인 세션이 만료되었습니다.
+#   서비스를 이용하려면 다시 로그인해 주세요." 로 **개행이 섞인 두 문장**이다.
+#   Maestro 텍스트는 전체매칭이라 `"로그인 세션이 만료"` 로는 **한 번도 잡히지 않았다**
+#   (2026-08-28 확인) → 부분매칭엔 `[\s\S]*`가 필요하다.
+#   그리고 구 UI에서 세션이 만료되면 **PIN으로 복구되지 않는다**(ID/비밀번호 재로그인 필요).
+#   그래서 다이얼로그를 닫고 진행하는 대신 **여기서 실패시킨다** — 원인이 로그에 남아야
+#   `01_01_로그인_정상_old.yaml`로 복구한 뒤 재실행할 수 있다.
+#   ⚠️ 홈 대기보다 **앞**에 둔다. 뒤에 두면 홈 대기가 먼저 타임아웃 나서 원인이 가려진다.
+- assertNotVisible:
+    text: "${SESSION_EXPIRED}"
+# 홈 도달 대기
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+# 지문인증/팝업 처리
+- runFlow:
+    when:
+      visible:
+        text: "${REG_LATER}"
+    commands:
+      - tapOn: "${REG_LATER}"
+- runFlow:
+    when:
+      visible:
+        text: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+# ⛔ **범용 `tapOn: "닫기"`를 걷어냈다**(2026-08-28). 엉뚱한 X를 눌러 앱이 런처로 빠져나간
+#   사고가 있었다(CLAUDE.md 참고). 인앱 배너는 id로 닫는다 — 7.19.x `btnTwo` / 7.20.0 `btnClose`.
+- runFlow:
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+# 홈 코치마크 balloon 처리
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# 해외송금 진입 (실시간 송금 탭)
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+# 사전 정리: GME TEST 삭제 (최대 6회)
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "GME TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+
+# 사전 정리: TEST GME 삭제 (최대 3회)
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+
+# 사전 정리: TESTUPDATE GME 삭제 (최대 3회 - 이전 실행에서 편집된 TEST GME 정리)
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "TESTUPDATE GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+
+# ★ 삭제가 **성립**했는지 본다 (2026-10-07 추가)
+#   종전에는 moreIcon → delete → 확인 까지만 하고 **사라졌는지를 보지 않았다**.
+#   바로 아래 수취인 **수정** 구간도 같은 문제였고(수행만 하고 반영 미검증 = 커버리지 착시)
+#   2026-10-02 에 성립 단언을 붙여 고쳤다 — 삭제만 예외로 두면 일관성이 깨진다.
+#   체크리스트 #224(기 등록된 수취인 삭제 동작 확인)가 이 단언으로 성립한다.
+# ⚠️ 이 수취인은 **직전 실행의 `[01]` 이 만든 것**이다(TEST GME → TESTUPDATE 로 개명).
+#   그래서 두 번째 실행부터는 위 조건부 블록이 **반드시 한 번 돈다.**
+#   계정이 완전히 깨끗한 최초 실행에서는 지울 것이 없어 이 단언만 통과한다.
+- assertNotVisible:
+    text: ".*TESTUPDATE.*"
+
+# ================================================================
+# [01] 수취인 추가 → 수정
+# ================================================================
+
+# 수취인 추가하기
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+
+# 국가: Sri Lanka
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Sri Lanka"
+- tapOn:
+    text: "Sri Lanka"
+    index: 1
+
+# 은행: COMMERCIAL BANK
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "COMMERCIAL"
+- tapOn: "COMMERCIAL BANK"
+
+# 계좌번호
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 이름 (First: TEST / Last: GME)
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "GME"
+- hideKeyboard
+
+# 핸드폰 번호
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 주소
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 구역
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 관계: 친구
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "${FRIEND_TEXT}"
+
+# 송금 사유: 급여 / 임금
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "${SALARY_WAGES_TEXT}"
+
+# 제출
+- tapOn:
+    id: "btn_submit"
+
+# 중복 수취인 오류 처리 (TEST GME 이미 존재 시 팝업 닫고 뒤로)
+- runFlow:
+    when:
+      visible:
+        text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
+    commands:
+      - tapOn: "${BTN_CONFIRM}"
+      - pressKey: back
+
+# 저장 성공 바텀시트: 아니요 (목록 복귀)
+- runFlow:
+    when:
+      visible:
+        id: "btnContactSupport1"
+    commands:
+      - tapOn:
+          id: "btnContactSupport1"
+
+# 수취인 목록 복귀 확인
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- assertVisible:
+    text: "TEST GME"
+
+# ⚠️ **이 구간에는 "수정이 반영됐는가"를 보는 단언이 없다**(2026-10-02 확인).
+#   폼을 열어 이름을 바꾸고 제출까지 하지만, 그 뒤 `btnContactSupport1`("아니요")을 누르면
+#   변경이 되돌아간다고 아래 주석이 적고 있고, 실제로 `TESTUPDATE GME` 은 계정에 존재하지 않는다
+#   (`02_02_해외송금_예약송금_old.yaml` 상단 주석의 같은 기록 참조).
+#   → 즉 **수정 동작은 수행하지만 성립은 검증하지 않는다 = 커버리지 착시**다.
+#   체크리스트 #241(기 등록 수취인 정보 수정)은 그래서 `02_02 [05-1]` 에 **성립 단언까지 있는
+#   케이스로 새로 썼다.** 거기서 반영 여부가 가려지면 이 구간도 같이 손볼 것.
+# 수취인 수정: First Name TEST → TESTUPDATE 변경 시도
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "edit"
+    index: 0
+
+# First Name: TEST → TESTUPDATE (Last Name 탭 → First Name 재탭으로 커서 끝 이동)
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- eraseText: 4
+- inputText: "TESTUPDATE"
+- hideKeyboard
+
+# 스크롤 후 제출
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- tapOn:
+    id: "btn_submit"
+
+# ★ 2026-10-02 실측 정정 — **종전 주석("아니요를 누르면 이름 변경이 취소된다")은 틀렸다.**
+#   저장 성공 시트의 실제 내용은 이렇다:
+#     `txvDialogTitle` "저장 성공"
+#     `txvDialogDescription` "수취인 정보가 수정되었습니다. (줄바꿈) <바뀐 이름>에게 송금하시겠습니까?"
+#     `btnVerifyBankAccount` "예" / `btnContactSupport1` "아니요"
+#   즉 "아니요"는 **이어서 송금할지**에 대한 답이지 수정을 되돌리는 게 아니다.
+#   **수정은 이미 반영된 상태**다(실기기에서 개명 → 저장 성공 → 목록 반영까지 확인).
+#   종전에 `TESTUPDATE GME` 이 계정에 남아 있던 것도 "되돌아가지 않았다"는 증거다.
+# ★ 성립 단언 추가 — 체크리스트 #241("기 등록된 수취인 정보 수정 동작 확인")이 보는 것이 이것이다.
+#   종전에는 수정을 **수행만 하고 반영을 보지 않아** 커버리지 착시였다.
+#   ※ 시트 문구 대신 **바뀐 이름이 시트에 찍히는지**로 판정한다 — 언어에 흔들리지 않는다.
+- extendedWaitUntil:
+    visible:
+      id: "txvDialogDescription"
+    timeout: 20000
+- assertVisible:
+    id: "txvDialogDescription"
+    text: ".*TESTUPDATE.*"
+- takeScreenshot: "[01]_수취인수정_저장성공"
+- tapOn:
+    id: "btnContactSupport1"
+- waitForAnimationToEnd
+# 목록에도 반영됐는가
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- assertVisible: ".*TESTUPDATE.*"
+
+
+
+# ================================================================
+# [02] 수취인 추가 (송금 구간은 아래에서 주석 처리됨 — 2026-10-07)
+# CLICKUP: z8nfn6ma88
+# CLICKUP-PARTIAL: z8nfn6ma87 | 오입력 후 송금 미진행은 확인되나 실패 안내 문구를 단언하지 않음
+#   ↑ 이 PARTIAL 은 `04_02_메뉴_거래내역 [02]` 에서 해소된다(오입력 뒤 PIN 재요구 + 성공화면 부재를 단언).
+# ================================================================
+
+# 해외송금 진입 (실시간 송금 탭)
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+# 수취인 추가하기
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+
+# 국가: Sri Lanka
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "Sri Lanka"
+- tapOn:
+    text: "Sri Lanka"
+    index: 1
+
+# 은행: COMMERCIAL BANK
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "COMMERCIAL"
+- tapOn: "COMMERCIAL BANK"
+
+# 계좌번호
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- inputText: "1234567891"
+- hideKeyboard
+
+# 이름 (First: GME / Last: TEST)
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "GME"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 핸드폰 번호
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "1234567890"
+- hideKeyboard
+
+# 주소
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 구역
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+
+# 관계: 친구
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "${FRIEND_TEXT}"
+
+# 송금 사유: 급여 / 임금
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "${SALARY_WAGES_TEXT}"
+
+# 제출
+- tapOn:
+    id: "btn_submit"
+
+# 중복 수취인 오류 처리 (GME TEST 이미 존재 시 팝업 닫고 뒤로)
+- runFlow:
+    when:
+      visible:
+        text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
+    commands:
+      - tapOn: "${BTN_CONFIRM}"
+      - pressKey: back
+
+# ================================================================
+# ⛔ 아래 송금 구간은 **주석 처리했다**(2026-10-07). 코드는 지우지 않고 남겨 둔다.
+#   왜: 실송금 횟수와 테스트 시간을 줄이기 위해 **Wallet 송금 검증을
+#       `04_02_메뉴_거래내역_old.yaml [02]`(재송금)로 옮겼다.** 재송금은 수취인 추가·
+#       국가/은행/금액 입력을 건너뛰어 **같은 것을 훨씬 짧은 경로로** 확인한다.
+#   옮겨간 체크리스트 항목: #226(PIN 불일치) · #227(PIN 일치) · #228(영수증/다운로드).
+#   ★ `[02]` 의 **수취인 추가까지는 그대로 살아 있다** — `[04]`(수취인 목록에 GME TEST 가
+#     있는지)가 여기서 추가한 수취인에 의존하기 때문이다.
+#   되돌리려면: 아래 `# ` 접두사를 걷어내고, 바로 위 "홈 복귀" 블록을 지우면 된다.
+#   ⛔ 단, **되살리기 전에 `[02-1]`(영수증) 구간의 셀렉터를 고쳐야 한다.** 그때는 미검증 추정이었고
+#      2026-10-07 실측 결과 **전부 틀렸다**: 성공 시트의 「영수증 보기」는 `btnOk` 가 아니라
+#      **`btnVerifyBankAccount`**(= 잔액부족 팝업의 자동충전 「확인」과 **같은 id**), 영수증 화면은
+#      `txvStatusValue`/`btn_download` 가 아니라 `SendMoneyV2TransactionCompleteActivity` 의
+#      `transfer_label`/**`btn_pdf_down`** 이다. 올바른 판본은 `04_02_메뉴_거래내역_old.yaml [02]` 에 있다.
+# ================================================================
+
+# 저장 성공 바텀시트 — **「예」(송금하기)를 누르지 않는다.** back 으로 닫고 홈까지 돌아간다.
+- waitForAnimationToEnd
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# # 저장 성공 바텀시트: 예 (송금하기)
+# - runFlow:
+#     when:
+#       visible:
+#         text: "${SEND_SAVED_YES}"
+#     commands:
+#       - tapOn: "${SEND_SAVED_YES}"
+#
+# # 계좌 선택: GME Wallet
+# - tapOn:
+#     text: "GME Wallet"
+#     index: 0
+#
+# # ---- 송금액: **앱이 알려주는 최소 송금액을 읽어 그대로 쓴다** (2026-09-23) ----
+# # ⛔ 종전에는 `SENDNOW_AMOUNT`(기본 14000)를 고정으로 넣었다. 최소치(그날 12,017)보다 넉넉히 잡은
+# #   값이라 두 가지로 깨졌다: ① 최소치가 오르면 `limitErrorMsg` 로 죽고 ② 잔액이 빠듯하면
+# #   **잔액부족 경로로 빠져 송금이 성립하지 않는다**(2026-09-23 실제로 14,000 vs 잔액 13,303 으로 막혔다).
+# #   최소 송금액은 **환율 연동이라 매일 바뀌므로** 고정값은 근본적으로 낡는다.
+# # → 일부러 최소치보다 낮은 값을 넣어 `limitErrorMsg` 를 띄우고, 거기 적힌 금액을 그대로 재입력한다.
+# #   메시지 형식은 양쪽 언어 모두 `<숫자> KRW` 를 포함한다(실측):
+# #     ko `최소 송금 금액은 12,017 KRW입니다.` / en `Minimum sending limit is 11,923 KRW.`
+# #   → 숫자만 추려 쓰면 언어와 무관하다. 다른 숫자가 섞이지 않는 문구라 전체 숫자 추출로 충분하다.
+# # ⚠️ 이 케이스의 검증 목적은 "송금이 성립하는가"이지 금액 자체가 아니다 → 최소치로 보내 비용을 줄인다.
+# - inputText: "${SENDNOW_PROBE_AMOUNT}"
+# - hideKeyboard
+# - tapOn: "${CALCULATE_TEXT}"
+# - extendedWaitUntil:
+#     visible:
+#       id: "limitErrorMsg"
+#     timeout: 60000
+# - copyTextFrom:
+#     id: "limitErrorMsg"
+# - evalScript: ${output.minAmt = maestro.copiedText.replace(/[^0-9]/g, '')}
+# # 금액 필드를 비우고 최소치를 다시 넣는다(`sendAmountEdTxt` = "You Send" 입력칸)
+# - tapOn:
+#     id: "sendAmountEdTxt"
+# - eraseText
+# - inputText: ${output.minAmt}
+# - hideKeyboard
+#
+# # 계산하기 (재계산)
+# - tapOn: "${CALCULATE_TEXT}"
+#
+# # ---- 1단계: 금액 세부 정보 (2026-08-31 운영 실측) ----
+# #   성공 시 `transferFeeTxtView`(수수료) + `gmeCouponAppliedAmountValueTxt`(쿠폰 적용가) + `agreeButton`("계속")
+# #   실패 시 `limitErrorMsg`("최소 송금 금액은 12,017 KRW입니다." / 한도 초과 등)
+# #   ⚠️ 종전에는 잔액·계속을 **조건부 `runFlow`로만** 두어 아무 일도 안 일어나도 넘어갔다 → 도달을 강제한다.
+# #   ⚠️ **잔액도 이 단계에서 검증된다**(2026-08-31 운영 실측). 부족하면 계산 결과 대신
+# #      "거래를 진행하기 위한 잔액이 부족합니다." 바텀시트가 뜬다.
+# - extendedWaitUntil:
+#     visible:
+#       text: "${SEND_CALC_RESULT_ANY}"
+#     timeout: 60000
+#
+# # ⛔ 잔액 부족이면 **여기서 실패시킨다.** 도달 조건에 함께 넣어 둔 이유는, 이 판정이 없으면
+# #   `agreeButton` 대기가 60초 타임아웃 나서 **원인이 로그에서 가려지기** 때문이다
+# #   (세션 만료 가드를 홈 대기보다 앞에 둔 것과 같은 이유).
+# # ⚠️⚠️ 이 팝업에는 **`자동이체 계좌 선택` 시트가 함께 뜬다**(계좌 목록 + `btnVerifyBankAccount`="확인").
+# #   거기서 계좌를 고르고 확인을 누르면 **실계좌에서 자동충전이 발생한다.** 절대 자동으로 누르지 말 것.
+# - assertNotVisible:
+#     text: "${SEND_INSUFFICIENT_BALANCE}"
+# - assertVisible:
+#     id: "agreeButton"
+#     text: "${MYQR_CONTINUE}"
+# # 최소금액/한도 오류가 남아 있으면 실송금이 성립하지 않는다 → 여기서 실패시킨다(닫고 진행하지 말 것)
+# - assertNotVisible:
+#     id: "limitErrorMsg"
+# - assertVisible:
+#     id: "transferFeeTxtView"
+# - tapOn:
+#     id: "agreeButton"
+#
+# # ---- 2단계: 수취인 정보 / 거래 상세 / 약관 동의 ----
+# #   ⚠️ 1·2단계는 **같은 액티비티(`SendMoneyV2Activity`)** 라 트리에 1단계 뷰가 남고 버튼 id도 같은
+# #      `agreeButton`이다 → 2단계 도달 판정은 **2단계에만 있는 `txt_pamount`**(총 지급액)로 한다.
+# - extendedWaitUntil:
+#     visible:
+#       id: "txt_pamount"
+#     timeout: 30000
+# - assertVisible:
+#     id: "txt_bankAcNo"
+#
+# # ⛔ **스크롤 없이 `agreeButton`을 누르면 안 된다**(2026-08-31 운영 실측).
+# #   2단계 콘텐츠가 화면보다 길어 "계속" 버튼이 **화면 밖**인데 접근성 트리에는 bounds가
+# #   `[54,1920][1026,2060]`으로 남아 있다. 그 좌표에 실제로 그려진 것은 **"2. 송금 사기 주의"
+# #   (`txt_fraud_warning`) 링크**라서, 탭이 **COMPLETED로 찍히고도** 약관 브라우저
+# #   (`TermsAndConditionV2BrowserActivity`)가 열리고 PIN에 도달하지 못한다.
+# #   → 높이0 노드 탭 함정과 같은 부류. 먼저 스크롤해 겹침을 해소한다.
+# - swipe:
+#     direction: UP
+#     duration: 1000
+# - waitForAnimationToEnd
+# - assertVisible:
+#     id: "agreeButton"
+#     text: "${MYQR_CONTINUE}"
+# - tapOn:
+#     id: "agreeButton"
+#
+# # 그래도 약관 브라우저가 열렸으면 되돌아와 재시도한다(자가복구)
+# - runFlow:
+#     when:
+#       visible:
+#         text: "GME Remittance - Terms"
+#     commands:
+#       - tapOn:
+#           id: "iv_back"
+#       - waitForAnimationToEnd
+#       - swipe:
+#           direction: UP
+#           duration: 1000
+#       - waitForAnimationToEnd
+#       - tapOn:
+#           id: "agreeButton"
+#
+# # ⚠️ **PIN 가드가 한 번도 동작하지 않았다**(2026-08-28 확인). 잠금화면 실제 문구는
+# #   **"간편 비밀번호를 입력하세요"** 인데 가드가 `"간편 비밀번호"` **전체매칭**이라 항상 SKIP됐다.
+# #   즉 `[02]`는 **PIN을 입력한 적이 없고 실송금도 성립한 적이 없다** — 통과했다면 거짓 통과다.
+# #   → 구 UI 잠금화면 판정은 **`id: input_dot_1`** 을 쓴다(언어·문구 변경에 영향받지 않는다).
+# # ⚠️ PIN 키패드는 **탭마다 배치가 재섞인다**. 탭 사이 `waitForAnimationToEnd`가 없으면
+# #   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력이 누적된다(= 계정 잠금). 원래 빠져 있었다.
+#
+# # PIN 1회 오입력 (의도된 실패 경로 검증)
+# - extendedWaitUntil:
+#     visible:
+#       id: "input_dot_1"
+#     timeout: 30000
+# - tapOn: "2"
+# - waitForAnimationToEnd
+# - tapOn: "3"
+# - waitForAnimationToEnd
+# - tapOn: "2"
+# - waitForAnimationToEnd
+# - tapOn: "3"
+# - waitForAnimationToEnd
+# # 오입력 안내 팝업이 뜨면 닫는다
+# - runFlow:
+#     when:
+#       visible:
+#         id: "btn_diaog_ok|btnOk"
+#     commands:
+#       - tapOn:
+#           id: "btn_diaog_ok|btnOk"
+#       - waitForAnimationToEnd
+#
+# # PIN 정상 입력
+# - extendedWaitUntil:
+#     visible:
+#       id: "input_dot_1"
+#     timeout: 30000
+# - tapOn: "1"
+# - waitForAnimationToEnd
+# - tapOn: "2"
+# - waitForAnimationToEnd
+# - tapOn: "1"
+# - waitForAnimationToEnd
+# - tapOn: "2"
+# - waitForAnimationToEnd
+#
+# # PIN 이후 결과 대기 — **성공/잔액부족 중 하나는 반드시 떠야 한다.**
+# # ⚠️ 종전에는 두 갈래가 모두 조건부 `runFlow`뿐이어서, 아무 팝업도 뜨지 않고 송금 화면에
+# #   멈춰 있어도 **조용히 통과**했다(거짓 통과). 결과 도달을 먼저 강제한다.
+# - extendedWaitUntil:
+#     visible:
+#       text: "${SEND_RESULT_ANY}"
+#     timeout: 120000
+# - takeScreenshot: "02_01_02_send_result"
+#
+# # ⚠️ 잔액 부족으로 빠지면 **송금은 일어나지 않는다.** `[02]`의 검증 목적(실제 송금)이 달성되지
+# #   않으므로 **팝업을 닫고 진행하지 않고 여기서 실패시킨다.** 스위트는 잔액을 선검사해
+# #   부족하면 이 파일을 **SKIP**하기로 되어 있다(잔액부족 경로를 Pass로 적지 말 것).
+# # ⚠️ 팝업 문구는 "잔액이 부족합니다" 형태라 `"잔액"` **전체매칭으로는 안 잡힌다** → `.*잔액.*`.
+# #   ※ 앱은 **PIN 입력 전까지 잔액을 검증하지 않는다**(실측) → 이 팝업은 PIN 이후에만 뜬다.
+# - assertNotVisible:
+#     text: "${SEND_RESULT_INSUFFICIENT}"
+#
+# # ✅ 실송금 성립 단언 — 2026-08-31 운영 실측 결과 화면은
+# #    **"성공" / "거래가 정상적으로 완료되었습니다."** + `영수증 보기` / `다시 보내기` 다.
+# #    조건부 처리만 두면 아무것도 안 떠도 EXIT=0이 된다 → 반드시 단언한다.
+# - assertVisible:
+#     text: "${SEND_SUCCESS}"
+#
+#
+# # ----------------------------------------------------------------
+# # [02-1] [Medium] 해외송금(Wallet) - 영수증 및 영수증 다운로드 동작 확인
+# #        (체크리스트 #228 / 2026-10-02 신설)
+# # ----------------------------------------------------------------
+# # 2026-10-02 재확인 — **이 항목의 공백은 "단언 누락"이 아니라 "영수증 화면에 안 들어간다"였다.**
+# #   위 송금 성공 구간은 이미 결과 도달 강제 + 잔액부족 배제 + `${SEND_SUCCESS}` 단언을 갖췄다.
+# #   빠져 있던 건 성공 시트의 **[영수증 보기]를 눌러 보는 것**이다.
+# #
+# # ⚠️ **성공 시트는 id 와 라벨이 어긋난다**(`08_마이QR_수신과송금_old.yaml [05]` 실측):
+# #   `contactSupport` = "확인" / **`btnOk` = "영수증 보기"**. 이름만 보고 고르면 반대를 누른다.
+# # 영수증 화면 셀렉터는 `08_마이QR_수신과송금 [05]`(`txvStatusValue` / 거래 상세 / SUCCESS)와
+# #   `03_국내송금_월렛과계좌 [02]`(`btn_download` / 다운로드 결과)의 실측분을 합쳐 썼다.
+# #
+# # ⛔ **미검증** — 이 구간은 **실제 해외송금이 일어난 뒤에만** 도달한다. 기기 앞에서
+# #   `[02]` 를 완주시킬 때 함께 확인할 것. 깨지면 영수증 화면의 실제 id 로 교체한다.
+# # ⚠️ 다운로드 결과 화면은 **기기/OS 마다 다르다**(03_국내송금_월렛과계좌 주석): 앱 선택창("연결 프로그램")
+# #   이거나 네이티브 파일 저장 화면(파일명 + "저장")이다. 해외송금 영수증의 **파일명 접두사는
+# #   미확인**이라 `[A-Za-z]*Receipt` 로 느슨하게 받는다. 확인되면 좁힐 것.
+# - tapOn:
+#     id: "btnOk"
+# - extendedWaitUntil:
+#     visible:
+#       id: "txvStatusValue"
+#     timeout: 30000
+# - assertVisible:
+#     text: "${TRANSACTION_DETAIL_TEXT}"
+# - takeScreenshot: "[02-1]_영수증_화면"
+# # 다운로드 — 거짓 통과 방지로 **영수증 화면을 실제로 벗어났는지**(btn_download 소멸)도 함께 본다
+# - assertVisible:
+#     id: "btn_download"
+# - tapOn:
+#     id: "btn_download"
+# - extendedWaitUntil:
+#     visible:
+#       text: '연결 프로그램|저장|[A-Za-z]*Receipt[\s\S]*'
+#     timeout: 20000
+# - assertNotVisible:
+#     id: "btn_download"
+# - takeScreenshot: "[02-1]_영수증_다운로드"
+# - pressKey: back
+# - waitForAnimationToEnd
+#
+# # ⚠️ 성공 팝업을 **`다시 보내기`로 닫지 않는다** — 그 버튼은 송금 화면으로 되돌아가므로
+# #   이후 홈 복귀 경로가 길어진다. 아래 back 루프로 빠져나온다.
+#
+# # 홈 복귀
+# # ⚠️ 송금 완료 후 스택이 깊다(2026-08-31 실측: 결과 팝업 → `SendMoneyV2TransactionCompleteActivity`
+# #   → `SchedulePaymentActivity` → 홈). 조건부 back 6회로는 모자랐다 → `repeat`로 홈까지 민다.
+# - repeat:
+#     while:
+#       notVisible:
+#         id: "bottom_item_home"
+#     commands:
+#       - pressKey: back
+#       - waitForAnimationToEnd
+# - extendedWaitUntil:
+#     visible:
+#       id: "bottom_item_home"
+#     timeout: 30000
+
+# ================================================================
+# [03] 실시간 송금 탭 - 수취인 화면 필터(설정) 동작 확인
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 30000
+- assertVisible:
+    text: "${SEND_NOW_TEXT}"
+- tapOn:
+    id: "imgvFilter"
+- assertVisible:
+    text: "${CH_COMMON_SETTINGS}"
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "et_searchText"
+- tapOn:
+    id: "et_searchText"
+- inputText: "TEST"
+- hideKeyboard
+# 필터 닫기
+- pressKey: back
+
+# ================================================================
+# [04] 실시간 송금 탭 - 수취인 목록 확인 (Send Now)
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+# [04] 결과 확인: [02]에서 추가한 GME TEST가 수취인 목록에 있는지 확인
+- assertVisible:
+    text: "GME TEST"
+
+# ================================================================
+# 사후 정리: 테스트에서 생성된 수취인 삭제
+# ================================================================
+
+# 홈으로 복귀 (어느 화면에 있든 Home까지)
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+
+# ⛔ **사후 정리에서 `GME TEST` 삭제를 제거했다**(2026-08-28).
+#   이 수취인은 `02_02`의 `[04][05][시나리오3]`이 **실시간 목록에서 예약 탭으로 복사해 쓰는 대상**이다.
+#   여기서 지우면 `02_02`가 "기존 수취인 추가" 시트가 비어 실패한다(실제로 그렇게 깨져 있었다).
+#   이 파일의 멱등성은 **사전 정리(GME TEST 6회 / TEST GME 3회 / TESTUPDATE GME 3회)** 가 담당하므로
+#   사후에 지우지 않아도 다음 실행에 영향이 없다.
+#   ⚠️ 그래서 이 파일은 **`GME TEST`(스리랑카 / COMMERCIAL BANK)를 계정에 남긴 채 끝난다.** 의도된 상태다.
+
+# 홈에서 끝낸다 — 스위트에서 다음 항목이 홈을 전제하므로 화면을 남겨두지 않는다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000

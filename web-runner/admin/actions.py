@@ -85,7 +85,7 @@ def find_customer(session: AdminSession, user_id: str, screen: str = "setup") ->
 # 스위트 전 사람이 admin 에 들어가 눈으로 확인하던 것 — GUIDE.md §10.1 의 '계정 5개'.
 # want:
 #   exists — 있어야 한다. 없으면 플로우가 진입부터 막힌다
-#   absent — **없어야** 한다. 06_Registration 이 생성·소모하는 계정이라
+#   absent — **없어야** 한다. 06_회원가입_신규계정생성 이 생성·소모하는 계정이라
 #            남아 있으면 같은 ID 로 다시 가입할 수 없어 재실행이 불가능하다
 # 점검의 **모양**만 여기 둔다 — 실제 계정 ID 는 사용자 프로파일에서 온다.
 #   (`Maestro\env\user.<이름>.env`. maestro 플로우도 같은 파일을 읽는다 →
@@ -93,10 +93,10 @@ def find_customer(session: AdminSession, user_id: str, screen: str = "setup") ->
 # 키 → (원하는 상태, 왜 그래야 하는가)
 PREFLIGHT_SHAPE = [
     ("ACCT_MAIN",     "exists", "G1·G2·G4 기본 계정 (한국인·은행 연결)"),
-    ("ACCT_FOREIGN",  "exists", "외국인·은행 미연결 (14_02 · 25_Profile_Foreign)"),
+    ("ACCT_FOREIGN",  "exists", "외국인·은행 미연결 (14_02 · 25_02_프로필_외국인신분증)"),
     ("ACCT_GMEPAY",   "exists", "외국인·GMEPay 신청완료 (14_03)"),
-    ("ACCT_SIGNUP_1", "absent", "06_Registration 이 소모 — 남아 있으면 재실행 불가"),
-    ("ACCT_SIGNUP_2", "absent", "06_Registration 이 소모 — 남아 있으면 재실행 불가"),
+    ("ACCT_SIGNUP_1", "absent", "06_회원가입_신규계정생성 이 소모 — 남아 있으면 재실행 불가"),
+    ("ACCT_SIGNUP_2", "absent", "06_회원가입_신규계정생성 이 소모 — 남아 있으면 재실행 불가"),
 ]
 
 # 업로드 문서가 **승인 대기로 남아 있으면 안 되는** 계정의 키.
@@ -125,7 +125,7 @@ def check_account(session: AdminSession, spec: dict) -> dict:
     customer_id = customer_id_of(found)
     ok = found["found"] if spec["want"] == "exists" else not found["found"]
     # ★ 고칠 수 있는 건 '없어야 하는데 있는' 경우뿐이다.
-    #   '있어야 하는데 없는' 계정은 사람이 만들어야 한다(06_Registration 이 만드는 계정이고,
+    #   '있어야 하는데 없는' 계정은 사람이 만들어야 한다(06_회원가입_신규계정생성 이 만드는 계정이고,
     #   그건 테스트지 사전 작업이 아니다) → fix 를 주지 않는다.
     fix = None if ok or spec["want"] == "exists" else "remove_customer"
     return {

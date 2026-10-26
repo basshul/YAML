@@ -1,6 +1,6 @@
 appId: ${APP_ID}
 ---
-# 인바운드 송금인 등록 - 신분증 사진 3종 업로드 헬퍼 (13_ReceiveOverseas.yaml [07-2] 등에서 사용)
+# 인바운드 송금인 등록 - 신분증 사진 3종 업로드 헬퍼 (13_해외송금받기_분할전원본.yaml [07-2] 등에서 사용)
 #
 # 흐름(실기기 확인 2026-08-07):
 #   문서 행 탭 → OCRImageCaptureActivity(카메라) → captureBtnImageView(촬영)

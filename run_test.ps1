@@ -2,13 +2,13 @@
 # run_test.ps1 (저장소 루트) — 테스트 이미지 배치 + Maestro\run_test.ps1 위임
 #
 # 갤러리 픽스처가 필요한 케이스 전용 래퍼다.
-#   · 21_Card [24] 글로벌 QR 갤러리 업로드
-#   · 06_Registration 신분증/ARC/여권 OCR
+#   · 21_카드_신청과충전 [24] 글로벌 QR 갤러리 업로드
+#   · 06_회원가입_신규계정생성 신분증/ARC/여권 OCR
 # 그 외에는 `Maestro\run_test.ps1` 을 직접 쓰면 된다.
 #
 # 사용법(인자는 Maestro\run_test.ps1 과 동일하다):
-#   .\run_test.ps1 -lang ko -flow "Old\21_Card_old.yaml"
-#   .\run_test.ps1 -lang en -flow "Old\06_Registration_old.yaml" -Build live
+#   .\run_test.ps1 -lang ko -flow "Old\21_카드_신청과충전_old.yaml"
+#   .\run_test.ps1 -lang en -flow "Old\06_회원가입_신규계정생성_old.yaml" -Build live
 #
 # ⛔ 2026-09-23 재작성 — 종전에는 이 파일이 러너 전체를 **복사해 갖고 있었다.**
 #   그래서 `Maestro\run_test.ps1` 에만 들어간 개선(플로우가 실제로 쓰는 env 만 추리는 것)이
@@ -53,7 +53,7 @@ if (-not $device) {
 
 # ================================================================
 # 테스트 이미지 사전 배치
-#   갤러리 1번째: Global QR.jpg          → 21_Card [24] 글로벌 QR 갤러리 업로드
+#   갤러리 1번째: Global QR.jpg          → 21_카드_신청과충전 [24] 글로벌 QR 갤러리 업로드
 #   갤러리 2번째: 3. ARC.jpg            → ARC OCR
 #   갤러리 3번째: 1. ID Card_Korean.jpg → 주민등록증
 #   갤러리 4번째: 2. Passport.jpg       → 여권

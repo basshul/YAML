@@ -1,0 +1,198 @@
+appId: ${APP_ID}
+env:
+  # 현재 로그인 비밀번호 = <비밀번호 앞부분><PW_CUR_LAST>  ("느낌표"=`!` / "골뱅이"=`@`)
+  # 자동화 표준은 <정상 비밀번호> / <대체 비밀번호> 2종이다([[project_01_login]]).
+  PW_CUR_LAST: "느낌표"
+---
+# ================================================================
+# 01_01 최초 로그인 (clearState → 로그인 → PIN <정상 PIN> 설정) — 구 UI
+# ================================================================
+#  실측 메모 (2026-08-14, 조건부라 실행에는 지장 없음):
+#    - 케이스 [04] 간편 비밀번호 설정이 **SKIP됐다** — clearState로 앱 데이터를 지워도 로그인하면
+#      기존 PIN(<정상 PIN>)이 그대로 유효했다. PIN은 기기 저장이 아니라 **계정(서버) 쪽 상태**로 보인다.
+#      (반대로 잠금화면에서 "아이디/비밀번호로 로그인"을 타면 기존 PIN이 해지돼 재등록을 요구한다)
+#    - 케이스 [01] "서비스 이용 안내"도 SKIP됐다(clearState로는 초기화되지 않는 플래그로 추정).
+#    - 케이스 [05] "보이스 피싱 주의"는 실제로 떠서 처리됐다.
+#
+# 용도: 다른 시나리오 실행 전 **로그인 상태를 만드는 셋업 플로우**.
+#   clearState로 앱 데이터를 지우므로 앱 언어도 기기 기본(한국어)으로 돌아간다.
+#
+# 케이스:
+#   [01] clearState 후 초기 진입 처리(서버선택 / 서비스 이용 안내 / 권한)
+#   [02] 로그인 — seungsoo818 / <비밀번호 앞부분><PW_CUR_LAST>
+#   [03] 지문인증 등록 제안 → "나중에" (조건부)
+#   [04] 간편 비밀번호 설정 → <정상 PIN> (조건부)
+#   [05] 로그인 후 팝업 정리 → 홈 도달 확인
+#
+# 2026-08-14 수정 3건:
+#   1. ⚠️ **`transKeypad_row4` 탭 제거** — `securityKeyboardEditText` 직후 이걸 누르면 키패드의 문자
+#      하나가 더 입력돼 비밀번호가 깨진다([[project_14_deposit]]에 실제 로그인 실패 사고 기록).
+#   2. ⚠️ **`<구 비밀번호(폐기)>` 폴백 블록 제거** — `<구 비밀번호(폐기)>`는 admin 임의 발급값이라 표준이 아니고,
+#      그 블록이 쓰던 `securityKeyboardClearAllImageView`는 이 화면에 **존재하지 않는다**.
+#      비밀번호가 바뀌면 폴백에 기대지 말고 위 `env`를 고칠 것(틀린 시도는 5회 잠금을 소모한다).
+#   3. 간편 비밀번호 설정 조건을 실제 문구에 맞춰 정규식으로 교체
+#      (`"간편비밀번호"`는 전체매칭이라 "앱에서 사용할 간편 비밀번호를 생성해 주세요"와 매칭되지 않는다).
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\01_01_로그인_정상_old.yaml"
+# ================================================================
+
+# ----------------------------------------------------------------
+# [01] clearState 후 초기 진입 처리
+# ----------------------------------------------------------------
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|서비스 이용 안내|신규 회원"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+# 서비스 이용 안내(최초 실행/clearState 후) → 확인 → OS 권한 허용
+# 온보딩 관문(서비스 이용 안내 + OS 권한 다이얼로그 여러 개) — 공용 헬퍼
+- runFlow: "_onboarding_gate_old.yaml"
+# clearState 로 앱 언어가 한국어로 초기화된다 → en 실행이면 여기서 영어로 바꾼다
+#   (`01_03`·`01_05`·`01_로그인_분할전원본`·`05_초기화면_로그인전` 과 같은 패턴. 2026-09-18 이식).
+#   ko 는 `LANG_SWITCH_TRIGGER=__NEVER_MATCH__` 라 통째로 SKIP 되어 평소 동작은 그대로다.
+#   ⚠️ 언어를 바꾸면 **앱이 재시작**되고 Server Override 스플래시가 **다시 뜬다** → 재처리한다.
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+      - runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn"
+    timeout: 30000
+
+# ----------------------------------------------------------------
+# [02] 로그인 — seungsoo818 / <비밀번호 앞부분><PW_CUR_LAST>
+# ----------------------------------------------------------------
+- tapOn:
+    id: "btn_lgn"
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 20000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "${ACCT_MAIN}"
+# ⚠️ securityKeyboardEditText 탭 직후 transKeypad_row4를 누르지 말 것(문자 오입력)
+- tapOn:
+    id: "securityKeyboardEditText"
+# 비밀번호는 사용자 프로파일에서 온다(라벨은 `env\user.<이름>.local.env`).
+#   ⚠️ 여기 하드코딩으로 되돌리지 말 것 — 사람마다 비밀번호가 다르다.
+- runFlow: "_enter_login_pw_old.yaml"
+- waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [03] 지문인증 등록 제안 → "나중에" (조건부)
+# ----------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [04] 간편 비밀번호 설정 → <정상 PIN> (조건부)
+# ----------------------------------------------------------------
+# 화면 문구: "앱에서 사용할 간편 비밀번호를 생성해 주세요" → 부분매칭 정규식으로 판정
+- runFlow:
+    when:
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+
+# ----------------------------------------------------------------
+# [05] 로그인 후 팝업 정리 → 홈 도달 확인
+# ----------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+
+# ⚠️ **홈 팝업은 하나가 아니라 큐로 연달아 뜬다.** 단발 조건부로는 못 잡는다.
+#   2026-08-27 실측(7.20.0-stag): 인앱 배너를 닫자 그 아래 **"증빙 서류 안내"**(`remindLaterBtn`)가
+#   깔려 있어 `btnTransfer` assert가 계속 실패했다.
+#   → 팝업 종류·순서를 이 파일에 복사하지 말고 **헬퍼 한 곳에서** 처리한다.
+#     헬퍼는 닫히는 팝업이 없어질 때까지 반복하고, 상한(times)이 있어 무한 루프에 빠지지 않는다.
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
+# ⚠️ **`btnTransfer` 로 홈을 판정하지 말 것** — 구 UI 홈은 스크롤 위치를 유지해서 상단 카드가
+#   화면 밖일 수 있고, **영문은 문구가 길어 레이아웃이 밀린다**(2026-09-18 en 실행에서 실패).
+#   → 하단 내비로 홈 도달을 먼저 확정하고, 상단 카드는 끌어올린 뒤 본다.
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    visibilityPercentage: 20
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btnTransfer"
+    timeout: 90000
+# 구 UI 홈 확인 (개편 UI면 이 요소들이 없다)
+- assertVisible:
+    id: "iv_nav"
+- assertVisible:
+    id: "bottom_item_profile"
+- takeScreenshot: login_first_home

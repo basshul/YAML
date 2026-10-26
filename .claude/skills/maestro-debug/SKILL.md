@@ -28,7 +28,7 @@ tr -d '\r' < "$D/<이름>.log" | grep -vE "^\s+at |^Caused by" | grep -B10 "FAIL
 | `device '...' not found` / `UNAVAILABLE` | **USB 연결 끊김** | `adb devices -l` 확인. 비면 사용자에게 알린다(소프트웨어로 복구 불가) |
 | 진입부에서 홈·잠금화면 둘 다 못 찾음 | **자동 로그아웃**(유휴 ~10분) | `mResumedActivity`가 `AutoLogoutActivity`/런처인지 확인 → 재로그인 후 **곧바로** 실행 |
 | 덤프에는 **직전 화면**이 보이는데 탭이 전부 헛돎 | 같은 자동 로그아웃 — ★**그 창은 접근성 트리에 안 나온다** | 아래 ②-1 |
-| `로그인 세션이 만료...` | 하루 경과 | `01_01_Login_Success_old.yaml`. **PIN만으로는 복구 안 된다** |
+| `로그인 세션이 만료...` | 하루 경과 | `01_01_로그인_정상_old.yaml`. **PIN만으로는 복구 안 된다** |
 | 상태가 `killed` | 외부 종료(사용자 중단 등) | 플로우 실패가 아니다. 어디까지 갔는지 로그로 확인 |
 | `Unable to launch app` | Server Override의 `APPLY & QUIT` 후 재실행 실패 | 앱 상태 확인 후 재시도 |
 
@@ -48,7 +48,7 @@ adb shell dumpsys activity activities | grep topResumedActivity   # autologout �
 ```
 
 - ⚠️ 입력칸의 `********` 는 **힌트**다. 입력값으로 착각해 "글자가 들어갔다"고 오판하지 말 것.
-- **자동화로 풀 수 없다** → `01_01_Login_Success_old.yaml`(`clearState: true`)로 **로그인
+- **자동화로 풀 수 없다** → `01_01_로그인_정상_old.yaml`(`clearState: true`)로 **로그인
   화면부터** 복구한다(그 화면의 transkey 는 트리에 정상 노출된다). PIN 은 계정(서버) 상태라 유효하다.
   `clearState` 는 앱 언어를 한국어로 되돌리므로, en 검증 중이면 `_set_lang_en_old.yaml` 을 다시 돌린다.
 - `run_test.ps1` 이 실행 전에 이걸 보고 **exit 3 으로 끊는다**(2026-09-15 신설).

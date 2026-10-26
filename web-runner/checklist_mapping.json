@@ -3,368 +3,359 @@
  "_만든_방법": "checklist_migrate.py (V2.1 의 H·I 열을 문구로 맞춰 옮겼다)",
  "mapping": {
   "ATM-001": [
-   "16_ATMWithdraw [03] Withdraw - 출금금액 입력 동작 확인 (- / +)"
+   "16_ATM출금_신청 [03] Withdraw - 출금금액 입력 동작 확인 (- / +)"
   ],
   "ATM-002": [
-   "16_ATMWithdraw [02] Withdraw - [다음] → ATM 선택 바텀시트 발생 확인"
+   "16_ATM출금_신청 [02] Withdraw - [다음] → ATM 선택 바텀시트 발생 확인"
   ],
   "ATM-003": [
-   "16_ATMWithdraw [04] Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인"
+   "16_ATM출금_신청 [04] Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인"
   ],
   "ATM-004": [
-   "16_ATMWithdraw [01] Withdraw - First time using ATM Withdrawal 선택 시 가이드 페이지 이동 확인"
+   "16_ATM출금_신청 [01] Withdraw - First time using ATM Withdrawal 선택 시 가이드 페이지 이동 확인"
   ],
   "BIL-001": [
-   "12_BillPayment [01] Country 검색 동작 확인 / 국가 리스트 및 선택 (Nepal)"
+   "12_청구서결제_해외빌러 [01] Country 검색 동작 확인 / 국가 리스트 및 선택 (Nepal)"
   ],
   "BIL-003": [
-   "12_BillPayment [03] Biller Category(청구 구분) 리스트 및 선택 (모바일/전화)"
+   "12_청구서결제_해외빌러 [03] Biller Category(청구 구분) 리스트 및 선택 (모바일/전화)"
   ],
   "BIL-004": [
-   "12_BillPayment [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)"
+   "12_청구서결제_해외빌러 [04] Biller 검색창 노출 확인 + 선택 (모바일 충전)"
   ],
   "BIL-005": [
-   "12_BillPayment [05] Biller별 입력 필드 노출 확인 (모바일 충전 → 휴대폰 번호)"
+   "12_청구서결제_해외빌러 [05] Biller별 입력 필드 노출 확인 (모바일 충전 → 휴대폰 번호)"
   ],
   "BKG-001": [
-   "20_Booking [02] Book Train Ticket - KTX 예약 동작 정상적으로 진행되는지 확인"
+   "20_예약_기차표결제와이력 [02] Book Train Ticket - KTX 예약 동작 정상적으로 진행되는지 확인"
   ],
   "BKG-002": [
-   "20_Booking [01] View Booking History - 예약 이력 정상노출 확인"
-  ],
-  "CER-002": [
-   "19_IssueCertificate [04] Certificate - 주민등록등본(Household Register, For Koreans)"
-  ],
-  "CER-003": [
-   "19_IssueCertificate [03] Certificate - 주민등록초본(Resident Registration, For Koreans)"
-  ],
-  "CER-004": [
-   "19_IssueCertificate [02] Certificate - 소득금액증명(Certificate of Alien Income, 홈택스)"
+   "20_예약_기차표결제와이력 [01] View Booking History - 예약 이력 정상노출 확인"
   ],
   "CRD-002": [
-   "21_Card [31] Recharge (Wallet) - Simple PW 간편비밀번호 일치/불일치 확인"
+   "21_카드_신청과충전 [31] Recharge (Wallet) - Simple PW 간편비밀번호 일치/불일치 확인"
   ],
   "CRD-006": [
-   "21_Card [32] 실제 환불 집행 — 충전 1원 → 환불 1원(순증 0, 실결제 왕복)"
+   "21_카드_신청과충전 [32] 실제 환불 집행 — 충전 1원 → 환불 1원(순증 0, 실결제 왕복)"
   ],
   "CRD-007": [
-   "21_Card [33-1] 간편비밀번호 일치→구매 성공 / 불일치→PIN_WRONG_PASSWORD 단언, 사후 쿠폰 취소까지 포함"
+   "21_카드_신청과충전 [33-1] 간편비밀번호 일치→구매 성공 / 불일치→PIN_WRONG_PASSWORD 단언, 사후 쿠폰 취소까지 포함"
   ],
   "CRD-012": [
-   "21_Card [01] Card Apply - 카드선택페이지 정상 진입 확인 및 Apply 동작 확인"
+   "21_카드_신청과충전 [01] Card Apply - 카드선택페이지 정상 진입 확인 및 Apply 동작 확인"
   ],
   "CRD-013": [
-   "21_Card [02] Card Apply - Select Pay service 선택 동작 확인"
+   "21_카드_신청과충전 [02] Card Apply - Select Pay service 선택 동작 확인"
   ],
   "CRD-014": [
-   "21_Card [03] Card Apply - 영문이름 수정 및 입력 동작 확인"
+   "21_카드_신청과충전 [03] Card Apply - 영문이름 수정 및 입력 동작 확인"
   ],
   "CRD-015": [
-   "21_Card [04] Card Apply - 비밀번호 4자리 입력 동작 확인"
+   "21_카드_신청과충전 [04] Card Apply - 비밀번호 4자리 입력 동작 확인"
   ],
   "CRD-016": [
-   "21_Card [05] Card Apply - 카드수령 동작 확인 (비대면/대면/브랜치)"
+   "21_카드_신청과충전 [05] Card Apply - 카드수령 동작 확인 (비대면/대면/브랜치)"
   ],
   "CRD-017": [
-   "21_Card [06] Card Apply - 카드신청완료 동작 확인"
+   "21_카드_신청과충전 [06] Card Apply - 카드신청완료 동작 확인"
   ],
   "CRD-018": [
-   "21_Card [07] Card Change - 카드 수령지 상세정보 노출 확인"
+   "21_카드_신청과충전 [07] Card Change - 카드 수령지 상세정보 노출 확인"
   ],
   "CRD-019": [
-   "21_Card [08] Card Change - 주소변경 시 카드수령지 정보 변경 동작 확인"
+   "21_카드_신청과충전 [08] Card Change - 주소변경 시 카드수령지 정보 변경 동작 확인"
   ],
   "CRD-020": [
-   "21_Card [09] Card Change - 카드 정보 변경동작 확인"
+   "21_카드_신청과충전 [09] Card Change - 카드 정보 변경동작 확인"
   ],
   "CRD-021": [
-   "21_Card [10] Card Cancel - 카드 취소시 정상취소 되는지 확인"
+   "21_카드_신청과충전 [10] Card Cancel - 카드 취소시 정상취소 되는지 확인"
   ],
   "CRD-022": [
-   "21_Card [22] Card Management - 카드 혜택페이지 이동 확인 (View Card Benefits)"
+   "21_카드_신청과충전 [22] Card Management - 카드 혜택페이지 이동 확인 (View Card Benefits)"
   ],
   "CRD-023": [
-   "21_Card [11] Card Management - 카드 비밀번호 정상 입력시 카드 정보 페이지 노출 확인"
+   "21_카드_신청과충전 [11] Card Management - 카드 비밀번호 정상 입력시 카드 정보 페이지 노출 확인"
   ],
   "CRD-024": [
-   "21_Card [12] Card Management - CVC 번호 입력 및 카드 비밀번호 변경 동작 확인"
+   "21_카드_신청과충전 [12] Card Management - CVC 번호 입력 및 카드 비밀번호 변경 동작 확인"
   ],
   "CRD-025": [
-   "21_Card [13] Card Management - Pause 버튼 선택 시 토글 스위치 ON/OFF 확인"
+   "21_카드_신청과충전 [13] Card Management - Pause 버튼 선택 시 토글 스위치 ON/OFF 확인"
   ],
   "CRD-026": [
-   "21_Card [14] Card Management - Automatic Recharge 버튼 선택 시 토글 스위치 ON/OFF 확인"
+   "21_카드_신청과충전 [14] Card Management - Automatic Recharge 버튼 선택 시 토글 스위치 ON/OFF 확인"
   ],
   "CRD-027": [
-   "21_Card [15] Card Management - Overseas Use 버튼 선택 시 하위 메뉴 노출 확인"
+   "21_카드_신청과충전 [15] Card Management - Overseas Use 버튼 선택 시 하위 메뉴 노출 확인"
   ],
   "CRD-028": [
-   "21_Card [16] Card Management - 아래 버튼 체크 시 Overseas Use 버튼 OFF 상태 변경 확인"
+   "21_카드_신청과충전 [16] Card Management - 아래 버튼 체크 시 Overseas Use 버튼 OFF 상태 변경 확인"
   ],
   "CRD-029": [
-   "21_Card [17] Card Management - Domestic Use 버튼 선택 시 하위 메뉴 노출 확인"
+   "21_카드_신청과충전 [17] Card Management - Domestic Use 버튼 선택 시 하위 메뉴 노출 확인"
   ],
   "CRD-030": [
-   "21_Card [18] Card Management - 아래 버튼 체크 시 Domestic Use 버튼 OFF 상태 변경 확인"
+   "21_카드_신청과충전 [18] Card Management - 아래 버튼 체크 시 Domestic Use 버튼 OFF 상태 변경 확인"
   ],
   "CRD-031": [
-   "21_Card [19] Card Management - Overseas Won Payment Restrictions 토글 ON/OFF 확인"
+   "21_카드_신청과충전 [19] Card Management - Overseas Won Payment Restrictions 토글 ON/OFF 확인"
   ],
   "CRD-032": [
-   "21_Card [20] Card Management - 카드 분실신고 동작 확인 (Report Lost)"
+   "21_카드_신청과충전 [20] Card Management - 카드 분실신고 동작 확인 (Report Lost)"
   ],
   "CRD-033": [
-   "21_Card [21] Card Management - 카드 취소 선택 시 안내 바텀시트 발생 (Card Cancellation)"
+   "21_카드_신청과충전 [21] Card Management - 카드 취소 선택 시 안내 바텀시트 발생 (Card Cancellation)"
   ],
   "CRD-034": [
-   "21_Card [23] Global QR - Overseas QR Pay Guide 선택시 가이드 화면으로 이동 확인"
+   "21_카드_신청과충전 [23] Global QR - Overseas QR Pay Guide 선택시 가이드 화면으로 이동 확인"
   ],
   "CRD-037": [
-   "21_Card [26] Mobile Transportation - 잔액과 교통카드 번호 표시 확인 (Android)"
+   "21_카드_신청과충전 [26] Mobile Transportation - 잔액과 교통카드 번호 표시 확인 (Android)"
   ],
   "DEP-001": [
-   "14_01_Deposit_seungsoo818 [01] Home - 입금 방법 선택 바텀시트 닫기 동작 확인",
-   "18_Telecom [01] GME Mobile - 홈화면 이동 확인"
+   "14_01_입금_한국인계좌연결 [01] Home - 입금 방법 선택 바텀시트 닫기 동작 확인",
+   "18_통신서비스_외부웹이동 [01] GME Mobile - 홈화면 이동 확인"
   ],
   "DEP-002": [
-   "14_01_Deposit_seungsoo818 KJ 가상계좌 발급 확인 가능 계정 없음"
+   "14_01_입금_한국인계좌연결 KJ 가상계좌 발급 확인 가능 계정 없음"
   ],
   "DEP-003": [
-   "14_01_Deposit_seungsoo818 KJ 가상계좌 발급 확인 가능 계정 없음"
+   "14_01_입금_한국인계좌연결 KJ 가상계좌 발급 확인 가능 계정 없음"
   ],
   "DEP-004": [
-   "14_01_Deposit_seungsoo818 KJ 가상계좌 발급 확인 가능 계정 없음"
+   "14_01_입금_한국인계좌연결 KJ 가상계좌 발급 확인 가능 계정 없음"
   ],
   "DEP-006": [
-   "14_01_Deposit_seungsoo818 [05] GME Wallet Deposit - WSB - WSB 가상계좌 정보 노출 확인"
+   "14_01_입금_한국인계좌연결 [05] GME Wallet Deposit - WSB - WSB 가상계좌 정보 노출 확인"
   ],
   "DEP-015": [
-   "14_03_Deposit_test251024 [13] GMEPay Deposit - See More(실제로는 우상단 정보 아이콘) 선택시 상세 설명 화면 확인"
+   "14_03_입금_GMEPay가상계좌 [13] GMEPay Deposit - See More(실제로는 우상단 정보 아이콘) 선택시 상세 설명 화면 확인"
   ],
   "DEP-016": [
-   "14_02_Deposit_test123 [14] ATM Deposit - ATM Deposit Without Card / ATM Deposit using Card 탭 확인"
+   "14_02_입금_외국인계좌미연결 [14] ATM Deposit - ATM Deposit Without Card / ATM Deposit using Card 탭 확인"
   ],
   "DEP-017": [
-   "14_02_Deposit_test123 [15] ATM Deposit - ATM 이용 안내 선택 시 가이드 페이지 노출 확인"
+   "14_02_입금_외국인계좌미연결 [15] ATM Deposit - ATM 이용 안내 선택 시 가이드 페이지 노출 확인"
   ],
   "DEP-018": [
-   "14_02_Deposit_test123 [16] ATM Deposit - Request deposit 선택시 ATM Deposit 화면 이동 확인"
+   "14_02_입금_외국인계좌미연결 [16] ATM Deposit - Request deposit 선택시 ATM Deposit 화면 이동 확인"
   ],
   "DEP-019": [
-   "14_02_Deposit_test123 [17] ATM Deposit - NICE - Deposit 금액 입력동작 확인 및 Apply 동작 확인"
+   "14_02_입금_외국인계좌미연결 [17] ATM Deposit - NICE - Deposit 금액 입력동작 확인 및 Apply 동작 확인"
   ],
   "DEP-020": [
-   "14_02_Deposit_test123 [18] ATM Deposit - NICE - Find nearest ATM 선택 시 근처 NICE ATM 위치 확인"
+   "14_02_입금_외국인계좌미연결 [18] ATM Deposit - NICE - Find nearest ATM 선택 시 근처 NICE ATM 위치 확인"
   ],
   "DEP-021": [
-   "14_02_Deposit_test123 [19] ATM Deposit - HYOSUNG - Deposit 금액 입력동작 확인 및 Apply 동작 확인"
+   "14_02_입금_외국인계좌미연결 [19] ATM Deposit - HYOSUNG - Deposit 금액 입력동작 확인 및 Apply 동작 확인"
   ],
   "DEP-022": [
-   "14_02_Deposit_test123 [20] ATM Deposit - HYOSUNG - Find nearest ATM 선택 시 근처 HYOSUNG ATM 위치 확인"
+   "14_02_입금_외국인계좌미연결 [20] ATM Deposit - HYOSUNG - Find nearest ATM 선택 시 근처 HYOSUNG ATM 위치 확인"
   ],
   "DEP-023": [
-   "14_02_Deposit_test123 [21] ATM Deposit - Card - 이용 가능한 편의점 리스트 노출 확인"
+   "14_02_입금_외국인계좌미연결 [21] ATM Deposit - Card - 이용 가능한 편의점 리스트 노출 확인"
   ],
   "DEP-024": [
-   "14_02_Deposit_test123 [22] ATM Deposit - Card - 편의점 ATM 별 이용 가이드 페이지 확인"
+   "14_02_입금_외국인계좌미연결 [22] ATM Deposit - Card - 편의점 ATM 별 이용 가이드 페이지 확인"
   ],
   "DEP-025": [
-   "14_02_Deposit_test123 [23] ATM Deposit - History - History 선택시 ATM Deposit 내역 노출 확인"
+   "14_02_입금_외국인계좌미연결 [23] ATM Deposit - History - History 선택시 ATM Deposit 내역 노출 확인"
   ],
   "DEP-027": [
-   "14_01_Deposit_seungsoo818 [25] Auto Debit Deposit - 등록된 KFTC 계좌리스트 노출 확인 및 변경동작 확인"
+   "14_01_입금_한국인계좌연결 [25] Auto Debit Deposit - 등록된 KFTC 계좌리스트 노출 확인 및 변경동작 확인"
   ],
   "DEP-028": [
-   "14_01_Deposit_seungsoo818 [26] Auto Debit Deposit - View Balance 통해 잔액조회 확인"
+   "14_01_입금_한국인계좌연결 [26] Auto Debit Deposit - View Balance 통해 잔액조회 확인"
   ],
   "DEP-029": [
-   "14_01_Deposit_seungsoo818 [27] Auto Debit Deposit - 충전 금액 입력 동작 확인"
+   "14_01_입금_한국인계좌연결 [27] Auto Debit Deposit - 충전 금액 입력 동작 확인"
   ],
   "DEP-031": [
-   "14_01_Deposit_seungsoo818 [28] Store Deposit - Request - Deposit 금액 입력 및 Confirm 동작 확인"
+   "14_01_입금_한국인계좌연결 [28] Store Deposit - Request - Deposit 금액 입력 및 Confirm 동작 확인"
   ],
   "DEP-032": [
-   "14_02_Deposit_test123 [29] Store Deposit - Request - Request 완료시 Barcode, Number, Deposit Amount, Time Limit이 표시됨"
+   "14_02_입금_외국인계좌미연결 [29] Store Deposit - Request - Request 완료시 Barcode, Number, Deposit Amount, Time Limit이 표시됨"
   ],
   "DEP-033": [
-   "14_01_Deposit_seungsoo818 [30] Store Deposit - Request - [?] 선택시 How to deposit 화면 이동 확인"
+   "14_01_입금_한국인계좌연결 [30] Store Deposit - Request - [?] 선택시 How to deposit 화면 이동 확인"
   ],
   "DEP-034": [
-   "14_01_Deposit_seungsoo818 [31] Store Deposit - Request - Quick Guide 진입후 각 편의점 가이드 표시 확인"
+   "14_01_입금_한국인계좌연결 [31] Store Deposit - Request - Quick Guide 진입후 각 편의점 가이드 표시 확인"
   ],
   "DEP-035": [
-   "14_01_Deposit_seungsoo818 [32] Store Deposit - Request - Start Store Deposit(실제 버튼명 매장에서 입금하기) 선택시 화면 이동 확인"
+   "14_01_입금_한국인계좌연결 [32] Store Deposit - Request - Start Store Deposit(실제 버튼명 매장에서 입금하기) 선택시 화면 이동 확인"
   ],
   "DEP-036": [
-   "14_01_Deposit_seungsoo818 [33] Store Deposit - History - History 탭 Deposit 이력 확인"
+   "14_01_입금_한국인계좌연결 [33] Store Deposit - History - History 탭 Deposit 이력 확인"
   ],
   "DEP-037": [
-   "14_01_Deposit_seungsoo818 [34] Store Deposit - History - Control Number 검색 동작 확인"
+   "14_01_입금_한국인계좌연결 [34] Store Deposit - History - Control Number 검색 동작 확인"
   ],
   "DOM-001": [
-   "03_Domestic [01] Wallet → KFTC 은행계좌 송금 (계좌번호 입력→은행리스트 노출)"
+   "03_국내송금_월렛과계좌 [01] Wallet → KFTC 은행계좌 송금 (계좌번호 입력→은행리스트 노출)"
   ],
   "DOM-002": [
-   "03_Domestic [01]/[03] 은행 칩(KFTC_BANK_CHIP / BANK_002_SHORTNAME) 선택 동작"
+   "03_국내송금_월렛과계좌 [01]/[03] 은행 칩(KFTC_BANK_CHIP / BANK_002_SHORTNAME) 선택 동작"
   ],
   "DOM-003": [
-   "03_Domestic [01] 금액 입력 동작"
+   "03_국내송금_월렛과계좌 [01] 금액 입력 동작"
   ],
   "DOM-004": [
-   "03_Domestic [02] Wallet → 다른 월렛 송금 (LEE SEUNGSOO 선택 → 동일계좌 에러 확인)"
+   "03_국내송금_월렛과계좌 [02] Wallet → 다른 월렛 송금 (LEE SEUNGSOO 선택 → 동일계좌 에러 확인)"
   ],
   "DOM-005": [
-   "03_Domestic [02] Wallet → 다른 월렛 송금 (PARK DOYOUNG, PIN, 성공)"
+   "03_국내송금_월렛과계좌 [02] Wallet → 다른 월렛 송금 (PARK DOYOUNG, PIN, 성공)"
   ],
   "DOM-006": [
-   "03_Domestic [04] Wallet → 내 은행계좌 송금"
+   "03_국내송금_월렛과계좌 [04] Wallet → 내 은행계좌 송금"
   ],
   "DOM-007": [
-   "03_Domestic [03] Wallet → 타인 은행계좌 송금"
+   "03_국내송금_월렛과계좌 [03] Wallet → 타인 은행계좌 송금"
   ],
   "DOM-008": [
-   "03_Domestic [01] 간편비밀번호 오류 → 정상 입력"
+   "03_국내송금_월렛과계좌 [01] 간편비밀번호 오류 → 정상 입력"
   ],
   "DOM-015": [
-   "03_Domestic [05] KFTC → 타인 Wallet 송금 불가 동작 확인"
+   "03_국내송금_월렛과계좌 [05] KFTC → 타인 Wallet 송금 불가 동작 확인"
   ],
   "DOM-016": [
-   "03_Domestic [06] KFTC → My Wallet OTP 불일치 시 송금불가 확인"
+   "03_국내송금_월렛과계좌 [06] KFTC → My Wallet OTP 불일치 시 송금불가 확인"
   ],
   "DTU-001": [
-   "10_DomesticTopup [01] Phone Number - 자동입력된 핸드폰 번호 노출 확인"
+   "10_국내충전_번호입력 [01] Phone Number - 자동입력된 핸드폰 번호 노출 확인"
   ],
   "DTU-002": [
-   "10_DomesticTopup [02] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인"
+   "10_국내충전_번호입력 [02] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인"
   ],
   "DTU-003": [
-   "10_DomesticTopup [03] Phone Number - 주소록 버튼 선택 시 주소록 번호 모바일 필드에 추가 동작 확인"
+   "10_국내충전_번호입력 [03] Phone Number - 주소록 버튼 선택 시 주소록 번호 모바일 필드에 추가 동작 확인"
   ],
   "DTU-004": [
-   "10_DomesticTopup [04] Wallet Charging (PPS) - PPS 번호 충전 동작 확인 (Simple PW)"
+   "10_국내충전_번호입력 [04] Wallet Charging (PPS) - PPS 번호 충전 동작 확인 (Simple PW)"
   ],
   "EVT-001": [
-   "22_Event [01] Ongoing Events - Share With my Friends 동작 확인"
+   "22_이벤트_친구공유 [01] Ongoing Events - Share With my Friends 동작 확인"
   ],
   "HOM-001": [
-   "09_Home [05] 알림 내역 표시 (검색창 노출만, 실제 검색 미수행)"
+   "09_홈화면_요소와진입경로 [05] 알림 내역 표시 (검색창 노출만, 실제 검색 미수행)"
   ],
   "HOM-002": [
-   "09_Home [23] 알림 선택시 내용 표시 + N표시 사라짐 확인"
+   "09_홈화면_요소와진입경로 [23] 알림 선택시 내용 표시 + N표시 사라짐 확인"
   ],
   "HOM-003": [
-   "09_Home [25] 알림 삭제 동작 확인"
+   "09_홈화면_요소와진입경로 [25] 알림 삭제 동작 확인"
   ],
   "HOM-004": [
-   "09_Home [05] 공지사항 내역 표시 (검색창 노출만, 실제 검색 미수행)"
+   "09_홈화면_요소와진입경로 [05] 공지사항 내역 표시 (검색창 노출만, 실제 검색 미수행)"
   ],
   "HOM-005": [
-   "09_Home [22] 공지사항 선택시 내용 표시 확인"
+   "09_홈화면_요소와진입경로 [22] 공지사항 선택시 내용 표시 확인"
   ],
   "HOM-006": [
-   "09_Home [01]+[14] GME Wallet Number 노출·Copy 완료 토스트"
+   "09_홈화면_요소와진입경로 [01]+[14] GME Wallet Number 노출·Copy 완료 토스트"
   ],
   "HOM-007": [
-   "09_Home [01]+[07] Total GME Balance 노출·Available(잔액 상세) 전환"
+   "09_홈화면_요소와진입경로 [01]+[07] Total GME Balance 노출·Available(잔액 상세) 전환"
   ],
   "HOM-008": [
-   "09_Home [02] 잔액 마스킹 토글(눈 아이콘)"
+   "09_홈화면_요소와진입경로 [02] 잔액 마스킹 토글(눈 아이콘)"
   ],
   "HOM-009": [
-   "09_Home [09] 송금 버튼→송금 바텀시트(해외/국내)"
+   "09_홈화면_요소와진입경로 [09] 송금 버튼→송금 바텀시트(해외/국내)"
   ],
   "HOM-010": [
-   "09_Home [10] 입금 버튼→GME Deposit Service 화면 이동"
+   "09_홈화면_요소와진입경로 [10] 입금 버튼→GME Deposit Service 화면 이동"
   ],
   "HOM-011": [
-   "09_Home [08] 은행 아이콘 탭 전환 (Wallet에서 스와이프시 Bank 이동은 미검증)"
+   "09_홈화면_요소와진입경로 [08] 은행 아이콘 탭 전환 (Wallet에서 스와이프시 Bank 이동은 미검증)"
   ],
   "HOM-012": [
-   "09_Home [16] KFTC Account Number 노출 + Copy 동작 확인"
+   "09_홈화면_요소와진입경로 [16] KFTC Account Number 노출 + Copy 동작 확인"
   ],
   "HOM-013": [
-   "09_Home [17] Bank Balance 숨기기/보이기 동작 확인"
+   "09_홈화면_요소와진입경로 [17] Bank Balance 숨기기/보이기 동작 확인"
   ],
   "HOM-014": [
-   "09_Home [18] Transfer → 송금 바텀시트(해외/국내) 발생 확인"
+   "09_홈화면_요소와진입경로 [18] Transfer → 송금 바텀시트(해외/국내) 발생 확인"
   ],
   "HOM-015": [
-   "09_Home [19] Check Statement → 은행 거래내역 이동 확인"
+   "09_홈화면_요소와진입경로 [19] Check Statement → 은행 거래내역 이동 확인"
   ],
   "HOM-016": [
-   "09_Home [20] Bank 페이지 스와이프 → 계좌추가 페이지 노출 확인"
+   "09_홈화면_요소와진입경로 [20] Bank 페이지 스와이프 → 계좌추가 페이지 노출 확인"
   ],
   "HOM-017": [
-   "09_Home [21] Add bank account → 은행 계좌 등록 화면 전환 확인"
+   "09_홈화면_요소와진입경로 [21] Add bank account → 은행 계좌 등록 화면 전환 확인"
   ],
   "HOM-018": [
-   "09_Home [04] QR 아이콘→QR 페이지 전환"
+   "09_홈화면_요소와진입경로 [04] QR 아이콘→QR 페이지 전환"
   ],
   "HOM-019": [
-   "09_Home [04] Send 버튼 노출만 (바텀시트 탭 후 Global QR/Local 진입 미검증)"
+   "09_홈화면_요소와진입경로 [04] Send 버튼 노출만 (바텀시트 탭 후 Global QR/Local 진입 미검증)"
   ],
   "HOM-020": [
-   "09_Home [04] Receive 버튼 노출만 (My QR 이동 미검증)"
+   "09_홈화면_요소와진입경로 [04] Receive 버튼 노출만 (My QR 이동 미검증)"
   ],
   "HOM-021": [
-   "09_Home [01]+[06] Reward Points 노출·선택시 이동"
+   "09_홈화면_요소와진입경로 [01]+[06] Reward Points 노출·선택시 이동"
   ],
   "HOM-022": [
-   "07_TodaysRate [01] 홈 환율 탭→Today's Rate 화면 이동"
+   "07_오늘의환율_환율계산 [01] 홈 환율 탭→Today's Rate 화면 이동"
   ],
   "HOM-023": [
-   "09_Home [12] 플로팅 고객지원→Customer Support 팝업"
+   "09_홈화면_요소와진입경로 [12] 플로팅 고객지원→Customer Support 팝업"
   ],
   "HOM-024": [
-   "09_Home [12] Live Chat 항목 노출만 (탭 후 챗봇 화면 전환 미검증)"
+   "09_홈화면_요소와진입경로 [12] Live Chat 항목 노출만 (탭 후 챗봇 화면 전환 미검증)"
   ],
   "HOM-028": [
-   "09_Home [12] 메신저 채널 전환(카카오/텔레그램, env SCR_KAKAO)"
+   "09_홈화면_요소와진입경로 [12] 메신저 채널 전환(카카오/텔레그램, env SCR_KAKAO)"
   ],
   "HOM-029": [
-   "09_Home [24] 전화번호 자동입력 확인(다이얼러 진입까지)"
+   "09_홈화면_요소와진입경로 [24] 전화번호 자동입력 확인(다이얼러 진입까지)"
   ],
   "INI-001": [
-   "05_InitialScreen [02] 언어 변경·복귀"
+   "05_초기화면_로그인전 [02] 언어 변경·복귀"
   ],
   "INI-002": [
-   "05_InitialScreen [03]+[04] 탭 전환·금액·통화 변경"
+   "05_초기화면_로그인전 [03]+[04] 탭 전환·금액·통화 변경"
   ],
   "INI-003": [
-   "05_InitialScreen [05] New User→약관 화면"
+   "05_초기화면_로그인전 [05] New User→약관 화면"
   ],
   "INI-004": [
-   "05_InitialScreen [06] Login→로그인 화면"
+   "05_초기화면_로그인전 [06] Login→로그인 화면"
   ],
   "INI-005": [
-   "05_InitialScreen [07] Branch→지점 목록"
+   "05_초기화면_로그인전 [07] Branch→지점 목록"
   ],
   "INI-007": [
-   "05_InitialScreen [01] 하단 앱 버전 표시 확인 (appVersionTxtView)"
+   "05_초기화면_로그인전 [01] 하단 앱 버전 표시 확인 (appVersionTxtView)"
   ],
   "ITU-001": [
-   "11_IntlTopup [01] Select Country - 나라 리스트 노출 및 선택 (Sri Lanka)"
+   "11_해외충전_통신사상품결제 [01] Select Country - 나라 리스트 노출 및 선택 (Sri Lanka)"
   ],
   "ITU-002": [
-   "11_IntlTopup [02] 올바른 번호 입력 동작 확인 (0776348242 반영)"
+   "11_해외충전_통신사상품결제 [02] 올바른 번호 입력 동작 확인 (0776348242 반영)"
   ],
   "ITU-003": [
-   "11_IntlTopup [03] Charging Account - 출금계좌 선택 (GME Wallet = 간편비밀번호 경로)"
+   "11_해외충전_통신사상품결제 [03] Charging Account - 출금계좌 선택 (GME Wallet = 간편비밀번호 경로)"
   ],
   "ITU-004": [
-   "11_IntlTopup [04] 잘못된 번호 입력 → 인라인 에러 + 계속 비활성"
+   "11_해외충전_통신사상품결제 [04] 잘못된 번호 입력 → 인라인 에러 + 계속 비활성"
   ],
   "ITU-005": [
-   "11_IntlTopup [05] 올바른 번호 + [Continue] → 상품 선택 페이지 노출"
+   "11_해외충전_통신사상품결제 [05] 올바른 번호 + [Continue] → 상품 선택 페이지 노출"
   ],
   "ITU-006": [
-   "11_IntlTopup [06] Carrier - 통신사 리스트 노출 및 선택 (Dialog Sri Lanka)"
+   "11_해외충전_통신사상품결제 [06] Carrier - 통신사 리스트 노출 및 선택 (Dialog Sri Lanka)"
   ],
   "ITU-007": [
-   "11_IntlTopup [07] Product - 상품 요금제 리스트 노출 및 선택 (50 LKR)"
+   "11_해외충전_통신사상품결제 [07] Product - 상품 요금제 리스트 노출 및 선택 (50 LKR)"
   ],
   "ITU-008": [
-   "11_IntlTopup [08] Amount - 상품 금액에 따라 원화(총 지급액) 자동 계산 노출"
+   "11_해외충전_통신사상품결제 [08] Amount - 상품 금액에 따라 원화(총 지급액) 자동 계산 노출"
   ],
   "LGN-001": [
    "— —"
@@ -373,13 +364,13 @@
    "— —"
   ],
   "LGN-003": [
-   "01_03_Login_screen_safe [02] Register Here - 이용약관 동의 화면 노출 확인"
+   "01_03_로그인화면_이동경로 [02] Register Here - 이용약관 동의 화면 노출 확인"
   ],
   "LGN-005": [
-   "01_01_Login_Success [02] 로그인 — 복합 비밀번호 로그인 성공"
+   "01_01_로그인_정상 [02] 로그인 — 복합 비밀번호 로그인 성공"
   ],
   "LGN-008": [
-   "01_01_Login_Success [04] 간편비밀번호 설정 · 로그인 성공"
+   "01_01_로그인_정상 [04] 간편비밀번호 설정 · 로그인 성공"
   ],
   "LGN-011": [
    "— —"
@@ -388,484 +379,484 @@
    "— —"
   ],
   "MNU-001": [
-   "09_Home [13] 드로어 헤더 Full Name/Phone/Email 표시 확인(값 형식 단언 보강)"
+   "09_홈화면_요소와진입경로 [13] 드로어 헤더 Full Name/Phone/Email 표시 확인(값 형식 단언 보강)"
   ],
   "MNU-014": [
-   "26_Menu [01-1] 은행 계좌 연결 -> [?](csButton) -> 고객센터 팝업 발생 확인"
+   "04_01_메뉴_드로어와설정 [01-1] 은행 계좌 연결 -> [?](csButton) -> 고객센터 팝업 발생 확인"
   ],
   "MNU-020": [
-   "04_Menu_History [41] History - My Usage - [<-],[->] 버튼 선택 시 날짜(월) 변경 확인"
+   "04_02_메뉴_거래내역 [41] History - My Usage - [<-],[->] 버튼 선택 시 날짜(월) 변경 확인"
   ],
   "MNU-021": [
-   "04_Menu_History [42] History - My Usage - [Chart] 버튼 선택 시 막대/도넛 차트 변경 확인"
+   "04_02_메뉴_거래내역 [42] History - My Usage - [Chart] 버튼 선택 시 막대/도넛 차트 변경 확인"
   ],
   "MNU-022": [
-   "04_Menu_History [43] My Usage - GME Card 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [43] My Usage - GME Card 선택 시 화면 진입"
   ],
   "MNU-023": [
-   "04_Menu_History [44] My Usage - Overseas Transfer 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [44] My Usage - Overseas Transfer 선택 시 화면 진입"
   ],
   "MNU-024": [
-   "04_Menu_History [45] My Usage - Domestic Transfer 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [45] My Usage - Domestic Transfer 선택 시 화면 진입"
   ],
   "MNU-025": [
-   "04_Menu_History [46] My Usage - International Bill Payment 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [46] My Usage - International Bill Payment 선택 시 화면 진입"
   ],
   "MNU-026": [
-   "04_Menu_History [47] My Usage - ATM Withdrawal 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [47] My Usage - ATM Withdrawal 선택 시 화면 진입"
   ],
   "MNU-027": [
-   "04_Menu_History [48] My Usage - International Top-up 선택 시 화면 진입"
+   "04_02_메뉴_거래내역 [48] My Usage - International Top-up 선택 시 화면 진입"
   ],
   "MNU-028": [
-   "04_Menu_History [04] History - Remittance - 해외송금 필터동작 확인"
+   "04_02_메뉴_거래내역 [04] History - Remittance - 해외송금 필터동작 확인"
   ],
   "MNU-029": [
-   "04_Menu_History [06] 해외송금 이력 다운로드"
+   "04_02_메뉴_거래내역 [06] 해외송금 이력 다운로드"
   ],
   "MNU-030": [
-   "04_Menu_History [02] History - Remittance - 해외송금 Wallet 송금내역 재송금 동작 확인 (Send Money)"
+   "04_02_메뉴_거래내역 [02] History - Remittance - 해외송금 Wallet 송금내역 재송금 동작 확인 (Send Money)"
   ],
   "MNU-031": [
-   "04_Menu_History [01] History - Remittance - 해외송금 상세페이지 재송금(Send Money) 동작 확인"
+   "04_02_메뉴_거래내역 [01] History - Remittance - 해외송금 상세페이지 재송금(Send Money) 동작 확인"
   ],
   "MNU-032": [
-   "04_Menu_History [05] History - Remittance - 해외송금 영수증 다운로드 동작 확인"
+   "04_02_메뉴_거래내역 [05] History - Remittance - 해외송금 영수증 다운로드 동작 확인"
   ],
   "MNU-033": [
-   "04_Menu_History [03] History - Remittance - 해외송금 검색동작 확인"
+   "04_02_메뉴_거래내역 [03] History - Remittance - 해외송금 검색동작 확인"
   ],
   "MNU-034": [
-   "04_Menu_History [07] History - Remittance - 스케줄송금 필터 동작 확인"
+   "04_02_메뉴_거래내역 [07] History - Remittance - 스케줄송금 필터 동작 확인"
   ],
   "MNU-035": [
-   "04_Menu_History [08] History - Remittance - 스케줄송금 상세페이지 확인"
+   "04_02_메뉴_거래내역 [08] History - Remittance - 스케줄송금 상세페이지 확인"
   ],
   "MNU-036": [
-   "04_Menu_History [09] 스케줄송금 이력 다운로드"
+   "04_02_메뉴_거래내역 [09] 스케줄송금 이력 다운로드"
   ],
   "MNU-037": [
-   "04_Menu_History [10] History - Remittance - 스케줄송금 검색동작 확인"
+   "04_02_메뉴_거래내역 [10] History - Remittance - 스케줄송금 검색동작 확인"
   ],
   "MNU-038": [
-   "04_Menu_History [11] History - Remittance - 국내송금 검색동작 확인"
+   "04_02_메뉴_거래내역 [11] History - Remittance - 국내송금 검색동작 확인"
   ],
   "MNU-039": [
-   "04_Menu_History [12] History - Remittance - 국내송금 상세페이지 확인"
+   "04_02_메뉴_거래내역 [12] History - Remittance - 국내송금 상세페이지 확인"
   ],
   "MNU-040": [
-   "04_Menu_History [13] History - Remittance - 국내송금 영수증 다운로드 동작 확인"
+   "04_02_메뉴_거래내역 [13] History - Remittance - 국내송금 영수증 다운로드 동작 확인"
   ],
   "MNU-041": [
-   "04_Menu_History [14] 국내송금 이력 다운로드"
+   "04_02_메뉴_거래내역 [14] 국내송금 이력 다운로드"
   ],
   "MNU-042": [
-   "04_Menu_History [15] History - Remittance - 국내송금 필터동작 확인"
+   "04_02_메뉴_거래내역 [15] History - Remittance - 국내송금 필터동작 확인"
   ],
   "MNU-043": [
-   "04_Menu_History [16] History - Remittance - 인바운드 필터 동작 확인"
+   "04_02_메뉴_거래내역 [16] History - Remittance - 인바운드 필터 동작 확인"
   ],
   "MNU-044": [
-   "04_Menu_History [17] History - Remittance - 인바운드 상세페이지 확인"
+   "04_02_메뉴_거래내역 [17] History - Remittance - 인바운드 상세페이지 확인"
   ],
   "MNU-045": [
-   "04_Menu_History [18] 인바운드 이력 다운로드"
+   "04_02_메뉴_거래내역 [18] 인바운드 이력 다운로드"
   ],
   "MNU-046": [
-   "04_Menu_History [19] History - Remittance - 인바운드 검색 동작 확인"
+   "04_02_메뉴_거래내역 [19] History - Remittance - 인바운드 검색 동작 확인"
   ],
   "MNU-047": [
-   "04_Menu_History [20] History - Account - Wallet Statement 잔액 확인"
+   "04_02_메뉴_거래내역 [20] History - Account - Wallet Statement 잔액 확인"
   ],
   "MNU-048": [
-   "04_Menu_History [21] History - Account - Wallet Statement 필터 동작 확인"
+   "04_02_메뉴_거래내역 [21] History - Account - Wallet Statement 필터 동작 확인"
   ],
   "MNU-049": [
-   "04_Menu_History [22] Wallet Statement 이력 다운로드"
+   "04_02_메뉴_거래내역 [22] Wallet Statement 이력 다운로드"
   ],
   "MNU-050": [
-   "04_Menu_History [23] History - Account - Wallet Statement 검색동작 확인"
+   "04_02_메뉴_거래내역 [23] History - Account - Wallet Statement 검색동작 확인"
   ],
   "MNU-051": [
-   "04_Menu_History [24] History - Account - Bank Statement 조회 확인"
+   "04_02_메뉴_거래내역 [24] History - Account - Bank Statement 조회 확인"
   ],
   "MNU-052": [
-   "04_Menu_History [25] Bank Statement 검색 (비매칭 ZZZZZ → 결과 0건)"
+   "04_02_메뉴_거래내역 [25] Bank Statement 검색 (비매칭 ZZZZZ → 결과 0건)"
   ],
   "MNU-053": [
-   "04_Menu_History [26] History - GMEPAY - All(모든 거래) 탭 잔액 확인"
+   "04_02_메뉴_거래내역 [26] History - GMEPAY - All(모든 거래) 탭 잔액 확인"
   ],
   "MNU-054": [
-   "04_Menu_History [27] History - GMEPAY - All 탭 이력 및 검색동작 확인"
+   "04_02_메뉴_거래내역 [27] History - GMEPAY - All 탭 이력 및 검색동작 확인"
   ],
   "MNU-055": [
-   "04_Menu_History [28] History - GMEPAY - Card Expenses(사용 내역) 이력 및 검색동작 확인"
+   "04_02_메뉴_거래내역 [28] History - GMEPAY - Card Expenses(사용 내역) 이력 및 검색동작 확인"
   ],
   "MNU-056": [
-   "04_Menu_History [29] History - GMEPAY - Purchase History(결제 내역) 이력 및 검색동작 확인"
+   "04_02_메뉴_거래내역 [29] History - GMEPAY - Purchase History(결제 내역) 이력 및 검색동작 확인"
   ],
   "MNU-057": [
-   "04_Menu_History [30] History - Top-up - Domestic(국내 송금) Topup 리스트 노출 확인"
+   "04_02_메뉴_거래내역 [30] History - Top-up - Domestic(국내 송금) Topup 리스트 노출 확인"
   ],
   "MNU-058": [
-   "04_Menu_History [31] History - Top-up - Domestic Topup 필터 동작 확인"
+   "04_02_메뉴_거래내역 [31] History - Top-up - Domestic Topup 필터 동작 확인"
   ],
   "MNU-059": [
-   "04_Menu_History [32] History - Top-up - Domestic Topup 검색 동작 확인"
+   "04_02_메뉴_거래내역 [32] History - Top-up - Domestic Topup 검색 동작 확인"
   ],
   "MNU-060": [
-   "04_Menu_History [33] History - Top-up - International(해외) Topup 리스트 노출 확인"
+   "04_02_메뉴_거래내역 [33] History - Top-up - International(해외) Topup 리스트 노출 확인"
   ],
   "MNU-061": [
-   "04_Menu_History [34] History - Top-up - International Topup 필터 동작 확인"
+   "04_02_메뉴_거래내역 [34] History - Top-up - International Topup 필터 동작 확인"
   ],
   "MNU-062": [
-   "04_Menu_History [35] History - Top-up - International Topup 검색 동작 확인"
+   "04_02_메뉴_거래내역 [35] History - Top-up - International Topup 검색 동작 확인"
   ],
   "MNU-063": [
-   "04_Menu_History [36] 쿠폰 리스트(사용가능/사용한/만료된/서비스쿠폰 탭 3종) 확인"
+   "04_02_메뉴_거래내역 [36] 쿠폰 리스트(사용가능/사용한/만료된/서비스쿠폰 탭 3종) 확인"
   ],
   "MNU-064": [
-   "04_Menu_History [37] Reward Point 필터 노출 확인"
+   "04_02_메뉴_거래내역 [37] Reward Point 필터 노출 확인"
   ],
   "MNU-065": [
-   "04_Menu_History [38] [포인트 사용하기] → GME Shop 페이지 이동 확인"
+   "04_02_메뉴_거래내역 [38] [포인트 사용하기] → GME Shop 페이지 이동 확인"
   ],
   "MNU-066": [
-   "04_Menu_History [39] History - Bill Payment - Bill Payment History 필터 동작 확인"
+   "04_02_메뉴_거래내역 [39] History - Bill Payment - Bill Payment History 필터 동작 확인"
   ],
   "MNU-067": [
-   "04_Menu_History [40] History - Bill Payment - Bill Payment History 검색 동작 확인"
+   "04_02_메뉴_거래내역 [40] History - Bill Payment - Bill Payment History 검색 동작 확인"
   ],
   "MNU-068": [
-   "26_Menu [03-1] 지점 -> 주소 복사 -> 복사 완료 토스트"
+   "04_01_메뉴_드로어와설정 [03-1] 지점 -> 주소 복사 -> 복사 완료 토스트"
   ],
   "MNU-069": [
-   "26_Menu [03-2] 지점 -> 주소 한/영 변환 (한국어 주소 <-> English Address)"
+   "04_01_메뉴_드로어와설정 [03-2] 지점 -> 주소 한/영 변환 (한국어 주소 <-> English Address)"
   ],
   "MNU-070": [
-   "26_Menu [03-3] 지점 -> 영업시간 펼침/접기"
+   "04_01_메뉴_드로어와설정 [03-3] 지점 -> 영업시간 펼침/접기"
   ],
   "MNU-071": [
-   "26_Menu [03-4] 지점 -> 지도 선택 -> 외부 지도 앱 진입"
+   "04_01_메뉴_드로어와설정 [03-4] 지점 -> 지도 선택 -> 외부 지도 앱 진입"
   ],
   "MNU-072": [
-   "26_Menu [04] 드로어 -> GME 소개 -> 앱 버전/업데이트 확인 노출"
+   "04_01_메뉴_드로어와설정 [04] 드로어 -> GME 소개 -> 앱 버전/업데이트 확인 노출"
   ],
   "MNU-073": [
-   "26_Menu [04-1] GME 소개 -> SNS [f] -> 페이스북(외부 앱/브라우저) 진입"
+   "04_01_메뉴_드로어와설정 [04-1] GME 소개 -> SNS [f] -> 페이스북(외부 앱/브라우저) 진입"
   ],
   "MNU-074": [
-   "04_02_Change_LoginPassword [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
+   "04_04_메뉴설정_로그인비번변경 [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
   ],
   "MNU-075": [
-   "04_02_Change_LoginPassword [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
+   "04_04_메뉴설정_로그인비번변경 [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
   ],
   "MNU-076": [
-   "04_02_Change_LoginPassword [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
+   "04_04_메뉴설정_로그인비번변경 [06][07][08] 현재/새/확인 입력 동작 + 규칙 인디케이터 확인"
   ],
   "MNU-077": [
-   "04_02_Change_LoginPassword [09] 새 비밀번호 규칙 미충족 - 최소 자릿수(9) 미달 시 인디케이터 미체크"
+   "04_04_메뉴설정_로그인비번변경 [09] 새 비밀번호 규칙 미충족 - 최소 자릿수(9) 미달 시 인디케이터 미체크"
   ],
   "MNU-078": [
-   "04_02_Change_LoginPassword [10] 새 비밀번호와 확인 불일치 -> checkPassMatch 미체크"
+   "04_04_메뉴설정_로그인비번변경 [10] 새 비밀번호와 확인 불일치 -> checkPassMatch 미체크"
   ],
   "MNU-079": [
-   "04_02_Change_LoginPassword [11] 현재 비밀번호 오입력 시 서버 거절"
+   "04_04_메뉴설정_로그인비번변경 [11] 현재 비밀번호 오입력 시 서버 거절"
   ],
   "MNU-080": [
-   "04_02_Change_LoginPassword [12][13] 실제 변경(PW_CUR->PW_NEW)->로그아웃->새 비밀번호 로그인 / 원복"
+   "04_04_메뉴설정_로그인비번변경 [12][13] 실제 변경(PW_CUR->PW_NEW)->로그아웃->새 비밀번호 로그인 / 원복"
   ],
   "MNU-081": [
-   "26_Menu [08-5] 설정 -> 간편 비밀번호 변경 -> 키패드 [X] -> 취소 팝업 아니요/예"
+   "04_01_메뉴_드로어와설정 [08-5] 설정 -> 간편 비밀번호 변경 -> 키패드 [X] -> 취소 팝업 아니요/예"
   ],
   "MNU-082": [
-   "04_01_Change_SimplePassword [02] 1단계 - 현재 PIN 오입력(0909) 거절"
+   "04_03_메뉴설정_간편비번변경 [02] 1단계 - 현재 PIN 오입력(0909) 거절"
   ],
   "MNU-083": [
-   "04_01_Change_SimplePassword [02] 1단계 - 정상 PIN 통과"
+   "04_03_메뉴설정_간편비번변경 [02] 1단계 - 정상 PIN 통과"
   ],
   "MNU-084": [
-   "04_01_Change_SimplePassword [03] 2단계 - 현재와 동일한 PIN은 새 비밀번호로 거절"
+   "04_03_메뉴설정_간편비번변경 [03] 2단계 - 현재와 동일한 PIN은 새 비밀번호로 거절"
   ],
   "MNU-085": [
-   "04_01_Change_SimplePassword [03] 2단계 - 유효한 새 PIN 입력 -> 3단계 이동"
+   "04_03_메뉴설정_간편비번변경 [03] 2단계 - 유효한 새 PIN 입력 -> 3단계 이동"
   ],
   "MNU-086": [
-   "04_01_Change_SimplePassword [04] 3단계 - 확인 PIN 불일치(3434) 시 재입력 요구"
+   "04_03_메뉴설정_간편비번변경 [04] 3단계 - 확인 PIN 불일치(3434) 시 재입력 요구"
   ],
   "MNU-087": [
-   "04_01_Change_SimplePassword [04] 3단계 - 동일 PIN 재입력 -> 인증 방법 선택 이동"
+   "04_03_메뉴설정_간편비번변경 [04] 3단계 - 동일 PIN 재입력 -> 인증 방법 선택 이동"
   ],
   "MNU-088": [
-   "04_01_Change_SimplePassword [06] 5단계 - 로그인 비밀번호 오답 -> 실패 팝업"
+   "04_03_메뉴설정_간편비번변경 [06] 5단계 - 로그인 비밀번호 오답 -> 실패 팝업"
   ],
   "MNU-089": [
-   "04_01_Change_SimplePassword [06][07] 정상 인증 -> 변경 완료 -> 재시작 후 새 PIN 확인"
+   "04_03_메뉴설정_간편비번변경 [06][07] 정상 인증 -> 변경 완료 -> 재시작 후 새 PIN 확인"
   ],
   "MNU-093": [
-   "04_01_Change_SimplePassword [07] 앱 재시작 -> 변경된 PIN으로 잠금 해제 확인"
+   "04_03_메뉴설정_간편비번변경 [07] 앱 재시작 -> 변경된 PIN으로 잠금 해제 확인"
   ],
   "MNU-100": [
-   "26_Menu [08-4] 설정 -> 마케팅 수신 동의 ON/OFF 토글"
+   "04_01_메뉴_드로어와설정 [08-4] 설정 -> 마케팅 수신 동의 ON/OFF 토글"
   ],
   "MNU-101": [
-   "04_06_Change_Languages [01] 24개 언어 순회 + 한국어 복귀 검증"
+   "04_05_메뉴설정_언어변경24종 [01] 24개 언어 순회 + 한국어 복귀 검증"
   ],
   "MNU-102": [
-   "26_Menu [06] 드로어 -> 이용약관 -> 약관 목록 화면 이동 확인"
+   "04_01_메뉴_드로어와설정 [06] 드로어 -> 이용약관 -> 약관 목록 화면 이동 확인"
   ],
   "MNU-103": [
-   "26_Menu [08-3] 설정 -> 추천인 번호 -> 코드 입력 동작 확인"
+   "04_01_메뉴_드로어와설정 [08-3] 설정 -> 추천인 번호 -> 코드 입력 동작 확인"
   ],
   "MNU-104": [
-   "26_Menu [08-1] 설정 -> GME 회원 탈퇴 -> 동의 체크박스 미선택 시 계속 비활성화"
+   "04_01_메뉴_드로어와설정 [08-1] 설정 -> GME 회원 탈퇴 -> 동의 체크박스 미선택 시 계속 비활성화"
   ],
   "MNU-105": [
-   "26_Menu [08-2] 회원 탈퇴 -> 사유 화면 -> 사유 미선택 시 계정 삭제하기 비활성화"
+   "04_01_메뉴_드로어와설정 [08-2] 회원 탈퇴 -> 사유 화면 -> 사유 미선택 시 계정 삭제하기 비활성화"
   ],
   "MNU-106": [
-   "26_Menu [09] 드로어 -> 로그아웃 -> 잠금화면 이동 후 PIN 재로그인"
+   "04_01_메뉴_드로어와설정 [09] 드로어 -> 로그아웃 -> 잠금화면 이동 후 PIN 재로그인"
   ],
   "OVS-001": [
-   "02_01_Overseas_Send now [01] 수취인 추가 → 수정 → 삭제 (수취인 추가)"
+   "02_01_해외송금_수취인관리 [01] 수취인 추가 → 수정 → 삭제 (수취인 추가)"
   ],
   "OVS-005": [
-   "04_Menu_History [02] PIN 1회 오입력 → PIN 재요구 + 성공화면 부재로 송금불가 확인"
+   "04_02_메뉴_거래내역 [02] PIN 1회 오입력 → PIN 재요구 + 성공화면 부재로 송금불가 확인"
   ],
   "OVS-017": [
-   "02_02_Overseas_Schedule [02] Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)"
+   "02_02_해외송금_예약송금 [02] Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)"
   ],
   "OVS-021": [
-   "02_02_Overseas_Schedule [03] 기존 수취인 목록 노출 확인"
+   "02_02_해외송금_예약송금 [03] 기존 수취인 목록 노출 확인"
   ],
   "OVS-022": [
-   "02_02_Overseas_Schedule [05] 이미 예약된 수취인 추가 시 중복 팝업 확인"
+   "02_02_해외송금_예약송금 [05] 이미 예약된 수취인 추가 시 중복 팝업 확인"
   ],
   "OVS-023": [
-   "02_02_Overseas_Schedule [04] 기존 수취인 정상 추가 동작 확인"
+   "02_02_해외송금_예약송금 [04] 기존 수취인 정상 추가 동작 확인"
   ],
   "OVS-024": [
-   "02_02_Overseas_Schedule [09] [시나리오 3] GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 (Step 1)"
+   "02_02_해외송금_예약송금 [09] [시나리오 3] GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 (Step 1)"
   ],
   "OVS-027": [
-   "02_02_Overseas_Schedule [08] [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 (Step 1)"
+   "02_02_해외송금_예약송금 [08] [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 (Step 1)"
   ],
   "OVS-030": [
-   "02_02_Overseas_Schedule [08] [시나리오 2] GME Wallet 1회 - 당일+지난시간 예약 불가 에러 확인"
+   "02_02_해외송금_예약송금 [08] [시나리오 2] GME Wallet 1회 - 당일+지난시간 예약 불가 에러 확인"
   ],
   "OVS-031": [
-   "02_02_Overseas_Schedule [07] [시나리오 1] KFTC 예약 - 매달 Step 1 (Day/Time/EndDate 설정)"
+   "02_02_해외송금_예약송금 [07] [시나리오 1] KFTC 예약 - 매달 Step 1 (Day/Time/EndDate 설정)"
   ],
   "OVS-035": [
-   "02_02_Overseas_Schedule [07] [시나리오 1] KFTC 예약 - 1회 전환 및 설정 (Step 1)"
+   "02_02_해외송금_예약송금 [07] [시나리오 1] KFTC 예약 - 1회 전환 및 설정 (Step 1)"
   ],
   "PRF-001": [
-   "25_Profile [01-6] 정보 수정 - 프로필 사진 변경 동작 확인 (Take photo, Choose photo)"
+   "25_01_프로필_정보수정과공유 [01-6] 정보 수정 - 프로필 사진 변경 동작 확인 (Take photo, Choose photo)"
   ],
   "PRF-002": [
-   "25_Profile [01-4] 정보 수정 - 휴대폰 번호 변경 화면 진입 확인 (실제 변경은 BLOCKED)"
+   "25_01_프로필_정보수정과공유 [01-4] 정보 수정 - 휴대폰 번호 변경 화면 진입 확인 (실제 변경은 BLOCKED)"
   ],
   "PRF-003": [
-   "25_Profile [01-5] 정보 수정 - 이메일 변경 동작 확인"
+   "25_01_프로필_정보수정과공유 [01-5] 정보 수정 - 이메일 변경 동작 확인"
   ],
   "PRF-004": [
-   "25_Profile [01-3] 정보 수정 - 주소 변경 동작 확인 (직접입력 + GPS)"
+   "25_01_프로필_정보수정과공유 [01-3] 정보 수정 - 주소 변경 동작 확인 (직접입력 + GPS)"
   ],
   "PRF-005": [
-   "25_Profile [01-2] 정보 수정 - 직업 변경 → 저장 → 반영 확인 → 원복"
+   "25_01_프로필_정보수정과공유 [01-2] 정보 수정 - 직업 변경 → 저장 → 반영 확인 → 원복"
   ],
   "PRF-007": [
-   "25_Profile_Foreign [F-02] 여권 업로드"
+   "25_02_프로필_외국인신분증 [F-02] 여권 업로드"
   ],
   "PRF-009": [
-   "25_Profile [02] Profile - 친구 초대: 진입 + Send Link + Share QR (Send Link 부분)"
+   "25_01_프로필_정보수정과공유 [02] Profile - 친구 초대: 진입 + Send Link + Share QR (Send Link 부분)"
   ],
   "PRF-010": [
-   "25_Profile [02] Profile - 친구 초대: 진입 + Send Link + Share QR (Share QR 부분)"
+   "25_01_프로필_정보수정과공유 [02] Profile - 친구 초대: 진입 + Send Link + Share QR (Share QR 부분)"
   ],
   "PRF-011": [
-   "25_Profile [03] Profile - 연간 송금/수취 한도 표시 확인"
+   "25_01_프로필_정보수정과공유 [03] Profile - 연간 송금/수취 한도 표시 확인"
   ],
   "PRF-012": [
-   "25_Profile [04] Profile - 거래 내역 → [i] 공유된 정보 → 자세히 알아보기 → 제3자 제공 동의서"
+   "25_01_프로필_정보수정과공유 [04] Profile - 거래 내역 → [i] 공유된 정보 → 자세히 알아보기 → 제3자 제공 동의서"
   ],
   "QR-001": [
-   "08_MyQR [03] [구06] Amount 입력 후 QR 생성"
+   "08_마이QR_수신과송금 [03] [구06] Amount 입력 후 QR 생성"
   ],
   "QR-002": [
-   "08_MyQR [03] [구03] Receiving account 변경"
+   "08_마이QR_수신과송금 [03] [구03] Receiving account 변경"
   ],
   "QR-003": [
-   "08_MyQR [03]+[04] [구01] QR 저장"
+   "08_마이QR_수신과송금 [03]+[04] [구01] QR 저장"
   ],
   "QR-004": [
-   "08_MyQR [01] QR 공유 (Teams 전송)"
+   "08_마이QR_수신과송금 [01] QR 공유 (Teams 전송)"
   ],
   "QR-005": [
-   "08_MyQR [03] [구06+구09] Amount QR 스캔→송금"
+   "08_마이QR_수신과송금 [03] [구06+구09] Amount QR 스캔→송금"
   ],
   "QR-006": [
-   "08_MyQR [04] Amount 미입력 QR 스캔→미자동입력 확인"
+   "08_마이QR_수신과송금 [04] Amount 미입력 QR 스캔→미자동입력 확인"
   ],
   "QR-007": [
-   "08_MyQR [03] [구03+구09] 계좌변경 QR 스캔→송금"
+   "08_마이QR_수신과송금 [03] [구03+구09] 계좌변경 QR 스캔→송금"
   ],
   "QR-008": [
-   "08_MyQR [03]+[04] [구09] QR 스캔→국내송금 화면"
+   "08_마이QR_수신과송금 [03]+[04] [구09] QR 스캔→국내송금 화면"
   ],
   "QR-009": [
-   "08_MyQR [03] [구06] amount=1원 QR 스캔 (명시 검증 없음)"
+   "08_마이QR_수신과송금 [03] [구06] amount=1원 QR 스캔 (명시 검증 없음)"
   ],
   "QR-010": [
-   "08_MyQR [03] 케이뱅크 계좌 QR→송금 완료"
+   "08_마이QR_수신과송금 [03] 케이뱅크 계좌 QR→송금 완료"
   ],
   "REG-001": [
-   "06_Registration [01] 모두동의→확인 활성화"
+   "06_회원가입_신규계정생성 [01] 모두동의→확인 활성화"
   ],
   "REG-002": [
-   "06_Registration [04] 선택항목 uncheck"
+   "06_회원가입_신규계정생성 [04] 선택항목 uncheck"
   ],
   "REG-003": [
-   "06_Registration [02]+[03] 필수 uncheck→비활성화→재선택"
+   "06_회원가입_신규계정생성 [02]+[03] 필수 uncheck→비활성화→재선택"
   ],
   "REG-004": [
-   "06_Registration [05] Confirm→SignUp 이동"
+   "06_회원가입_신규계정생성 [05] Confirm→SignUp 이동"
   ],
   "REG-005": [
-   "06_Registration [06] User ID 입력"
+   "06_회원가입_신규계정생성 [06] User ID 입력"
   ],
   "REG-006": [
-   "06_Registration [07] Password 입력·규칙 확인"
+   "06_회원가입_신규계정생성 [07] Password 입력·규칙 확인"
   ],
   "REG-007": [
-   "06_Registration [08] Confirm Password 일치 확인"
+   "06_회원가입_신규계정생성 [08] Confirm Password 일치 확인"
   ],
   "REG-008": [
-   "06_Registration [09] Mobile Number 입력"
+   "06_회원가입_신규계정생성 [09] Mobile Number 입력"
   ],
   "REG-009": [
-   "06_Registration [10] Nationality 선택(Korean/Foreigner)"
+   "06_회원가입_신규계정생성 [10] Nationality 선택(Korean/Foreigner)"
   ],
   "REG-010": [
-   "06_Registration [11] Save and Next 활성화·이동"
+   "06_회원가입_신규계정생성 [11] Save and Next 활성화·이동"
   ],
   "REG-011": [
-   "06_Registration [12] ID Card/Driving License 노출"
+   "06_회원가입_신규계정생성 [12] ID Card/Driving License 노출"
   ],
   "REG-012": [
-   "06_Registration [12] 촬영 동작 확인"
+   "06_회원가입_신규계정생성 [12] 촬영 동작 확인"
   ],
   "REG-013": [
-   "06_Registration [13] OCR 자동채움·수동입력 (Korean)"
+   "06_회원가입_신규계정생성 [13] OCR 자동채움·수동입력 (Korean)"
   ],
   "REG-014": [
-   "06_Registration [14] Passport 항목 노출 (Foreigner)"
+   "06_회원가입_신규계정생성 [14] Passport 항목 노출 (Foreigner)"
   ],
   "REG-015": [
-   "06_Registration [15] Passport 촬영 동작"
+   "06_회원가입_신규계정생성 [15] Passport 촬영 동작"
   ],
   "REG-016": [
-   "06_Registration [16] OCR 자동채움·수동입력 (Foreigner)"
+   "06_회원가입_신규계정생성 [16] OCR 자동채움·수동입력 (Foreigner)"
   ],
   "REG-017": [
-   "06_Registration [17] Sur Name 입력"
+   "06_회원가입_신규계정생성 [17] Sur Name 입력"
   ],
   "REG-018": [
-   "06_Registration [18] Given Name 입력·다음 활성화"
+   "06_회원가입_신규계정생성 [18] Given Name 입력·다음 활성화"
   ],
   "REG-019": [
-   "06_Registration [19] 도시 선택·검색"
+   "06_회원가입_신규계정생성 [19] 도시 선택·검색"
   ],
   "REG-020": [
-   "06_Registration [20] 상세주소 GPS 동작"
+   "06_회원가입_신규계정생성 [20] 상세주소 GPS 동작"
   ],
   "REG-021": [
-   "06_Registration [21] Occupation 선택"
+   "06_회원가입_신규계정생성 [21] Occupation 선택"
   ],
   "REG-022": [
-   "06_Registration [22] Gender 선택·다음 활성화"
+   "06_회원가입_신규계정생성 [22] Gender 선택·다음 활성화"
   ],
   "REG-023": [
-   "06_Registration [23] Email 입력"
+   "06_회원가입_신규계정생성 [23] Email 입력"
   ],
   "REG-024": [
-   "06_Registration [24] Referral Code 입력·다음 활성화"
+   "06_회원가입_신규계정생성 [24] Referral Code 입력·다음 활성화"
   ],
   "REG-025": [
-   "06_Registration [25] 은행 선택·검색"
+   "06_회원가입_신규계정생성 [25] 은행 선택·검색"
   ],
   "REG-026": [
-   "06_Registration [26] 계좌번호 입력·확인 활성화"
+   "06_회원가입_신규계정생성 [26] 계좌번호 입력·확인 활성화"
   ],
   "REG-027": [
    "— —"
   ],
   "REG-028": [
-   "06_Registration [27] 간편비밀번호 설정·로그인"
+   "06_회원가입_신규계정생성 [27] 간편비밀번호 설정·로그인"
   ],
   "ROF-001": [
-   "13_01_Rate_Indonesia_old.yaml [01] Exchange Rate - 인바운드 환율 선택 시 국가리스트 바텀시트 발생 확인 - 국가 선택 동작 확인"
+   "13_01_해외송금받기_환율과인니등록_old.yaml [01] Exchange Rate - 인바운드 환율 선택 시 국가리스트 바텀시트 발생 확인 - 국가 선택 동작 확인"
   ],
   "ROF-003": [
-   "13_01_Rate_Indonesia_old.yaml [03] Exchange Rate - 임의 국가 선택 시 국가 환율 계산페이지 노출 확인"
+   "13_01_해외송금받기_환율과인니등록_old.yaml [03] Exchange Rate - 임의 국가 선택 시 국가 환율 계산페이지 노출 확인"
   ],
   "ROF-004": [
-   "13_01_Rate_Indonesia_old.yaml [04] Exchange Rate - 국가 별 환율계산 확인 - 인도네시아, 몽골, 베트남"
+   "13_01_해외송금받기_환율과인니등록_old.yaml [04] Exchange Rate - 국가 별 환율계산 확인 - 인도네시아, 몽골, 베트남"
   ],
   "ROF-005": [
-   "13_01_Rate_Indonesia_old.yaml [05] Exchange Rate - 환율계산 완료 > Request 동작 시 인바운드 메인화면 이동확인"
+   "13_01_해외송금받기_환율과인니등록_old.yaml [05] Exchange Rate - 환율계산 완료 > Request 동작 시 인바운드 메인화면 이동확인"
   ],
   "ROF-006": [
-   "13_01_Rate_Indonesia_old.yaml [06] Add Inbound Sender - 국가리스트 발생 확인"
+   "13_01_해외송금받기_환율과인니등록_old.yaml [06] Add Inbound Sender - 국가리스트 발생 확인"
   ],
   "ROF-007": [
-   "13_01_Rate_Indonesia_old.yaml(인도네시아 [07]) / 13_02_Sender_Mongolia_old.yaml(몽골 [07-1]) / 13_03_Sender_Vietnam_old.yaml(베트남 [07-2]) [07]/[07-1]/[07-2] Add Inbound Sender - 인도네시아·몽골·베트남 국가 송금인 등록 확인(베트남은 신분증 사진 업로드 포함)"
+   "13_01_해외송금받기_환율과인니등록_old.yaml(인도네시아 [07]) / 13_02_해외송금받기_몽골송금인_old.yaml(몽골 [07-1]) / 13_03_해외송금받기_베트남송금인_old.yaml(베트남 [07-2]) [07]/[07-1]/[07-2] Add Inbound Sender - 인도네시아·몽골·베트남 국가 송금인 등록 확인(베트남은 신분증 사진 업로드 포함)"
   ],
   "ROF-008": [
-   "13_04_Request_old.yaml [08] Add Inbound Sender - 송금인 정보 입력페이지 정보 입력 동작 확인(이름/전화번호/이메일/주소/도시, NEXT→확인 바텀시트)"
+   "13_04_해외송금받기_송금요청등록_old.yaml [08] Add Inbound Sender - 송금인 정보 입력페이지 정보 입력 동작 확인(이름/전화번호/이메일/주소/도시, NEXT→확인 바텀시트)"
   ],
   "ROF-009": [
-   "13_04_Request_old.yaml [09] Add Inbound Sender - 확인 바텀시트 동작 확인(취소→닫힘, OK→저장성공)"
+   "13_04_해외송금받기_송금요청등록_old.yaml [09] Add Inbound Sender - 확인 바텀시트 동작 확인(취소→닫힘, OK→저장성공)"
   ],
   "ROF-010": [
-   "13_04_Request_old.yaml [10] Inbound Request - 등록된 송금인 항목 선택 해당 국가 환율계산 페이지 이동 확인"
+   "13_04_해외송금받기_송금요청등록_old.yaml [10] Inbound Request - 등록된 송금인 항목 선택 해당 국가 환율계산 페이지 이동 확인"
   ],
   "ROF-011": [
-   "13_04_Request_old.yaml [11] Inbound Request - 환율계산 동작 확인 - Calculate 선택 시 계좌선택 바텀시트 발생 확인"
+   "13_04_해외송금받기_송금요청등록_old.yaml [11] Inbound Request - 환율계산 동작 확인 - Calculate 선택 시 계좌선택 바텀시트 발생 확인"
   ],
   "ROF-012": [
-   "13_04_Request_old.yaml [12] Inbound Request - 계좌 선택 시 받는계좌 확인 바텀시트 발생(Edit→재선택, Confirm→Request 등록)"
+   "13_04_해외송금받기_송금요청등록_old.yaml [12] Inbound Request - 계좌 선택 시 받는계좌 확인 바텀시트 발생(Edit→재선택, Confirm→Request 등록)"
   ],
   "ROF-013": [
-   "13_05_ExistingSender_old.yaml [13] Existing Sender - 기존 송금인 삭제 동작 확인"
+   "13_05_해외송금받기_송금인수정삭제_old.yaml [13] Existing Sender - 기존 송금인 삭제 동작 확인"
   ],
   "ROF-014": [
-   "13_05_ExistingSender_old.yaml [14] Existing Sender - 기존 송금인 수정 동작 확인 - 수정 변경 확인"
+   "13_05_해외송금받기_송금인수정삭제_old.yaml [14] Existing Sender - 기존 송금인 수정 동작 확인 - 수정 변경 확인"
   ],
   "ROF-015": [
-   "13_07_RequestStatus_old.yaml [15] Inbound Request Status - 송금요청 한 카드 노출 되는지 확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [15] Inbound Request Status - 송금요청 한 카드 노출 되는지 확인"
   ],
   "ROF-016": [
-   "13_07_RequestStatus_old.yaml [16] Inbound Request Status - 송금요청 디테일페이지 확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [16] Inbound Request Status - 송금요청 디테일페이지 확인"
   ],
   "ROF-017": [
-   "13_07_RequestStatus_old.yaml [17] Inbound Request Status - 송금요청 디테일 > Check History 버튼 선택 시 이력페이지 이동확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [17] Inbound Request Status - 송금요청 디테일 > Check History 버튼 선택 시 이력페이지 이동확인"
   ],
   "ROF-018": [
-   "13_07_RequestStatus_old.yaml [18] Inbound Request Status - Submit Another Request 선택 시 인바운드 메인화면 이동 확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [18] Inbound Request Status - Submit Another Request 선택 시 인바운드 메인화면 이동 확인"
   ],
   "ROF-019": [
-   "13_07_RequestStatus_old.yaml [19] Inbound Request Status - Share Detail With Sender 선택 시 공유동작 확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [19] Inbound Request Status - Share Detail With Sender 선택 시 공유동작 확인"
   ],
   "ROF-020": [
-   "13_07_RequestStatus_old.yaml [20] Inbound Request Status - Proceed to Payment 선택 시 인바운드 송금 상세 웹페이지 연결 확인"
+   "13_07_해외송금받기_요청상태조회_old.yaml [20] Inbound Request Status - Proceed to Payment 선택 시 인바운드 송금 상세 웹페이지 연결 확인"
   ],
   "TRT-001": [
-   "07_TodaysRate [01]+[02]+[03]+[04] 환율 조회·BDT·특급환율·송금"
+   "07_오늘의환율_환율계산 [01]+[02]+[03]+[04] 환율 조회·BDT·특급환율·송금"
   ],
   "WST-001": [
-   "17_WalletStatement [01] Statement - 잔액 정상 노출 확인"
+   "17_월렛거래내역_조회필터 [01] Statement - 잔액 정상 노출 확인"
   ]
  }
 }

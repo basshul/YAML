@@ -1,6 +1,6 @@
 r"""항목 실행 로그 → **케이스별 결과**.
 
-실행 이력은 시나리오 단위로만 PASS/FAIL 을 안다. 48케이스짜리 `04_Menu_History` 가
+실행 이력은 시나리오 단위로만 PASS/FAIL 을 안다. 48케이스짜리 `04_02_메뉴_거래내역` 가
 FAIL 이라고만 적히면 **어느 케이스에서 깨졌는지** 로그를 끝까지 읽어야 알 수 있다.
 
 어떻게 케이스를 가르나 — **로그의 최상위 스텝 순서 ↔ yaml 의 최상위 커맨드 순서**를 맞춘다.
@@ -33,10 +33,10 @@ _STATUS = re.compile(r"\.\.\.\s+(COMPLETED|FAILED|SKIPPED|WARNED|PENDING)\s*$")
 _FLOW_HDR = re.compile(r"^\s*>\s*Flow\s")
 # `# [NN] [High] 제목` / `# [33-1] 제목` — 중요도는 없을 수도 있다.
 #   ⛔ **숫자로 시작하는 것만** 케이스로 본다. 느슨하게 받으면 `# [History] …` 같은 구역
-#     주석까지 케이스로 잡혀 없는 케이스가 표에 생긴다(04_Menu_History 에서 실제로 그랬다).
+#     주석까지 케이스로 잡혀 없는 케이스가 표에 생긴다(04_02_메뉴_거래내역 에서 실제로 그랬다).
 #     케이스 번호는 `01` · `33-1` · `01-3` 처럼 숫자와 하이픈뿐이다.
 _CASE_HDR = re.compile(r"^#\s*\[(\d[\d\-]*)\]\s*(?:\[(?:Low|Medium|High)\]\s*)?(.*)$")
-# 로그에 적힌 실제 실행 커맨드. 파일명에 **공백이 있다**(`02_01_Overseas_Send now_old.yaml`)
+# 로그에 적힌 실제 실행 커맨드. 파일명에 **공백이 있다**(`02_01_해외송금_수취인관리_old.yaml`)
 # → `[^ ]+` 로 끊으면 안 된다. `.yaml` 까지 비탐욕으로 받는다.
 _RAN_YAML = re.compile(r"\btest\s+(.+?\.ya?ml)(?:\s|$)")
 
@@ -53,7 +53,7 @@ def flow_path_from_log(lines: list[str]) -> Path | None:
     """로그에 적힌 `maestro … test Old\\X_old.yaml` 에서 **그때 실제로 돈 파일**을 집는다.
 
     이름으로 추측하지 않는 이유: 항목 이름과 파일명이 다른 경우가 있다
-    (`02_01_Overseas_SendNow` → `Old\\02_01_Overseas_Send now_old.yaml`).
+    (`02_01_해외송금_수취인관리` → `Old\\02_01_해외송금_수취인관리_old.yaml`).
     표가 그 뒤로 바뀌었어도 **그 실행이 돌린 파일**이 정답이다.
     """
     for line in lines[:40]:

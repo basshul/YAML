@@ -85,7 +85,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 # 간편비밀번호 설정 (조건부)
 # ⚠️ 종전 가드는 `visible: "간편비밀번호"` 였다. **텍스트는 전체매칭**이라 실제 문구
 #   "앱에서 사용할 간편 비밀번호를 생성해 주세요"와 매칭되지 않아 **블록이 통째로 SKIP**됐다
-#   → PIN이 설정되지 않은 채 넘어간다(06_Registration 결함 #1과 같은 부류).
+#   → PIN이 설정되지 않은 채 넘어간다(06_회원가입_신규계정생성 결함 #1과 같은 부류).
 - runFlow:
     when:
       visible: "${LOCK_CREATE_PROMPT}"

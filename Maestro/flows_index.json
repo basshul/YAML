@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-06-25T01:47:54.150917+00:00",
   "source_dir": "/mnt/c/GME/qa-automation/Maestro",
-  "flow_count": 37,
+  "flow_count": 36,
   "note": "TC 단위 매칭용. key_texts/assertions/comments 를 체크리스트 TC 문구와 대조하세요.",
   "flows": [
     {
@@ -1661,40 +1661,6 @@
         "[08] [High] GME Mobile - Check My GME Mobile usage 선택시 신청한 유심 정보 정상적으로 노출되는지 확인",
         "- tapOn: \"TODO: Check My GME Mobile usage 버튼\"",
         "text: \"TODO: 유심 정보 화면 식별 텍스트 (요금제, 번호 등)\""
-      ],
-      "subflows": []
-    },
-    {
-      "filename": "19_IssueCertificate.yaml",
-      "scenario_code": "19",
-      "size_bytes": 3272,
-      "modified": "2026-06-16T07:34:02.785806+00:00",
-      "appId": "com.gmeremit.online.gmeremittance_native.livetest",
-      "command_count": 15,
-      "key_texts": [
-        "[입력 3타]"
-      ],
-      "assertions": [],
-      "comments": [
-        "시나리오: Issue Certificate",
-        "앱 최초 실행 (전체 suite 1회)",
-        "[01] [High] Certificate - 외국인등록사실증명 동작 정상적으로 진행되는지 확인",
-        "Issue Certificate 진입",
-        "TODO: 진입 경로 확인",
-        "- tapOn: \"TODO: Issue Certificate 메뉴 버튼\"",
-        "외국인등록사실증명 선택 후 진행 확인",
-        "- tapOn: \"TODO: 외국인등록사실증명 항목\"",
-        "text: \"TODO: 외국인등록사실증명 화면 식별 텍스트\"",
-        "홈 복귀",
-        "[02] [High] Certificate - 소득금액증명 정상적으로 진행되는지 확인 (Certificate of Alien Income)",
-        "- tapOn: \"TODO: Certificate of Alien Income 항목\"",
-        "text: \"TODO: 소득금액증명 화면 식별 텍스트\"",
-        "[03] [High] Certificate - 주민등록초본 동작 정상적으로 진행되는지 확인 (Resident Registration - For ",
-        "- tapOn: \"TODO: 주민등록초본 항목\"",
-        "text: \"TODO: 주민등록초본 화면 식별 텍스트\"",
-        "[04] [High] Certificate - 주민등록등본 동작 정상적으로 진행되는지 확인 (Household Register - For Kor",
-        "- tapOn: \"TODO: 주민등록등본 항목\"",
-        "text: \"TODO: 주민등록등본 화면 식별 텍스트\""
       ],
       "subflows": []
     },

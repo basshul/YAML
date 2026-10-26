@@ -28,7 +28,7 @@ appId: ${APP_ID}
 #   5) **증빙 서류 안내**    updateBtn / remindLaterBtn  ← 2026-08-27 추가 (7.20.0-stag 실측)
 #      → `remindLaterBtn`("나중에 하기").
 #        ⚠️ `updateBtn`("지금 업로드")은 서류 업로드 화면으로 진입하므로 절대 누르지 말 것.
-#      이 팝업 때문에 `01_01_Login_Success`가 배너를 닫은 뒤에도 `btnTransfer` assert로 실패했다.
+#      이 팝업 때문에 `01_01_로그인_정상`가 배너를 닫은 뒤에도 `btnTransfer` assert로 실패했다.
 #
 # 팝업이 없으면 while 조건이 거짓이라 통째로 SKIP된다(홈에서 호출해도 안전).
 # `times`로 상한을 둬서 닫히지 않는 팝업이 있어도 무한 루프에 빠지지 않게 한다.

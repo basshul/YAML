@@ -1,0 +1,1059 @@
+appId: ${APP_ID}
+# [05-1] 이 쓰는 '바꿀 계좌번호'. 원래 값(…891)과 **달라야** 저장된다 —
+#   같으면 실시간 탭 원본과 중복으로 걸린다(아래 [05-1] 주석 참고).
+env:
+  SCHEDULE_EDIT_ACCOUNT: "1234567899"
+---
+# ================================================================
+# 시나리오: Overseas Transfer - 예약 송금 / 필터 / 수취인 추가
+# 실행: .\run_test.ps1 -lang ko -flow 02_02_해외송금_예약송금.yaml
+#
+# [Add Recipient] [01][03][04][05] 수취인 추가 시나리오 (병합)
+#   [01] [High]   바텀시트 및 새 수취인 추가 폼 진입 확인
+#   [03] [Medium] 기존 수취인 목록 노출 확인
+#   [04] [Medium] 기존 수취인 정상 추가 동작 확인
+#   [05] [Medium] 이미 예약된 수취인 추가 시 중복 팝업 확인
+# [06] [Medium] 예약 탭 - 수취인 화면 필터(설정) 동작 확인
+# [02] [High]   Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)
+# [05-1] [Medium] Schedule Add Recipient - 기 등록된 수취인 정보 수정 (예약 탭)
+# [07] [High]   [시나리오 1] KFTC 예약 - 매달 Step 1~3 확인 후 1회 Step 1~3 확인
+#                       (KFTC는 OTP/생체인증 필요로 실제 제출 불가 - Step 3까지만 검증)
+# [08] [High]   [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 성공
+# [09] [High]   [시나리오 3] GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 + 예약 성공
+# ================================================================
+
+# 앱 실행 및 홈 화면 진입
+# 주의(2026-08-03): 기존 `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇힘. 잠금화면을 명시적으로 대기 후 PIN 입력하도록 변경.
+#   PIN 키패드는 매번 랜덤 배치라 좌표가 아닌 text("1"/"2")로 탭.
+- launchApp
+# ⚠️ **Server Override 스플래시 처리가 없었다**(2026-08-28 stag 전환에서 추가).
+#   livetest 빌드에서는 기본값이 LIVETEST라 드러나지 않았지만, stag 빌드는 기본값이 **STAG**이고
+#   `clearState`가 선택을 초기화하므로 **서버가 조용히 STAG로 새거나 스플래시에서 멈춘다.**
+#   선택을 바꾸면 버튼이 `CONTINUE` → **`APPLY & QUIT`** 로 바뀌며 **앱이 종료**된다(둘 다 id `button1`).
+#   Maestro가 `checked:`를 무시해 판별이 불가하므로 **항등 시퀀스**로 처리한다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
+    timeout: 60000
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+    timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+# PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
+#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
+#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
+# ⚠️ **조건부로 감쌌다**(2026-08-28) — 서버 전환 후 세션이 살아 있으면 잠금화면 없이 홈으로
+#   바로 떨어질 수 있는데, 그때 무조건 "1"을 누르면 홈에서 엉뚱한 요소를 탭한다.
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
+# 세션 만료 판정 — 실제 문구는 "로그인 세션이 만료되었습니다.
+#   서비스를 이용하려면 다시 로그인해 주세요." 로 **개행이 섞인 두 문장**이다.
+#   Maestro 텍스트는 전체매칭이라 `"로그인 세션이 만료"` 로는 **한 번도 잡히지 않았다**
+#   (2026-08-28 확인) → 부분매칭엔 `[\s\S]*`가 필요하다.
+#   그리고 구 UI에서 세션이 만료되면 **PIN으로 복구되지 않는다**(ID/비밀번호 재로그인 필요).
+#   그래서 다이얼로그를 닫고 진행하는 대신 **여기서 실패시킨다** — 원인이 로그에 남아야
+#   `01_01_로그인_정상_old.yaml`로 복구한 뒤 재실행할 수 있다.
+#   ⚠️ 홈 대기보다 **앞**에 둔다. 뒤에 두면 홈 대기가 먼저 타임아웃 나서 원인이 가려진다.
+- assertNotVisible:
+    text: "${SESSION_EXPIRED}"
+# 홈 도달 대기
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        text: "${REG_LATER}"
+    commands:
+      - tapOn: "${REG_LATER}"
+# 홈 코치마크 balloon(별도 PopupWindow, 떠있으면 아래 노드를 못읽음) 닫기
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# ================================================================
+# [Add Recipient] [01][03][04][05] 수취인 추가 시나리오
+# ================================================================
+
+# 사전 정리 Step 1: 내역 > 예약 송금 내역에서 활성 예약 모두 취소
+# ⚠️ 구 UI 하단 내비 라벨은 **"거래 내역"**(공백 포함)이라 `"내역"`으로는 안 걸린다
+#   (Maestro 텍스트는 전체매칭) → **id로 판정**. 홈 타일에도 "거래 내역"이 있어 텍스트는 모호하다.
+- tapOn:
+    id: "bottom_item_history"
+- tapOn: "${SCR_HISTORY}"
+- tapOn: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TEXT}"
+    commands:
+      - tapOn: "${ACTIVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - tapOn: "${BTN_YES}"
+
+# 홈 복귀: launchApp으로 확실한 홈 진입 (back 횟수가 예약 상태에 따라 달라짐)
+- launchApp
+# ⚠️ 재실행이므로 **Server Override 스플래시가 다시 뜬다**(매 콜드 실행 노출).
+#   이걸 처리하지 않으면 스플래시 위에서 PIN "1"을 눌러 엉뚱한 항목을 탭한다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|button1"
+    timeout: 60000
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home"
+    timeout: 60000
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# 사전 정리 Step 2: 이전 실행 잔류분을 예약 탭에서 삭제
+# ⚠️ **`TESTUPDATE GME`을 쓰고 있었으나 그 수취인은 존재하지 않는다**(2026-08-28 실기기 확인).
+#   `TESTUPDATE GME`은 `02_01`의 **수취인 편집 테스트가 `GME TEST`를 개명해 남긴 잔재**였고
+#   (02_01 주석: "이전 실행에서 편집된 TEST GME 정리"), 그게 정리된 뒤로 이 파일은 항상 실패한다.
+#   → 계정에 실제로 있는 **실시간 송금 수취인 `GME TEST`(스리랑카 / COMMERCIAL BANK / 계좌 입금)** 를 쓴다.
+# ⚠️ 예약 탭에는 **이름이 같은 다른 수취인 `GME TEST`(몽골 / Moru / 모바일 월렛)** 가 이미 있다.
+#   이름으로는 구분이 안 되므로 잔류 판정·검증은 **`COMMERCIAL BANK`(유일)** 로 한다.
+# ⚠️ 예약 목록은 **최근 추가가 맨 위**라 방금 추가분은 항상 index 0이다(실측). 잔류분도 마찬가지.
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- runFlow:
+    when:
+      visible:
+        text: "COMMERCIAL BANK"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "BASSHU TEST GME"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+
+# [01] 바텀시트 및 새 수취인 추가 폼 진입 확인
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- assertVisible:
+    id: "tv_addRecipient"
+- assertVisible:
+    id: "tv_addExistingRecipient"
+- tapOn:
+    id: "tv_addRecipient"
+- assertVisible:
+    id: "recieverCountrySelectionFormInputField"
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_SELECT_RECIPIENT}"
+    commands:
+      - pressKey: back
+
+# [03] 기존 수취인 목록 노출 확인
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
+- tapOn:
+    id: "tv_close"
+
+# [04] 기존 수취인 정상 추가 동작 확인
+#      GME TEST(스리랑카·미예약)를 예약 목록에 추가
+# ※ 바텀시트가 열리면 **뒤쪽 예약 목록은 접근성 트리에서 사라지므로**(실측)
+#   시트 안의 "GME TEST"는 동명이인과 충돌하지 않는다.
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
+- tapOn: "GME TEST"
+# 추가 결과는 **동명이인과 구분되는 `COMMERCIAL BANK`로 검증**한다.
+#   ("GME TEST"로 assert하면 기존 몽골 수취인 때문에 **추가에 실패해도 통과**한다)
+- assertVisible:
+    text: "COMMERCIAL BANK"
+
+# [05] 이미 예약된 수취인 추가 시 중복 팝업 확인
+#      GME TEST ([04]에서 추가된 상태)
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- assertVisible:
+    text: "${ADD_EXISTING_RECIPIENT_TEXT}"
+- tapOn: "GME TEST"
+- assertVisible:
+    id: "txt_dialog_message"
+- assertVisible:
+    text: "${SCHEDULE_030}"
+- tapOn:
+    id: "btn_diaog_ok"
+
+# ----------------------------------------------------------------
+# [05-1] [Medium] Schedule Add Recipient - 기 등록된 수취인 정보 수정 (예약 탭)
+#        (체크리스트 #241 / 2026-10-12 실기기 실측)
+# ----------------------------------------------------------------
+# ★ **2026-10-02 의 🐞BLOCKED 판정을 정정한다.** 그때는 '어느 필드를 바꿔도 저장이 실패한다'
+#   고 적었지만, 2026-10-12 실측 결과 **식별 조합에 없는 필드만 바꿔 봤던 것**이었다.
+#     도시만 수정        → ❌ The same beneficiary details already exist
+#     계좌번호 수정      → ✅ 성공 / 수취인 정보가 수정되었습니다
+#     계좌번호 되돌리기  → ❌ 다시 같은 오류
+#   예약 탭 수취인은 **실시간 탭 원본과 별개 레코드**이고, 중복 판정이
+#   (국가·은행·계좌·이름) 조합을 본다. 즉 앱 결함이 아니라 **중복 방지 규칙**이다.
+#
+# ⛔ **되돌리지 않는다.** 원래 계좌번호로 되돌리면 실시간 탭 원본과 중복이라 **반드시 실패**한다.
+#   바로 아래 사후 정리가 이 예약 항목을 삭제하므로 바뀐 상태가 남지 않는다.
+#   → 이 케이스와 사후 정리는 **한 몸**이다. 떼어 쓰면 계좌가 바뀐 수취인이 예약 목록에 남는다.
+#
+# ⚠️ 대상 식별은 **`COMMERCIAL BANK`(유일)** 로 한다 — 동명이인(몽골 GME TEST)이 있다.
+# ⚠️ 추가 폼과 수정 폼은 **필드 id 가 같다** → 어느 폼인지는 `toolbar_title` 로만 구분된다.
+# ⚠️ 폼이 길어 제출 버튼은 **스크롤해야** 닿는다(계좌 칸은 진입 직후 보인다).
+# ----------------------------------------------------------------
+- assertVisible:
+    text: "COMMERCIAL BANK"
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "edit"
+    index: 0
+# 수정 폼인지 확인 — 추가 폼과 필드 id 가 같아 제목으로만 구분된다
+- extendedWaitUntil:
+    visible:
+      id: "toolbar_title"
+    timeout: 20000
+- assertVisible:
+    id: "recieverAccountNoFormInputField"
+
+# 계좌번호를 바꾼다 — 식별 조합이 달라져야 저장된다(위 주석 참고)
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- eraseText: 20
+- inputText: "${SCHEDULE_EDIT_ACCOUNT}"
+- hideKeyboard
+# ⚠️ 제출 버튼은 폼 **맨 아래**다. swipe 횟수를 추측하면 화면 높이에 따라 깨진다 →
+#   보일 때까지 끌어온다(2026-10-12 실측: 1회 스와이프로는 안 닿았다).
+- scrollUntilVisible:
+    element:
+      id: "btn_submit"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "btn_submit"
+
+# 성립 단언 — 수행만 하고 반영을 안 보면 커버리지 착시다(`02_01 [01]` 주석 참고).
+#   성공 시트: `txvDialogTitle` '성공' / `txvDialogDescription` '수취인 정보가 수정되었습니다…'
+#   ⛔ 여기서 `already exist` 가 나오면 **식별 조합이 그대로**라는 뜻이다.
+- extendedWaitUntil:
+    visible:
+      id: "txvDialogDescription"
+    timeout: 20000
+- takeScreenshot: "[05-1]_예약탭_수취인수정_저장성공"
+- assertNotVisible:
+    text: "[\\s\\S]*already exist[\\s\\S]*"
+- assertVisible:
+    id: "txvDialogTitle"
+    text: "${SEND_SUCCESS}"
+# 「아니요」 = 이어서 송금하지 않는다(수정은 이미 반영된 상태다)
+- tapOn:
+    id: "btnContactSupport1"
+- waitForAnimationToEnd
+# 목록에도 반영됐는가 — 바뀐 계좌번호가 보여야 한다
+- extendedWaitUntil:
+    visible:
+      text: "${SCHEDULE_EDIT_ACCOUNT}"
+    timeout: 20000
+
+# ----------------------------------------------------------------
+# 사후 정리: [04]에서 추가한 GME TEST(스리랑카)를 예약 목록에서 삭제
+# ⚠️ index 0 = **가장 최근에 추가된 행**(실측). 방금 추가분이 맨 위라 이 인덱스가 맞다.
+#   순서 가정이 깨지면 **엉뚱한 수취인(GGGG TTTT 등)이 영구 삭제**되므로,
+#   삭제 후 `COMMERCIAL BANK`가 사라졌는지 **반드시 사후 검증**한다.
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "delete"
+    index: 0
+- tapOn: "${BTN_YES}"
+- assertNotVisible:
+    text: "COMMERCIAL BANK"
+- runFlow:
+    when:
+      notVisible:
+        text: "${SCR_SELECT_RECIPIENT}"
+    commands:
+      - pressKey: back
+      
+# ================================================================
+# [02] Schedule Add Recipient - 새 수취인 추가 (Kazakhstan / MoneyGram 현금 지급)
+#      [시나리오 1~3]에서 사용할 수취인 추가 (사후 정리는 [시나리오 3] 이후)
+# ================================================================
+
+# 사전 정리: SCHEDULE TRANSFER TEST 수취인이 있으면 삭제 시도
+# - 예약 없음: btn_yes(예) → 삭제 완료
+# - 예약 있음: btn_diaog_ok(확인) → 삭제 불가 팝업 닫기 → 기존 수취인 유지
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- runFlow:
+    when:
+      visible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      # 정상 삭제 확인 팝업 (예약 없음)
+      - runFlow:
+          when:
+            visible:
+              id: "btn_yes"
+          commands:
+            - tapOn:
+                id: "btn_yes"
+      # 예약된 송금으로 삭제 불가 팝업 (예약 있음)
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+
+# SCHEDULE TRANSFER TEST가 없는 경우만 새로 추가 (삭제 성공 or 원래 없었던 경우)
+- runFlow:
+    when:
+      notVisible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn: "${ADD_RECIPIENT_TEXT}"
+      - tapOn:
+          id: "tv_addRecipient"
+      # 국가: Kazakhstan
+      - tapOn:
+          id: "recieverCountrySelectionFormInputField"
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "Kazakhstan"
+      - tapOn:
+          text: "Kazakhstan"
+          index: 1
+      # 송금방법: 현금 지급
+      - tapOn: "${PAYMENT_MODE_PLACEHOLDER_TEXT}"
+      - tapOn: "${INIT_TAB_CASH}"
+      # 은행/에이전트: MoneyGram
+      - tapOn:
+          id: "recieverBankSelectionFormInputField"
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "money"
+      - hideKeyboard
+      - tapOn: "MONEYGRAM"
+      # 이름 (First: schedule / Middle: transfer / Last: test)
+      - tapOn:
+          id: "recieverFirstNameFormInputField"
+      - inputText: "schedule"
+      - hideKeyboard
+      - tapOn:
+          id: "recieverMiddleNameFormInputField"
+      - inputText: "transfer"
+      - hideKeyboard
+      - tapOn:
+          id: "recieverLastNameFormInputField"
+      - inputText: "test"
+      - hideKeyboard
+      # 핸드폰 번호
+      - tapOn:
+          id: "recieverMobileNoFormInputField"
+      - inputText: "123456789"
+      - hideKeyboard
+      # 주소
+      - tapOn:
+          id: "recieverAddressFormInputField"
+      - inputText: "GME"
+      - hideKeyboard
+      # 도시
+      - tapOn:
+          id: "recieverCityFormInputField"
+      - inputText: "TEST"
+      - hideKeyboard
+      # 관계: 본인
+      - tapOn:
+          id: "recieverRelationSelectionFormInputField"
+      - tapOn: "${SELF_TEXT}"
+      # 송금 사유: 급여 / 임금 (스크롤 후)
+      - swipe:
+          direction: UP
+          element:
+            id: "scrollView"
+          duration: 1200
+      - extendedWaitUntil:
+          visible:
+            id: "recieverTransferReasonSelectionFormInputField"
+          timeout: 10000
+      - tapOn:
+          id: "recieverTransferReasonSelectionFormInputField"
+      - tapOn: "${SALARY_WAGES_TEXT}"
+      # 제출
+      - tapOn:
+          id: "btn_submit"
+      # 중복 수취인 오류 처리
+      - runFlow:
+          when:
+            visible:
+              text: "${ERROR_ICON_CONTENT_DESCRIPTION}"
+          commands:
+            - tapOn: "${BTN_CONFIRM}"
+            - pressKey: back
+      # 저장 성공 바텀시트: 아니요 (목록 복귀)
+      - runFlow:
+          when:
+            visible:
+              id: "btnContactSupport1"
+          commands:
+            - tapOn:
+                id: "btnContactSupport1"
+
+# 예약 수취인 목록 확인
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- assertVisible:
+    text: "SCHEDULE TRANSFER TEST"
+
+# ================================================================
+# [06] 예약 탭 - 수취인 화면 필터(설정) 동작 확인
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- tapOn:
+    id: "imgvFilter"
+- assertVisible:
+    text: "${CH_COMMON_SETTINGS}"
+- assertVisible:
+    id: "tv_period"
+- assertVisible:
+    id: "one_month"
+- assertVisible:
+    id: "three_month"
+- assertVisible:
+    id: "one_year"
+- assertVisible:
+    id: "et_searchText"
+- tapOn:
+    id: "one_month"
+- assertVisible:
+    id: "date1"
+- assertVisible:
+    id: "date2"
+# 닫기 → 예약 탭 수취인 목록 복귀
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+
+
+# ================================================================
+# [07] [High] [시나리오 1] KFTC 예약 - 매달 Step 1~3 확인 후 1회 Step 1~3 확인
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "${SCHEDULED_TEXT}"
+- tapOn: "${KFTC_BANK}"
+
+# --- 매달 설정 (Step 1) ---
+- assertVisible:
+    id: "one_month"
+- tapOn:
+    id: "et_daySelection"
+- assertVisible:
+    text: "${CH_DAY}"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "${TIME_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- scroll
+- assertVisible:
+    text: "${END_DATE_TEXT}"
+- tapOn:
+    id: "et_endDateSelection"
+- assertVisible:
+    text: "${END_DATE_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- assertVisible:
+    id: "et_endDateSelection"
+
+# --- 매달 Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+
+# --- 매달 Step 3: 동의 및 저장 화면 확인 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "${VERIFICATION_DETAIL_TEXT}"
+- scroll
+- assertVisible:
+    text: "${AGREE_AND_SAVE_TEXT}"
+
+# --- Step 3 → Step 1으로 이동 ---
+- pressKey: back
+- pressKey: back
+
+# --- 1회 전환 및 설정 (Step 1) ---
+- tapOn:
+    id: "three_month"
+- tapOn:
+    id: "et_dateSelection"
+- assertVisible:
+    text: "${DATE_ONLY_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "${TIME_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+
+# --- 1회 Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+
+# --- 1회 Step 3: 동의 및 저장 화면 확인 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "${VERIFICATION_DETAIL_TEXT}"
+- scroll
+- assertVisible:
+    text: "${AGREE_AND_SAVE_TEXT}"
+
+# --- 홈 복귀 ---
+- pressKey: back
+- pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+
+# ================================================================
+# [08] [High] [시나리오 2] GME Wallet 1회 - 지난 시간 예약 실패 후 날짜 변경 성공
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "${SCHEDULED_TEXT}"
+- assertVisible:
+    text: "GME Wallet"
+
+# --- 실패 케이스: 1회 + 당일(기본값) + 지난 시간(00:00~01:00) ---
+- tapOn:
+    id: "three_month"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "${TIME_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "${VERIFICATION_DETAIL_TEXT}"
+- scroll
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${INIT_SERVICE_GUIDE}"
+    commands:
+      - tapOn: "${AGREE_TEXT}"
+# PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 20000
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
+# 당일+지난시간 예약 불가 에러 팝업 확인
+- assertVisible:
+    text: "${DIALOG_ERROR_TITLE}"
+- tapOn: "${BTN_CONFIRM}"
+
+# --- Step 3 → Step 1으로 이동 ---
+- pressKey: back
+- pressKey: back
+
+# --- 성공 케이스: 날짜 다음달로 변경 ---
+- tapOn:
+    id: "et_dateSelection"
+- assertVisible:
+    text: "${DATE_ONLY_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "20"
+- hideKeyboard
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "${VERIFICATION_DETAIL_TEXT}"
+- scroll
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${INIT_SERVICE_GUIDE}"
+    commands:
+      - tapOn: "${AGREE_TEXT}"
+# PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 20000
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
+# 예약 성공 확인
+- assertVisible:
+    text: "${LOGIN_SUCCESS}"
+- assertVisible:
+    text: "${SCHEDULE_SUCCESS_DIALOG}"
+
+# 성공 팝업 닫기 (back으로 닫히지 않으므로 "다시 보내기" 탭)
+- tapOn: "${SEND_AGAIN_TEXT}"
+
+# --- 홈 복귀 ---
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+
+# ================================================================
+# [시나리오 3] 준비 - 기존 수취인(GME TEST / 스리랑카)을 예약 탭에 추가
+#   ⚠️ 종전 `TESTUPDATE GME`은 존재하지 않는 수취인이었다 — 사전 정리 Step 2 주석 참고.
+# ================================================================
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- tapOn:
+    id: "tv_addExistingRecipient"
+- tapOn: "GME TEST"
+# 동명이인(몽골 GME TEST)과 구분되는 `COMMERCIAL BANK`로 검증
+- assertVisible:
+    text: "COMMERCIAL BANK"
+
+# ================================================================
+# [09] [High] [시나리오 3] GME Wallet 매달 - 종료일 이전 날짜 설정 불가 확인 + 예약 성공
+# (GME TEST(스리랑카) 카드 사용 - 준비 단계에서 추가됨, 목록 최상단 index 0)
+# ================================================================
+- tapOn:
+    id: "foreground"
+    index: 0
+- assertVisible:
+    text: "${SCHEDULED_TEXT}"
+- assertVisible:
+    text: "GME Wallet"
+
+# --- 매달 설정 (Step 1): 종료일 이전 날짜 선택 불가 확인 ---
+- assertVisible:
+    id: "one_month"
+- tapOn:
+    id: "et_daySelection"
+- assertVisible:
+    text: "${CH_DAY}"
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "time_selection"
+- assertVisible:
+    text: "${TIME_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- scroll
+- assertVisible:
+    text: "${END_DATE_TEXT}"
+# 종료일 picker: 과거 날짜 선택 시 최솟값(오늘)으로 자동 보정
+- tapOn:
+    id: "et_endDateSelection"
+- assertVisible:
+    text: "${END_DATE_TEXT}"
+- tapOn:
+    id: "confirmBtn"
+- assertVisible:
+    id: "et_endDateSelection"
+
+# --- Step 2: 금액 입력 ---
+- tapOn:
+    id: "btn_continue"
+- tapOn:
+    id: "receiveAmountEdTxt"
+- inputText: "2000"
+- hideKeyboard
+
+# --- Step 3: 동의 및 저장 → PIN → 성공 ---
+- tapOn:
+    id: "btn_continue"
+- assertVisible:
+    text: "${VERIFICATION_DETAIL_TEXT}"
+- scroll
+- tapOn: "${AGREE_AND_SAVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${INIT_SERVICE_GUIDE}"
+    commands:
+      - tapOn: "${AGREE_TEXT}"
+# PIN 화면 도달을 먼저 확정한다 — 안 기다리면 같은 글자를 가진 다른 요소를 집는다
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 20000
+- runFlow:
+    file: _enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
+# 예약 성공 확인
+- assertVisible:
+    text: "${LOGIN_SUCCESS}"
+- assertVisible:
+    text: "${SCHEDULE_SUCCESS_DIALOG}"
+
+# --- 사후 정리: 활성 예약 모두 취소 ([시나리오 2] + [시나리오 3]) ---
+- tapOn: "${MYQR_VIEW_RECEIPT}"
+- assertVisible:
+    text: "${DEBUG_MENU_DEEPLINK_SCHEDULE_HISTORY}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TEXT}"
+    commands:
+      - tapOn: "${ACTIVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+# 취소 후 활성화 탭 재진입 → 남은 예약 추가 취소
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TEXT}"
+    commands:
+      - tapOn: "${ACTIVE_TEXT}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      visible:
+        text: "${ACTIVE_TITLE_TEXT}"
+    commands:
+      - scroll
+      - tapOn: "${TXT_CANCEL}"
+      - assertVisible:
+          text: "${CANCEL_REMITTANCE_RESERVATION_TEXT}"
+      - tapOn: "${BTN_YES}"
+
+# --- 홈 복귀 ---
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+
+# 사후 정리: 예약 수취인 목록에서 삭제
+# (GME TEST(스리랑카)가 index 0 = 최신, SCHEDULE TRANSFER TEST가 index 1)
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 10000
+- tapOn: "${COMMON_BOOKING_LABEL}"
+# GME TEST(스리랑카) 먼저 삭제 (index 0). 판정은 유일한 `COMMERCIAL BANK`로 한다.
+- runFlow:
+    when:
+      visible:
+        text: "COMMERCIAL BANK"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+# SCHEDULE TRANSFER TEST 삭제 (GME TEST 삭제 후 index 0)
+- runFlow:
+    when:
+      visible:
+        text: "SCHEDULE TRANSFER TEST"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+- runFlow:
+    when:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      # ⚠️ 2026-09-03 수정: 이 줄의 `back`이 한글 IME 오타로 오염돼 있었다.
+      #   Maestro는 유효하지 않은 pressKey 값을 만나면 **`Parsing Failed`로 파일을 통째로 거부**한다
+      #   → 02_02가 **실행조차 되지 않았다**(COMPLETED 0). 저장소 9/1 커밋본에도 같은 오염이 있어
+      #   그때부터 죽어 있었다. 린터 `E09`(pressKey 값 검사)를 추가해 재발을 막았다.
+      - pressKey: back

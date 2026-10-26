@@ -22,7 +22,7 @@ appId: ${APP_ID}
 #
 # ⛔ `clearState`를 쓰지 않는다 — 서버 선택이 **빌드 기본값(stag=STAG)으로 초기화**되어
 #   전 스위트가 조용히 STAG로 돌아간다(2026-08-27 실제 사고: logcat gmeuat 1,113건 / livetest 0건).
-#   단 아래 ④에서 호출하는 `01_01_Login_Success_old.yaml`은 자체적으로 `clearState`를 쓰고
+#   단 아래 ④에서 호출하는 `01_01_로그인_정상_old.yaml`은 자체적으로 `clearState`를 쓰고
 #   그 직후 Server Override를 처리하므로 결과적으로 안전하다.
 #
 # 다루는 상태:
@@ -34,7 +34,7 @@ appId: ${APP_ID}
 #   앱은 그냥 내부 화면으로 들어간다(2026-09-02: 액티비티가 `AutoLogoutActivity`로 찍히고
 #   내용은 해외송금 내역이었다 — 이름과 상태가 무관했다).
 #   ⚠️ 이 상태는 **PIN 재등록 구간에서 플로우가 끊길 때 생긴다**(계정 전환은 기존 PIN을 해지한다).
-#   → 빠져나오려면 `01_01_Login_Success_old.yaml`을 돌려야 한다(clearState + 로그인 + PIN 설정).
+#   → 빠져나오려면 `01_01_로그인_정상_old.yaml`을 돌려야 한다(clearState + 로그인 + PIN 설정).
 #     잠금화면을 전제하는 파일(`01_02` 등)은 그 전에는 성립하지 않는다.
 # ================================================================
 
@@ -103,7 +103,7 @@ appId: ${APP_ID}
     when:
       visible: "${REG_NEW_MEMBER}"
     commands:
-      - runFlow: "01_01_Login_Success_old.yaml"
+      - runFlow: "01_01_로그인_정상_old.yaml"
 
 # ---------------------------------------------------------------
 # ⑤ 잠금화면이면 PIN 입력
@@ -198,7 +198,7 @@ appId: ${APP_ID}
           when:
             visible: "${REG_NEW_MEMBER}"
           commands:
-            - runFlow: "01_01_Login_Success_old.yaml"
+            - runFlow: "01_01_로그인_정상_old.yaml"
 
 - repeat:
     times: 6

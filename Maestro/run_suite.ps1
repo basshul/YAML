@@ -7,7 +7,7 @@
 #   .\run_suite.ps1 -Balance 12000             # 잔액을 알려준다 → 모자라면 자동 충전(아래 ③)
 #   .\run_suite.ps1 -Balance 1000 -AutoCharge  # ⚠️ 자동 충전 시도(미검증 — OTP로 막힐 수 있다)
 #   .\run_suite.ps1 -Resume                    # 마지막 실행에서 못 끝낸 그룹부터
-#   .\run_suite.ps1 -Names 08_MyQR,03_Domestic -AppId com.gmeremit.online.gmeremittance_native.stag
+#   .\run_suite.ps1 -Names 08_마이QR_수신과송금,03_국내송금_월렛과계좌 -AppId com.gmeremit.online.gmeremittance_native.stag
 #   .\run_suite.ps1 -NoKeepAwake               # 실행 중 절전 차단을 끈다(기본 켜짐 — `Set-KeepAwake` 주석 참고)
 #
 # ── 축: **계정/로그인 상태** ───────────────────────────────────
@@ -19,12 +19,12 @@
 # ── `est`(예상 소요)는 어디서 왔나 ───────────────────────────
 #   2026-09-11 전수 대조: `suite_logs\*\SUMMARY.md` 의 **PASS 행 소요**를 모아
 #   `ceil(실측 최대 × 1.1)` 로 다시 매겼다(21항목 수정 / 9항목 유지).
-#   ⚠️ 손으로 적은 값은 **믿을 게 못 된다**: `11_IntlTopup` 4분(실측 9.5) ·
-#      `25_Profile` 6분(실측 10.2) · `20_Booking` 5분(실측 8.6) 처럼 절반 이하로
-#      적혀 있었고, 반대로 `06_Registration` 28분(실측 17.6) 처럼 부풀려진 것도 있었다.
+#   ⚠️ 손으로 적은 값은 **믿을 게 못 된다**: `11_해외충전_통신사상품결제` 4분(실측 9.5) ·
+#      `25_01_프로필_정보수정과공유` 6분(실측 10.2) · `20_예약_기차표결제와이력` 5분(실측 8.6) 처럼 절반 이하로
+#      적혀 있었고, 반대로 `06_회원가입_신규계정생성` 28분(실측 17.6) 처럼 부풀려진 것도 있었다.
 #   ⛔ **실측이 없는 11항목은 손으로 적은 값 그대로다** — 완주 PASS 기록이 없다:
-#      08_MyQR · 10_DomesticTopup · 03_Domestic · 16_ATMWithdraw · 02_01_Overseas_SendNow ·
-#      21_Card · 04_06/04_01/04_02_Change_* · 01_04/01_05(G9).
+#      08_마이QR_수신과송금 · 10_국내충전_번호입력 · 03_국내송금_월렛과계좌 · 16_ATM출금_신청 · 02_01_해외송금_수취인관리 ·
+#      21_카드_신청과충전 · 04_05/04_03/04_04_메뉴설정_* · 01_04/01_05(G9).
 #      돌려서 PASS가 남으면 같은 방식으로 갱신할 것(대조 스크립트는 일회성이라 남기지 않았다).
 #   ※ 플로우를 크게 손보면 실측도 낡는다 — 케이스를 추가/삭제했으면 다음 완주 후 다시 맞춘다.
 #
@@ -90,26 +90,26 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 # ----------------------------------------------------------------
 $Suite = @(
   # ── G1 로그인 불필요 ───────────────────────────────────────────
-  @{ n="05_InitialScreen";        g="G1"; acct="-";           est=5;  f="Old\05_InitialScreen_old.yaml"
+  @{ n="05_초기화면_로그인전";        g="G1"; acct="-";           est=5;  f="Old\05_초기화면_로그인전_old.yaml"
      note="clearState — 로그아웃 상태에서 시작한다" }
-  @{ n="06_Registration";         g="G1"; acct="-";           est=20; f="Old\06_Registration_old.yaml"; push=$true
+  @{ n="06_회원가입_신규계정생성";         g="G1"; acct="-";           est=20; f="Old\06_회원가입_신규계정생성_old.yaml"; push=$true
      note="⚠️ 비멱등 — test006/test007을 소모한다. 원복 꼬리는 주석 처리돼 test006 로그인 상태로 끝난다" }
-  @{ n="01_03_Login_screen_safe"; g="G1"; acct="-";           est=3;  f="Old\01_03_Login_screen_safe_old.yaml"
+  @{ n="01_03_로그인화면_이동경로"; g="G1"; acct="-";           est=3;  f="Old\01_03_로그인화면_이동경로_old.yaml"
      note="[01]~[05] 비파괴. clearState라 앞 항목의 test006 세션을 정리한다" }
-  @{ n="01_01_Login_Success";     g="G1"; acct="seungsoo818"; est=3;  f="Old\01_01_Login_Success_old.yaml"
+  @{ n="01_01_로그인_정상";     g="G1"; acct="seungsoo818"; est=3;  f="Old\01_01_로그인_정상_old.yaml"
      note="G2의 세션을 여기서 만든다" }
-  @{ n="01_02_Login_Wrong_SimplePassword"; g="G1"; acct="seungsoo818"; est=4;  f="Old\01_02_Login_Wrong_SimplePassword_old.yaml"
+  @{ n="01_02_로그인_간편비번오류5회"; g="G1"; acct="seungsoo818"; est=4;  f="Old\01_02_로그인_간편비번오류5회_old.yaml"
      note="PIN 5회 오입력 → 로그아웃 → [04][05]가 자가복구 → 로그인 상태로 G2에 인계" }
 
   # ── G2 한국인 (부작용 없는 것부터) ─────────────────────────────
-  @{ n="09_Home";                 g="G2"; acct="seungsoo818"; est=9;  f="Old\09_Home_old.yaml" }
-  @{ n="07_TodaysRate";           g="G2"; acct="seungsoo818"; est=4;  f="Old\07_TodaysRate_old.yaml"
+  @{ n="09_홈화면_요소와진입경로";                 g="G2"; acct="seungsoo818"; est=9;  f="Old\09_홈화면_요소와진입경로_old.yaml" }
+  @{ n="07_오늘의환율_환율계산";           g="G2"; acct="seungsoo818"; est=4;  f="Old\07_오늘의환율_환율계산_old.yaml"
      note="진입 시 USD 계산오류 다이얼로그를 먼저 닫는다" }
-  @{ n="15_Loan";                 g="G2"; acct="seungsoo818"; est=2;  f="Old\15_Loan_old.yaml"
+  @{ n="15_개인금융_미노출확인";                 g="G2"; acct="seungsoo818"; est=2;  f="Old\15_개인금융_미노출확인_old.yaml"
      note="⚠️ seungsoo818이 **한국인일 때만** 통과 → G3 뒤로 밀리면 안 된다" }
-  @{ n="26_Menu";                 g="G2"; acct="seungsoo818"; est=8;  f="Old\26_Menu_old.yaml"
+  @{ n="04_01_메뉴_드로어와설정";                 g="G2"; acct="seungsoo818"; est=8;  f="Old\04_01_메뉴_드로어와설정_old.yaml"
      note="Settings + LinkBank(KFTC) 포함, 20케이스" }
-  @{ n="17_WalletStatement";      g="G2"; acct="seungsoo818"; est=3;  f="Old\17_WalletStatement_old.yaml"
+  @{ n="17_월렛거래내역_조회필터";      g="G2"; acct="seungsoo818"; est=3;  f="Old\17_월렛거래내역_조회필터_old.yaml"
      note="잔액 로딩 최대 90초" }
   # ── 13 → 04 순서 고정 (2026-09-04 사용자 지시) ────────────────
   #   `04`의 인바운드 구간([16]~[19])은 **송금 받기 데이터가 있어야** 실검증이 된다.
@@ -125,23 +125,23 @@ $Suite = @(
   #   ⚠️ **순서 의존이 강하다 — 13_01~13_07을 이 순서대로 돌려야 한다.**
   #     01~03이 송금인 3국 등록 → 04가 **인도네시아**로 요청 신청 → 05가 **베트남** 정보 수정
   #     → 06이 송금인 전부 삭제 → 07은 04가 만든 **요청** 상태를 본다(송금인 무관).
-  #   ⛔ 원본 `13_ReceiveOverseas_old.yaml` 은 분할본과 **중복**이므로 넣지 않는다
-  #     (`14_Deposit_old.yaml` 이 `14_01/02/03` 과 중복이라 제외된 것과 같다).
-  @{ n="13_01_Rate_Indonesia";    g="G2"; acct="seungsoo818"; est=6;  f="Old\13_01_Rate_Indonesia_old.yaml"
+  #   ⛔ 원본 `13_해외송금받기_분할전원본_old.yaml` 은 분할본과 **중복**이므로 넣지 않는다
+  #     (`14_입금_분할전원본_old.yaml` 이 `14_01/02/03` 과 중복이라 제외된 것과 같다).
+  @{ n="13_01_해외송금받기_환율과인니등록";    g="G2"; acct="seungsoo818"; est=6;  f="Old\13_01_해외송금받기_환율과인니등록_old.yaml"
      note="[01]~[07] 환율 5케이스 + 인도네시아 송금인 등록(이 사슬의 시작)" }
-  @{ n="13_02_Sender_Mongolia";   g="G2"; acct="seungsoo818"; est=5;  f="Old\13_02_Sender_Mongolia_old.yaml"
+  @{ n="13_02_해외송금받기_몽골송금인";   g="G2"; acct="seungsoo818"; est=5;  f="Old\13_02_해외송금받기_몽골송금인_old.yaml"
      note="[07-1] 몽골 등록 — 14필드 + 신분증 사진 3종(앱 내 촬영, 갤러리 픽스처 불필요)" }
-  @{ n="13_03_Sender_Vietnam";    g="G2"; acct="seungsoo818"; est=5;  f="Old\13_03_Sender_Vietnam_old.yaml"
+  @{ n="13_03_해외송금받기_베트남송금인";    g="G2"; acct="seungsoo818"; est=5;  f="Old\13_03_해외송금받기_베트남송금인_old.yaml"
      note="[07-2] 베트남 등록 — 사진 3종. **등록만 하고 남긴다**(13_05가 쓴다)" }
-  @{ n="13_04_Request";           g="G2"; acct="seungsoo818"; est=7;  f="Old\13_04_Request_old.yaml"
-     note="[08]~[12] 인도네시아 송금요청 Confirm 실등록. **04_Menu_History의 인바운드 데이터를 여기서 만든다**" }
-  @{ n="13_05_ExistingSender";    g="G2"; acct="seungsoo818"; est=7;  f="Old\13_05_ExistingSender_old.yaml"
+  @{ n="13_04_해외송금받기_송금요청등록";           g="G2"; acct="seungsoo818"; est=7;  f="Old\13_04_해외송금받기_송금요청등록_old.yaml"
+     note="[08]~[12] 인도네시아 송금요청 Confirm 실등록. **04_02_메뉴_거래내역의 인바운드 데이터를 여기서 만든다**" }
+  @{ n="13_05_해외송금받기_송금인수정삭제";    g="G2"; acct="seungsoo818"; est=7;  f="Old\13_05_해외송금받기_송금인수정삭제_old.yaml"
      note="[13] 삭제 동작 + [14] 베트남 정보 수정. edit 아이콘은 **'승인 대기 중' 행에만** 뜬다 → 13_03 필수" }
-  @{ n="13_06_PurgeSenders";      g="G2"; acct="seungsoo818"; est=3;  f="Old\13_06_PurgeSenders_old.yaml"
+  @{ n="13_06_해외송금받기_송금인일괄삭제";      g="G2"; acct="seungsoo818"; est=3;  f="Old\13_06_해외송금받기_송금인일괄삭제_old.yaml"
      note="등록된 송금인 일괄 삭제(사양). **반드시 13_05 뒤** — 먼저 지우면 04/05가 쓸 데이터가 사라진다. 잔재가 더 있으면 FAIL로 드러난다(수동 정리)" }
-  @{ n="13_07_RequestStatus";     g="G2"; acct="seungsoo818"; est=5;  f="Old\13_07_RequestStatus_old.yaml"
+  @{ n="13_07_해외송금받기_요청상태조회";     g="G2"; acct="seungsoo818"; est=5;  f="Old\13_07_해외송금받기_요청상태조회_old.yaml"
      note="[15]~[20] 요청 상태. 13_04가 만든 Request(72시간 만료)가 전제. 송금인과 무관해 13_06 뒤여도 성립" }
-  @{ n="04_Menu_History";         g="G2"; acct="seungsoo818"; est=13; f="Old\04_Menu_History_old.yaml"
+  @{ n="04_02_메뉴_거래내역";         g="G2"; acct="seungsoo818"; est=13; f="Old\04_02_메뉴_거래내역_old.yaml"
      # 2026-09-04: **130([17] 인바운드 상세) BLOCKED 해제** — 13이 데이터를 만들면서 진입 가능해졌다.
      #   131([18] 인바운드 이력 다운로드)은 저장소 권한 앱버그라 그대로 BLOCKED다.
      blocked=@("115","117","122","127","131","135","138"); na=@("149","150","151")
@@ -151,7 +151,7 @@ $Suite = @(
      #   ("확인")가 **실계좌 자동충전**이다 → 게이트로 갈라내는 게 맞다.
      needs=@{ balance=15000 }
      note="48케이스. [02] Wallet 실송금 완주(잔액 의존). 이력 다운로드 계열은 저장소 권한 앱버그로 BLOCKED. 인바운드 구간은 13 선행 전제" }
-  @{ n="18_Telecom";              g="G2"; acct="seungsoo818"; est=1;  f="Old\18_Telecom_old.yaml"
+  @{ n="18_통신서비스_외부웹이동";              g="G2"; acct="seungsoo818"; est=1;  f="Old\18_통신서비스_외부웹이동_old.yaml"
      # 2026-09-29: 앱이 바뀌어 홈 그리드 "통신 서비스"가 **외부 웹(gmemobile.com)** 으로 나간다.
      #   앱 내 텔레콤 화면으로 가는 진입점이 사라졌다 → [02]~[08]은 **막힌 게 아니라 해당 없음**이라
      #   blocked 가 아니라 na 로 센다. (화면 자체는 빌드에 남아 있고 앱이 안 부를 뿐이다)
@@ -162,43 +162,41 @@ $Suite = @(
      #     체크리스트를 이 표에 연결하면 이런 값이 그대로 집계에 흘러든다.
      na=@("02","03","04","05","06","07","08")
      note="[01] 외부 웹(gmemobile.com) 이동 확인만 실행. [02]~[08]은 진입 경로 소멸로 N/A" }
-  @{ n="19_IssueCertificate";     g="G2"; acct="seungsoo818"; est=5;  f="Old\19_IssueCertificate_old.yaml"
-     note="WeCheck 인증수단 선택까지. ⚠️ livetest:id 정리 후 stag 재검증 미완" }
-  @{ n="22_Event";                g="G2"; acct="seungsoo818"; est=3;  f="Old\22_Event_old.yaml"
+  @{ n="22_이벤트_친구공유";                g="G2"; acct="seungsoo818"; est=3;  f="Old\22_이벤트_친구공유_old.yaml"
      note="Compose UI라 id 없음" }
-  @{ n="25_Profile";              g="G2"; acct="seungsoo818"; est=12; f="Old\25_Profile_old.yaml"; push=$true
+  @{ n="25_01_프로필_정보수정과공유";              g="G2"; acct="seungsoo818"; est=12; f="Old\25_01_프로필_정보수정과공유_old.yaml"; push=$true
      note="⚠️ 실 Gmail 주소가 코드에 있다 — 공유 전 교체(ENVIRONMENT.md §3.5)" }
   # ── 14_01은 잔액을 쓰지도 만들지도 않는다 → 돈 쓰는 구간 **앞**에 둔다 (2026-09-03 사용자 지시) ──
   #   ⚠️ 이 파일이 "충전 플로우"라서 앞으로 당긴 게 아니다. **충전하지 않는다**:
   #      [27] 자동이체는 금액만 입력하고 표시 확인 후 back(확인·PIN 없음) /
   #      [02][05] 가상계좌는 번호 표시만 / [28][29] 편의점 입금은 10분 뒤 만료되는 요청이다.
   #      실충전은 아래 **자동 충전 단계**(`_suite_charge_old.yaml`)가 맡는다.
-  @{ n="14_01_Deposit";           g="G2"; acct="seungsoo818"; est=8;  f="Old\14_01_Deposit_seungsoo818_old.yaml"
+  @{ n="14_01_입금_한국인계좌연결";           g="G2"; acct="seungsoo818"; est=8;  f="Old\14_01_입금_한국인계좌연결_old.yaml"
      note="Wallet/GMEPay/AutoDebit. 계좌는 목록에서 동적 선택한다" }
 
   # ── 여기부터 돈이 움직인다 ──
-  @{ n="08_MyQR";                 g="G2"; acct="seungsoo818"; est=10; f="Old\08_MyQR_old.yaml"; push=$true
+  @{ n="08_마이QR_수신과송금";                 g="G2"; acct="seungsoo818"; est=10; f="Old\08_마이QR_수신과송금_old.yaml"; push=$true
      needs=@{ balance=100 };  note="1원 송금 완주 포함(실측 1원×3=3원 — 2026-09-18 2000→100 정정). 카카오뱅크는 [05][06] 실송금 조합이라 고정" }
-  @{ n="10_DomesticTopup";        g="G2"; acct="seungsoo818"; est=4;  f="Old\10_DomesticTopup_old.yaml"
+  @{ n="10_국내충전_번호입력";        g="G2"; acct="seungsoo818"; est=4;  f="Old\10_국내충전_번호입력_old.yaml"
      # ★ needs.balance 는 '얼마가 빠져나가나' 가 아니라 **'진행하려면 얼마가 있어야 하나'** 다.
      #   2026-09-18 에 '차감되지 않는다'를 근거로 0 으로 내렸는데 둘을 뒤섞은 것이었다.
      #   돈은 실제로 안 빠지지만 **결제 요청을 걸려면 10,000원이 있어야 한다**(2026-10-23 사용자 확인).
      needs=@{ balance=10000 }
      note="[04]는 **거부 동작이 케이스 정의**(테스트 번호가 선불폰 아님) → 실자금 이동 없음. 실패응답 최대 3분" }
-  @{ n="03_Domestic";             g="G2"; acct="seungsoo818"; est=12; f="Old\03_Domestic_old.yaml"
+  @{ n="03_국내송금_월렛과계좌";             g="G2"; acct="seungsoo818"; est=12; f="Old\03_국내송금_월렛과계좌_old.yaml"
      needs=@{ balance=3000 }
      note="⚠️ [03]은 타인 은행계좌라 **수수료 1,000원 이상**. 1,006원으로는 막혔다(2026-09-01 실측)" }
-  @{ n="16_ATMWithdraw";          g="G2"; acct="seungsoo818"; est=4;  f="Old\16_ATMWithdraw_old.yaml"
+  @{ n="16_ATM출금_신청";          g="G2"; acct="seungsoo818"; est=4;  f="Old\16_ATM출금_신청_old.yaml"
      needs=@{ balance=13000 }; note="취소 재시도 루프 필수 + 내역 사후검증" }
-  @{ n="02_01_Overseas_SendNow";  g="G2"; acct="seungsoo818"; est=8;  f="Old\02_01_Overseas_Send now_old.yaml"
+  @{ n="02_01_해외송금_수취인관리";  g="G2"; acct="seungsoo818"; est=8;  f="Old\02_01_해외송금_수취인관리_old.yaml"
      # 2026-10-07 에 송금 구간이 통째로 주석 처리됐다 — 이 파일은 더 이상 실송금을 하지 않는다.
-     #   Wallet 송금 검증은 04_Menu_History [02] 로 이관됐다. 남은 건 수취인 추가·삭제뿐이라
+     #   Wallet 송금 검증은 04_02_메뉴_거래내역 [02] 로 이관됐다. 남은 건 수취인 추가·삭제뿐이라
      #   잔액이 필요 없다(종전 15,000 은 송금하던 시절의 값이라 불필요한 자동충전을 불렀다).
      needs=@{ balance=0 }
      note="수취인 추가·삭제만 남았다(송금 구간 주석). `GME TEST`를 남겨야 02_02가 성립" }
-  @{ n="02_02_Overseas_Schedule"; g="G2"; acct="seungsoo818"; est=16; f="Old\02_02_Overseas_Schedule_old.yaml"
+  @{ n="02_02_해외송금_예약송금"; g="G2"; acct="seungsoo818"; est=16; f="Old\02_02_해외송금_예약송금_old.yaml"
      note="예약 등록/취소만, 실결제 없음. **02_01 직후여야 한다**" }
-  @{ n="20_Booking";              g="G2"; acct="seungsoo818"; est=10; f="Old\20_Booking_old.yaml"
+  @{ n="20_예약_기차표결제와이력";              g="G2"; acct="seungsoo818"; est=10; f="Old\20_예약_기차표결제와이력_old.yaml"
      irreversible=$true; note="🔴 실결제 + 자동취소. 날짜는 최대한 먼 미래로(취소 수수료)" }
   # ⚠️ est 8 → 30 (2026-09-11). 종전 8분은 **신청 블록이 조용히 SKIP되던 실행**을 잰 값이다
   #   ([01]의 가드가 전체매칭으로 안 맞아 [01]~[10]이 통째로 건너뛰어졌다). 실기기 실측:
@@ -206,20 +204,20 @@ $Suite = @(
   # ⚠️ push=$true 신설 — [24] Global QR이 갤러리 픽스처에 의존하는데 빠져 있었다.
   # ⚠️ needs.balance=3000 신설 — [33-1]이 CU 3,000원 쿠폰을 실제로 구매(후 취소)한다.
   #   잔액이 모자라면 **실계좌 자동충전**이 일어나므로 SKIP으로 갈라내는 게 맞다.
-  @{ n="21_Card";                 g="G2"; acct="seungsoo818"; est=30; f="Old\21_Card_old.yaml"; push=$true
+  @{ n="21_카드_신청과충전";                 g="G2"; acct="seungsoo818"; est=30; f="Old\21_카드_신청과충전_old.yaml"; push=$true
      irreversible=$true; needs=@{ balance=3000 }
      note="🔴 [01]~[06]이 **실제 카드 신청을 접수**하고 [10]이 취소해 원복한다 — 중간에 끊기면 신청이 남아 손으로 취소해야 한다. [12]는 카드 PIN을 바꿨다 되돌리므로 끊기면 대체 PIN으로 남는다([11]의 폴백이 1회 받아준다). 잔액부족 시 GME Shop 구매하기에서 **실계좌 자동충전**이 일어난다. [24]는 갤러리 픽스처(Global QR.jpg) 의존." }
-  @{ n="11_IntlTopup";            g="G2"; acct="seungsoo818"; est=11; f="Old\11_IntlTopup_old.yaml"
+  @{ n="11_해외충전_통신사상품결제";            g="G2"; acct="seungsoo818"; est=11; f="Old\11_해외충전_통신사상품결제_old.yaml"
      irreversible=$true; note="🔴 실결제·**취소 불가** → 돌릴 때마다 금액이 누적된다" }
-  @{ n="12_BillPayment";          g="G2"; acct="seungsoo818"; est=5;  f="Old\12_BillPayment_old.yaml"
+  @{ n="12_청구서결제_해외빌러";          g="G2"; acct="seungsoo818"; est=5;  f="Old\12_청구서결제_해외빌러_old.yaml"
      irreversible=$true; note="🔴 실결제·취소 불가. btn_save_biller는 누르면 안 된다" }
 
   # ── G3 외국인 (계정 2개, 순서 고정) ────────────────────────────
-  @{ n="14_02_Deposit";           g="G3"; acct="test123";     est=11; f="Old\14_02_Deposit_test123_old.yaml"
+  @{ n="14_02_입금_외국인계좌미연결";           g="G3"; acct="test123";     est=11; f="Old\14_02_입금_외국인계좌미연결_old.yaml"
      note="ATM/Store Deposit. [29] 편의점 입금 요청은 10분 만료" }
-  @{ n="25_Profile_Foreign";      g="G3"; acct="test123";     est=3;  f="Old\25_Profile_Foreign_old.yaml"; push=$true
+  @{ n="25_02_프로필_외국인신분증";      g="G3"; acct="test123";     est=3;  f="Old\25_02_프로필_외국인신분증_old.yaml"; push=$true
      note="⛔ **계정 전환 코드가 없다** — 14_02 직후가 아니면 성립하지 않는다" }
-  @{ n="14_03_Deposit";           g="G3"; acct="test251024";  est=7;  f="Old\14_03_Deposit_test251024_old.yaml"
+  @{ n="14_03_입금_GMEPay가상계좌";           g="G3"; acct="test251024";  est=7;  f="Old\14_03_입금_GMEPay가상계좌_old.yaml"
      note="GMEPay Deposit. 끝에서 seungsoo818로 원복한다" }
 
   # ── G4 설정 변경 — 자기 원복형 (반드시 맨 뒤) ─────────────────
@@ -227,21 +225,21 @@ $Suite = @(
   #   그 상태(외국어 / 바뀐 PIN / 바뀐 비밀번호)는 **뒤따르는 모든 항목의 진입을 깨뜨린다.**
   #   `_suite_recover_old.yaml` 은 앱 재시작·재로그인만 하므로 **이 셋은 복구하지 못한다.**
   #   → 그래서 G2(같은 seungsoo818)가 아니라 **전 그룹 뒤**에 둔다. 실패해도 오염될 것이 없다.
-  #   전제: 직전 `14_03_Deposit` 이 끝에서 seungsoo818 로 원복한다. 셋 다 계정 전환 코드가 없다.
-  #   순서 고정 이유: `04_01`(PIN 변경)은 인증에 **로그인 비밀번호**를 쓴다 → `04_02` 보다 먼저.
+  #   전제: 직전 `14_03_입금_GMEPay가상계좌` 이 끝에서 seungsoo818 로 원복한다. 셋 다 계정 전환 코드가 없다.
+  #   순서 고정 이유: `04_03`(PIN 변경)은 인증에 **로그인 비밀번호**를 쓴다 → `04_04` 보다 먼저.
   #                  자격정보를 건드리는 둘을 뒤로 몰아 실패 시 남는 피해를 줄인다.
-  @{ n="04_06_Change_Languages";  g="G4"; acct="seungsoo818"; est=25; f="Old\04_06_Settings_Change languages_old.yaml"
+  @{ n="04_05_메뉴설정_언어변경24종";  g="G4"; acct="seungsoo818"; est=25; f="Old\04_05_메뉴설정_언어변경24종_old.yaml"
      note="24개 언어 순회 후 한국어 복귀. ⚠️ 중단되면 앱이 **외국어로 남아** 뒤 항목이 전부 깨진다(수동 복구 필요). est 는 추정치" }
-  @{ n="04_01_Change_SimplePassword"; g="G4"; acct="seungsoo818"; est=8; f="Old\04_01_Change_SimplePassword_old.yaml"
-     note="PIN 정상→대체→원복. ⚠️ 중단되면 **대체 PIN 으로 남아** 모든 진입 블록이 깨진다. env PW_CUR_LAST 는 04_02 와 함께 맞출 것" }
-  @{ n="04_02_Change_LoginPassword";  g="G4"; acct="seungsoo818"; est=12; f="Old\04_02_Change_LoginPassword_old.yaml"
+  @{ n="04_03_메뉴설정_간편비번변경"; g="G4"; acct="seungsoo818"; est=8; f="Old\04_03_메뉴설정_간편비번변경_old.yaml"
+     note="PIN 정상→대체→원복. ⚠️ 중단되면 **대체 PIN 으로 남아** 모든 진입 블록이 깨진다. env PW_CUR_LAST 는 04_04 와 함께 맞출 것" }
+  @{ n="04_04_메뉴설정_로그인비번변경";  g="G4"; acct="seungsoo818"; est=12; f="Old\04_04_메뉴설정_로그인비번변경_old.yaml"
      note="[06]~[13] 로그인 비밀번호 변경→원복(멱등). ⚠️ [13] 이 실패하면 PW_NEW 로 남는다 → env 두 줄을 서로 바꿔 다음 실행을 맞춘다" }
 
   # ── G9 파괴적: admin 개입이 있어야 복구된다. 기본 세트에서 제외 ─
-  @{ n="01_04_Login_Wrong_LoginPassword"; g="G9"; acct="-"; est=3; f="Old\01_04_Login_Wrong_LoginPassword_old.yaml"
+  @{ n="01_04_로그인_비번오류계정잠금"; g="G9"; acct="-"; est=3; f="Old\01_04_로그인_비번오류계정잠금_old.yaml"
      destructive="로그인 비밀번호 오입력 = **계정 잠금**. 자가복구 불가 → admin 해제 필요"
      note="CLI로 LOCK_ID/CONFIRM_LOCK 을 넘겨야 동작한다(파일 내 assertTrue 가드)" }
-  @{ n="01_05_Login_Password_Reset";      g="G9"; acct="-"; est=4; f="Old\01_05_Login_Password_Reset_old.yaml"
+  @{ n="01_05_로그인_비번초기화";      g="G9"; acct="-"; est=4; f="Old\01_05_로그인_비번초기화_old.yaml"
      destructive="[06]이 **비밀번호를 실제 초기화**한다 → admin 재설정 전까지 모든 플로우가 깨진다" }
 )
 
@@ -569,7 +567,7 @@ if ($IsLive) {
 # 돈이 드는 케이스가 통째로 빠진 채 3시간이 지나간다.
 # → 이제 **부족한 항목 직전에 `_suite_charge_old.yaml`을 부족액만큼 반복 호출**한다(1회=1,000원).
 #
-# ⚠️ `14_01_Deposit`이 이 일을 대신하지 못한다(그래서 순서만 앞으로 옮기고 충전은 따로 둔다):
+# ⚠️ `14_01_입금_한국인계좌연결`이 이 일을 대신하지 못한다(그래서 순서만 앞으로 옮기고 충전은 따로 둔다):
 #    [27] 자동이체는 금액 입력·표시 확인 후 back(확인·PIN 없음) / [02][05] 가상계좌는 번호 표시만 /
 #    [28][29] 편의점 입금은 10분 뒤 만료되는 요청이라 스캔 전에는 자금이 움직이지 않는다.
 #
@@ -698,7 +696,7 @@ foreach ($t in $plan) {
 
     # ⚠️ 로그 첫 줄은 `Running: maestro … --env SESSION_EXPIRED="로그인 세션이 만료" --env TXT_BALANCE="잔액" …`
     #   형태의 **커맨드 에코**다. 이 줄을 그대로 검사하면 **env 값 자신이 매칭**된다
-    #   → 2026-09-02 실측: `09_Home`이 `btnTransfer` assert로 죽었는데 리포트엔
+    #   → 2026-09-02 실측: `09_홈화면_요소와진입경로`이 `btnTransfer` assert로 죽었는데 리포트엔
     #     **[세션 만료(환경)]**로 찍혔고, 원인 자리엔 maestro 커맨드 전문(4KB)이 실렸다.
     #     환경 탓으로 오분류된 FAIL은 **코드 결함을 가리는** 가장 나쁜 종류의 오보다.
     #   → 분류·원인 추출은 **에코 줄을 걷어낸 본문(`$bodyLines`)**으로만 한다.
@@ -707,7 +705,7 @@ foreach ($t in $plan) {
 
     # ⚠️ **성공한 스텝 설명줄로 분류하지 말 것.** 에코 줄을 걷어내도 오탐이 남았다:
     #   `Assert that "로그인 세션이 만료[\s\S]*" is not visible... COMPLETED` 는 **세션이 살아 있다는 뜻**인데
-    #   "세션이 만료"가 문자열로 들어 있어 2026-09-03 `21_Card` FAIL이 [세션 만료(환경)]로 찍혔다.
+    #   "세션이 만료"가 문자열로 들어 있어 2026-09-03 `21_카드_신청과충전` FAIL이 [세션 만료(환경)]로 찍혔다.
     #   → 분류·원인은 **COMPLETED/SKIPPED로 끝나지 않는 줄**(= 실제 실패·오류 줄)만 본다.
     $errLines = @($bodyLines | Where-Object { $_ -notmatch '(COMPLETED|SKIPPED|PENDING)\s*$' })
     $errBody  = $errLines -join "`n"
@@ -720,7 +718,7 @@ foreach ($t in $plan) {
     $envHint = ""
     if ($code -ne 0) {
         # ⚠️ **기기 연결이 끊긴 것을 코드 결함으로 찍지 말 것** — 2026-09-03 첫 검증 실행에서
-        #   `09_Home`이 54스텝에서 `device '...' not found`(adb transport 유실)로 죽었다.
+        #   `09_홈화면_요소와진입경로`이 54스텝에서 `device '...' not found`(adb transport 유실)로 죽었다.
         #   USB는 실제로 자주 끊긴다(8/31~9/1에만 4회). 가장 먼저 본다.
         if     ($errBody -match "not found\)|device .* not found|Command failed \(host:transport") { $envHint = "기기 연결 끊김(환경)" }
         elseif ($errBody -match "insufficient")   { $envHint = "잔액 부족(환경)" }
@@ -750,7 +748,7 @@ foreach ($t in $plan) {
     if (-not $earlyHostChecked) {
         $earlyHostChecked = $true
         # ⚠️ **콜드스타트 gmeuat 은 유출이 아니다** (2026-09-09 실측).
-        #   `clearState` 를 쓰는 플로우(05_InitialScreen · 01_03 · 01_01 …)는 앱 데이터를 지워
+        #   `clearState` 를 쓰는 플로우(05_초기화면_로그인전 · 01_03 · 01_01 …)는 앱 데이터를 지워
         #   서버 선택이 빌드 기본값(stag=STAG)으로 돌아간다. 그래서 **Server Override 적용 전에**
         #   앱이 설정 API `ChangePasswordRule` 하나를 gmeuat 로 호출한다(요청+응답 2줄).
         #   → 그 엔드포인트만 **콜드스타트로 분류**하고, 나머지 gmeuat 는 전부 위반으로 본다.
@@ -810,7 +808,7 @@ foreach ($t in $plan) {
             # ★ 복구가 2회 연속 실패하면 중단한다. 안 그러면 남은 항목이 전부 FAIL로 찍힌다.
             if ($recoverFail -ge 2) {
                 Write-Host "`n⛔ 복구 2회 연속 실패 — 중단합니다. 기기·세션 상태를 손으로 확인하세요." -ForegroundColor Red
-                Write-Host "   PIN 미등록 상태라면 `01_01_Login_Success_old.yaml` 로만 빠져나옵니다." -ForegroundColor DarkYellow
+                Write-Host "   PIN 미등록 상태라면 `01_01_로그인_정상_old.yaml` 로만 빠져나옵니다." -ForegroundColor DarkYellow
                 $aborted = $true; break
             }
         }

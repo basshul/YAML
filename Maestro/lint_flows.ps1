@@ -156,7 +156,7 @@ foreach ($d in @($root, (Join-Path $root "Old"))) {
 #      두면 `--env` 로 넘긴 값이 무시되기 때문이다. 대신 잘 짠 플로우는
 #      `assertTrue: ${typeof VAR !== 'undefined' && …}` 로 **주입 여부를 스스로 검증**한다.
 #      그 계약이 있으면 "정의되지 않음"이 아니다 → 여기서 declared 로 인정한다.
-#      (2026-09-02 `01_04_Login_Wrong_LoginPassword_old.yaml` 이 이 패턴이라 오탐이 났다)
+#      (2026-09-02 `01_04_로그인_비번오류계정잠금_old.yaml` 이 이 패턴이라 오탐이 났다)
 foreach ($ef in $envScanFiles) {
     $codeAll = ((Read-Lines $ef.FullName) -join "`n")
     foreach ($m in [regex]::Matches($codeAll, 'typeof\s+([A-Za-z_][A-Za-z0-9_]*)')) {
@@ -184,7 +184,7 @@ foreach ($name in $docs.Keys) {
         if ($l -match 'assertNotVisible|notVisible') { continue }
         # ⚠️ **여러 줄 형식을 놓치면 오탐이 난다**(2026-09-03).
         #   `extendedWaitUntil:` / `visible:` / `text: "..."` 처럼 3줄로 쪼개 쓰면 값이 있는 줄에는
-        #   키워드가 없어서 긍정 집합에 안 들어갔고, `20_Booking`의 `SELECT DATE`가
+        #   키워드가 없어서 긍정 집합에 안 들어갔고, `20_예약_기차표결제와이력`의 `SELECT DATE`가
         #   "짝 없는 assertNotVisible"로 잘못 지적됐다(위에서 분명히 긍정 검증하고 있었다).
         #   → 값만 있는 `text:`/`id:` 줄도 받되, **앞 3줄에 부정 마커가 있으면 제외**한다.
         $isKeywordLine = $l -match '(assertVisible|extendedWaitUntil|tapOn|visible|longPressOn|scrollUntilVisible|inputText)'
@@ -281,7 +281,7 @@ foreach ($f in $files) {
         # ---- E09 pressKey 값이 Maestro가 아는 키가 아님 ----
         #   ⚠️ **유효하지 않은 값이면 Maestro가 `Parsing Failed`로 파일을 통째로 거부**한다.
         #     케이스 하나가 아니라 **플로우 전체가 실행되지 않는다** — 2026-09-03에
-        #     `02_02_Overseas_Schedule_old.yaml`의 `pressKey: back`이 한글 IME 오타로 오염돼
+        #     `02_02_해외송금_예약송금_old.yaml`의 `pressKey: back`이 한글 IME 오타로 오염돼
         #     `backdhwjs`가 돼 있었고, 그 상태로 저장소 9/1 커밋본까지 들어가 있었다.
         #     스위트에서 COMPLETED 0으로 죽고 나서야 알았다 → 정적으로 잡는다.
         if ($c -match '^\s*-?\s*pressKey\s*:\s*"?([^"#]+?)"?\s*$') {
@@ -341,7 +341,7 @@ foreach ($f in $files) {
         #
         #   그래서 진짜 위험은 **첫 탭 전**이다. 화면 도달을 기다리지 않고 바로 숫자를 누르면
         #   PIN 화면이 아직 안 떴을 수 있고, 그때 같은 글자가 **다른 요소에 있으면 그걸 누른다.**
-        #   실례: `03_Domestic`은 금액으로 "2"를 넣은 직후 대기 없이 `tapOn: "2"`로 PIN을 시작한다.
+        #   실례: `03_국내송금_월렛과계좌`은 금액으로 "2"를 넣은 직후 대기 없이 `tapOn: "2"`로 PIN을 시작한다.
         #
         #   오탐 제외: 보안 키패드의 신분증번호 입력(`입력완료`로 끝남)은 다른 물건이다.
         if ($c -match '^\s*-?\s*tapOn:\s*"[0-9]"\s*$') {
@@ -414,7 +414,7 @@ foreach ($f in $files) {
         # ---- W01 범용 라벨의 **맹목적 팝업 닫기** ----
         #   CLAUDE.md가 금지하는 건 모든 "닫기" 탭이 아니라 **`visible: "닫기"` → `tapOn: "닫기"` 짝**이다.
         #   그 짝은 "무엇이 떠 있는지 모른 채 아무 X나 누른다"라서 런처 이탈 사고를 냈다.
-        #   반대로 [X]를 의도적으로 누르고 **바로 결과를 단언하는** 스텝은 안전하다(26_Menu의 PIN 재설정 취소) →
+        #   반대로 [X]를 의도적으로 누르고 **바로 결과를 단언하는** 스텝은 안전하다(04_01_메뉴_드로어와설정의 PIN 재설정 취소) →
         #   그래서 **자기참조 가드가 있을 때만** 잡는다.
         #   또 가드에 `notVisible: <목적 화면>` 이 함께 걸려 있으면 "아직 도달 못 했을 때만" 누르는 것이므로 제외한다.
         if ($c -match '^\s*-?\s*tapOn:\s*"?([^"]+)"?\s*$') {
@@ -467,7 +467,7 @@ foreach ($f in $files) {
         }
 
         # ---- W10 연동 계좌 목록에서 은행명 하드코딩 + 전제 단언 없음 ----
-        #   목록 내용은 **계정 상태에 따라 바뀐다**(`케이뱅크` 소멸 실측 2026-08-28 → 08_MyQR [02] 정지).
+        #   목록 내용은 **계정 상태에 따라 바뀐다**(`케이뱅크` 소멸 실측 2026-08-28 → 08_마이QR_수신과송금 [02] 정지).
         #   하드코딩 자체가 항상 틀린 건 아니다(실송금 조합처럼 특정 계좌가 케이스의 일부인 경우가 있다).
         #   문제는 **전제 단언이 없을 때** — 목록이 바뀌면 tapOn이 Element not found로 죽어
         #   셀렉터 버그처럼 오진하게 된다. 그래서 "assert 없는 tapOn"만 잡는다.
@@ -495,7 +495,7 @@ foreach ($f in $files) {
 
         # ---- W11 좌표 탭인데 결과 단언이 없다 ----
         #   좌표는 해상도가 바뀌면 **에러 없이** 다른 곳을 누르거나 아무것도 안 누른다.
-        #   `21_Card [19]`의 토글이 정확히 이 모양이라 안 눌려도 EXIT=0 이 된다.
+        #   `21_카드_신청과충전 [19]`의 토글이 정확히 이 모양이라 안 눌려도 EXIT=0 이 된다.
         if ($c -match '^\s*point\s*:') {
             $fw = Get-FwdWindow $code $raw $i 12
             if ($fw -notmatch 'assertVisible|assertNotVisible|assertTrue|extendedWaitUntil') {
@@ -506,7 +506,7 @@ foreach ($f in $files) {
 
         # ---- W12 hideKeyboard 앞에 입력이 없다 = 사실상 뒤로가기 ----
         #   Maestro의 hideKeyboard는 **키보드가 없으면 back으로 동작한다**(2026-09-08 실측).
-        #   `26_Menu` 추천인 케이스에서 앱이 홈으로 튀었고, 06 탐색본은 가입 폼을 벗어났다.
+        #   `04_01_메뉴_드로어와설정` 추천인 케이스에서 앱이 홈으로 튀었고, 06 탐색본은 가입 폼을 벗어났다.
         if ($c -match 'hideKeyboard') {
             $bw = Get-BackWindow $code $i 8
             if ($bw -notmatch 'inputText|eraseText|copyTextFrom|[Ee]dit[Tt]ext|when:') {

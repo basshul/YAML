@@ -23,15 +23,15 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
 ## 실행 명령
 
 ```powershell
-.\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml"              # 기본 = stag + LIVETEST
-.\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml" -Build live  # 운영 요청이 있을 때만
-.\run_suite.ps1 -Names 04_Menu_History
+.\run_test.ps1 -lang ko -flow "Old\09_홈화면_요소와진입경로_old.yaml"              # 기본 = stag + LIVETEST
+.\run_test.ps1 -lang ko -flow "Old\09_홈화면_요소와진입경로_old.yaml" -Build live  # 운영 요청이 있을 때만
+.\run_suite.ps1 -Names 04_02_메뉴_거래내역
 ```
 
 - `-device` 생략 시 자동 감지하고 **2대 이상이면 실행을 거부**한다. 시리얼을 하드코딩하지 말 것.
 - `run_test.ps1`이 `env\<lang>.env`를 파싱해 `--env KEY="VALUE"`로 넘긴다. 값의 인용은 필수.
 - 저장소 루트의 `run_test.ps1` 은 **갤러리 픽스처 전용 래퍼**다 — 이미지를 push 하고
-  `Maestro\run_test.ps1` 로 넘긴다(인자 동일). `21_Card [24]`·`06_Registration` 만 이걸 쓴다.
+  `Maestro\run_test.ps1` 로 넘긴다(인자 동일). `21_카드_신청과충전 [24]`·`06_회원가입_신규계정생성` 만 이걸 쓴다.
 - 스위트 상세는 `maestro-suite` 스킬 참고.
 
 ### 빌드 2종 (2026-09-03 사용자 선언)
@@ -82,7 +82,7 @@ adb shell dumpsys window | grep mCurrentFocus   # 몇 초 간격으로 두 번 �
 tasklist | findstr /i maestro                    # maestro 프로세스가 떠 있는가
 ```
 
-⚠️ **`01_01_Login_Success_old.yaml` 은 `clearState` 라 남의 작업 상태를 날린다.**
+⚠️ **`01_01_로그인_정상_old.yaml` 은 `clearState` 라 남의 작업 상태를 날린다.**
 로그인 실패는 **5회 제한**이므로, 원인을 모른 채 재시도하지 말고 **비밀번호를 고치지도 말 것**
 (근거 없이 `PW_CUR_LAST` 를 바꾸면 남은 횟수를 태우고 계정이 잠긴다 → `maestro-debug`).
 
@@ -93,13 +93,13 @@ tasklist | findstr /i maestro                    # maestro 프로세스가 떠 �
    - `AutoLogoutActivity` / 런처 → **자동 로그아웃**. 유휴 ~10분이면 걸린다 → 재로그인 필요
      ★ 이 화면은 **접근성 트리에 안 잡히고 덤프는 직전 화면을 돌려준다** → 플로우가 오진해
      보안 키패드를 블라인드로 누른다. `run_test.ps1` 이 **exit 3 으로 끊고**(2026-09-15),
-     복구는 `Old\01_01_Login_Success_old.yaml`(`clearState`)뿐이다. 진단은 `maestro-debug` ②-1.
-   - `LoginV2Activity` → 로그아웃 상태 → `Old\01_01_Login_Success_old.yaml` 먼저
+     복구는 `Old\01_01_로그인_정상_old.yaml`(`clearState`)뿐이다. 진단은 `maestro-debug` ②-1.
+   - `LoginV2Activity` → 로그아웃 상태 → `Old\01_01_로그인_정상_old.yaml` 먼저
 3. **수정 반영 확인** — 파일을 고치고 돌릴 때는 실행 명령 앞에 카운트를 찍는다.
    편집한 수정이 파일에서 되돌아간 사고가 실제로 있었다(같은 실패를 두 번 겪음).
 
 ```powershell
-$c = (Select-String -Path "Old\04_Menu_History_old.yaml" -Pattern 'timeout: 120000' -SimpleMatch).Count
+$c = (Select-String -Path "Old\04_02_메뉴_거래내역_old.yaml" -Pattern 'timeout: 120000' -SimpleMatch).Count
 Write-Host "실행직전 확인: $c"
 ```
 
@@ -125,7 +125,7 @@ adb shell wm size && adb shell wm density     # 해상도·DPI 를 기록해 둔
 ### 세션 만료
 
 하루 지나면 세션이 만료된다. 진입부터 실패하면 이걸 먼저 의심하고
-`Old\01_01_Login_Success_old.yaml`로 재로그인한다. **PIN만으로는 복구되지 않는다.**
+`Old\01_01_로그인_정상_old.yaml`로 재로그인한다. **PIN만으로는 복구되지 않는다.**
 재로그인과 본 실행 사이에 유휴를 두지 말 것(자동 로그아웃이 다시 걸린다).
 
 ## 백그라운드 실행

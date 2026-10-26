@@ -83,7 +83,7 @@ C:\GME\qa-automation\            ★ 편집·실행·커밋이 전부 여기서 
 
 - 실행 로그(`suite_logs\`)에는 **계정 ID·잔액·거래 내역·실 이메일**이 그대로 남는다 → 추적하지 않는다.
   증적은 정본(OneDrive)에 그대로 있다.
-- 앱이 화면에 보여주는 값이면 **주입보다 런타임 판독이 낫다**: `21_Card [12]` 의 카드 CVC 는
+- 앱이 화면에 보여주는 값이면 **주입보다 런타임 판독이 낫다**: `21_카드_신청과충전 [12]` 의 카드 CVC 는
   `[11]` 이 `copyTextFrom: cvcnumbertext` + `evalScript` 로 읽어 `output.cvc1~3` 으로 넘긴다.
   로그에는 치환 전 원문만 찍혀 값이 남지 않는다.
 - **로그인 비밀번호·PIN 은 평문으로 둔다**(2026-09-18 결정). 테스트 계정이라 공개돼도 무방하고,
@@ -98,10 +98,10 @@ CWD는 항상 `Maestro\` 루트다. 플로우 경로는 그 기준의 상대경�
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
-.\run_test.ps1 -lang ko -flow "Old\14_01_Deposit_seungsoo818_old.yaml"
-.\run_test.ps1 -lang en -flow "Old\09_Home_old.yaml"
-.\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml" -device 27dbf1ec440d7ece
-.\run_test.ps1 -lang ko -flow "Old\09_Home_old.yaml" -Build live   # 운영(Live) 요청이 있을 때만
+.\run_test.ps1 -lang ko -flow "Old\14_01_입금_한국인계좌연결_old.yaml"
+.\run_test.ps1 -lang en -flow "Old\09_홈화면_요소와진입경로_old.yaml"
+.\run_test.ps1 -lang ko -flow "Old\09_홈화면_요소와진입경로_old.yaml" -device 27dbf1ec440d7ece
+.\run_test.ps1 -lang ko -flow "Old\09_홈화면_요소와진입경로_old.yaml" -Build live   # 운영(Live) 요청이 있을 때만
 ```
 
 ### ★ 어느 빌드로 도는가 (2026-09-03 사용자 선언)
@@ -122,7 +122,7 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
   돌려야 한다. `icon_thumbnail`의 index가 "테스트 이미지 4장이 갤러리 최신 4개"라는 전제에 기대므로,
   다른 이미지가 쌓이면 앱이 "OCR이 유효하지 않습니다"로 거부한다(앱 버그가 아니다).
 - 저장소 루트에도 `run_test.ps1` 이 있다 — **갤러리 픽스처가 필요한 케이스 전용 래퍼**다
-  (`21_Card [24]` 글로벌 QR, `06_Registration` OCR). 이미지를 push 한 뒤 `Maestro\run_test.ps1` 로
+  (`21_카드_신청과충전 [24]` 글로벌 QR, `06_회원가입_신규계정생성` OCR). 이미지를 push 한 뒤 `Maestro\run_test.ps1` 로
   **그대로 넘긴다**(2026-09-23 재작성). 인자는 같고 `-flow` 는 `Maestro\` 기준이다.
   ⚠️ 종전엔 러너 전체를 **복사해 갖고 있어** `Maestro\` 쪽에만 들어간 개선(플로우가 쓰는 env 만 추리기)이
   여기엔 없었고, env 가 475개로 늘자 **"The command line is too long."** 로 죽었다.
@@ -142,7 +142,7 @@ Maestro에는 케이스 선택 옵션이 없다. 한 파일이 곧 한 실행 �
 
 ```powershell
 .\run_suite.ps1 -List                     # 실행 계획만 출력
-.\run_suite.ps1 -Names 08_MyQR,03_Domestic         # 기본 = .stag 빌드 + LIVETEST 서버
+.\run_suite.ps1 -Names 08_마이QR_수신과송금,03_국내송금_월렛과계좌         # 기본 = .stag 빌드 + LIVETEST 서버
 .\run_suite.ps1 -Group G2 -Build live               # 운영(Live) 요청이 있을 때만
 ```
 
@@ -275,7 +275,7 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
   개행이 섞이면 `.*`로 부족하다 → **`[\s\S]*`**(단일인용).
 - **id에 패키지명을 박지 말 것.** `id: "com.…livetest:id/xxx"` 형태는 **stag 빌드에서 절대
   매칭되지 않는데**, 대개 조건부 블록 안이라 **에러 없이 SKIP**된다. Maestro는 짧은 id를 부분
-  매칭하므로 `id: "balloonClose"` 로 쓴다. (2026-08-28 정리: `04_Menu_History` **145곳** 등 175곳)
+  매칭하므로 `id: "balloonClose"` 로 쓴다. (2026-08-28 정리: `04_02_메뉴_거래내역` **145곳** 등 175곳)
 - **다이얼로그·바텀시트가 뜨면 뒤 화면이 접근성 트리에서 사라진다.** 뒤 요소를 겨냥한 assert가
   `Element not found`로 죽는다 → **팝업을 먼저 닫고** 진행한다. 반대로 시트 안에서는 뒤 화면과
   텍스트가 겹쳐도 모호하지 않다(`02_02` "기존 수취인 추가" 시트에서 실측).
@@ -301,9 +301,9 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
   Edit/Write 도구나 bash(`sed`, heredoc)를 쓴다.
 - ⚠️ **개행은 파일마다 다르다 — "CRLF"로 단정하지 말 것**(2026-09-15 전수 실측으로 정정).
   `Maestro\` 전체 114개 중 **LF 86 / CRLF 25 / 한 파일 안에 섞인 것 3**
-  (`13_01_Rate_Indonesia` · `13_04_Request` · `13_05_ExistingSender`).
+  (`13_01_해외송금받기_환율과인니등록` · `13_04_해외송금받기_송금요청등록` · `13_05_해외송금받기_송금인수정삭제`).
   `env\ko.env`는 LF인데 `en.env`는 CRLF다. BOM도 `Old\`엔 없지만 루트 개편 UI 사본
-  `04_01_Change_SimplePassword.yaml` · `04_06_Settings_Change languages.yaml` **2개에는 있다.**
+  `04_03_메뉴설정_간편비번변경.yaml` · `04_05_메뉴설정_언어변경24종.yaml` **2개에는 있다.**
   → 스크립트로 파일을 다시 쓸 때는 **읽은 바이트 그대로 보존**한다(`newline=""`로 읽고 감지한
   개행으로 join). 일괄 변환하면 내용은 그대로인데 **전 줄이 변경으로 잡히고**, `.gitattributes`가
   `* -text`라 저장소에도 그대로 올라간다. 쓴 뒤 `\r\n` 개수를 원본과 대조해 검산할 것.
@@ -326,14 +326,14 @@ appId: ${APP_ID}      # 러너의 -Build 가 정한다(기본 .stag)
   돌려준다** → 플로우가 엉뚱한 화면으로 오진해 **보안 키패드를 블라인드로 누른다**(2026-09-15 사고).
   판정은 `adb shell dumpsys activity activities | grep topResumedActivity` 뿐이고,
   `run_test.ps1` 이 실행 전에 보고 **exit 3 으로 끊는다**(`clearState` 플로우는 예외).
-  복구는 `Old\01_01_Login_Success_old.yaml` 하나뿐이다 — 앱 언어가 한국어로 돌아가므로 en 검증
+  복구는 `Old\01_01_로그인_정상_old.yaml` 하나뿐이다 — 앱 언어가 한국어로 돌아가므로 en 검증
   중이면 `_set_lang_en_old.yaml` 을 다시 돌린다. **실행 사이에 공백을 두지 말 것.**
 - 하루가 지나면 세션이 만료된다. 진입부터 실패하면 이걸 먼저 의심하고
   `01_01_Login_First_old.yaml`로 재로그인한다(PIN만으로는 복구되지 않는다).
   ⚠️ 만료 다이얼로그를 **닫고 진행하지 말 것** — 구 UI는 PIN으로 복구되지 않으므로 의미가 없다.
   `assertNotVisible: '로그인 세션이 만료[\s\S]*'` 로 **즉시 실패**시키고, 그 판정은
   **홈 대기보다 앞**에 둔다(뒤에 두면 홈 대기가 먼저 타임아웃 나서 원인이 가려진다).
-- `clearState: true`가 걸린 플로우(`01_Login_screen_old`, `05_InitialScreen_old`)는 실행하면
+- `clearState: true`가 걸린 플로우(`01_로그인_분할전원본_old`, `05_초기화면_로그인전_old`)는 실행하면
   **로그아웃된다** → 이후 재로그인 플로우가 필요하다.
 
 ## 결과 보고
