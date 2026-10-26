@@ -165,6 +165,41 @@ appId: ${APP_ID}
       id: "bottom_item_home"
     timeout: 20000
     optional: true
+
+# ---------------------------------------------------------------
+# ⑦-2 세션 만료 팝업 **다시 보기** — ③ 만으로는 못 잡는다(2026-10-26 실측).
+#    이 팝업은 앱이 **첫 인증 API 호출에서 401을 받은 뒤**에 뜨는데, 그 호출을 유발하는 것이
+#    바로 ⑤의 PIN 입력이다 → ③ 시점에는 아직 화면에 없다.
+#      실측: ③ `when SESSION_EXPIRED` **SKIPPED** → PIN 입력 COMPLETED → 직후 계층에
+#      `txvDialogDescription "로그인 세션이 만료되었습니다…"` 존재.
+#    → ③ 은 **실행 시작부터 떠 있던 경우**를, 여기는 **PIN 이 불러낸 경우**를 받는다. 둘 다 필요하다.
+#  ⛔ **back 으로는 닫히지 않는다.** `design_bottom_sheet` 라서 아래 ⑦ back 루프를 6회 다 돌아도
+#    그대로 남아 있었다(같은 실행의 step-055 계층에서 확인) → 반드시 `btnOk` 를 누른다.
+#  ※ 위치가 바로 위 홈 대기 **뒤**인 이유: 팝업이 PIN 직후 즉시 뜨지는 않는다. 그 대기는 홈이면
+#    즉시 끝나므로(정상 경로 비용 0) 아닐 때만 20초를 주고, 그 사이에 팝업이 뜬다.
+#  ⚠️ 그리고 **back 루프보다 앞**이어야 한다. 뒤에 두면 back 이 6회 헛돌고 ⑨ 홈 대기가
+#    타임아웃되면서 "홈을 못 찾음"으로 원인이 가려진다 — 2026-10-23 스위트가 그렇게 중단됐다.
+# ---------------------------------------------------------------
+- runFlow:
+    when:
+      visible: "${SESSION_EXPIRED}"
+    commands:
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+      # OK 를 누르면 초기화면으로 돌아간다. 도달을 확인한 뒤 **검증된 로그인 플로우**를 부른다
+      # (④ 와 같은 이유 — 로그인 시퀀스를 베끼지 않는다).
+      - extendedWaitUntil:
+          visible:
+            text: "${REG_NEW_MEMBER}"
+          timeout: 30000
+          optional: true
+      - runFlow:
+          when:
+            visible: "${REG_NEW_MEMBER}"
+          commands:
+            - runFlow: "01_01_Login_Success_old.yaml"
+
 - repeat:
     times: 6
     while:
