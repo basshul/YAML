@@ -606,6 +606,20 @@ Write-Host ""
 $lastG = ""
 foreach ($t in $plan) {
     Set-KeepAwake   # 항목마다 다시 건다(멱등) — 요청이 유실돼도 여기서 복구된다
+
+    # ── 케이스 단위 제외 목록 (BLOCKED · N/A) ──────────────────────
+    #   ⛔ **개수로 접지 않는다.** 어느 케이스가 BLOCKED·N/A 인지 모르면 체크리스트
+    #     행별 기입값을 만들 수 없다 — `web-runner/checklist_result.py` 는 번호 문자열을
+    #     전제하고(`"05"` · `"33-1"`), 개수를 주면 `'int' object is not iterable` 로 터진다.
+    #   ⚠️ **`@($null).Count` 는 0 이 아니라 1 이다.** 종전 `@($t.blocked).Count` 는
+    #     선언이 없는 항목까지 1씩 세어, 38개 실행에서 BLOCKED 44 / N/A 46 으로 찍혔다
+    #     (실제 7 / 10). 콘솔 요약과 SUMMARY.md 에 그대로 나갔다(2026-10-26 발견).
+    #     → `Where-Object` 로 빈 값을 걸러 **선언이 없으면 빈 배열**이 되게 한다.
+    #   ※ 함수로 빼지 않은 이유: PowerShell 은 **원소 1개짜리 배열을 반환할 때 스칼라로 풀어서**
+    #     `blocked: "115"` 가 되고, 파이썬 쪽이 글자 단위로 순회한다. 그 자리에서 `@()` 로 감싼다.
+    $tBlocked = @($t.blocked | Where-Object { "$_" -ne "" })
+    $tNa      = @($t.na      | Where-Object { "$_" -ne "" })
+
     if ($t.g -ne $lastG) { Write-Host ("── {0} ({1}) ──" -f $t.g, $t.acct) -ForegroundColor DarkCyan; $lastG = $t.g }
 
     # ── 잔액이 모자라면 **여기서 채운다** (1회=1,000원, 실계좌 출금) ────────────
@@ -649,7 +663,7 @@ foreach ($t in $plan) {
         Write-Host ("▶ {0,-34} SKIP    {1}" -f $t.n, $skip[$t.n]) -ForegroundColor Yellow
         $results += [pscustomobject]@{
             Group = $t.g; Name = $t.n; Status = "SKIP"; Exit = $null; Steps = 0
-            Elapsed = "-"; Reason = $skip[$t.n]; Blocked = @($t.blocked).Count; Na = @($t.na).Count; Log = ""
+            Elapsed = "-"; Reason = $skip[$t.n]; Blocked = $tBlocked; Na = $tNa; Log = ""
         }
         continue
     }
@@ -726,7 +740,7 @@ foreach ($t in $plan) {
         Group = $t.g; Name = $t.n; Status = $status; Exit = $code; Steps = $done
         Elapsed = $sw.Elapsed.ToString("mm\:ss")
         Reason = if ($code -ne 0) { (($envHint ? "[$envHint] " : "") + ($reason ?? $failLine ?? "")).Trim() } else { "" }
-        Blocked = @($t.blocked).Count; Na = @($t.na).Count; Log = $log
+        Blocked = $tBlocked; Na = $tNa; Log = $log
     }
 
     # ── 조기 서버 검사: **첫 실행 직후 한 번만** 본다 ──────────────────
@@ -843,8 +857,10 @@ if (-not $aborted) {
 $pass = @($results | Where-Object Status -eq "PASS").Count
 $fail = @($results | Where-Object Status -eq "FAIL").Count
 $skipN = @($results | Where-Object Status -eq "SKIP").Count
-$blk = ($results | Measure-Object -Property Blocked -Sum).Sum
-$naN = ($results | Measure-Object -Property Na -Sum).Sum
+# Blocked·Na 는 이제 **번호 배열**이다 → 합계는 펼쳐서 센다.
+#   `Measure-Object -Property Blocked -Sum` 은 배열을 못 더해 조용히 0/빈 값이 된다.
+$blk = @($results | ForEach-Object { $_.Blocked }).Count
+$naN = @($results | ForEach-Object { $_.Na }).Count
 
 Write-Host ""
 Write-Host "=== 요약 ===" -ForegroundColor Cyan
