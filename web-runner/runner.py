@@ -164,7 +164,7 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
 #     # [06][07][08] 현재/새/확인 입력   한 줄이 케이스 **여럿**을 덮는다
 #     # [07-1] 몽골 송금인 등록          접미사가 붙은 번호
 #   ⛔ 예전에는 "중요도 태그가 있는 줄만 쓴다" 로 했는데, **한 파일에 두 표기가 섞이면**
-#      태그 없는 케이스를 통째로 버렸다(04_02 에서 [06]~[11] 6개가 사라져 체크리스트
+#      태그 없는 케이스를 통째로 버렸다(04_04 에서 [06]~[11] 6개가 사라져 체크리스트
 #      매핑이 "yaml 에 없는 케이스" 로 잘못 잡혔다). 이제 둘 다 읽고 **번호로 합친다.**
 #
 # ⚠️ 산문 속 참조와 구분하는 열쇠는 **닫는 대괄호 뒤의 공백**이다:
@@ -176,7 +176,7 @@ COMMENT_HEAD_RE = re.compile(r"^\s*#+\s*")
 #   `#   · [01-2] 직업 …` 같은 **산문**이 케이스로 새어들어왔다.
 DIVIDER_CHARS = "-─━–—="
 PRIORITIES = {"high": "High", "medium": "Medium", "low": "Low"}
-# 글자 접두 번호: [F-01] 처럼 파일 안에서만 쓰는 네임스페이스 (25_Profile_Foreign)
+# 글자 접두 번호: [F-01] 처럼 파일 안에서만 쓰는 네임스페이스 (25_02_프로필_외국인신분증)
 ALPHA_ID_RE = re.compile(r"^([A-Za-z]{1,3})-?(\d{1,3})$")
 
 
@@ -288,7 +288,7 @@ def read_cases(rel_path: str) -> list[dict]:
 
 
 # 파일 이름 → 케이스 id 집합. 시트 쪽(`checklist_sync`)이 **같은 판단**을 쓰려고 부른다.
-#   시트는 `26_Menu` · `02_01_Overseas_Send now` · `Old_01_..._old.yaml` 처럼 제각각 적는다
+#   시트는 `04_01_메뉴_드로어와설정` · `02_01_해외송금_수취인관리` · `Old_01_..._old.yaml` 처럼 제각각 적는다
 #   → 화면(`app.js normFile`)과 같은 방식으로 맞춘다: 경로·확장자·`_old`·공백 제거 후 소문자.
 _REAL_CASES: dict[str, set[str]] = {}
 
@@ -322,7 +322,13 @@ def list_tests(include_destructive: bool = False) -> list[dict]:
     cfg = load_config()
     # ★ 부르기 전에 옵션 실재를 확인한다 — 없으면 실기기가 돈다(위 안전장치 주석 참고)
     require_params(SUITE_SCRIPT, ["DumpJson"])
-    proc = _run([cfg["pwsh"], "-NoProfile", "-File", str(SUITE_SCRIPT), "-DumpJson"], MAESTRO_DIR)
+    # ⚠️ `-File` 로 부르면 **리다이렉트된 stdout 이 콘솔 기본 인코딩(한국어 Windows=MS949)**
+    #   으로 나온다. 항목 이름에 한글이 들어간 뒤로는 그대로 깨져서 아래 허용목록
+    #   대조(`n not in known`)가 전부 실패한다 → 어떤 테스트도 시작하지 못한다.
+    #   실행 경로(`Run.start`)와 같은 방식으로 OutputEncoding 을 UTF-8 로 박고 부른다.
+    proc = _run([cfg["pwsh"], "-NoProfile", "-Command",
+                 "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "
+                 f"& '{SUITE_SCRIPT}' -DumpJson"], MAESTRO_DIR)
     if proc.returncode != 0:
         raise RuntimeError(f"run_suite.ps1 -DumpJson 실패 (exit={proc.returncode})\n{proc.stderr.strip()}")
 
@@ -401,7 +407,10 @@ def list_devices() -> list[dict]:
 #   `suite_logs\<시각>\<항목>.log` 로 흘린다(콘솔엔 결과 한 줄만 찍힌다).
 #   그래서 콘솔 출력과 **그 로그 파일을 같이 따라 읽어** 화면에 합친다.
 
-_SAFE_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+# 항목 이름에 **한글**이 들어간다(스위트 표의 n). 완성형 음절만 허용한다.
+#   따옴표·공백·경로 구분자·PowerShell 메타문자는 여전히 전부 막힌다 →
+#   아래 -Names 보간의 인자 주입과 run_item_log_path 의 경로 조작 방어가 그대로 유지된다.
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9_.\-가-힣]+$")
 _SAFE_SERIAL = re.compile(r"^[A-Za-z0-9_.:-]+$")
 
 # run_test.ps1 이 찍는 maestro 커맨드 에코는 `--env` 가 수십 개라 한 줄이 4KB 를 넘는다.
@@ -418,7 +427,7 @@ def _shorten(line: str) -> str:
 
 # maestro 는 스텝마다 `<설명>... COMPLETED|FAILED|SKIPPED` 한 줄을 찍는다 → 진행 표시의 재료.
 _STEP = re.compile(r"^\s*(.+?)\.\.\.\s*(COMPLETED|FAILED|SKIPPED|PENDING)\s*$")
-# run_suite.ps1 의 항목 결과 줄: `▶ 09_Home   PASS   192 steps  05:43`
+# run_suite.ps1 의 항목 결과 줄: `▶ 09_홈화면_요소와진입경로   PASS   192 steps  05:43`
 _ITEM_DONE = re.compile(r"^▶\s+(\S+)\s+(PASS|FAIL|SKIP)\b\s*(.*)$")
 _STEPS_N = re.compile(r"(\d+)\s*steps")
 _ELAPSED = re.compile(r"(\d{2}:\d{2})")
@@ -496,7 +505,8 @@ class Run:
         build, server = self.build, self.server
         inner = (
             "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "
-            f"& '{SUITE_SCRIPT}' -Names '{','.join(self.names)}' "
+            # 작은따옴표는 _SAFE_NAME 이 이미 막지만, 보간에 기대지 않고 한 겹 더 감싼다.
+            f"& '{SUITE_SCRIPT}' -Names '{','.join(n.replace(chr(39), chr(39) * 2) for n in self.names)}' "
             f"-Device '{self.device}' -Build {build} -Server {server} -Lang {cfg['lang']} "
             f"-User {self.user}; "
             "exit $LASTEXITCODE"
