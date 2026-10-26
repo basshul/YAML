@@ -641,6 +641,8 @@ function updateRunState() {
   all.title = why;
   // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
   all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
+  // 실행 중에는 선택을 갈아끼우지 못하게 같이 잠근다(renderSelection·setRunning 이 여기를 지난다).
+  updateSelFailState();
 }
 
 /* -------------------------------------------------------------------- 실행 */
@@ -987,6 +989,62 @@ async function onFixAll() {
   }
 }
 
+/* ------------------------------------------------------ 최근 실패만 선택 */
+
+/* 재실행은 거의 늘 **실패한 것만** 다시 돌리는 일이다. 39개 중 14개가 FAIL 이면 손으로
+   14번 체크하게 되고, 그러다 하나를 빠뜨린다.
+
+   어느 실행을 보나 — 「결과 보기」가 가리키는 실행. 「최신 결과」면 **가장 최근 실행**.
+   → 어느 실행의 FAIL 인지 **버튼 title 에 적는다.** 누르는 순간 무엇이 선택되는지
+     모르면 안 된다(실행 버튼까지 두 번이면 닿는다).
+
+   ⚠️ **순서는 걱정하지 않아도 된다.** `onRun` 이 `state.tests` 순서로 보내므로
+     (고른 순서가 아니다) 플랜 표의 의존 순서가 그대로 유지된다.
+   ⛔ 다만 **상태 의존은 남는다.** `13_06` 은 `13_05` 가 만든 데이터를 지우는 식이고
+     `04_Menu_History` 는 `13_*` 가 만든 내역을 본다 — 실패한 것만 떼어 돌리면 전제가
+     빠져 또 실패할 수 있다. 자동으로 선행 항목을 끌어오지 않는다(무엇이 선행인지는
+     플랜 표의 `note` 에 사람 말로만 있다). 판단은 사람 몫으로 남긴다. */
+
+function failSourceRun() {
+  if (state.basis !== "latest") return state.runs.find((r) => r.stamp === state.basis) || null;
+  return state.runs[0] || null;
+}
+
+/* 실행의 FAIL 중 **지금 목록에 있는 것**만. 이름이 바뀌었거나 G9(파괴적, /api/tests 에서
+   빠진다)면 고를 수가 없다 — 조용히 빠뜨리지 말고 title 에 몇 개가 빠졌는지 적는다. */
+function failedPick() {
+  const run = failSourceRun();
+  const names = run ? (run.items || []).filter((i) => i.status === "FAIL").map((i) => i.name) : [];
+  const known = new Set(state.tests.map((t) => t.name));
+  return { run, names, hit: names.filter((n) => known.has(n)) };
+}
+
+function updateSelFailState() {
+  const btn = $("btn-selfail");
+  if (!btn) return;
+  const { run, names, hit } = failedPick();
+  const miss = names.length - hit.length;
+
+  btn.disabled = hit.length === 0 || state.running;
+  btn.textContent = "최근 실패만 선택" + (hit.length ? " (" + hit.length + ")" : "");
+  btn.title =
+    !run ? "실행 이력이 없습니다."
+    : !names.length ? whenOf(run.stamp) + " 실행에는 FAIL 이 없습니다."
+    : !hit.length ? whenOf(run.stamp) + " 의 FAIL 이 모두 지금 목록에 없습니다(이름 변경·G9)."
+    : whenOf(run.stamp) + " 실행의 FAIL " + hit.length + "개를 고릅니다" +
+      (miss ? " · 목록에 없는 " + miss + "개는 제외" : "") +
+      ". 선행 항목은 함께 고르지 않습니다 — 상태 의존을 확인하세요.";
+}
+
+function onSelectFailed() {
+  const { hit } = failedPick();
+  if (!hit.length) return;
+  // **갈아끼운다.** "실패한 것만" 이라고 했으면 그래야 한다 — 기존 선택에 더하면
+  // 무엇이 왜 골라졌는지 알 수 없게 된다. 되돌리려면 「선택 해제」가 바로 옆에 있다.
+  state.selected = new Set(hit);
+  renderTable();
+}
+
 /* --------------------------------------------------- 결과 기준 · 엑셀 기입 */
 
 /* 「결과 보기」 = 지금 보고 있는 결과가 **어느 실행의 것인지** 정하는 단 하나의 셀렉트
@@ -1055,6 +1113,7 @@ async function onBasisChange() {
   document.body.classList.toggle("ro", v !== "latest");
 
   state.pending = null;
+  updateSelFailState();   // 보는 실행이 바뀌면 「최근 실패만 선택」이 가리키는 실행도 바뀐다
   if (v === "latest") {
     state.pendingBusy = false;
     updateSaveState();
@@ -1177,6 +1236,7 @@ $("f-pri").addEventListener("change", (ev) => {
   state.priFilter = ev.target.value;
   renderTable();
 });
+$("btn-selfail").addEventListener("click", onSelectFailed);
 $("btn-selvis").addEventListener("click", () => {
   for (const t of visibleTests()) state.selected.add(t.name);
   renderTable();
