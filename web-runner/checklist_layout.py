@@ -46,6 +46,14 @@ HEADER_ALIASES = {
 }
 
 
+# 결과 열은 머리글 **아랫단**에 있다(9행 날짜·버전 / 10행 iOS·Android).
+#   윗단 별칭과 섞으면 `text` 가 있는 행을 고르는 판단이 흐려진다 → 따로 둔다.
+RESULT_ALIASES = {
+    "iosresult": "ios",
+    "androidresult": "android",
+}
+
+
 def _norm(s: str) -> str:
     return re.sub(r"[\s​()]+", "", str(s or "")).lower()
 
@@ -62,11 +70,25 @@ def col_letter(idx0: int) -> str:
 class Layout:
     """어느 열이 무엇인지. `idx[이름] = 0-based 열 번호`(시트 전체 기준)."""
 
-    def __init__(self, sheet: str, header_row: int, first_row: int, idx: dict[str, int]):
+    def __init__(self, sheet: str, header_row: int, first_row: int, idx: dict[str, int],
+                 result_idx: dict[str, int] | None = None):
         self.sheet = sheet
         self.header_row = header_row
         self.first_row = first_row
         self.idx = idx
+        # {"ios": 0-based 열, "android": …}. 2단 머리글이 아니면 비어 있다.
+        self.result_idx = result_idx or {}
+
+    def result_col(self, platform: str) -> str:
+        """결과를 적을 열 문자. 못 찾으면 사유를 그대로 올린다 —
+        ⛔ 열 문자를 **지어내지 않는다**(docs/CHECKLIST.md §9 가 막아 둔 사고다)."""
+        i = self.result_idx.get((platform or "").strip().lower())
+        if i is None:
+            have = ", ".join(sorted(self.result_idx)) or "없음"
+            raise RuntimeError(
+                f"{self.sheet} 에서 '{platform}' 결과 열을 찾지 못했습니다(찾은 것: {have}). "
+                "머리글 아랫단에 `iOS Result` · `Android Result` 가 있어야 합니다.")
+        return col_letter(i)
 
     @property
     def has_sheet_mapping(self) -> bool:
@@ -95,7 +117,10 @@ class Layout:
         cols = " · ".join(f"{col_letter(i)}={n}" for n, i in order)
         return (f"{self.sheet} — 머리글 {self.header_row}행 / 데이터 {self.first_row}행~\n"
                 f"    {cols}\n"
-                f"    매핑 위치: {'시트(H·I)' if self.has_sheet_mapping else '저장소 파일(Case ID 기준)'}")
+                f"    매핑 위치: {'시트(H·I)' if self.has_sheet_mapping else '저장소 파일(Case ID 기준)'}\n"
+                f"    결과 열: " + (" · ".join(
+                    f"{col_letter(i)}={n}" for n, i in sorted(self.result_idx.items(),
+                                                              key=lambda kv: kv[1])) or "못 찾음"))
 
 
 def detect(fetch_range) -> Layout:
@@ -123,5 +148,10 @@ def detect(fetch_range) -> Layout:
     header_row, idx = best
     # 데이터는 머리글 **다음 행부터**. 2단 머리글이면 한 줄 더 건너뛴다.
     nxt = rows[header_row - 7 + 1] if header_row - 7 + 1 < len(rows) else []
-    two_tier = any(_norm(c) in ("iosresult", "androidresult") for c in nxt)
-    return Layout("", header_row, header_row + (2 if two_tier else 1), idx)
+    result_idx = {}
+    for i, cell in enumerate(nxt):
+        key = RESULT_ALIASES.get(_norm(cell))
+        if key and key not in result_idx:
+            result_idx[key] = i
+    two_tier = bool(result_idx)
+    return Layout("", header_row, header_row + (2 if two_tier else 1), idx, result_idx)

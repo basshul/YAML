@@ -37,8 +37,8 @@ const esc = (t) =>
 
 /* ---------------------------------------------------------------- 불러오기 */
 
-async function api(path) {
-  const res = await fetch(path);
+async function api(path, opts) {
+  const res = await fetch(path, opts);
   const data = await res.json();
   if (!res.ok || data.error) throw new Error(data.error || path + " 실패");
   return data;
@@ -1281,6 +1281,61 @@ function openSavePreview() {
 /* ------------------------------------------------------------------ 도움말 */
 
 let modalBack = null;
+/* 실제 기입. **쓰기 전에 서버가 다시 계산한다** — 이 화면의 미리보기는 로컬 캐시 기준이고,
+   그사이 시트가 바뀌었을 수 있다. 이미 값이 있는데 다른 칸은 서버가 **덮지 않고** 충돌로
+   돌려준다(사람이 적은 값을 자동이 지우면 안 된다). */
+async function applySave() {
+  const p = state.pending;
+  const btn = $("sv-apply");
+  if (!p || !p.stamp || btn.disabled) return;
+
+  if (!confirm(
+      "엑셀에 기입합니다.\n\n" +
+      "· 실행: " + whenOf(p.stamp) + "\n" +
+      "· 넣는 값: Pass · NA 뿐입니다(Fail 은 사람이 확인한 뒤에 들어갑니다)\n" +
+      "· 이미 값이 있는 칸은 덮지 않습니다\n\n" +
+      "시트는 그 실행이 돈 **서버**가 정합니다. 계속할까요?")) return;
+
+  const before = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "기입 중…";
+  let res;
+  try {
+    res = await api("/api/checklist/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stamp: p.stamp }),
+    });
+  } catch (err) {
+    $("sv-ex").innerHTML = '<span class="bad">기입하지 못했습니다 — ' + esc(err.message) + "</span>";
+    btn.disabled = false;
+    btn.textContent = before;
+    return;
+  }
+
+  const c = res.counts || {};
+  $("sv-h").textContent = "엑셀에 저장 — 완료 (" + whenOf(res.stamp) + ")";
+  $("sv-i9").textContent =
+    res.file + " · " + res.sheet + " · " + res.column + "열(" + res.platform + ")" +
+    " — 서버 " + res.server + " 로 돈 실행이라 이 시트를 골랐습니다.";
+  $("sv-rows").innerHTML =
+    (res.write || []).map((r) =>
+      "<tr><td>" + esc(r.cell) + "</td><td>" + esc(r.case_id) + "</td><td>→ <b>" +
+      esc(r.value) + "</b></td><td><span class=\"muted\">기입</span></td></tr>").join("") ||
+    '<tr><td colspan="4" class="muted">새로 넣은 칸이 없습니다.</td></tr>';
+  $("sv-ex").innerHTML =
+    "<b>기입 " + esc(c.ok || 0) + "칸</b>" +
+    (c.failed ? ' · <span class="bad">실패 ' + esc(c.failed) + "</span>" : "") +
+    " · 이미 같아서 건너뜀 " + esc(c.same || 0) +
+    (c.conflict ? ' · <b class="bad">충돌 ' + esc(c.conflict) +
+      "</b>(이미 다른 값이 있어 덮지 않았습니다 — 사람이 판단할 몫입니다)" : "") +
+    (c.mismatch ? ' · <b class="bad">행 어긋남 ' + esc(c.mismatch) +
+      "</b>(캐시가 낡았습니다 — checklist_sync.py 를 다시 돌리세요)" : "");
+
+  btn.textContent = "기입 완료";
+  await onBasisChange();           // 다시 세면 같은 칸이 두 번 나가지 않는다
+}
+
 function openModal(id) {
   modalBack = document.activeElement;
   const m = $(id);
@@ -1350,6 +1405,7 @@ $("btn-back-latest").addEventListener("click", () => {
   onBasisChange();
 });
 $("btn-save").addEventListener("click", openSavePreview);
+$("sv-apply").addEventListener("click", applySave);
 $("btn-help").addEventListener("click", () => openModal("helpm"));
 for (const b of document.querySelectorAll("[data-close]")) {
   b.addEventListener("click", () => closeModal(b.dataset.close));

@@ -268,10 +268,9 @@
     <div class="exline" id="sv-ex"></div>
     <footer>
       <button class="ghost" type="button" data-close="savem">닫기</button>
-      <!-- ⛔ `data-close` 를 떼고 **꺼 둔다.** 셀 PATCH(단계 4)가 아직 없는데 누르면 그냥 닫히고,
-           사용자는 저장된 줄 안다 — 조용한 거짓말이 된다. 저장이 붙을 때 열 것. -->
-      <button class="primary" type="button" id="sv-apply" disabled
-              title="셀 PATCH 는 아직 붙지 않았습니다(단계 4). 지금은 미리보기만 됩니다.">이대로 저장</button>
+      <!-- ⛔ `data-close` 를 붙이지 않는다. 기입이 끝난 **결과를 이 창에 적어야** 하는데
+           먼저 닫히면 무엇이 들어갔는지 못 본다. 닫기는 왼쪽 버튼이 한다. -->
+      <button class="primary" type="button" id="sv-apply">이대로 저장</button>
     </footer>
   </div>
 </div>
@@ -308,6 +307,6 @@
   </div>
 </div>
 
-<script src="app.js?v=35"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

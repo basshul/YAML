@@ -20,6 +20,7 @@ from pydantic import BaseModel
 import runner
 import checklist as checklist_cache
 import checklist_result
+import checklist_write
 import case_result
 from admin import actions as admin_actions
 
@@ -193,6 +194,86 @@ def _with_case_counts(runs: list[dict]) -> list[dict]:
                 "notrun": sum(1 for c in cases if c["status"] == "NOTRUN"),
             }
     return runs
+
+
+class SaveBody(BaseModel):
+    stamp: str
+    dry_run: bool = False
+
+
+@app.post("/api/checklist/save")
+def api_checklist_save(body: SaveBody):
+    """실행 하나의 자동 기입값을 **엑셀에 적는다**(docs/CHECKLIST.md 단계 4).
+
+    시트는 그 실행이 **어느 서버로 돌았는지**가 고른다(`result.json` 의 `server`).
+    ⛔ 쓰는 값은 `Pass` · `NA` 뿐이고, 이미 값이 있는데 다르면 **덮지 않는다**.
+    `dry_run` 이면 무엇을 쓸지만 돌려주고 한 칸도 건드리지 않는다.
+    """
+    try:
+        path = runner.run_result_path(body.stamp)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except FileNotFoundError as exc:
+        return JSONResponse(status_code=404, content={"error": str(exc)})
+
+    try:
+        run = checklist_result.load_run(path)
+        rows = checklist_cache.load()["rows"]
+        derived = checklist_result.derive(run, rows, run_dir=path.parent)
+    except checklist_cache.ChecklistUnavailable as exc:
+        return JSONResponse(status_code=503, content={"error": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc)})
+
+    cfg = runner.load_config()
+    try:
+        sheet = checklist_write.target_sheet(run.get("server"), cfg)
+        link = checklist_write.target_link(cfg)
+        platform = ((cfg.get("checklist") or {}).get("write") or {}).get("platform", "android")
+        wb, fname, lay = checklist_write.open_sheet(link, sheet)
+        state = checklist_write.read_state(wb, lay, platform)
+    except checklist_write.WriteBlocked as exc:
+        return JSONResponse(status_code=409, content={"error": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=502,
+                            content={"error": f"엑셀에 붙지 못했습니다: {exc}"})
+
+    # 이미 같은 값인 칸은 `plan` 이 거른다 → pending 은 **시트를 읽기 전** 값 그대로 넘긴다
+    items = checklist_result.pending(derived, rows, {})
+    planned = checklist_write.plan(items, state)
+
+    done = []
+    if not body.dry_run:
+        try:
+            done = checklist_write.apply(wb, sheet, planned["write"])
+        except Exception as exc:
+            return JSONResponse(status_code=502,
+                                content={"error": f"기입 중 끊겼습니다: {exc}"})
+
+    return {
+        "stamp": body.stamp,
+        "dry_run": body.dry_run,
+        "file": fname,
+        "sheet": sheet,
+        "server": run.get("server"),
+        "column": state["col"],
+        "platform": platform,
+        "counts": {
+            "write": len(planned["write"]),
+            "same": len(planned["same"]),
+            "conflict": len(planned["conflict"]),
+            "mismatch": len(planned["mismatch"]),
+            "ok": sum(1 for d in done if d.get("ok")),
+            "failed": sum(1 for d in done if not d.get("ok")),
+        },
+        "write": [{k: r[k] for k in ("case_id", "cell", "value")} for r in planned["write"]],
+        "conflict": [{k: r[k] for k in ("case_id", "cell", "value", "current")}
+                     for r in planned["conflict"]],
+        "mismatch": [{k: r.get(k) for k in ("case_id", "cell", "sheet_case_id")}
+                     for r in planned["mismatch"]],
+        "failed": [{"cell": d["cell"], "error": d.get("error", "")}
+                   for d in done if not d.get("ok")],
+    }
 
 
 @app.get("/api/history")

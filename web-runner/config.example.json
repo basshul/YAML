@@ -25,6 +25,15 @@
     "next_sheet": "",
     "prev_url": "",
     "prev_sheet": "",
-    "copy_item_id": ""
+    "copy_item_id": "",
+    "write": {
+      "_설명": "실행 결과를 적을 곳. 시트는 **실행 서버**가 고른다 — livetest 로 돈 결과를 Live 시트에 적으면 그 자체가 거짓이다. stag 는 문서에 시트가 없어 일부러 비워 뒀다.",
+      "url": "<공유 링크>",
+      "platform": "android",
+      "sheets": {
+        "livetest": "Checklist(Livetest) (2.2)",
+        "live": "Checklist(Live) (2.2)"
+      }
+    }
   }
 }
