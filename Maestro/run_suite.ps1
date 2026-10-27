@@ -593,6 +593,33 @@ $recoverFail = 0
 $aborted = $false
 
 Write-Host "로그: $logDir" -ForegroundColor DarkGray
+
+# ── 묵은 임시 APK 정리 (2026-10-27) ──────────────────────────────────────
+#   maestro 는 실행마다 대상 APK 사본(약 139MB)을 만들고 **끝나도 지우지 않는다.**
+#   2026-10-27 에 `%TEMP%` 로 235개 31.8GB 가 쌓여 **C: 가 여유 0바이트**가 됐다 —
+#   그러면 조용히 실패하지 않고 **쓰다 만 파일이 남는다**(메모리 파일 하나가 0바이트로 잘렸다).
+#   `run_test.ps1` 이 `-Djava.io.tmpdir` 로 D: 에 떨구게 바꿨지만 **D: 도 결국 찬다** —
+#   지우는 건 maestro 가 안 해 준다. 그래서 시작할 때 한 번 치운다.
+#   ⛔ `tmp*.apk` 만, **하루 지난 것만** 건드린다. 지금 도는 실행이 쓰는 파일을 지우면 안 된다.
+#   ⛔ 이 스크립트는 `$ErrorActionPreference = "Stop"` 이다 → 잠긴 파일 하나로 스위트가
+#     죽지 않게 감싼다(그 부류로 실행 하나를 통째로 날린 적이 있다).
+$apkCut   = (Get-Date).AddDays(-1)
+$apkFreed = 0
+foreach ($apkDir in @("D:\maestro\tmp", $env:TEMP)) {
+    if (-not $apkDir -or -not (Test-Path $apkDir)) { continue }
+    try {
+        Get-ChildItem $apkDir -Filter "tmp*.apk" -File -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTime -lt $apkCut } |
+            ForEach-Object {
+                $apkFreed += $_.Length
+                Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+            }
+    } catch { }
+}
+if ($apkFreed) {
+    Write-Host ("임시 APK 정리: {0:N1} GB" -f ($apkFreed / 1GB)) -ForegroundColor DarkGray
+}
+
 Set-KeepAwake
 Write-Host ""
 
