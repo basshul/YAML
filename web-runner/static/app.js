@@ -398,13 +398,6 @@ function hasPri(t, pri) {
     (c) => !covered.has(c.id) && (c.pri || "").trim() === pri);
 }
 
-/* **일괄**로 집어가는 자리(전체 실행 · 보이는 것 모두 선택 · 최근 실패만 선택)가 쓰는 목록.
-   G9(파괴적)는 하나씩 고를 수는 있지만 여기엔 넣지 않는다 — 전체 실행 한 번에 계정이
-   잠기거나 비밀번호가 초기화되면 안 된다. 스위트 자체도 기본 그룹을 G1~G4 로 둔다. */
-function bulkTests() {
-  return visibleTests().filter((t) => !t.destructive);
-}
-
 function visibleTests() {
   let list = state.tests.filter(
     (t) => state.groupFilter === "all" || t.group === state.groupFilter);
@@ -666,7 +659,7 @@ function renderSelection() {
 
 function updateRunState() {
   const hasDevice = !!$("dev").value;
-  const vis = bulkTests();   // G9 는 빼고 센다 — 전체 실행이 집어가는 것과 같아야 한다
+  const vis = visibleTests();
   // 사용자를 고르기 전에는 아무것도 돌리지 않는다 — 계정이 사람마다 다르다.
   const hasUser = !!state.runUser;
   // 고를 수 없는 빌드·서버 조합이면 아예 못 누르게 한다 — 눌러서 400 을 받는 것보다
@@ -705,8 +698,9 @@ function filterOn() {
 
 function onRunAll() {
   // ★ **보이는 것만** 고른다. 종전엔 state.tests 전부를 골라 필터가 무의미했다.
-  //   G9 는 하나씩 고를 때만 들어간다 — 여기서는 빠진다(`bulkTests`).
-  for (const t of bulkTests()) state.selected.add(t.name);
+  //   ⛔ G9(파괴적)도 들어간다(2026-10-27 사용자 지시). 막는 곳은 **확인 창 하나**뿐이다 —
+  //     `01_05` 는 파일에 인터록이 없어 돌면 비밀번호가 실제로 초기화된다.
+  for (const t of visibleTests()) state.selected.add(t.name);
   renderTable();
   onRun();
 }
@@ -1078,12 +1072,12 @@ function failSourceRun() {
   return state.runs[0] || null;
 }
 
-/* 실행의 FAIL 중 **지금 고를 수 있는 것**만. 이름이 바뀌었거나 G9(파괴적 — 목록에는
-   보이지만 고를 수 없다)면 제외된다 — 조용히 빠뜨리지 말고 title 에 몇 개가 빠졌는지 적는다. */
+/* 실행의 FAIL 중 **지금 목록에 있는 것**만. 이름이 바뀌었으면 고를 수가 없다 —
+   조용히 빠뜨리지 말고 title 에 몇 개가 빠졌는지 적는다. */
 function failedPick() {
   const run = failSourceRun();
   const names = run ? (run.items || []).filter((i) => i.status === "FAIL").map((i) => i.name) : [];
-  const known = new Set(state.tests.filter((t) => !t.destructive).map((t) => t.name));
+  const known = new Set(state.tests.map((t) => t.name));
   return { run, names, hit: names.filter((n) => known.has(n)) };
 }
 
@@ -1098,7 +1092,7 @@ function updateSelFailState() {
   btn.title =
     !run ? "실행 이력이 없습니다."
     : !names.length ? whenOf(run.stamp) + " 실행에는 FAIL 이 없습니다."
-    : !hit.length ? whenOf(run.stamp) + " 의 FAIL 이 모두 지금 목록에 없습니다(이름 변경·G9)."
+    : !hit.length ? whenOf(run.stamp) + " 의 FAIL 이 모두 지금 목록에 없습니다(이름 변경)."
     : state.running ? "실행 중에는 선택을 바꿀 수 없습니다."
     : whenOf(run.stamp) + " 실행의 FAIL " + hit.length + "개를 고릅니다" +
       (miss ? " · 목록에 없는 " + miss + "개는 제외" : "") +
@@ -1307,8 +1301,7 @@ $("f-pri").addEventListener("change", (ev) => {
 });
 $("btn-selfail").addEventListener("click", onSelectFailed);
 $("btn-selvis").addEventListener("click", () => {
-  // 파괴적 항목은 **하나씩 고를 때만** 들어간다 — 일괄 선택엔 끌려오지 않는다.
-  for (const t of bulkTests()) state.selected.add(t.name);
+  for (const t of visibleTests()) state.selected.add(t.name);
   renderTable();
 });
 $("btn-selnone").addEventListener("click", () => {
