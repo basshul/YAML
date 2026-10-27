@@ -787,10 +787,15 @@ foreach ($t in $plan) {
         Write-Host "  · 복구(_suite_recover_old.yaml)..." -NoNewline -ForegroundColor DarkGray
         $rlog = Join-Path $logDir "$($t.n)_recover.log"
         if (-not (Wait-Device)) {
-        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User; Server = $Server }
             $aborted = $true; break
         }
-        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User }
+        # ★ `Server` 를 **반드시** 넘긴다 — 본 실행($flowArgs)과 같은 모양이어야 한다.
+        #   빠뜨리면 run_test.ps1 이 기본값(livetest)으로 떨어지는데, **운영 빌드**에서는
+        #   "운영 빌드에는 Server Override 가 없다" 가드에 걸려 `Write-Error` 가 난다.
+        #   이 스크립트는 `$ErrorActionPreference = "Stop"`(78행) 이라 그 에러가 파이프로
+        #   올라와 **스위트를 통째로 끝낸다** — SUMMARY·result.json 도 못 쓰고 죽는다.
+        #   2026-10-27 운영 빌드 실행에서 실제로 그랬다(27개 중 9개에서 중단, 이력에도 안 떴다).
+        $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User; Server = $Server }
         if ($Device) { $rArgs['device'] = $Device }
         $rArgs['AppId'] = $EffAppId
         & (Join-Path $root "run_test.ps1") @rArgs *>&1 | Tee-Object -FilePath $rlog | Out-Null
