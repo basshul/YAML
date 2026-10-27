@@ -444,6 +444,8 @@ class Run:
         self.user = user
         self.started_at = datetime.now()
         self.finished = False
+        # 끝은 여러 곳에서(정상 종료·중단·감시) 날 수 있다 → **한 번만** 나게 잠근다.
+        self._finish_lock = threading.Lock()
         self.stopped = False
         self.returncode: int | None = None
         self.summary: dict | None = None
@@ -545,19 +547,53 @@ class Run:
         self._emit("⛔ 사용자가 실행을 중단했습니다 — 앱은 중단 시점 화면에 그대로 남습니다.")
 
         proc = self._proc
-        if not proc or proc.poll() is not None:
-            return
-        try:
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-                               capture_output=True, timeout=20)
-            else:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        except Exception as exc:
-            self._emit(f"[중단 실패] {exc}")
+        # ⛔ 종전엔 **이미 죽은 프로세스면 그냥 return** 했다. 그러면 `_pump` 가 막혀 있을 때
+        #   아무도 끝을 내지 않아 화면이 영영 잠긴다 → 죽어 있어도 아래 감시는 반드시 건다.
+        if proc and proc.poll() is None:
+            try:
+                if os.name == "nt":
+                    subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                                   capture_output=True, timeout=20)
+                else:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            except Exception as exc:
+                self._emit(f"[중단 실패] {exc}")
+
+        # ★ 끝을 보장한다. `_pump` 가 정상이면 그쪽이 먼저 끝내고, 이 감시는 조용히 물러난다
+        #   (`_finish` 는 멱등이다). 파이프가 안 닫히는 경우가 실재한다 — 살아남은 손자
+        #   프로세스가 stdout 핸들을 쥐고 있으면 `for raw in stdout` 이 영원히 안 끝난다.
+        threading.Thread(target=self._finish_after, args=(20.0,), daemon=True).start()
+
+    def _finish_after(self, seconds: float) -> None:
+        """중단 요청 뒤 주어진 시간 안에 안 끝나면 끝난 것으로 처리한다."""
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if self.finished:
+                return
+            time.sleep(0.5)
+        self._emit(f"[강제 종료] 로그 스트림이 {int(seconds)}초 안에 닫히지 않아 "
+                   f"실행을 끝난 것으로 처리합니다.")
+        self._finish()
 
     def _pump(self) -> None:
-        """run_suite.ps1 의 콘솔 출력을 읽어 나른다."""
+        """run_suite.ps1 의 콘솔 출력을 읽어 나른다.
+
+        ⛔ **반드시 끝을 낸다.** 종전엔 try 가 없어서, 여기서 예외가 나면 데몬 스레드가
+          조용히 죽고 `finished` 가 영영 False 로 남았다. 그러면
+            · 화면이 `done` 을 못 받아 **체크박스 잠금이 안 풀리고**
+            · `start_run` 이 "이미 실행 중입니다" 로 **다음 실행까지 막는다**
+          2026-10-27 에 실제로 그 상태인 실행이 있었다(stopped=true / running=true).
+        """
+        try:
+            self._pump_lines()
+        except Exception as exc:
+            self._emit(f"[로그 읽기 끊김] {exc}")
+        finally:
+            self._stop.set()
+            time.sleep(1.0)      # 마지막 항목 로그가 밀려 들어올 틈을 준다
+            self._finish()
+
+    def _pump_lines(self) -> None:
         assert self._proc and self._proc.stdout
         for raw in self._proc.stdout:
             line = raw.rstrip("\r\n")
@@ -586,13 +622,27 @@ class Run:
                     "reason": tail.strip() if done.group(2) == "SKIP" else "",
                 })
         self.returncode = self._proc.wait()
-        self._stop.set()
-        time.sleep(1.0)              # 마지막 항목 로그가 밀려 들어올 틈을 준다
-        self.summary = self._build_summary()
-        self.finished = True
-        with self._lock:
-            for q in self._subs:
-                q.put(None)          # 스트림 종료 신호
+
+    def _finish(self) -> None:
+        """끝을 **한 번만, 반드시** 낸다(여러 스레드가 불러도 안전하다)."""
+        with self._finish_lock:
+            if self.finished:
+                return
+            try:
+                self.summary = self._build_summary()
+            except Exception as exc:
+                # 요약을 못 만들어도 **끝은 내야 한다** — 못 끝내면 화면이 영영 잠긴다.
+                self.summary = {
+                    "ok": False, "stopped": self.stopped, "returncode": self.returncode,
+                    "items": [], "counts": {"PASS": 0, "FAIL": 0, "SKIP": 0},
+                    "elapsed": str(datetime.now() - self.started_at).split(".")[0],
+                    "error": f"요약을 만들지 못했습니다: {exc}",
+                }
+            self._stop.set()
+            self.finished = True
+            with self._lock:
+                for q in self._subs:
+                    q.put(None)      # 스트림 종료 신호
 
     def _tail_item_logs(self) -> None:
         """suite_logs\\<시각>\\*.log 를 따라 읽어 maestro 진행 상황을 실시간으로 보낸다.
