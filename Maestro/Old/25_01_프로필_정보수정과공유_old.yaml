@@ -410,25 +410,32 @@ appId: ${APP_ID}
 # [01-3] [Medium] 정보 수정 - 주소 변경 동작 확인 (직접입력 + GPS)
 # CLICKUP: z8nfn6ma7u
 # ----------------------------------------------------------------
-# 2026-08-18 재작성. 종전에는 "저장은 KYC라 사용자 승인 필요"로 입력까지만 했으나,
-#   승인을 받아 **변경 → 저장 → 반영 확인 → 원복**까지 수행하도록 바꿨다(EXIT=0).
+# ★ 2026-10-27 재작성 — **기준 주소 의존을 걷어냈다.**
+#   종전 구조: 진입 시 주소가 `Yangpyeong dong sam ga Yeongdeungpo District` 인지 단언 →
+#     `Test Address 100` 으로 저장 → 반영 확인 → 그 기준값으로 **원복**.
+#   계정 주소가 테스트 밖에서 바뀌자(사용자가 직접 변경) **10-23·10-26 세 실행이 연속으로
+#   첫 단언에서 죽었다.** 코드 결함이 아니라 하드코딩한 기준값이 낡은 것이다.
+#   원복 구조 자체도 약했다 — 중간에 끊기면 `Test Address 100` 이 계정에 남았다.
 #
-# ⚠️ 기준값 = **"Yangpyeong dong sam ga Yeongdeungpo District"**(seungsoo818, 2026-08-18 실측).
-#   ASCII라 원복이 가능해서 이 케이스가 성립한다. 이전 실행이 중간에 끊겨 "Test Address 100"으로
-#   남아 있으면 첫 assert에서 즉시 실패한다 — 그때는 수동으로 위 원본값으로 되돌린 뒤 재실행할 것.
-#   ([01-2] 직업과 같은 방침: 조용히 통과시키는 것보다 실패로 드러내는 편이 안전하다)
+#   새 구조: ① 진입 시 들어 있는 주소는 **보지 않는다**(무엇이든 통과)
+#           ② `Test address` 를 넣고 **위치 버튼이 그 값을 실제 주소로 바꾸는가**를 본다
+#           ③ **저장하지 않는다** → 계정 주소가 그대로라 원복이 필요 없고, 끊겨도 잔재가 없다
+#
+#   ⚠️ 바뀐 범위: 종전의 **저장(btn_next) + PIN 인증 + 반영 확인** 구간이 빠졌다.
+#     이 케이스가 보는 것은 입력칸과 위치 버튼의 동작이다. 저장까지 봐야 한다면
+#     되돌릴 기준값을 어디서 얻을지부터 정해야 한다(계정 주소는 더 이상 고정이 아니다).
 #
 # ⚠️ **입력칸 커서 함정과 그 해법(2026-08-18 확정)**
 #   `address_input_field`는 기존 주소가 채워진 채 열리고, 탭하면 **커서가 문자열 중간**에 놓인다.
 #   `eraseText`는 커서 **앞쪽만** 지우므로 한 번에 비워지지 않는다
-#   (그냥 inputText하면 "YangpyeonTest Address 100g dong sam ga..."처럼 값 중간에 끼워넣어진다).
+#   (그냥 inputText하면 "YeongdeungpTest addressodong..."처럼 값 중간에 끼워넣어진다).
 #   → **[탭 + eraseText]를 6회 반복**하면 확실히 빈다. 탭할 때마다 커서가 남은 문자열의 중간으로
 #     가고, 문자열이 짧아지면 탭 지점이 문자열 끝을 넘어가 커서가 끝에 붙어 전부 지워진다.
 #     좌표를 쓰지 않으므로 해상도에 영향받지 않는다.
 #   ※ 판정은 부분일치 정규식으로 한다(Maestro 텍스트 매칭은 전체매칭이라 앞뒤 `.*`가 필요하다).
 #
-# ⚠️ **저장(btn_next)하면 간편 비밀번호(PIN) 인증이 뜬다** — [01-2]와 동일하다.
-#   여기서 back = 취소(커밋 안 됨). PIN 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수.
+# ※ 저장(btn_next)을 누르면 간편 비밀번호(PIN) 인증이 뜬다 — [01-2]와 동일하다.
+#   이 케이스는 **저장하지 않으므로** 거기까지 가지 않는다. back = 취소(커밋 안 됨).
 - scrollUntilVisible:
     element:
       id: "editProfileLayout"
@@ -440,7 +447,10 @@ appId: ${APP_ID}
     visible:
       id: "addressLayout"
     timeout: 20000
-- assertVisible: ".*Yangpyeong dong sam ga Yeongdeungpo District.*"
+# ⚠️ 진입 시 들어 있는 주소는 **보지 않는다**(2026-10-27). 무엇이 들어 있든 통과시킨다.
+#   종전엔 여기서 "Yangpyeong dong sam ga Yeongdeungpo District" 를 단언했는데,
+#   계정 주소가 테스트 밖에서 바뀌자 10-23·10-26 세 실행이 연속으로 이 줄에서 죽었다.
+#   확인 대상은 "지금 주소가 무엇인가" 가 아니라 "**바꾸는 동작이 되는가**" 다.
 - tapOn:
     id: "addressLayout"
 - extendedWaitUntil:
@@ -455,6 +465,9 @@ appId: ${APP_ID}
 - takeScreenshot: "[01-3-1]_주소변경_진입"
 
 # ---- (A) 빈 값이면 저장 불가 ----
+# `address_input_field` 는 기존 주소가 채워진 채 열리고, 탭하면 **커서가 문자열 중간**에 놓인다.
+# `eraseText` 는 커서 앞쪽만 지우므로 한 번에 안 비워진다 → [탭 + eraseText] 6회 반복.
+# 좌표를 쓰지 않으므로 해상도에 영향받지 않는다.
 - repeat:
     times: 6
     commands:
@@ -466,14 +479,14 @@ appId: ${APP_ID}
     enabled: false
 - takeScreenshot: "[01-3-2]_빈주소_저장버튼_비활성"
 
-# ---- (B) GPS 간편입력 ----
+# ---- (B) 'Test address' 입력 → 위치 버튼이 주소를 바꾸는가 ----
 # `location`(우측 조준 아이콘)을 누르면 **현재 위치 기반 주소가 입력칸에 자동으로 채워진다.**
-# ※ 사무실에서 실행하면 채워지는 값이 등록 주소(영등포)와 사실상 같아서, 원래 값이 그대로
-#   있으면 "아무 일도 안 일어난 것"처럼 보인다. 그래서 **먼저 GPSTEST라는 표식을 넣고**
-#   그것이 사라지는지로 판정한다. 채워지는 문자열 자체는 실행 위치에 따라 달라지므로
-#   값을 하드코딩하지 않고 "비어 있지 않다"까지만 본다.
-- inputText: "GPSTEST"
-- assertVisible: ".*GPSTEST.*"
+# ⚠️ 채워지는 값은 실행 위치에 따라 달라지므로 **하드코딩하지 않는다.**
+#   사무실에서 돌리면 등록 주소와 사실상 같은 값이 들어와, 원래 값이 그대로 있으면
+#   "아무 일도 안 일어난 것"과 구분이 안 된다. → 먼저 `Test address` 라는 **표식**을 넣고
+#   그것이 **사라지는지**로 판정한다. 채워진 쪽은 "비어 있지 않다" 까지만 본다.
+- inputText: "Test address"
+- assertVisible: ".*Test address.*"
 # 키보드를 먼저 내린다(입력 직후라 반드시 올라와 있다 — `hideKeyboard` 는 키보드가 없으면
 #   뒤로가기로 동작하므로 입력 직후에만 쓴다).
 - hideKeyboard
@@ -481,17 +494,16 @@ appId: ${APP_ID}
 - tapOn:
     id: "location"
 - waitForAnimationToEnd
-# ★ 2026-09-28: GPS 를 누르는 **이 순간** 위치 권한을 묻는다 — 온보딩 때가 아니다.
+# ★ GPS 를 누르는 **이 순간** 위치 권한을 묻는다 — 온보딩 때가 아니다.
 #   (`ACCESS_COARSE_LOCATION` 은 clearState 로 초기화되고, 실제로 위치를 쓸 때 물어본다)
-#   실측 문구: `GME 해외송금(stag)에서 기기의 대략적인 위치에 액세스하도록 허용하시겠습니까?`
 #   ⛔ 이 다이얼로그에는 `허용` 버튼이 **없다** — `앱 사용 중에만 허용`/`이번만 허용` 뿐이라
-#      문구(`SYS_PERMISSION_ALLOW`)로는 못 잡는다. 헬퍼가 AOSP id 로 잡는다.
-#   ⚠️ 이게 없으면 다이얼로그가 화면을 덮은 채 아래 `notVisible: GPSTEST` 가
-#      **거짓 통과**하고(가려서 안 보일 뿐) `btn_next` 단언에서 죽는다.
+#      문구로는 못 잡는다. 헬퍼가 AOSP id 로 잡는다.
+#   ⚠️ 이게 없으면 다이얼로그가 화면을 덮은 채 아래 `notVisible` 이 **거짓 통과**한다
+#      (가려서 안 보일 뿐이다).
 - runFlow: "_allow_permission_old.yaml"
-# ⚠️ 위치 확보가 느릴 수 있다(실내·COARSE 권한). 2026-09-09 SM-S911N 에서 20초로는 모자라 실패했다.
+# ⚠️ 위치 확보가 느릴 수 있다(실내·COARSE 권한). 2026-09-09 SM-S911N 에서 20초로는 모자랐다.
 - extendedWaitUntil:
-    notVisible: ".*GPSTEST.*"
+    notVisible: ".*Test address.*"
     timeout: 40000
 - assertVisible:
     id: "btn_next"
@@ -499,90 +511,20 @@ appId: ${APP_ID}
 - copyTextFrom:
     id: "address_input_field"
 - assertTrue: ${maestro.copiedText.length > 0}
-- takeScreenshot: "[01-3-3]_GPS_주소자동입력"
+- takeScreenshot: "[01-3-3]_위치버튼_주소자동입력"
 
-# ---- (C) 직접입력 → 저장 → 반영 확인 ----
-- repeat:
-    times: 6
-    commands:
-      - tapOn:
-          id: "address_input_field"
-      - eraseText: 100
-- inputText: "Test Address 100"
-- assertVisible: ".*Test Address 100.*"
-# 키보드가 저장 버튼을 가리므로 먼저 내린다
-- hideKeyboard
-- tapOn:
-    id: "btn_next"
+# ---- (C) 저장하지 않고 나간다 ----
+# ⛔ **저장(btn_next)을 누르지 않는다**(2026-10-27). 누르면 계정 주소가 GPS 값으로 바뀌고,
+#   되돌릴 기준값이 없어 다음 실행부터 주소가 계속 흘러간다. 종전 코드가 그래서
+#   "Test Address 100 으로 저장 → 원래 값으로 원복" 구조였고, 중간에 끊기면 잔재가 남았다.
+#   이 케이스가 보는 것은 **입력칸의 동작**이므로 커밋하지 않아도 성립한다.
+- pressKey: back
 - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      text: "${ENTER_THE_LOCK}"
-    timeout: 20000
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "확인|예|OK"
-    commands:
-      - tapOn: "확인|예|OK"
-      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "${EDIT_INFO_TEXT}"
-    timeout: 30000
-- assertVisible: ".*Test Address 100.*"
-- takeScreenshot: "[01-3-4]_주소변경_반영확인"
-
-# ---- (D) 원복 ----
-- tapOn:
-    id: "addressLayout"
-- extendedWaitUntil:
-    visible:
-      text: "${CHANGE_YOUR_ADDRESS}"
     timeout: 20000
-- repeat:
-    times: 6
-    commands:
-      - tapOn:
-          id: "address_input_field"
-      - eraseText: 100
-- inputText: "Yangpyeong dong sam ga Yeongdeungpo District"
-- hideKeyboard
-- tapOn:
-    id: "btn_next"
-- waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      text: "${ENTER_THE_LOCK}"
-    timeout: 20000
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- tapOn: "1"
-- waitForAnimationToEnd
-- tapOn: "2"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "확인|예|OK"
-    commands:
-      - tapOn: "확인|예|OK"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      text: "${EDIT_INFO_TEXT}"
-    timeout: 30000
-- assertVisible: ".*Yangpyeong dong sam ga Yeongdeungpo District.*"
-- assertNotVisible: ".*Test Address 100.*"
-- takeScreenshot: "[01-3-5]_주소_원복확인"
+- takeScreenshot: "[01-3-4]_저장없이_복귀"
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
