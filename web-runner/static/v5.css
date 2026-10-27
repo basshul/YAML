@@ -208,6 +208,18 @@
   .scenhead .sum{float:right;font-weight:400;color:var(--muted);font-size:11px;
     padding-top:1px;}
   .scenhead .noscen{color:var(--amber);}
+
+  /* 그룹 머리줄 — 목록은 **실행 순서**로 내려오고 그 순서가 곧 계정/로그인 상태
+     의존성이다. 어디서 계정이 바뀌는지 한눈에 보여야 하므로 시나리오 머리줄
+     (.scenhead)보다 한 단 위의 위계를 준다: 위쪽 굵은 경계선 + 더 진한 바탕. */
+  .grouphead td{
+    background:#dde3ea;color:#1b2735;font-size:12px;font-weight:600;
+    padding:6px 12px;letter-spacing:-0.01em;
+    border-top:2px solid #b9c3cf;border-bottom:1px solid var(--line);
+  }
+  .grouphead .muted{font-weight:400;font-size:11.5px;}
+  /* 첫 줄에는 위 경계선을 그리지 않는다 — 표 머리와 겹쳐 두 줄로 보인다 */
+  tbody tr.grouphead:first-child td{border-top:0;}
   .failbtns{display:flex;gap:4px;margin-top:5px;}
   .failbtns button{padding:2px 8px;font-size:11px;}
 

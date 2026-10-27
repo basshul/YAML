@@ -479,7 +479,25 @@ function renderTable() {
     html += '<tr><td colspan="7" class="muted" style="padding:10px 12px">' + why + "</td></tr>";
   }
 
+  // 그룹이 바뀌는 자리에 머리줄을 넣는다. 목록은 **실행 순서**로 내려오고 그 순서가
+  // 곧 계정/로그인 상태 의존성이라, 어디서 계정이 바뀌는지가 눈에 보여야 한다.
+  //   ⚠️ 그룹 하나만 보는 중(그룹 필터)에는 넣지 않는다 — 나눌 것이 없다.
+  //   설명 문구는 **드롭다운과 같은 출처**(`config.group_labels` = runner.GROUP_LABELS)를
+  //   쓴다. 여기에 따로 적으면 둘이 조용히 갈린다.
+  const gLabels = (state.config && state.config.group_labels) || {};
+  let lastGroup = null;
+  const oneGroup = state.groupFilter !== "all";
+
   for (const t of rows) {
+    if (!oneGroup && t.group !== lastGroup) {
+      lastGroup = t.group;
+      const n = rows.filter((x) => x.group === t.group).length;
+      html +=
+        '<tr class="grouphead"><td colspan="7">' +
+        '<b>' + esc(t.group) + "</b>" +
+        (gLabels[t.group] ? ' <span class="muted">· ' + esc(gLabels[t.group]) + "</span>" : "") +
+        ' <span class="muted">· ' + n + "개</span></td></tr>";
+    }
     const yamlCases = t.cases || [];
     const clRows = connected ? clRowsOf(t.name) : [];
     // 오류만 보는 중에는 **펼친 채로** 보여 준다 — 무엇이 잘못됐는지가 케이스 행에 있다
