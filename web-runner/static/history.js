@@ -33,6 +33,16 @@ async function boot() {
   renderRuns(runs);
 }
 
+/* 결과 칸에 적을 말. **일부만 깨졌으면 숫자로** 적는다 — 48케이스 중 1개가 깨진 것과
+   전부 깨진 것이 똑같이 `FAIL` 로 보이면 어느 쪽인지 알 수 없다.
+   전부 통과·전부 실패는 종전대로 `PASS`·`FAIL` 그대로 둔다(서버가 `cases` 를 안 주는
+   경우 — 가르지 못했다 — 도 마찬가지다). */
+function verdict(i) {
+  const c = i.cases;
+  if (!c || !c.pass || !c.fail) return i.status;
+  return `성공 ${c.pass} · 실패 ${c.fail}`;
+}
+
 function renderStats(runs) {
   const all = runs.flatMap((r) => r.items);
   const pass = all.filter((i) => i.status === "PASS").length;
@@ -94,7 +104,7 @@ function renderRuns(runs) {
         .map(
           (i) =>
             `<tr><td class="muted">${esc(i.group)}</td><td>${esc(i.name)}</td>` +
-            `<td class="st-${i.status}">${i.status}</td><td>${esc(i.steps)}</td><td>${esc(i.elapsed)}</td>` +
+            `<td class="st-${i.status}">${esc(verdict(i))}</td><td>${esc(i.steps)}</td><td>${esc(i.elapsed)}</td>` +
             `<td class="muted">${esc(i.reason)}</td>` +
             `<td><button class="ghost small" data-kind="cases" data-stamp="${r.stamp}" data-item="${esc(i.name)}">케이스</button> ` +
             `<button class="ghost small" data-kind="log" data-stamp="${r.stamp}" data-item="${esc(i.name)}">로그</button></td></tr>`

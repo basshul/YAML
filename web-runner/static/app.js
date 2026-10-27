@@ -1225,7 +1225,9 @@ function updateSaveState() {
     note = "기입 대기 <b>" + esc(p.counts.pending) + "건</b>(자동)" +
            '<span class="muted"> — Pass ' + esc(p.counts.pass) + " · NA " + esc(p.counts.na) +
            " · " + esc(p.ran) + "항목 실행" + (p.aborted ? " · 중단된 실행" : "") + "</span>";
-    if (!p.counts.pending) why = "이 실행에서 엑셀에 넣을 값이 없습니다.";
+    // ★ 넣을 값이 0 건이어도 **끄지 않는다**(2026-10-27 사용자 지시) — 고른 실행이
+    //   끝났으면 열어 두고, 비어 있다는 사실은 미리보기에서 말한다. 종전엔 버튼이
+    //   꺼져 있어 "왜 안 눌리지" 를 화면에서 알 길이 없었다.
   } else {
     why = "실행을 고르세요.";
     note = esc(why);
@@ -1242,7 +1244,19 @@ function updateSaveState() {
    ⛔ 셀 PATCH 는 아직 없다(단계 4). 「이대로 저장」은 index.html 에서 꺼 둔 상태다. */
 function openSavePreview() {
   const p = state.pending;
-  if (!p || p.error || !p.counts || !p.counts.pending) return;
+  if (!p || p.error || !p.counts) return;
+  if (!p.counts.pending) {
+    // 버튼은 열어 두되(사용자 지시) **왜 비었는지**는 여기서 말한다.
+    $("sv-h").textContent = "엑셀에 저장 — 미리보기 (" + whenOf(p.stamp) + ")";
+    $("sv-i9").textContent = "";
+    $("sv-rows").innerHTML =
+      '<tr><td colspan="4" class="muted">자동으로 넣을 값이 없습니다 — 이 실행에서 ' +
+      "통과한 케이스가 없거나(공통 진입부에서 끊김) 체크리스트에 연결된 행이 없습니다.</td></tr>";
+    $("sv-ex").innerHTML =
+      "자동 기입은 <b>Pass · NA</b> 둘뿐입니다. Fail 은 사람이 확인한 뒤에야 나갑니다.";
+    openModal("savem");
+    return;
+  }
 
   $("sv-h").textContent = "엑셀에 저장 — 미리보기 (" + whenOf(p.stamp) + ")";
   // ⛔ 셀 주소를 지어내지 않는다. 결과 열이 캐시에 없어서(= `column_source: null`) 어느 열인지

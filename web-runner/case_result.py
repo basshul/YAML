@@ -109,6 +109,26 @@ def removed_reason(flow: Path) -> str | None:
     return _renames()["removed"].get(flow.name)
 
 
+def resolve_flow(log_path: Path) -> Path | None:
+    """그 실행이 **실제로 돈** yaml 의 지금 경로. 못 찾으면 None.
+
+    이름으로 추측하지 않는다 — 로그에 적힌 `maestro … test <경로>` 가 정본이고,
+    그 뒤 이름이 바뀌었으면 `flow_renames.json` 을 따라간다.
+    항목 이름과 파일명이 다른 경우(`14_01_Deposit` ↔ `14_01_Deposit_seungsoo818_old.yaml`)
+    까지 이걸로 풀린다 — 그래서 체크리스트 연결도 이 함수를 쓴다.
+    """
+    if not log_path.exists():
+        return None
+    flow = flow_path_from_log(_read(log_path))
+    if flow is None:
+        return None
+    if flow.exists():
+        return flow
+    if removed_reason(flow):
+        return None
+    return follow_renames(flow)
+
+
 def log_steps(lines: list[str]) -> tuple[list[tuple[str, str]], str | None]:
     """(끝난 최상위 스텝들, 끝내 안 닫힌 커맨드).
 

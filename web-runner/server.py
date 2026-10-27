@@ -110,7 +110,7 @@ def api_checklist_pending(stamp: str):
         return JSONResponse(status_code=503, content={"error": str(exc)})
 
     try:
-        derived = checklist_result.derive(run, rows)
+        derived = checklist_result.derive(run, rows, run_dir=path.parent)
     except (TypeError, KeyError, AttributeError) as exc:
         # 옛 형식 result.json(blocked/na 가 **개수**)이 여기로 들어오면 터진다.
         #   2026-10-26 수정 전 실행이 그렇다 — 500 으로 숨기지 말고 사유를 그대로 준다.
@@ -167,12 +167,40 @@ def api_config():
     }
 
 
+def _with_case_counts(runs: list[dict]) -> list[dict]:
+    """FAIL 인 시나리오를 케이스로 갈라 `cases` 집계를 얹는다.
+
+    시나리오 하나가 48케이스짜리인데 1개만 깨져도 결과 칸엔 `FAIL` 만 남는다 → 화면이
+    `성공 N · 실패 N` 으로 적을 수 있게 숫자를 같이 준다.
+    PASS 는 가르지 않는다(전부 PASS 라 읽을 이유가 없다). 못 가르면 `cases` 를 안 붙이고
+    화면은 **종전대로** 시나리오 상태만 적는다.
+    """
+    for r in runs:
+        for it in r.get("items") or []:
+            if (it.get("status") or "").upper() == "PASS":
+                continue
+            try:
+                log = runner.SUITE_LOGS_DIR / r["stamp"] / f"{it.get('name')}.log"
+                cases = case_result.analyze(log, it).get("cases") or []
+            except Exception:
+                continue
+            if not cases:
+                continue
+            it["cases"] = {
+                "total": len(cases),
+                "pass": sum(1 for c in cases if c["status"] == "PASS"),
+                "fail": sum(1 for c in cases if c["status"] == "FAIL"),
+                "notrun": sum(1 for c in cases if c["status"] == "NOTRUN"),
+            }
+    return runs
+
+
 @app.get("/api/history")
 def api_history(limit: int = 50):
     """지난 실행 이력. 정본은 run_suite.ps1 이 쓰는 suite_logs\\<시각>\\SUMMARY.md 다
     (웹 밖에서 돌린 실행도 여기 들어온다)."""
     try:
-        return {"runs": runner.read_history(limit)}
+        return {"runs": _with_case_counts(runner.read_history(limit))}
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
