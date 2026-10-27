@@ -398,6 +398,13 @@ function hasPri(t, pri) {
     (c) => !covered.has(c.id) && (c.pri || "").trim() === pri);
 }
 
+/* 보이는 것 중 **실제로 돌릴 수 있는 것**. G9(파괴적)는 목록에 보이지만 고를 수 없으므로
+   선택·실행·개수 세 곳이 모두 이 기준을 써야 한다. 한 곳만 빠뜨리면 버튼은 40개라고
+   적어 놓고 서버가 거절하는 꼴이 된다. */
+function runnableTests() {
+  return visibleTests().filter((t) => !t.destructive);
+}
+
 function visibleTests() {
   let list = state.tests.filter(
     (t) => state.groupFilter === "all" || t.group === state.groupFilter);
@@ -467,6 +474,15 @@ function mapCellOf(r) {
     (r.mapError ? ' title="' + esc(r.mapError) + '"' : "") + ">" + esc(label) + "</span>";
 }
 
+// G9 를 고를 수 없는 이유. 태그 title 과 체크박스 title 이 같은 말을 해야 한다.
+//   스위트 표의 `destructive` 는 **사유 문구**가 들어 있다(참/거짓이 아니다) → 그걸 그대로
+//   쓴다. 표가 정본이고, 없을 때만 아래 기본 문구로 떨어진다.
+const DESTR_FALLBACK =
+  "파괴적 항목(G9)입니다 — admin 개입이 필요해 화면에서는 실행할 수 없습니다.";
+const destrWhy = (t) =>
+  (typeof t.destructive === "string" && t.destructive.trim() ? t.destructive : DESTR_FALLBACK) +
+  " · 실행은 터미널에서 run_suite.ps1 로 합니다.";
+
 function renderTable() {
   const rows = visibleTests();
   const connected = clConnected();
@@ -505,6 +521,9 @@ function renderTable() {
     const hasChildren = connected ? (clRows.length || yamlCases.length) : yamlCases.length;
 
     const pills =
+      // G9 는 보여 주되 고르지 못한다 — 왜인지 태그와 title 로 같이 적는다.
+      (t.destructive ? '<span class="tag wait" title="' + esc(destrWhy(t)) +
+                       '">파괴적 · 선택 불가</span>' : "") +
       (t.irreversible ? '<span class="tag man">실결제</span>' : "") +
       (t.needs_balance ? '<span class="tag pend">잔액 ' + t.needs_balance.toLocaleString() + "원</span>" : "") +
       (t.push ? '<span class="tag auto">픽스처</span>' : "");
@@ -529,11 +548,15 @@ function renderTable() {
     }
 
     html +=
-      '<tr class="scenhead"><td colspan="7">' + twisty +
-      '<label style="cursor:pointer"><input type="checkbox" data-test="' + esc(t.name) + '"' +
+      '<tr class="scenhead' + (t.destructive ? " destr" : "") + '"><td colspan="7">' + twisty +
+      '<label style="cursor:' + (t.destructive ? "default" : "pointer") +
+      '"><input type="checkbox" data-test="' + esc(t.name) + '"' +
       (state.selected.has(t.name) ? " checked" : "") +
-      (state.running ? " disabled" : "") +
-      ' aria-label="' + esc(t.name) + ' 시나리오 선택"> <span class="mono">' + esc(t.name) +
+      (state.running || t.destructive ? " disabled" : "") +
+      (t.destructive ? ' title="' + esc(destrWhy(t)) + '"' : "") +
+      ' aria-label="' + esc(t.name) +
+      (t.destructive ? ' — 화면에서 실행할 수 없습니다' : " 시나리오 선택") +
+      '"> <span class="mono">' + esc(t.name) +
       "</span></label>" + (pills ? " " + pills : "") +
       '<span class="muted" style="font-weight:400"> · ' + esc(t.group) +
       " · 계정 " + esc(t.account) + "</span>" +
@@ -644,7 +667,7 @@ function renderSelection() {
 
 function updateRunState() {
   const hasDevice = !!$("dev").value;
-  const vis = visibleTests();
+  const vis = runnableTests();   // G9 는 세지 않는다 — 눌러도 못 도는 수를 적으면 거짓말이다
   // 사용자를 고르기 전에는 아무것도 돌리지 않는다 — 계정이 사람마다 다르다.
   const hasUser = !!state.runUser;
   // 고를 수 없는 빌드·서버 조합이면 아예 못 누르게 한다 — 눌러서 400 을 받는 것보다
@@ -666,7 +689,12 @@ function updateRunState() {
   //   안 바뀐다** → 화면이 사실과 달라진다. 진행 표시도 떠난 목록 기준이라 같이 어긋난다.
   //   끝나면(`setRunning(false)`) 여기를 다시 지나며 열린다.
   const lock = state.running ? "실행 중에는 선택을 바꿀 수 없습니다." : "";
-  for (const cb of document.querySelectorAll("[data-test]")) cb.disabled = state.running;
+  //   ⛔ 파괴적 항목(G9)은 실행 여부와 **무관하게** 잠긴 채로 둔다. 종전엔 여기서
+  //     `cb.disabled = state.running` 로 일괄로 열어 버려, 렌더 때 잠근 것이 곧바로 풀렸다.
+  const locked = new Set(state.tests.filter((t) => t.destructive).map((t) => t.name));
+  for (const cb of document.querySelectorAll("[data-test]")) {
+    cb.disabled = state.running || locked.has(cb.dataset.test);
+  }
   for (const id of ["btn-selvis", "btn-selnone"]) {
     const b = $(id);
     if (b) { b.disabled = state.running; b.title = lock; }
@@ -683,7 +711,8 @@ function filterOn() {
 
 function onRunAll() {
   // ★ **보이는 것만** 고른다. 종전엔 state.tests 전부를 골라 필터가 무의미했다.
-  for (const t of visibleTests()) state.selected.add(t.name);
+  //   G9 는 보이기만 하므로 여기서도 빠진다(`runnableTests`).
+  for (const t of runnableTests()) state.selected.add(t.name);
   renderTable();
   onRun();
 }
@@ -1046,12 +1075,12 @@ function failSourceRun() {
   return state.runs[0] || null;
 }
 
-/* 실행의 FAIL 중 **지금 목록에 있는 것**만. 이름이 바뀌었거나 G9(파괴적, /api/tests 에서
-   빠진다)면 고를 수가 없다 — 조용히 빠뜨리지 말고 title 에 몇 개가 빠졌는지 적는다. */
+/* 실행의 FAIL 중 **지금 고를 수 있는 것**만. 이름이 바뀌었거나 G9(파괴적 — 목록에는
+   보이지만 고를 수 없다)면 제외된다 — 조용히 빠뜨리지 말고 title 에 몇 개가 빠졌는지 적는다. */
 function failedPick() {
   const run = failSourceRun();
   const names = run ? (run.items || []).filter((i) => i.status === "FAIL").map((i) => i.name) : [];
-  const known = new Set(state.tests.map((t) => t.name));
+  const known = new Set(state.tests.filter((t) => !t.destructive).map((t) => t.name));
   return { run, names, hit: names.filter((n) => known.has(n)) };
 }
 
@@ -1275,7 +1304,8 @@ $("f-pri").addEventListener("change", (ev) => {
 });
 $("btn-selfail").addEventListener("click", onSelectFailed);
 $("btn-selvis").addEventListener("click", () => {
-  for (const t of visibleTests()) state.selected.add(t.name);
+  // 파괴적 항목은 **보이기만** 한다 — 「보이는 것 모두 선택」에도 끌려오면 안 된다.
+  for (const t of runnableTests()) state.selected.add(t.name);
   renderTable();
 });
 $("btn-selnone").addEventListener("click", () => {
@@ -1300,6 +1330,8 @@ $("tbody").addEventListener("change", (ev) => {
   const cb = ev.target.closest("[data-test]");
   if (!cb) return;
   if (state.running) return;   // 잠겨 있어도 한 겹 더 막는다 — 선택은 실행 중 사실과 달라지면 안 된다
+  const t = state.tests.find((x) => x.name === cb.dataset.test);
+  if (t && t.destructive) { cb.checked = false; return; }   // disabled 를 우회해도 막는다
   if (cb.checked) state.selected.add(cb.dataset.test);
   else state.selected.delete(cb.dataset.test);
   renderSelection();

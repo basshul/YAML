@@ -46,9 +46,14 @@ async def no_cache_html(request, call_next):
 
 @app.get("/api/tests")
 def api_tests():
-    """스위트 표에서 읽은 테스트 목록 (G9 파괴적 항목 제외)."""
+    """스위트 표에서 읽은 테스트 목록 (G9 파괴적 항목 **포함**).
+
+    무엇이 있는지는 보여야 한다 — 안 보이면 "왜 없지?" 를 매번 다시 조사하게 된다.
+    대신 그 항목에는 `destructive: true` 가 붙고, 화면이 고르지 못하게 하며
+    `runner.start_run` 이 **한 번 더** 거절한다. 목록을 넓힌 것이지 실행을 넓힌 게 아니다.
+    """
     try:
-        return {"tests": runner.list_tests()}
+        return {"tests": runner.list_tests(include_destructive=True)}
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 

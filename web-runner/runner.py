@@ -70,7 +70,7 @@ GROUP_LABELS = {
     "G2": "한국인 계정 (seungsoo818)",
     "G3": "외국인 계정 (test123 → test251024)",
     "G4": "설정 변경 — 반드시 맨 뒤",
-    "G9": "파괴적 — admin 개입 필요 (목록에서 제외)",
+    "G9": "파괴적 — admin 개입 필요 (선택 불가)",
 }
 
 _DEFAULT_CONFIG = {
@@ -872,7 +872,18 @@ def start_run(names: list[str], device: str, build: str, server: str, user: str)
     global _current
 
     # ⚠️ 이름·시리얼을 그대로 명령행에 넣으면 주입이 된다 → **아는 값만** 통과시킨다.
-    known = {t["name"] for t in list_tests()}
+    #   ⛔ G9(파괴적)는 `/api/tests` 에 **보이지만** 여기서 막는다. 화면이 안 보여주는 것에
+    #     기대지 않는다 — 목록을 넓힌 것이 실행까지 넓히면 안 된다.
+    everything = list_tests(include_destructive=True)
+    destructive = {t["name"] for t in everything if t.get("destructive")}
+    picked_destructive = [n for n in names if n in destructive]
+    if picked_destructive:
+        raise ValueError(
+            "파괴적 항목(G9)은 화면에서 실행할 수 없습니다: "
+            + ", ".join(picked_destructive)
+            + " — 계정 잠금·비밀번호 초기화라 admin 개입이 필요합니다. "
+              "터미널에서 run_suite.ps1 로 직접 돌리세요.")
+    known = {t["name"] for t in everything if not t.get("destructive")}
     unknown = [n for n in names if n not in known or not _SAFE_NAME.match(n)]
     if not names:
         raise ValueError("테스트를 하나 이상 고르세요.")
