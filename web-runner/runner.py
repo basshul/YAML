@@ -70,7 +70,7 @@ GROUP_LABELS = {
     "G2": "한국인 계정 (seungsoo818)",
     "G3": "외국인 계정 (test123 → test251024)",
     "G4": "설정 변경 — 반드시 맨 뒤",
-    "G9": "파괴적 — admin 개입 필요 (선택 불가)",
+    "G9": "파괴적 — 계정 잠금·비밀번호 초기화 (admin 해제 필요)",
 }
 
 _DEFAULT_CONFIG = {
@@ -872,18 +872,11 @@ def start_run(names: list[str], device: str, build: str, server: str, user: str)
     global _current
 
     # ⚠️ 이름·시리얼을 그대로 명령행에 넣으면 주입이 된다 → **아는 값만** 통과시킨다.
-    #   ⛔ G9(파괴적)는 `/api/tests` 에 **보이지만** 여기서 막는다. 화면이 안 보여주는 것에
-    #     기대지 않는다 — 목록을 넓힌 것이 실행까지 넓히면 안 된다.
-    everything = list_tests(include_destructive=True)
-    destructive = {t["name"] for t in everything if t.get("destructive")}
-    picked_destructive = [n for n in names if n in destructive]
-    if picked_destructive:
-        raise ValueError(
-            "파괴적 항목(G9)은 화면에서 실행할 수 없습니다: "
-            + ", ".join(picked_destructive)
-            + " — 계정 잠금·비밀번호 초기화라 admin 개입이 필요합니다. "
-              "터미널에서 run_suite.ps1 로 직접 돌리세요.")
-    known = {t["name"] for t in everything if not t.get("destructive")}
+    #   G9(파괴적)도 고를 수 있다(2026-10-27 사용자 지시). 마지막 가드는 화면의 확인 창이다.
+    #   ⚠️ `01_05_로그인_비번초기화` 는 **파일 자체에 인터록이 없다** — 돌면 비밀번호가
+    #     실제로 초기화되고 admin 재설정 전까지 모든 플로우가 깨진다.
+    #     (`01_04` 는 `CONFIRM_LOCK` 가드가 있어 env 없이 돌리면 [01]에서 바로 멈춘다.)
+    known = {t["name"] for t in list_tests(include_destructive=True)}
     unknown = [n for n in names if n not in known or not _SAFE_NAME.match(n)]
     if not names:
         raise ValueError("테스트를 하나 이상 고르세요.")
@@ -909,7 +902,8 @@ def start_run(names: list[str], device: str, build: str, server: str, user: str)
         if _current and not _current.finished:
             raise RuntimeError("이미 실행 중입니다.")
         # 스위트 표의 순서대로 돌린다 — 순서가 곧 상태 의존성이다(고른 순서가 아니다).
-        order = [t["name"] for t in list_tests()]
+        # G9 도 고를 수 있으므로 순서 표에도 있어야 한다 — 없으면 **조용히 빠진다**.
+        order = [t["name"] for t in list_tests(include_destructive=True)]
         ordered = [n for n in order if n in set(names)]
         run = Run(ordered, device, build, server, user)
         _current = run
