@@ -1487,9 +1487,17 @@ appId: ${APP_ID}
 # 편의점 쿠폰(CU) 3,000원권 선택 → 결제 화면 진입
 - tapOn: "${CONVINENCE_STORE_TITLE}"
 - waitForAnimationToEnd
-# "3,000" 텍스트가 커스텀 뷰라 텍스트 매칭 불가 → 좌표 탭 사용 (CU 3,000원 카드)
-- tapOn:
-    point: "27%, 41%"
+# ⛔ 2026-10-27: 종전엔 `point: "27%, 41%"` 좌표 탭이었다("3,000 이 커스텀 뷰라 매칭
+#   불가"라는 주석과 함께). **그 전제는 지금 틀리다** — 브랜드 탭(CU/GS25/7-ELEVEN)도
+#   금액(`3,000 원`)도 전부 텍스트 노드다(실측).
+#   좌표로 고르면 **진열이 바뀌는 순간 엉뚱한 상품을 실제로 결제한다.** 2026-10 에
+#   상품명이 바뀐 것이 곧 진열이 바뀐다는 신호다 → 이름으로 고른다.
+- assertVisible: "${SHOP_PICK_PRODUCT_GUIDE}"
+# 브랜드 탭. 기본이 CU 지만 명시한다(이미 선택돼 있으면 무해하다).
+- tapOn: "CU"
+- waitForAnimationToEnd
+- assertVisible: "${SHOP_COUPON_CU}"
+- tapOn: "${SHOP_COUPON_AMOUNT}"
 - waitForAnimationToEnd
 - assertVisible:
     text: "${PAYMENT_TEXT}"
@@ -1504,6 +1512,10 @@ appId: ${APP_ID}
 - scroll
 - assertVisible:
     text: "${PAYMENT_AMOUNT_TEXT}"
+# ★ 결제 **전** 가드 — 고른 상품이 맞는지 금액으로 한 번 더 본다. 여기서 죽으면 돈이
+#   안 나간다. 구매 뒤 단언만으로는 이미 결제가 끝난 뒤다 — 2026-10 에 실제로 그랬다
+#   (3회 모두 구매는 성사되고 단언만 실패해 **사후 취소가 실행되지 않았다**).
+- assertVisible: ".*3,000.*"
 # 참고: GME Wallet 잔액 부족 시 "잔액이 부족할 경우, 선택된 계좌에서 자동으로 충전됩니다" 안내와 함께
 # 실제로 연동된 카카오뱅크 계좌에서 GME Wallet으로 자동충전이 발생함 (부작용 주의).
 # "구매하기" 버튼은 GME Wallet 잔액이 상품 금액 이상일 때만 활성화(빨간색)됨.
