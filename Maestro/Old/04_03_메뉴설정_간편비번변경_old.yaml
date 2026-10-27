@@ -90,7 +90,7 @@ env:
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 40000
 
 # ----------------------------------------------------------------
@@ -317,7 +317,7 @@ env:
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 40000
 
 # ----------------------------------------------------------------
@@ -418,9 +418,9 @@ env:
 - repeat:
     while:
       notVisible:
-        id: "btnTransfer"
+        id: "bottom_item_home"
     commands:
       - pressKey: back
       - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"

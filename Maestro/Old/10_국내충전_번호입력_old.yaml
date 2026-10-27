@@ -141,7 +141,7 @@ appId: ${APP_ID}
 - assertNotVisible: "${SESSION_EXPIRED}"
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ---------------- 진입: 홈 그리드 → 허브 → 국내 충전 서비스 ----------------

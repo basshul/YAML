@@ -119,7 +119,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ----------------------------------------------------------------

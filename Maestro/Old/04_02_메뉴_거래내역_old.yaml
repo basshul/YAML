@@ -101,7 +101,7 @@ appId: ${APP_ID}
 - runFlow: "_dismiss_popups_stag_old.yaml"
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ================================================================

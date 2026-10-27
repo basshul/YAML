@@ -103,13 +103,13 @@ appId: ${APP_ID}
       #   ※ 이 파일의 PIN 재설정 [X] 탭(756·768행 부근)은 성격이 다르다 — 의도적으로 누르고
       #     바로 결과를 단언하므로 맹목적 닫기가 아니다.
       notVisible:
-        id: "btnTransfer"
+        id: "bottom_item_home"
     commands:
       - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ----------------------------------------------------------------
@@ -172,7 +172,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [02] [High] 드로어 → 거래 내역 → 내역 화면 이동 확인
@@ -211,7 +211,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [03] [Low] 드로어 → 지점 → 지점 목록 화면 이동 확인
@@ -372,7 +372,7 @@ appId: ${APP_ID}
       - runFlow:
           when:
             notVisible:
-              id: "btnTransfer"
+              id: "bottom_item_home"
           commands:
             - runFlow:
                 when:
@@ -383,13 +383,13 @@ appId: ${APP_ID}
             - runFlow:
                 when:
                   notVisible:
-                    id: "btnTransfer"
+                    id: "bottom_item_home"
                 commands:
                   - pressKey: back
                   - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ----------------------------------------------------------------
@@ -443,7 +443,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [05] [Low] 드로어 → 개인정보 처리 방침 → 화면 이동 확인
@@ -473,7 +473,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [06] [Low] 드로어 → 이용약관 → 약관 목록 화면 이동 확인
@@ -510,7 +510,7 @@ appId: ${APP_ID}
       - runFlow:
           when:
             notVisible:
-              id: "btnTransfer"
+              id: "bottom_item_home"
           commands:
             - runFlow:
                 when:
@@ -521,13 +521,13 @@ appId: ${APP_ID}
             - runFlow:
                 when:
                   notVisible:
-                    id: "btnTransfer"
+                    id: "bottom_item_home"
                 commands:
                   - pressKey: back
                   - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 20000
 
 # ----------------------------------------------------------------
@@ -580,7 +580,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [08] [High] 드로어 → 설정 → 설정 화면 이동 확인
@@ -812,7 +812,7 @@ appId: ${APP_ID}
 - pressKey: back
 - waitForAnimationToEnd
 - assertVisible:
-    id: "btnTransfer"
+    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [09] [High] 드로어 → 로그아웃 → 잠금화면 이동 후 PIN 재로그인
@@ -882,13 +882,13 @@ appId: ${APP_ID}
       #   ※ 이 파일의 PIN 재설정 [X] 탭(756·768행 부근)은 성격이 다르다 — 의도적으로 누르고
       #     바로 결과를 단언하므로 맹목적 닫기가 아니다.
       notVisible:
-        id: "btnTransfer"
+        id: "bottom_item_home"
     commands:
       - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ================================================================

@@ -304,7 +304,7 @@ appId: com.gmeremit.online.gmeremittance_native.stag
 #   그래서 "배너 또는 홈" 중 먼저 뜨는 쪽을 기다린 뒤 배너를 닫고, 다시 홈을 확인한다.
 - extendedWaitUntil:
     visible:
-      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|btnTransfer"
+      id: "imgvCross|btnDontShowToday|btn6MonthsLater|btnCancel|bottom_item_home"
     timeout: 90000
 # 홈을 덮는 팝업은 4종이고 큐로 연달아 뜬다 → 헬퍼가 사라질 때까지 반복해서 닫는다.
 #   (비밀번호 변경 안내 / 자동이체 갱신 안내 / 인앱배너 B / 인앱배너 A — 상세는 헬퍼 주석)
@@ -312,5 +312,5 @@ appId: com.gmeremit.online.gmeremittance_native.stag
     file: _dismiss_popups_stag_old.yaml
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 60000

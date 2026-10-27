@@ -105,7 +105,7 @@ appId: ${APP_ID}
 - assertNotVisible: "${SESSION_EXPIRED}"
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # Receive Overseas Funds 진입: Home > 해외송금 받기 (전체 [01]~[14] suite 진입 시 1회만)

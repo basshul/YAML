@@ -126,13 +126,13 @@ appId: ${APP_ID}
       #   남을 수 있어 진입이 막힌다. 대신 **이미 홈에 도달했으면 누르지 않도록** 가드를 좁혔다.
       #   ⛔ 이 패턴을 새로 만들지 말 것 — 닫아야 할 팝업의 id를 알면 id로 닫는다.
       notVisible:
-        id: "btnTransfer"
+        id: "bottom_item_home"
     commands:
       - tapOn: "${BTN_CLOSE}"
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ----------------------------------------------------------------

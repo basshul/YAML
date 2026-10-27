@@ -144,7 +144,7 @@ appId: ${APP_ID}
 - assertNotVisible: "${SESSION_EXPIRED}"
 - extendedWaitUntil:
     visible:
-      id: "btnTransfer"
+      id: "bottom_item_home"
     timeout: 30000
 
 # ---------------- ATM 출금 진입 ----------------
