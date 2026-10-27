@@ -269,7 +269,22 @@ if ($needed.Count -ge 1) {
 # ⚠️ `JAVA_TOOL_OPTIONS` 는 쓰지 말 것 — JVM 이 "Picked up JAVA_TOOL_OPTIONS:" 를 stderr 에
 #   찍어 로그에 줄이 하나씩 낀다. maestro 런처(`maestro.bat`)가 `MAESTRO_OPTS` 를 JVM 에
 #   그대로 넘겨주므로 이쪽이 노이즈가 없다.
-$env:MAESTRO_OPTS = "-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+# ── maestro 가 남기는 임시 APK 를 C: 밖으로 돌린다 (2026-10-27) ──────────
+# maestro 는 실행마다 대상 APK 사본을 `java.io.tmpdir` 에 만들고 **끝나도 지우지 않는다.**
+# 하나가 약 140MB 라 일주일에 31.8GB(235개)가 쌓여 **C: 가 꽉 찼다** — 그러면 조용히
+# 실패하지 않고 **쓰다 만 파일이 남는다**(그날 메모리 파일 하나가 0바이트로 잘렸다).
+#   ⚠️ 없는 폴더를 가리키면 `createTempFile` 이 실패한다 → 미리 만들고, 만들 수 있을 때만 붙인다.
+#   ⚠️ D: 가 없는 PC 도 있다 → 그때는 손대지 않고 기본값(%TEMP%)으로 둔다. 대신 거기서는
+#      `%TEMP%\tmp*.apk` 를 주기적으로 지워야 한다.
+#   ※ 검증법: 한 번 돌린 뒤 `D:\maestro\tmp` 에 `tmp*.apk` 가 생기고 `%TEMP%` 에는
+#      안 생기면 먹은 것이다.
+$maestroOpts = "-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+$maestroTmp  = "D:\maestro\tmp"
+if (Test-Path ((Split-Path $maestroTmp -Qualifier) + "\")) {
+    New-Item -ItemType Directory -Path $maestroTmp -Force -ErrorAction SilentlyContinue | Out-Null
+    if (Test-Path $maestroTmp) { $maestroOpts += " -Djava.io.tmpdir=$maestroTmp" }
+}
+$env:MAESTRO_OPTS = $maestroOpts
 
 $cmd = @("maestro", "--device", $device, "test", $flow) + $envArgs
 Write-Host "Running: $($cmd -join ' ')"
