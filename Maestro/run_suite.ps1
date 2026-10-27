@@ -798,8 +798,25 @@ foreach ($t in $plan) {
         $rArgs = @{ lang = $Lang; flow = "Old\_suite_recover_old.yaml"; User = $User; Server = $Server }
         if ($Device) { $rArgs['device'] = $Device }
         $rArgs['AppId'] = $EffAppId
-        & (Join-Path $root "run_test.ps1") @rArgs *>&1 | Tee-Object -FilePath $rlog | Out-Null
-        if ($LASTEXITCODE -eq 0) {
+        # ⛔ 복구 호출은 **무슨 일이 있어도 스위트를 끝내지 못하게** 감싼다.
+        #   이 스크립트는 `$ErrorActionPreference = "Stop"`(78행) 이라, 자식이 `Write-Error`
+        #   한 줄만 뱉어도 `*>&1` 파이프를 타고 올라와 **스크립트가 통째로 죽는다.**
+        #   그러면 복구 실패로 세지도 못하고 **SUMMARY·result.json 도 못 쓴다** — 몇 시간짜리
+        #   실행이 이력에서 통째로 사라진다(2026-10-27 운영 빌드에서 실제로 그랬다).
+        #   여기서 잡아 실패로 세면 아래 "2회 연속" 판정이 정상적으로 중단시키고, 루프를
+        #   빠져나가 요약을 쓴다. ★ 복구가 깨지는 것과 실행 기록을 잃는 것은 다른 일이다.
+        #   기본값을 1(실패)로 두는 이유: 호출이 터지면 `$LASTEXITCODE` 는 **직전 명령의 값**이
+        #   그대로 남아 있어, 그걸 믿으면 실패를 성공으로 읽는다.
+        $rCode = 1
+        try {
+            & (Join-Path $root "run_test.ps1") @rArgs *>&1 | Tee-Object -FilePath $rlog | Out-Null
+            $rCode = $LASTEXITCODE
+        } catch {
+            # 사유는 복구 로그에 남긴다 — 화면에는 아래에서 "실패 (n회 연속)" 한 줄만 찍는다.
+            ("복구 호출이 예외로 끊겼습니다: " + $_.Exception.Message) |
+                Out-File -FilePath $rlog -Append -Encoding UTF8
+        }
+        if ($rCode -eq 0) {
             Write-Host " OK" -ForegroundColor DarkGray
             $recoverFail = 0
         } else {
