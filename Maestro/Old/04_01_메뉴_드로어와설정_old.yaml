@@ -146,33 +146,34 @@ appId: ${APP_ID}
 - assertVisible:
     id: "imgvMainAccount"
 
-# ----------------------------------------------------------------
-# [01-1] [Low] 은행 계좌 연결 → [?](csButton) → 고객센터 팝업 발생 확인
-# CLICKUP: z8nfn6ma2h
-# ----------------------------------------------------------------
-# 팝업 구성(2026-08-13 구 UI 실측): chatView("실시간 채팅" + 운영 상태),
-#   SNS 3종(Facebook/WhatsApp/Instagram), callTxtView(대표번호), btnCancel("취소")
-# ※ 대표번호가 1811-2961 → **1811-2904로 변경**됐다. 번호 문자열을 하드코딩하지 않고
-#   id(callTxtView) 노출만 검증한다.
-- tapOn:
-    id: "csButton"
+
+# ★ 뒤따르던 저중요도 케이스가 홈으로 돌려놓던 자리다(2026-10-28 제거). 그 복귀가
+#   없으면 다음 케이스의 `tapOn: iv_nav`(드로어)가 설 자리를 잃는다 → 여기서 되돌린다.
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - runFlow:
+                when:
+                  visible: "${HOME_EXIT_CONFIRM}"
+                commands:
+                  - tapOn: "${REG_NO}"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "bottom_item_home"
+                commands:
+                  - pressKey: back
+                  - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "chatView"
-    timeout: 15000
-- assertVisible: "${SCR_LIVE_CHAT}"
-- assertVisible:
-    id: "callTxtView"
-- tapOn:
-    id: "btnCancel"
-- extendedWaitUntil:
-    visible:
-      id: "csButton"
-    timeout: 15000
-- pressKey: back
-- waitForAnimationToEnd
-- assertVisible:
-    id: "bottom_item_home"
+      id: "bottom_item_home"
+    timeout: 20000
 
 # ----------------------------------------------------------------
 # [02] [High] 드로어 → 거래 내역 → 내역 화면 이동 확인
@@ -212,323 +213,6 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 - assertVisible:
     id: "bottom_item_home"
-
-# ----------------------------------------------------------------
-# [03] [Low] 드로어 → 지점 → 지점 목록 화면 이동 확인
-# ----------------------------------------------------------------
-# ※ 목적지 식별에 "지점"을 쓰면 드로어 메뉴명과 부분매칭되므로,
-#   지점 카드 안의 주소 언어변환 버튼 "한국어 주소"로 식별한다.
-- tapOn:
-    id: "iv_nav"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "txt_user_email"
-    commands:
-      - tapOn:
-          id: "iv_nav"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "txt_user_email"
-    timeout: 15000
-# ★ 2026-09-23 en 실행으로 확인: `한국어 주소` 는 **영문 UI 에서도 그대로 보인다**
-#   (지점 화면이 한국어 주소를 별도 섹션으로 보여준다) → 변수화 대상이 아니다.
-#   영문 UI 에서도 한국어로 남는 데이터성 문자열이다 — 빼면 오히려 깨진다.
-- tapOn: "${INIT_BRANCH_TITLE}"
-- extendedWaitUntil:
-    visible:
-      text: "한국어 주소"
-    timeout: 20000
-- assertVisible:
-    id: "agentListRv"
-
-# ----------------------------------------------------------------
-# [03-1] [Low] 지점 → 주소 복사 → "복사 완료" 토스트
-# CLICKUP: z8nfn6ma2q
-# ----------------------------------------------------------------
-# 지점 카드는 목록(agentListRv)이라 같은 id가 여러 개다 → **index: 0**(첫 지점=안산)으로 한정한다.
-# ※ 개편 UI에서는 "복사"가 주소 TextView 안의 span이라 좌표(36%,35%)를 썼지만,
-#   구 UI는 `branch_address` 뷰 자체가 clickable이라 **id 탭으로 복사가 동작한다**(2026-08-13 실측).
-# ※ 토스트는 uiautomator 덤프에는 안 잡히지만 Maestro는 본다. ~2초면 사라지므로
-#   탭과 assert 사이에 **대기를 넣지 말 것**.
-- tapOn:
-    id: "branch_address"
-    index: 0
-- assertVisible: "${TOAST_COPY_DONE}"
-
-# ----------------------------------------------------------------
-# [03-2] [Low] 지점 → 주소 한/영 변환 (한국어 주소 ↔ English Address)
-# CLICKUP: z8nfn6ma2r
-# ----------------------------------------------------------------
-- tapOn:
-    id: "language_select"
-    index: 0
-- extendedWaitUntil:
-    visible:
-      text: "English Address"
-    timeout: 10000
-- tapOn:
-    id: "language_select"
-    index: 0
-- extendedWaitUntil:
-    visible:
-      text: "한국어 주소"
-    timeout: 10000
-
-# ----------------------------------------------------------------
-# [03-3] [Low] 지점 → 영업시간 펼침/접기
-# CLICKUP: z8nfn6ma2t
-# ----------------------------------------------------------------
-# ⚠️ `tv_time`은 **요약 줄과 펼쳐진 요일별 줄이 같은 id를 공유**한다(2026-08-13 실측).
-#   펼친 뒤에는 tv_time이 8개가 되므로 반드시 index: 0(요약 줄)을 탭해야 접힌다.
-- tapOn:
-    id: "tv_time"
-    index: 0
-- extendedWaitUntil:
-    visible:
-      text: "10:00 ~ 19:00"
-    timeout: 10000
-- tapOn:
-    id: "tv_time"
-    index: 0
-- waitForAnimationToEnd
-- assertNotVisible:
-    text: "10:00 ~ 19:00"
-
-# ----------------------------------------------------------------
-# [03-4] [Low] 지점 → 지도 선택 → 외부 지도 앱 진입
-# CLICKUP: z8nfn6ma2u
-# ----------------------------------------------------------------
-# 지도 앱은 별도 태스크로 뜨고 back은 GME가 아니라 런처로 간다
-# → 복귀는 launchApp + PIN 재진입으로 처리한다(원본 04_Menu_remaining_old와 동일한 방식).
-# 외부 앱 화면은 appId 스코프 밖이라 내용을 읽을 수 없으므로 **지점 목록 이탈**로 판정한다.
-- tapOn:
-    id: "google_map_link"
-    index: 0
-- extendedWaitUntil:
-    notVisible:
-      id: "agentListRv"
-    timeout: 20000
-
-# --- 지도 앱 → GME 복귀(재실행 + PIN) ---
-- launchApp
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      visible:
-        text: "Server Override"
-    commands:
-      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
-      - tapOn:
-          text: "${SERVER_PICK}"
-      - waitForAnimationToEnd
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
-      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
-      - launchApp
-      - extendedWaitUntil:
-          visible:
-            text: "Server Override"
-          timeout: 60000
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
-- runFlow: "_relogin_if_autologout_old.yaml"
-- runFlow:
-    when:
-      visible:
-        text: "${PIN_ENTER_4DIGIT}"
-    commands:
-      - runFlow:
-          file: _enter_pin_old.yaml
-          env:
-            PIN: ${PIN_NORMAL}
-- runFlow:
-    when:
-      visible: "${REG_VOICE_PHISHING}"
-    commands:
-      - tapOn:
-          id: "check_customer"
-      - waitForAnimationToEnd
-      - tapOn: "확인|OK"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "${ASK_ME_LATER_TEXT}"
-    commands:
-      - tapOn: "${ASK_ME_LATER_TEXT}"
-      - waitForAnimationToEnd
-# 재실행 시 지점 화면이 복원될 수 있으므로 홈까지 back으로 정리한다.
-# ⚠️ "앱을 종료하시겠습니까?" 처리는 반드시 `btnTransfer 미노출` 가드 **바깥**에 둘 것.
-#   안쪽에 두면 홈에서 back → 다이얼로그 → back → 다이얼로그가 무한 반복된다(2026-08-12 사고).
-- repeat:
-    times: 5
-    commands:
-      - runFlow:
-          when:
-            notVisible:
-              id: "bottom_item_home"
-          commands:
-            - runFlow:
-                when:
-                  visible: "${HOME_EXIT_CONFIRM}"
-                commands:
-                  - tapOn: "${REG_NO}"
-                  - waitForAnimationToEnd
-            - runFlow:
-                when:
-                  notVisible:
-                    id: "bottom_item_home"
-                commands:
-                  - pressKey: back
-                  - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 30000
-
-# ----------------------------------------------------------------
-# [04] [Low] 드로어 → GME 소개 → 앱 버전/업데이트 확인 노출
-# CLICKUP: z8nfn6ma2v
-# ----------------------------------------------------------------
-- tapOn:
-    id: "iv_nav"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "txt_user_email"
-    commands:
-      - tapOn:
-          id: "iv_nav"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "txt_user_email"
-    timeout: 15000
-- tapOn: "${ABOUT_GME_TEXT}"
-- extendedWaitUntil:
-    visible:
-      text: "${CHECK_FOR_UPDATE_TEXT}"
-    timeout: 20000
-# 앱 버전 노출 확인 — `txvAppversion` = "7.19.1-livetest (719010) livetest" 형태.
-# 버전 문자열은 빌드마다 바뀌므로 id 노출만 검증한다(2026-08-13 구 UI 실측).
-- assertVisible:
-    id: "txvAppversion"
-- assertVisible:
-    id: "btn_check_update"
-
-# ----------------------------------------------------------------
-# [04-1] [Low] GME 소개 → SNS [f] → 페이스북(외부 앱/브라우저) 진입
-# CLICKUP: z8nfn6ma2w
-# ----------------------------------------------------------------
-# 외부 앱으로 나가면 appId 스코프 밖이라 내용을 못 읽는다 → `iv_fb` 사라짐으로 이탈을 판정한다.
-# 페이스북은 지도 앱과 달리 back 1회로 GME에 복귀한다.
-- tapOn:
-    id: "iv_fb"
-- extendedWaitUntil:
-    notVisible:
-      id: "iv_fb"
-    timeout: 20000
-- pressKey: back
-- extendedWaitUntil:
-    visible:
-      id: "iv_fb"
-    timeout: 20000
-- pressKey: back
-- waitForAnimationToEnd
-- assertVisible:
-    id: "bottom_item_home"
-
-# ----------------------------------------------------------------
-# [05] [Low] 드로어 → 개인정보 처리 방침 → 화면 이동 확인
-# ----------------------------------------------------------------
-# ※ 드로어 메뉴는 "개인정보 처리 방침"(공백 있음), 진입 화면 제목은
-#   "개인정보 처리방침"(공백 없음). 정확 매칭으로 구분된다.
-- tapOn:
-    id: "iv_nav"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "txt_user_email"
-    commands:
-      - tapOn:
-          id: "iv_nav"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "txt_user_email"
-    timeout: 15000
-- tapOn: "${COMMON_PRIVACY_POLICY_LABEL}"
-- extendedWaitUntil:
-    visible:
-      text: "${PERSONAL_INFO_TREATMENT_POLICY}"
-    timeout: 20000
-- pressKey: back
-- waitForAnimationToEnd
-- assertVisible:
-    id: "bottom_item_home"
-
-# ----------------------------------------------------------------
-# [06] [Low] 드로어 → 이용약관 → 약관 목록 화면 이동 확인
-# CLICKUP: z8nfn6ma3t
-# ----------------------------------------------------------------
-# ⓘ ClickUp 케이스명은 "Settings - Terms - 이용약관 정상 노출 확인"이지만,
-#   구 UI에서 이용약관은 **설정이 아니라 드로어**에 있어 이 케이스가 담당한다(2026-08-20 대조).
-# ※ "이용약관" 단독은 드로어 메뉴명과 부분매칭되므로 목록 항목
-#   "전자금융거래 이용약관"으로 식별한다.
-- tapOn:
-    id: "iv_nav"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "txt_user_email"
-    commands:
-      - tapOn:
-          id: "iv_nav"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "txt_user_email"
-    timeout: 15000
-- tapOn: "${REG_TERMS_TITLE}"
-- extendedWaitUntil:
-    visible:
-      text: "${ELECTRONIC_FINANCE_TRANSATION_TERM}"
-    timeout: 20000
-# ※ 이 화면은 back 1회로 홈까지 오지 않는다(2026-08-12 실측) → 조건부 back 반복으로 복귀.
-- repeat:
-    times: 3
-    commands:
-      - runFlow:
-          when:
-            notVisible:
-              id: "bottom_item_home"
-          commands:
-            - runFlow:
-                when:
-                  visible: "${HOME_EXIT_CONFIRM}"
-                commands:
-                  - tapOn: "${REG_NO}"
-                  - waitForAnimationToEnd
-            - runFlow:
-                when:
-                  notVisible:
-                    id: "bottom_item_home"
-                commands:
-                  - pressKey: back
-                  - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 20000
 
 # ----------------------------------------------------------------
 # [07] [High] 드로어 → 송금 받을 계좌 → 송금 받을 계좌 관리 화면 이동 확인
@@ -650,169 +334,34 @@ appId: ${APP_ID}
     id: "continueBtn"
     enabled: false
 
-# ----------------------------------------------------------------
-# [08-2] [Medium] 회원 탈퇴 → 사유 화면 → 사유 미선택 시 "계정 삭제하기" 비활성화
-# CLICKUP: z8nfn6ma3x
-# ----------------------------------------------------------------
-# ⚠️ 실제 탈퇴는 절대 수행하지 않는다. 버튼 활성화 상태까지만 확인하고 되돌아온다.
-# ⚠️ 2026-09-14: en 실행에서 이 체크박스를 못 찾아 죽었다 — **영문 약관 문구가 길어 화면 밖으로 밀린다**
-#   (ko 에서는 보이던 자리다). 언어에 따라 길이가 달라지는 화면이니 **탭 전에 스크롤**한다.
-- scrollUntilVisible:
-    element:
-      id: "termscondition"
-    direction: DOWN
-    centerElement: true
-    timeout: 15000
-- tapOn:
-    id: "termscondition"
-- assertVisible:
-    id: "continueBtn"
-    enabled: true
-- tapOn:
-    id: "continueBtn"
-- extendedWaitUntil:
-    visible:
-      id: "deleteBtn"
-    timeout: 20000
-- assertVisible:
-    id: "deleteBtn"
-    enabled: false
-# 사유 선택 → 삭제 버튼 활성화 (사유 항목은 전부 id가 `checkbox`로 같아 텍스트로 지정한다)
-- tapOn: "${WITHDRAWAL_REASON6}"
-- assertVisible:
-    id: "deleteBtn"
-    enabled: true
-# 설정으로 복귀 (사유 화면 → 동의 화면 → 설정)
-- tapOn:
-    id: "iv_back"
-- waitForAnimationToEnd
-- tapOn:
-    id: "iv_back"
-- extendedWaitUntil:
-    visible:
-      id: "view_referral_code"
-    timeout: 20000
 
-# ----------------------------------------------------------------
-# [08-3] [Medium] 설정 → 추천인 번호 → 코드 입력 동작 확인
-# CLICKUP: z8nfn6ma3u
-# ----------------------------------------------------------------
-# 다이얼로그: tvDialogTitle("추천 코드를 입력하세요") / etReferralCode / btnCancel("취소") / btnConfirm("확인")
-# ⚠️ 실제 코드를 적용하지 않는다 — 입력만 확인하고 **취소**로 닫는다.
-- tapOn:
-    id: "view_referral_code"
-- extendedWaitUntil:
-    visible:
-      id: "etReferralCode"
-    timeout: 20000
-- tapOn:
-    id: "etReferralCode"
-- inputText: "TEST123"
-- assertVisible: "TEST123"
-- tapOn:
-    id: "btnCancel"
-# ⚠️ 다이얼로그를 닫아도 **소프트 키보드가 남아 있어** 설정 화면 하단이 계층에서 통째로 잘린다
-#   (2026-08-13 실측: view_marketing이 y=1234에서 잘리고 view_language·view_referral_code·
-#    delete_gme_account는 아예 안 나옴 → 복귀 판정이 실패한다).
-#   화면은 SettingsView가 맞으므로 **키보드를 먼저 닫고** 판정할 것.
-#   ⛔ 다만 `hideKeyboard` 를 **무조건 부르면 안 된다** — 키보드가 없을 때는 **뒤로가기로 동작**해
-#     설정 화면을 빠져나간다(2026-09-08 SM-S911N 실측: 홈까지 밀려나 복귀 판정이 실패했다).
-#     → 하단이 실제로 가려졌을 때(= `view_referral_code` 가 안 보일 때)만 닫는다.
-- runFlow:
-    when:
-      notVisible:
-        id: "view_referral_code"
+# ★ 뒤따르던 저중요도 케이스가 홈으로 돌려놓던 자리다(2026-10-28 제거). 그 복귀가
+#   없으면 다음 케이스의 `tapOn: iv_nav`(드로어)가 설 자리를 잃는다 → 여기서 되돌린다.
+- repeat:
+    times: 3
     commands:
-      - hideKeyboard
-      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            notVisible:
+              id: "bottom_item_home"
+          commands:
+            - runFlow:
+                when:
+                  visible: "${HOME_EXIT_CONFIRM}"
+                commands:
+                  - tapOn: "${REG_NO}"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "bottom_item_home"
+                commands:
+                  - pressKey: back
+                  - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "view_referral_code"
+      id: "bottom_item_home"
     timeout: 20000
-
-# ----------------------------------------------------------------
-# [08-4] [Low] 설정 → 마케팅 수신 동의 ON/OFF 토글
-# CLICKUP: z8nfn6ma3q
-# ----------------------------------------------------------------
-# ⚠️ **실제 계정 설정이 즉시 바뀐다.** 토글하면 곧바로 반영되고 알림 다이얼로그가 뜬다
-#   (txt_dialog_title "'마케팅 푸시 알림 수신 동의'가 (비)활성화되었습니다." / btn_diaog_ok "확인").
-#   따라서 이 케이스는 **반드시 원래 상태(ON)로 복원하고 끝난다.**
-# ※ 다이얼로그 문구 검증은 전체 매칭이라 "비활성화되었습니다"와 "활성화되었습니다"가 섞이지 않는다.
-- assertVisible:
-    id: "view_marketing"
-    checked: true
-# ON → OFF
-- tapOn:
-    id: "view_marketing"
-- extendedWaitUntil:
-    visible:
-      id: "btn_diaog_ok"
-    timeout: 20000
-- assertVisible: "${MARKETING_DIS_AGREED}"
-- tapOn:
-    id: "btn_diaog_ok"
-- waitForAnimationToEnd
-- assertVisible:
-    id: "view_marketing"
-    checked: false
-# OFF → ON (복원)
-- tapOn:
-    id: "view_marketing"
-- extendedWaitUntil:
-    visible:
-      id: "btn_diaog_ok"
-    timeout: 20000
-- assertVisible: "${MARKETING_AGREED}"
-- tapOn:
-    id: "btn_diaog_ok"
-- waitForAnimationToEnd
-- assertVisible:
-    id: "view_marketing"
-    checked: true
-
-# ----------------------------------------------------------------
-# [08-5] [Medium] 설정 → 간편 비밀번호 변경 → 키패드 [X] → 취소 팝업 아니요/예
-# CLICKUP: z8nfn6ma34
-# ----------------------------------------------------------------
-# 진입 화면: "기존 간편 비밀번호" + "4자리 숫자를 입력하세요" + 보안 키패드(transKeypad_main)
-# ⚠️ 키패드 [X]는 text가 아니라 **content-desc "닫기"** 다(Maestro는 둘 다 매칭한다).
-# 취소 팝업: txvDialogDescription "간편 비밀번호 재설정을 그만하시겠습니까?" / btnCancel("아니요") / btnOk("예")
-# ⚠️ 비밀번호는 입력하지 않는다 — 입력하면 실제로 간편 비밀번호가 바뀌어 다른 파일의 PIN <정상 PIN> 전제가 깨진다.
-- tapOn:
-    id: "view_change_pin_code"
-- extendedWaitUntil:
-    visible:
-      text: "${PIN_ENTER_4DIGIT}"
-    timeout: 20000
-- assertVisible: "${CURRENT_ENTER_THE_LOCK}"
-# [X] → 취소 팝업 → 아니요: 팝업만 닫히고 키패드 화면 유지
-- tapOn: "${BTN_CLOSE}"
-- extendedWaitUntil:
-    visible:
-      text: "${CHANGE_LOCK_CODE_CANCEL}"
-    timeout: 20000
-- tapOn:
-    id: "btnCancel"
-- extendedWaitUntil:
-    visible:
-      text: "${PIN_ENTER_4DIGIT}"
-    timeout: 20000
-# 다시 [X] → 예: 화면을 나가 설정으로 복귀
-- tapOn: "${BTN_CLOSE}"
-- extendedWaitUntil:
-    visible:
-      id: "btnOk"
-    timeout: 20000
-- tapOn:
-    id: "btnOk"
-- extendedWaitUntil:
-    visible:
-      id: "view_referral_code"
-    timeout: 20000
-- pressKey: back
-- waitForAnimationToEnd
-- assertVisible:
-    id: "bottom_item_home"
 
 # ----------------------------------------------------------------
 # [09] [High] 드로어 → 로그아웃 → 잠금화면 이동 후 PIN 재로그인

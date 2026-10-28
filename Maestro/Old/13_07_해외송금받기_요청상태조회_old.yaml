@@ -122,135 +122,15 @@ appId: ${APP_ID}
 # 스택을 확신할 수 없으므로, [19]/[20]은 안전하게 Home부터 재진입함(특히 [20]은 실제
 # 결제 페이지로 연결되므로 상태가 꼬이면 위험함).
 
-# ----------------------------------------------------------------
-# [15] [Medium] Inbound Request Status - 송금요청 한 카드 노출 되는지 확인
-# ----------------------------------------------------------------
 
-- runFlow: "_enter_receive_overseas_old.yaml"
-# ⚠️ 진입 화면이 **활성 요청 건수로 갈린다**(2026-09-04 / 2026-09-08 재확인):
-#   2건 이상 = "받는 계좌" 카드 목록 / **1건 = 카드 목록을 건너뛰고 요청 상세로 직행**.
-#   13_04 가 만든 요청 1건만 있는 계정(test123)에서는 카드 목록이 아예 뜨지 않으므로
-#   `받는 계좌` 를 단정하면 실패한다 → 두 경로를 모두 받고, 카드 목록일 때만 목록을 검증한다.
-#   상세 도달은 [16]의 `tv_req_complete` 단언이 보증하므로 거짓 통과가 되지 않는다.
-- extendedWaitUntil:
-    visible: "${INBOUND_LIST_ANY}"
-    timeout: 40000
-- runFlow:
-    when:
-      visible:
-        text: "${RECEIVING_ACCOUNT}"
-    commands:
-      - assertVisible:
-          id: "rvAccountList"
-
-# ----------------------------------------------------------------
-# [16] [Low] Inbound Request Status - 송금요청 디테일페이지 확인
-# ----------------------------------------------------------------
-# [15]가 끝난 화면(카드 목록)에서 바로 이어서 진행
-
-# 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
-- runFlow:
-    when:
-      visible:
-        text: "${RECEIVING_ACCOUNT}"
-    commands:
-      - tapOn:
-          id: "cardView"
-          index: 0
-      - waitForAnimationToEnd
-- assertVisible:
-    id: "tv_req_complete"
-- assertVisible:
-    id: "tv_expirydate"
-
-# ----------------------------------------------------------------
-# [17] [Medium] Inbound Request Status - 송금요청 디테일 > Check History 버튼 선택 시 이력페이지 이동확인
-# ----------------------------------------------------------------
-# "내역 조회"(우측 상단) 탭 시 거래내역 > 송금 > 송금 받기 탭으로 이동, "요청 완료" 상태 배지 노출 확인
-# [16]이 끝난 화면(디테일)에서 바로 이어서 진행
-
-- tapOn:
-    id: "tv_request_history"
-- assertVisible:
-    text: "${REQUEST_COMPLETED_TEXT}"
-
-# 이력화면에서 뒤로가기 1번이면 디테일 화면으로 복귀
-- pressKey: back
-- waitForAnimationToEnd
-
-# ----------------------------------------------------------------
-# [18] [Medium] Inbound Request Status - Submit Another Request 선택 시 인바운드 메인화면 이동 확인
-# ----------------------------------------------------------------
-# "다른 요청 진행" 탭 시 [01]~[09]에서 사용한 환율계산+수취인목록 메인화면으로 이동 확인
-# [17]에서 뒤로가기로 복귀한 디테일 화면에서 바로 이어서 진행
-
-- assertVisible:
-    id: "tv_req_complete"
-- tapOn:
-    id: "tv_make_another_payment"
-- waitForAnimationToEnd
-- assertVisible:
-    text: "${CLICK_TO_CHECK_INBOUND_RATE}"
-
-# "다른 요청 진행" 이후 내비게이션 스택이 불확실해 안전하게 Home까지 복귀
-# ⚠️ **back 2회로는 모자랄 수 있다.** 2026-09-08 SM-S911N 실측: 홈에 못 닿은 채 [19]가
-#   진입 헬퍼를 불러 **카드 목록 대신 수취인 목록에 머물렀고** `tv_req_complete` 가 실패했다.
-#   → 홈(`bottom_item_home`)이 보일 때까지 최대 5회 되돌아간다.
-- repeat:
-    times: 5
-    commands:
-      - runFlow:
-          when:
-            notVisible:
-              id: "bottom_item_home"
-          commands:
-            - pressKey: back
-            - waitForAnimationToEnd
-
-# ----------------------------------------------------------------
-# [19] [Low] Inbound Request Status - Share Detail With Sender 선택 시 공유동작 확인
-# ----------------------------------------------------------------
-# 버튼 라벨은 "송금인에게 내역 공유하기"이나 resource-id는 btn_cancel_request로 명명되어 있음
-# (id/라벨 불일치, 앱 버그로 추정 - 기능 자체는 정상 동작). 안드로이드 공유 시트가 노출되며
-# "Deposit Amount"/"Payment Link" 텍스트와 "복사" 버튼이 포함됨. 실제 앱 선택 없이 뒤로가기로 종료
-
-- runFlow: "_enter_receive_overseas_old.yaml"
-# 카드 목록일 때만 카드를 연다(요청 1건이면 이미 상세 화면이다 — 위 [15] 주석 참고)
-#   ⚠️ 분기 전에 **도달을 먼저 기다린다** — 렌더 중에 조건을 보면 모든 갈래가 조용히 SKIP된다.
-- extendedWaitUntil:
-    visible: "${INBOUND_LIST_ANY}"
-    timeout: 40000
-- runFlow:
-    when:
-      visible:
-        text: "${RECEIVING_ACCOUNT}"
-    commands:
-      - tapOn:
-          id: "cardView"
-          index: 0
-      - waitForAnimationToEnd
-- assertVisible:
-    id: "tv_req_complete"
-- tapOn:
-    id: "btn_cancel_request"
-# ⚠️ 공유 시트 판정을 **"복사" 라벨로 하면 안 된다** (2026-09-08 SM-S911N / One UI 실측).
-#   이 기기에서는 복사가 **라벨 없는 아이콘**이라 텍스트가 아예 없다(시트는 정상 노출됨).
-#   → 시트 제목과 공유 본문으로 판정한다. 본문에는 개행이 섞여 있어 `[\s\S]*` 를 쓴다.
-- assertVisible:
-    text: '텍스트 공유|Share text|Deposit Amount[\s\S]*'
-- pressKey: back
-
-# [20]도 안전하게 Home부터 재진입하도록 복귀
-- waitForAnimationToEnd
-- pressKey: back
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "bottom_item_home"
-    commands:
-      - pressKey: back
-      - waitForAnimationToEnd
+# ================================================================
+# ⏸ [15]~[19] — 2026-10-28 제거 (실행 시간 단축)
+# ================================================================
+# High 는 [20](Proceed to Payment) 하나뿐이고, 그 케이스는
+# `runFlow: _enter_receive_overseas_old.yaml` 로 **홈부터 다시 진입**한다
+# → 앞 케이스들이 만든 화면에 기대지 않아 통째로 걷어도 성립한다.
+# ⚠️ 되살리기: git show 23bf3a5:Maestro/Old/13_07_해외송금받기_요청상태조회_old.yaml
+# ================================================================
 
 # ----------------------------------------------------------------
 # [20] [High] Inbound Request Status - Proceed to Payment 선택 시 인바운드 송금 상세 웹페이지 연결 확인
