@@ -344,6 +344,42 @@ appId: ${APP_ID}
     timeout: 10000
 
 # ----------------------------------------------------------------
+# [07] [High] 잔액 영역 탭 → 잔액 상세(총 잔액 분해) 노출 확인
+# CLICKUP: z8nfn6ma19
+# ----------------------------------------------------------------
+# 화면 이동이 아니라 홈 위에 잔액 상세가 펼쳐진다(총 잔액 = GME Wallet + GME Pay).
+# ※ 이 동작도 잔액 카드 페이지에 따라 다르다 — **지갑 페이지에서만** 상세가 열리고,
+#   은행 페이지에서는 아무 반응이 없다. 그래서 [04]에서 지갑 페이지로 복귀시킨 상태를 전제로 한다.
+# 금액은 계정마다 달라 라벨만 검증한다.
+- tapOn:
+    id: "llBalanceSection"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${CARD_TOTAL_BALANCE_TEXT}"
+- assertVisible:
+    text: "GME Wallet"
+- assertVisible:
+    text: "${GMEPAY_TITLE}"
+# 닫기: 바텀시트로 뜨면 시트 밖 탭, 그래도 홈이 아니면 back
+- runFlow:
+    when:
+      visible:
+        id: "touch_outside"
+    commands:
+      - tapOn:
+          id: "touch_outside"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "btnTransfer"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "btnTransfer"
+
+# ----------------------------------------------------------------
 # [10] [High] 입금 버튼 탭 → 입금 서비스 화면 이동 확인
 # CLICKUP: z8nfn6ma1c
 # ----------------------------------------------------------------

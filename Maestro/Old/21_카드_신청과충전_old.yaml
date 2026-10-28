@@ -651,6 +651,42 @@ appId: ${APP_ID}
 # ================================================================
 
 # ----------------------------------------------------------------
+# [20] [Medium] Card Management - 카드 분실신고 동작 확인 (Report Lost)
+# CLICKUP-PARTIAL: z8nfn6madw | 신고 화면 도달 후 취소로 원복. 분실국가·도시·날짜·휴대폰 입력은 미커버
+#              - 분실신고 시 카드 사용 즉시 정지 안내 확인
+# ----------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      text: "${REPORT_LOST_TEXT}"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn: "${REPORT_LOST_TEXT}"
+- waitForAnimationToEnd
+# 도달을 먼저 강제한다 — 탭 직후 곧바로 단언하면 다이얼로그가 뜨기 전에 판정할 수 있다.
+- extendedWaitUntil:
+    visible: '${REPORT_CARD_LOSS_TEXT}'
+    timeout: 20000
+- tapOn: "${REG_NO}"
+- waitForAnimationToEnd
+# ⚠️ 취소가 실제로 먹혔는지까지 본다. 안 보면 "분실 신고가 접수됐는데 통과"가 가능하다.
+- extendedWaitUntil:
+    notVisible: '${REPORT_CARD_LOSS_TEXT}'
+    timeout: 15000
+- assertVisible:
+    id: "report_lost_title"
+
+# ★ [20] 은 분실 신고 화면에서 끝난다. 원래 뒤따르던 [21][22] 가 카드 관리로
+#   돌려놓았는데 그것들이 2026-10-28 에 빠졌다 → 여기서 직접 되돌린다.
+#   바로 아래 [24] 가 **카드 관리 화면의 「정보」 탭**을 누른다.
+- pressKey: back
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${CARD_MANAGEMENT_TEXT}"
+    timeout: 20000
+
+# ----------------------------------------------------------------
 # [24] [High] Global QR - Wallet 지불 동작 확인
 # ----------------------------------------------------------------
 # 국가 선택 → Cambodia(KHR) → QR Pay 송금 화면(오늘의 환율 재사용) → 스캔 화면 진입까지 자동화
