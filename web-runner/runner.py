@@ -46,10 +46,15 @@ BUILD_CHOICES = {
 }
 # 서버 = 앱이 붙는 백엔드. 플로우가 Server Override 에서 이 줄을 누른다.
 #   `live` 만 실서비스다 — **빌드가 아니라 서버가 실자금 여부를 가른다.**
+#   ★ `real_money` = **운영 DB 에 닿는가**. 2026-10-28 사용자 확인으로
+#     `livetest` 도 운영 DB 를 본다 — 결제·접수가 실제로 일어난다.
+#     그동안 `live` 만 확인을 받고 livetest 는 기본값으로 조용히 돌았다.
+#     ⚠️ `live` 와 다른 개념이다. `live` 는 "운영 서버인가"(라벨·이력용),
+#       `real_money` 는 "돈이 실제로 움직이는가"(확인을 받을 기준)다.
 SERVER_CHOICES = {
-    "livetest": {"label": "LiveTest", "host": "livetest", "live": False},
-    "stag": {"label": "STAG", "host": "gmeuat", "live": False},
-    "live": {"label": "운영(Live)", "host": "mobileapi", "live": True},
+    "livetest": {"label": "LiveTest", "host": "livetest", "live": False, "real_money": True},
+    "stag": {"label": "STAG", "host": "gmeuat", "live": False, "real_money": False},
+    "live": {"label": "운영(Live)", "host": "mobileapi", "live": True, "real_money": True},
 }
 
 

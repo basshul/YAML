@@ -187,10 +187,14 @@ if ($AppId -eq $BuildMap.live -and $Server -ne "live") {
     exit 1
 }
 
-# 실서비스에 닿는 경우는 조용히 넘어가지 않게 한 번 크게 찍는다.
-#   ★ 위험의 기준은 빌드가 아니라 **서버**다 — stag 빌드라도 LIVE 서버에 붙으면 실자금이다.
-if ($AppId -eq $BuildMap.live -or $Server -eq "live") {
-    Write-Host "[LIVE] 실서비스 서버로 실행합니다 - 실계정/실자금입니다: $AppId (서버 $Server)" -ForegroundColor Red
+# 운영 DB 에 닿는 경우는 조용히 넘어가지 않게 한 번 크게 찍는다.
+#   ★ 기준은 빌드가 아니라 **서버**다 — stag 빌드라도 LIVE 서버에 붙으면 실자금이다.
+#   ★ 2026-10-28: **livetest 도 운영 DB 를 본다**(사용자 확인) → 결제·접수가 실제로
+#     일어난다. 그동안 livetest 는 조용히 지나갔는데 그 사이에도 돈이 나가고 있었다.
+#     STAG(gmeuat) 만 별개다.
+if ($AppId -eq $BuildMap.live -or $Server -eq "live" -or $Server -eq "livetest") {
+    $where = if ($Server -eq "livetest") { "livetest (운영 DB)" } else { "운영(Live)" }
+    Write-Host "[실자금] $where 로 실행합니다 - 실계정이고 결제·접수가 실제로 일어납니다: $AppId" -ForegroundColor Red
 } else {
     Write-Host "빌드: $AppId  /  서버: $Server  ($serverPick)" -ForegroundColor DarkCyan
 }

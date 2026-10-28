@@ -276,6 +276,12 @@ $EffAppId   = if ($AppId) { $AppId } else { $BuildMap[$Build] }
 # ★ 위험의 기준은 빌드만이 아니다 — stag 빌드라도 LIVE 서버에 붙으면 실자금이다.
 $IsLive     = ($EffAppId -eq $BuildMap.live) -or ($Server -eq "live")
 $ExpectHost = $ServerHostMap[$Server]
+# ★ 운영 DB 에 닿는가 — **경고의 기준은 이것**이다(2026-10-28 사용자 확인).
+#   `livetest` 서버도 **운영 DB 를 바라본다** → 결제·접수가 실제로 일어난다.
+#   그동안 `live` 만 빨간 글씨로 찍고 livetest 는 초록으로 지나갔는데, 그 사이에도
+#   실제로 돈이 나가고 있었다. STAG(gmeuat) 만 별개다.
+#   ⚠️ `$IsLive`(서버가 live) 와는 다른 개념이다 — 라벨·result.json 은 그쪽을 쓴다.
+$RealMoney  = $IsLive -or ($Server -eq "livetest")
 
 # ⛔ 운영 빌드에는 Server Override 가 없다 → 서버를 고를 수 없다(run_test.ps1 과 같은 가드).
 if ($EffAppId -eq $BuildMap.live -and $Server -ne "live") {
@@ -553,12 +559,16 @@ if ($pkgHit -lt 1) {
     Write-Host (@(adb shell pm list packages 2>$null | Select-String "gmeremit" | ForEach-Object { ($_ -replace "package:","").Trim() }) -join ", ") -ForegroundColor DarkGray
     exit 1
 }
-if ($IsLive) {
-    Write-Host ("  빌드            {0}  [운영/Live]" -f $EffAppId) -ForegroundColor Red
+if ($RealMoney) {
+    $tag = if ($IsLive) { "[운영/Live]" } else { "[livetest — **운영 DB**]" }
+    Write-Host ("  빌드            {0}  {1}" -f $EffAppId, $tag) -ForegroundColor Red
     Write-Host ("  서버            {0}" -f $Server) -ForegroundColor Red
-    Write-Host "                  실서비스 계정과 실자금이 움직입니다. 의도한 실행인지 확인하세요." -ForegroundColor Red
+    Write-Host "                  실계정과 실자금이 움직입니다 — 결제·접수가 실제로 일어납니다." -ForegroundColor Red
+    if (-not $IsLive) {
+        Write-Host "                  (livetest 도 운영 DB 를 봅니다 — 2026-10-28 확인)" -ForegroundColor Red
+    }
 } else {
-    Write-Host ("  빌드            {0}  (서버는 플로우가 LIVETEST로 강제)" -f $EffAppId) -ForegroundColor Green
+    Write-Host ("  빌드            {0}  (서버 {1})" -f $EffAppId, $Server) -ForegroundColor Green
 }
 
 # ③ 잔액 — 모자라면 **그 자리에서 충전**하고, 못 채우면 SKIP한다 (2026-09-03 변경)

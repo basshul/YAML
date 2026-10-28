@@ -209,7 +209,10 @@ function isLivePicked() {
   const srv = state.config.servers.find((s) => s.value === state.server);
   // ★ 실자금 여부는 빌드가 아니라 **서버**가 가른다. 운영 빌드는 서버를 고를 수 없어
   //   늘 운영 서버이므로 함께 본다.
-  return !!(srv && srv.live) || state.build === "live";
+  // ★ 2026-10-28: 기준이 `live`(운영 서버인가) → `real_money`(운영 DB 에 닿는가) 로 바뀌었다.
+  //   livetest 도 운영 DB 를 본다 — 결제·접수가 실제로 일어난다(사용자 확인).
+  //   옛 서버가 real_money 를 안 내려주면 종전대로 live 로 판단한다.
+  return !!(srv && (srv.real_money ?? srv.live)) || state.build === "live";
 }
 
 function renderEnvWarnings() {
@@ -719,7 +722,8 @@ async function onRun() {
     picked.length + "개 시나리오를 실행합니다. (예상 " +
     Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분)\n\n";
   ask += "빌드 " + state.build + " / 서버 " + state.server + "\n\n";
-  if (isLive) ask += "⚠️ 운영(Live) 서버 — 실서비스 계정과 실자금이 움직입니다.\n";
+  if (isLive) ask += "⚠️ 실계정·실자금 — 결제와 접수가 실제로 일어납니다"
+    + (state.server === "livetest" ? " (LiveTest 도 운영 DB 입니다).\n" : ".\n");
   if (destr.length) {
     ask += "\n⛔ 파괴적 항목 포함 — admin 이 풀어 주기 전까지 그 계정으로는 아무것도 못 돌립니다:\n";
     for (const t of destr) {
