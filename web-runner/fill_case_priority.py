@@ -1,7 +1,17 @@
-r"""yaml 케이스 주석의 **빠진 중요도**를 체크리스트 시트 값으로 채운다.
+r"""yaml 케이스 주석의 중요도를 체크리스트 시트 값에 맞춘다.
 
-    python fill_case_priority.py            # 예행 — 바뀔 줄만 보여준다
-    python fill_case_priority.py --apply    # 실제로 고친다
+    python fill_case_priority.py            # 예행 — 빠진 것만
+    python fill_case_priority.py --apply    # 빠진 것을 채운다
+    python fill_case_priority.py --fix      # 예행 — **틀린 것**까지 본다
+    python fill_case_priority.py --fix --apply
+
+★ `--fix` 는 **이미 적혀 있는데 시트와 다른** 값을 고친다(2026-10-28 신설).
+  그동안 이 스크립트는 빈 칸만 채웠고, 손으로 적힌 값은 그대로 남았다. 그 결과
+  192개 중 **39개가 시트와 어긋나** 있었다 — `09_홈화면` 은 yaml 에 High 16개였지만
+  시트 기준은 2개뿐이었다. 어느 케이스를 지워도 되는지 판단할 때 이 값을 보므로,
+  틀린 채 두면 **지우면 안 될 것을 지우게 된다.**
+  ⚠️ 양방향이다. yaml 이 과대평가한 쪽(High→Medium)이 다수지만
+    `21_카드 [05]`(Medium→High)처럼 **올려야 하는 것**도 있다.
 
 왜 시트에서 끌어오나:
   중요도는 **지어내면 안 된다.** 체크리스트의 Priority 열이 정본이고,
@@ -29,6 +39,7 @@ sys.path.insert(0, str(WEB_RUNNER_DIR))
 import runner                                        # noqa: E402
 
 CACHE = WEB_RUNNER_DIR / "checklist_cache.json"
+FIX = "--fix" in sys.argv          # 틀린 값까지 고칠 것인가
 RANK = {"Low": 1, "Medium": 2, "High": 3}
 UNRANK = {v: k for k, v in RANK.items()}
 
@@ -61,6 +72,7 @@ def plan() -> tuple[dict, list]:
     best = sheet_priorities()
     edits: dict = collections.defaultdict(dict)
     missing = []
+    fixes: dict = collections.defaultdict(dict)   # --fix: 틀린 값 교정
 
     for t in runner.list_tests():
         rel = t["file"]
@@ -78,6 +90,7 @@ def plan() -> tuple[dict, list]:
         #   색인은 사람용 목차이니 건드리지 않고 **본문(= 마지막에 나오는 줄)만** 고친다.
         parsed_lines = []
         last_for_id: dict = {}
+        last_pri_for_id: dict = {}
         has_pri: set = set()
         for lineno, line in enumerate(lines):
             parsed = runner._parse_case_line(line)
@@ -98,9 +111,25 @@ def plan() -> tuple[dict, list]:
                 last_for_id[k] = lineno
                 if pri:
                     has_pri.add(k)
+                    # ★ --fix 는 **중요도가 적힌 줄 중 마지막**을 고친다.
+                    #   `last_for_id`(그냥 마지막 줄)로는 안 된다 — 색인·요약 블록이
+                    #   본문보다 **뒤**에 있는 파일이 있다(04_01 의 447·465행).
+                    #   그러면 본문이 "마지막"이 아니게 되어 조용히 안 고쳐진다.
+                    last_pri_for_id[k] = lineno
 
         for lineno, keys, pri, text in parsed_lines:
             if pri:
+                if not FIX:
+                    continue
+                # 이 줄이 **마지막 자리**인 케이스만 책임진다(색인 줄은 걸러진다)
+                own = [k for k in keys if last_pri_for_id.get(k) == lineno]
+                found = [best[(norm(t["name"]), k)] for k in own
+                         if (norm(t["name"]), k) in best]
+                if not found:
+                    continue
+                want = UNRANK[max(RANK[p] for p in found)]
+                if want != pri:
+                    fixes[rel][lineno] = (pri, want)
                 continue
             # 이 줄이 **마지막 자리**인 케이스만 책임진다(색인 줄은 여기서 걸러진다)
             own = [k for k in keys if last_for_id.get(k) == lineno and k not in has_pri]
@@ -113,7 +142,29 @@ def plan() -> tuple[dict, list]:
                 continue
             edits[rel][lineno] = UNRANK[max(RANK[p] for p in found)]
 
-    return edits, missing
+    return edits, missing, fixes
+
+
+def apply_fixes(rel: str, line_fixes: dict, dry: bool) -> list:
+    """이미 적힌 `[중요도]` 를 시트 값으로 **갈아 끼운다**.
+
+    ⚠️ 줄 전체를 다시 쓰지 않고 **그 대괄호만** 바꾼다 — 제목·ClickUp 표기를 건드리지 않는다.
+    """
+    path = runner.MAESTRO_DIR / rel
+    raw = path.read_bytes()
+    text = raw.decode("utf-8")
+    eol = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split(eol)
+    shown = []
+    for lineno, (cur, want) in sorted(line_fixes.items()):
+        old = lines[lineno]
+        new = old.replace("[" + cur + "]", "[" + want + "]", 1)
+        assert new != old, (rel, lineno, old)
+        lines[lineno] = new
+        shown.append((lineno + 1, old.strip(), new.strip()))
+    if not dry:
+        path.write_bytes(eol.join(lines).encode("utf-8"))
+    return shown
 
 
 def apply_edits(rel: str, line_edits: dict, dry: bool) -> list:
@@ -155,7 +206,7 @@ def apply_edits(rel: str, line_edits: dict, dry: bool) -> list:
 
 def main(argv: list[str]) -> int:
     dry = "--apply" not in argv
-    edits, missing = plan()
+    edits, missing, fixes = plan()
     total = sum(len(v) for v in edits.values())
     print(("[예행] " if dry else "") + f"중요도를 채울 줄 {total}개 / 파일 {len(edits)}개")
     for rel, line_edits in sorted(edits.items()):
@@ -169,6 +220,17 @@ def main(argv: list[str]) -> int:
               "(시트에 케이스 번호가 없는 행들이다 — 시트를 고치면 풀린다)")
         for name, ids, text in missing:
             print(f"    {name:<34} [{ids}] {text}")
+    if FIX:
+        n = sum(len(v) for v in fixes.values())
+        print(f"{NL}{'[예행] ' if dry else ''}시트와 **다른** 중요도 {n}개 / 파일 {len(fixes)}개")
+        for rel, line_fixes in sorted(fixes.items()):
+            shown = apply_fixes(rel, line_fixes, dry)
+            print(f"{NL}  {rel}")
+            for lineno, old, new in shown:
+                print(f"    {lineno:>5}  - {old[:76]}")
+                print(f"           + {new[:76]}")
+    elif any(True for _ in ()):
+        pass
     if dry:
         print(f"{NL}(예행이라 쓰지 않았습니다. --apply 를 붙이면 고칩니다)")
     return 0

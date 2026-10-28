@@ -356,7 +356,7 @@ appId: ${APP_ID}
 # - assertVisible:
 #     text: "TODO: Deposit 페이지 식별 텍스트"
 
-# [08] [High] GMEPay Deposit - "GMEPay 가상 계좌 입금" 영역 미노출 확인 (국적: 한국인)
+# [08] [Medium] GMEPay Deposit - "GMEPay 가상 계좌 입금" 영역 미노출 확인 (국적: 한국인)
 # CLICKUP-PARTIAL: z8nfn6mabj | 자동화는 *입금 영역 미노출*을 단언 — 케이스는 *이용불가 바텀시트 발생*이라 방향이 다르다
 # ----------------------------------------------------------------
 # 계정 전환: 로그아웃 → seungsoo818(한국인) 재로그인

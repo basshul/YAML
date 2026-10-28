@@ -459,7 +459,7 @@ appId: ${APP_ID}
 - assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
-# [17] [Low] ATM Deposit - NICE - Deposit 금액 입력동작 확인 및 Apply 동작 확인 (국내이용자 이용불가)
+# [17] [Medium] ATM Deposit - NICE - Deposit 금액 입력동작 확인 및 Apply 동작 확인 (국내이용자 이용불가)
 # CLICKUP: z8nfn6mabz
 # ----------------------------------------------------------------
 # [16]에서 이미 레벨1 목록 화면에 있으므로 그대로 이어서 검증(불필요한 홈
@@ -519,7 +519,7 @@ appId: ${APP_ID}
 - assertVisible: "${CHOOSE_THE_AVAILABLE_ATM}"
 
 # ----------------------------------------------------------------
-# [18] [Low] ATM Deposit - NICE - Find nearest ATM 선택 시 근처 NICE ATM 위치 확인
+# [18] [Medium] ATM Deposit - NICE - Find nearest ATM 선택 시 근처 NICE ATM 위치 확인
 # CLICKUP: z8nfn6mac0
 # ----------------------------------------------------------------
 # 참고: 외부 브라우저(checkpay.co.kr)로 이동하여 지도 기반 ATM 위치를
@@ -646,7 +646,7 @@ appId: ${APP_ID}
 - assertVisible: "${CHOOSE_A_CONVENIENCE_STORE_TEXT}"
 
 # ----------------------------------------------------------------
-# [23] [High] ATM Deposit - History - History 선택시 ATM Deposit 내역 노출 확인
+# [23] [Medium] ATM Deposit - History - History 선택시 ATM Deposit 내역 노출 확인
 # CLICKUP: z8nfn6mac8
 # ----------------------------------------------------------------
 # 정정(2026-07-16, 실기기 재확인): "카드 없이 ATM 입금"/"카드를 사용하여 ATM
@@ -807,7 +807,7 @@ appId: ${APP_ID}
       - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
-# [30] [High] Store Deposit - Request - [?] 선택시 How to deposit 화면 이동 확인
+# [30] [Low] Store Deposit - Request - [?] 선택시 How to deposit 화면 이동 확인
 # CLICKUP: z8nfn6mach
 # ----------------------------------------------------------------
 # 참고: 실기기 확인 결과 이동한 화면의 타이틀은 앱 자체 오타로 "현장 입급
@@ -903,7 +903,7 @@ appId: ${APP_ID}
     id: "iv_calendar"
 
 # ----------------------------------------------------------------
-# [34] [High] Store Deposit - History - Control Number 검색 동작 확인
+# [34] [Medium] Store Deposit - History - Control Number 검색 동작 확인
 # CLICKUP: z8nfn6macn
 # ----------------------------------------------------------------
 # 참고: 검증 편의상 이번 세션에서 미리 확인된 기존 거래번호(2026-06-24 생성,
@@ -939,7 +939,7 @@ appId: ${APP_ID}
 - waitForAnimationToEnd
 
 # ----------------------------------------------------------------
-# [35] [High] Store Deposit - History - Date Filter 동작 확인 - [x]선택시 필터 해제됨
+# [35] [Medium] Store Deposit - History - Date Filter 동작 확인 - [x]선택시 필터 해제됨
 # CLICKUP: z8nfn6macp
 # ----------------------------------------------------------------
 # 참고: 실기기 확인 결과 "[x] 선택시 필터 해제"가 아니라 "기간 선택"
