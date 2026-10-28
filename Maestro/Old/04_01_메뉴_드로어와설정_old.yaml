@@ -112,68 +112,11 @@ appId: ${APP_ID}
       id: "bottom_item_home"
     timeout: 30000
 
-# ----------------------------------------------------------------
-# [01] [Medium] 드로어 → 은행 계좌 연결 → 은행 계좌 연결 관리 화면 이동 확인
-# ----------------------------------------------------------------
-# AutoDebitAccountScreen — 연결된 KFTC 계좌 목록
-- tapOn:
-    id: "iv_nav"
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      notVisible:
-        id: "txt_user_email"
-    commands:
-      - tapOn:
-          id: "iv_nav"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "txt_user_email"
-    timeout: 15000
-- tapOn: "${AUTO_DEBIT_ACCOUNT_TEXT}"
-- extendedWaitUntil:
-    visible:
-      text: "${AUTO_DEBIT_TITLE_TEXT}"
-    timeout: 20000
-# ⛔ 2026-09-23: 종전 `${MAIN_ACCOUNT_TEXT}`("기본 계좌") 문구 단언은 **en 에서 깨진다** —
-#   이 빌드의 기본 계좌 표시는 **텍스트가 아니라 아이콘**이다(`llMainAccountSection` 안의
-#   `imgvMainAccount`). 계좌 목록 어디에도 그 문구가 없다(실측).
-#   → 언어와 무관한 id 로 단언한다. 목록 자체(`accountListRv`)도 함께 봐서
-#     "목록은 떴는데 기본 계좌 표시가 없다"와 "화면이 안 떴다"를 구분한다.
-- assertVisible:
-    id: "accountListRv"
-- assertVisible:
-    id: "imgvMainAccount"
-
-
-# ★ 뒤따르던 저중요도 케이스가 홈으로 돌려놓던 자리다(2026-10-28 제거). 그 복귀가
-#   없으면 다음 케이스의 `tapOn: iv_nav`(드로어)가 설 자리를 잃는다 → 여기서 되돌린다.
-- repeat:
-    times: 3
-    commands:
-      - runFlow:
-          when:
-            notVisible:
-              id: "bottom_item_home"
-          commands:
-            - runFlow:
-                when:
-                  visible: "${HOME_EXIT_CONFIRM}"
-                commands:
-                  - tapOn: "${REG_NO}"
-                  - waitForAnimationToEnd
-            - runFlow:
-                when:
-                  notVisible:
-                    id: "bottom_item_home"
-                commands:
-                  - pressKey: back
-                  - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 20000
+# ⏸ [01](은행 계좌 연결) — 2026-10-28 제거
+#   시트 기준 Medium 이다(지울 당시엔 yaml 마커가 High 로 낙아 남아 있었다).
+#   앞의 공통 진입이 `bottom_item_home` 으로 끝나고 [02] 가 `tapOn: iv_nav` 로
+#   시작하므로 사이에 넣었던 홈 복귀 블록도 함께 걷었다.
+#   ⚠️ 되살리기: git show 4202f72:Maestro/Old/04_01_메뉴_드로어와설정_old.yaml
 
 # ----------------------------------------------------------------
 # [02] [High] 드로어 → 거래 내역 → 내역 화면 이동 확인
