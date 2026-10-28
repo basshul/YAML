@@ -166,11 +166,17 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # [01-2] [High] 정보 수정 - 직업 변경 → 저장 → 반영 확인 → 원복
 # CLICKUP: z8nfn6ma7v
-# ----------------------------------------------------------------
 # 이 파일에서 **실제로 값을 바꾸는 유일한 케이스**다(직업은 라디오 선택이라 한글 입력 제약이 없다).
-# ⚠️ 기준값은 **"직장인"**(seungsoo818, 2026-08-13 실측). 이전 실행이 중간에 끊겨 "사업가"로
-#   남아 있으면 아래 첫 assert에서 즉시 실패한다 — 그때는 수동으로 직장인으로 되돌린 뒤 재실행할 것.
-#   (조용히 통과시키는 것보다 실패로 드러내는 편이 안전하다)
+#
+# ★ 2026-10-28 재작성 — **기준값 의존을 걷어냈다.**
+#   종전엔 "직업이 `직장인` 이어야 한다" 고 단언하고 `사업가` 로 바꿨다가 `직장인` 으로
+#   되돌렸다. 계정 값이 바뀌거나 이전 실행이 중간에 끊겨 `사업가` 로 남으면 **첫 줄에서**
+#   죽는다 — 2026-10-28 운영 실행이 실제로 그렇게 19스텝에서 멈췄다(당시 값은 `사업가`).
+#   [01-3] 주소 케이스를 같은 이유로 10-27 에 고쳤는데, 이쪽이 남아 있었다.
+#
+#   → 지금 값을 읽어 `output.orig` 에 두고, **반대 값**(`output.target`)으로 바꿨다가
+#     `output.orig` 로 되돌린다. 어느 쪽에서 시작하든 성립하고, 중간에 끊겨도
+#     다음 실행이 그 자리에서 다시 성립한다.
 - scrollUntilVisible:
     element:
       id: "editProfileLayout"
@@ -182,7 +188,16 @@ appId: ${APP_ID}
     visible:
       id: "occupationLayout"
     timeout: 20000
-- assertVisible: "${SALARIED}"
+# ★ 기준값을 박지 않는다 — **지금 값을 읽어** 두고 끝에 그 값으로 되돌린다.
+#   `occupation` 이 직업 값 노드다(2026-10-28 실측).
+- copyTextFrom:
+    id: "occupation"
+- evalScript: ${output.orig = maestro.copiedText}
+# 아는 값인지 확인한다 — 셋째 값이 생기면 조용히 통과하지 않고 여기서 드러난다.
+- assertTrue: ${output.orig === SALARIED || output.orig === BUSINESSMAN}
+# 반대 값으로 바꿔 본다.
+#   ⚠️ 삼항연산자의 `: ` 를 YAML 이 매핑으로 읽는다 → **값 전체를 인용**해야 한다.
+- evalScript: '${output.target = (output.orig === SALARIED) ? BUSINESSMAN : SALARIED}'
 # --- 직장인 → 사업가 ---
 - tapOn:
     id: "occupationLayout"
@@ -198,9 +213,9 @@ appId: ${APP_ID}
     timeout: 15000
 - assertVisible: "${OCCUPATION_SEARCH}"
 - takeScreenshot: profile_occupation_sheet
-- tapOn: "${BUSINESSMAN}"
+- tapOn: ${output.target}
 - waitForAnimationToEnd
-- assertVisible: "${BUSINESSMAN}"
+- assertVisible: ${output.target}
 - tapOn:
     id: "btn_next"
 - waitForAnimationToEnd
@@ -228,8 +243,8 @@ appId: ${APP_ID}
     timeout: 30000
 # 변경이 실제로 반영됐는지
 #   ⚠️ id + text 동시지정은 이 앱에서 실패하는 함정이 있다([[project_15_loan]]) → 텍스트 단독으로 판정
-- assertVisible: "${BUSINESSMAN}"
-- assertNotVisible: "${SALARIED}"
+- assertVisible: ${output.target}
+- assertNotVisible: ${output.orig}
 - takeScreenshot: profile_occupation_changed
 # --- 원복: 사업가 → 직장인 ---
 - tapOn:
@@ -244,7 +259,7 @@ appId: ${APP_ID}
     visible:
       id: "rv_radioButtons"
     timeout: 15000
-- tapOn: "${SALARIED}"
+- tapOn: ${output.orig}
 - waitForAnimationToEnd
 - tapOn:
     id: "btn_next"
@@ -272,7 +287,7 @@ appId: ${APP_ID}
     visible:
       text: "${EDIT_INFO_TEXT}"
     timeout: 30000
-- assertVisible: "${SALARIED}"
+- assertVisible: ${output.orig}
 - takeScreenshot: profile_occupation_restored
 - pressKey: back
 - waitForAnimationToEnd
