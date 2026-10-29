@@ -47,8 +47,8 @@ appId: ${APP_ID}
 #       `imgvSearchIcon` 검색까지 여기 다 있다).
 #
 # 케이스 목록:
-#   [01] [High] Statement - 잔액 정상 노출 확인
-#   [02] [High] Statement - 필터동작 확인 - 상태, 날짜
+#   [01] [Medium] Statement - 잔액 정상 노출 확인
+#   [02] [High]   Statement - 필터동작 확인 - 상태, 날짜
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\17_월렛거래내역_조회필터_old.yaml"

@@ -58,10 +58,10 @@ appId: ${APP_ID}
 #   [01] `z8nfn6ma6d` / [02] `z8nfn6ma6b` / [03] `z8nfn6ma6a` / [04] `z8nfn6ma6c`
 #
 # 케이스:
-#   [01] [Low]  Withdraw - First time using ATM Withdrawal → 출금 가이드 진입 확인
-#   [02] [Low]  Withdraw - [다음] → ATM 선택 바텀시트 발생 확인  (⏸ 잔액 조건)
-#   [03] [High] Withdraw - 출금금액 입력 동작 확인 (- / + )        (⏸ 잔액 조건)
-#   [04] [High] Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인 (⏸ 잔액 조건)
+#   [01] [Low]    Withdraw - First time using ATM Withdrawal → 출금 가이드 진입 확인
+#   [02] [Medium] Withdraw - [다음] → ATM 선택 바텀시트 발생 확인  (⏸ 잔액 조건)
+#   [03] [High]   Withdraw - 출금금액 입력 동작 확인 (- / + )        (⏸ 잔액 조건)
+#   [04] [High]   Withdraw - 신청 동작 확인 → ATM Withdrawal 정보 확인 (⏸ 잔액 조건)
 #
 # 실행:
 #   .\run_test.ps1 -lang ko -flow "Old\16_ATM출금_신청_old.yaml"
