@@ -51,9 +51,15 @@ BUILD_CHOICES = {
 #     그동안 `live` 만 확인을 받고 livetest 는 기본값으로 조용히 돌았다.
 #     ⚠️ `live` 와 다른 개념이다. `live` 는 "운영 서버인가"(라벨·이력용),
 #       `real_money` 는 "돈이 실제로 움직이는가"(확인을 받을 기준)다.
+#   ⛔ **STAG 서버(`gmeuat`)는 2026-10-29 선택지에서 뺐다**(사용자 지시).
+#     스위트가 전제하는 계정·데이터는 운영 DB 에 있어서 STAG 로 돌면 테스트 대부분이
+#     의미 없이 실패하거나, 더 나쁘게는 **아무것도 못 건드리면서 통과**한다.
+#     ⚠️ 여기서 빠지면 `start_run` 이 `-Server stag` 를 **거절**한다. 꼭 써야 하면
+#       웹이 아니라 CLI 로 돌릴 것: `run_test.ps1 -Server stag` (그쪽 가드는 그대로다).
+#     ⚠️ 이력의 `hosts.stag` 집계는 **지우지 말 것** — 그건 선택지가 아니라
+#       "STAG 트래픽이 섞였는가"를 잡는 신호다(`server_mixed`).
 SERVER_CHOICES = {
     "livetest": {"label": "LiveTest", "host": "livetest", "live": False, "real_money": True},
-    "stag": {"label": "STAG", "host": "gmeuat", "live": False, "real_money": False},
     "live": {"label": "운영(Live)", "host": "mobileapi", "live": True, "real_money": True},
 }
 
