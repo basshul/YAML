@@ -18,6 +18,7 @@ env:
 #              ✅ 2026-08-31 운영(Live) 빌드 실송금 완주 이력은 주석 처리된 본문에 그대로 보존돼 있다.
 # [03] [Medium] 실시간 송금 탭 - 수취인 화면 필터(설정) 동작 확인
 # [04] [High]   실시간 송금 탭 - 수취인 추가 동작 확인 (Send Now)
+# [05] [Medium] 수취인 추가 - 몽골 / 계좌 입금 (KHAN BANK) — 나라별 폼 차이 확인. 추가 후 삭제까지 한다
 # ================================================================
 
 # 앱 실행 및 홈 화면 진입
@@ -864,6 +865,334 @@ env:
     timeout: 10000
 
 # [04] 결과 확인: [02]에서 추가한 GME TEST가 수취인 목록에 있는지 확인
+- assertVisible:
+    text: "GME TEST"
+
+
+# ================================================================
+# [05] 수취인 추가 - 몽골 / 은행 입금 (KHAN BANK)
+# ================================================================
+# 2026-10-29 추가(사용자 제공 스크린샷 기준). 보는 것은 **나라마다 수취인 폼이 다르다**는 점이다.
+#   [01][02] 는 스리랑카(COMMERCIAL BANK) 하나만 보는데, 그 폼에는 아래 세 가지가 아예 없다:
+#     · 수취 방법   `recieverPaymentMethodSelectionFormInputField` (몽골은 은행 입금/월렛 등 복수)
+#     · 키릴 이름·성 `recieverLocalFirstNameFormInputField` / `recieverLocalLastNameFormInputField`
+#     · 국적        `recieverNativeCountrySelectionFormInputField`
+#   반대로 **구역(`recieverCityFormInputField`)은 몽골 폼에 없다** → 조건부로 감쌌다.
+#   ✅ **2026-10-29 실기기 EXIT=0 — 한국어·몽골어 두 언어 모두.** 추가 → 목록 반영 → 삭제까지 완주.
+#     이 케이스 본문은 **언어 무관**이다(값·셀렉터가 전부 id 아니면 env 변수다).
+#     ⚠️ 그날 기기에는 `stag`·`livetest` 패키지가 깔려 있지 않아 **운영 빌드로 돌렸다.**
+#       이 케이스는 송금·결제를 하지 않으므로(추가하고 바로 지운다) 운영에서도 안전하다.
+#     ⛔ 몽골어로 돌리려면 `.\run_test.ps1 -lang mn ...` — `env\mn.env` 는 **부분 파일**이고,
+#       몽골어 값은 `\uXXXX` 로 적어야 한다(cmd 셰임이 인자를 MS949 로 재인코딩해 `ү`·`ө` 가
+#       `?` 로 깨진다). 사유와 규칙은 `env\mn.env` 머리말에 적어 뒀다.
+#
+# 입력값(스크린샷):
+#   국가 MONGOLIA / 수취 방법 은행 입금 / 은행 KHAN BANK / 계좌 5059080618
+#   이름 ANKHBAYAR / 성 ZAGD / 전화 99165703 (+976 은 국가 선택으로 자동)
+#   주소 DARHAN / 국적 MONGOLIA / 관계 본인 / 송금 사유 급여 / 임금
+#
+# ⛔ **키릴 두 칸은 자동화로 채우지 않는다 — 채울 필요도 없다(2026-10-29 실측).**
+#   ① maestro 는 비ASCII 입력을 거부한다. 드라이버 apk 안에 `" contains invalid ASCII characters"`
+#     문자열이 그대로 있다(2.10.0 확인). `inputText` 는 adb 경로라 **기기에 몽골어 키보드를
+#     추가해도 달라지지 않는다.**
+#   ② **앱이 선택 항목이라고 명시한다.** 전화번호 바로 위 칸(`recieverLocalLastNameFormInputField`)의
+#     라벨은 ko "현지 성 (Native Last Name) **(선택)**" / mn "Крилл овог **(Байгаа бол)**" 이다
+#     (2026-10-29 증적 `[05]_몽골수취인_입력완료.png` 두 언어 모두).
+#   ③ 그리고 **앱이 알아서 채운다.** 제출하면 계좌 확인 다이얼로그가 뜨는데, 거기 `localnameTxt`
+#     ("성명 (한국어)")에 은행 조회로 받은 예금주명이 **키릴로** 찍혀 나온다
+#     (5059080618 / KHAN BANK → "ЗАГД АНХБАЯР"). 즉 키릴 칸은 사람이 넣는 값이 아니다.
+#
+# ★ 멱등 — 직전 실행이 중간에 죽으면 수취인이 남아 중복 오류로 추가가 실패한다.
+#   그래서 **추가 전에 지우고(최대 2회), 검증이 끝나면 또 지운다.**
+# ⚠️ `moreIcon index 0` 은 **목록 맨 위**다. 이 앱의 수취인 목록은 최근 추가가 맨 위고
+#   (`02_02` 실측, 이 파일 `[01]` 도 같은 전제로 돈다), 삭제 뒤 `GME TEST` 가 그대로 있는지를
+#   단언해 **엉뚱한 수취인을 지우지 않았음**을 증명한다 — `GME TEST` 를 지우면 `02_02` 가 깨진다.
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+
+# 사전 정리: ANKHBAYAR ZAGD 삭제 (최대 2회)
+- runFlow:
+    when:
+      visible:
+        text: "ANKHBAYAR ZAGD"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "ANKHBAYAR ZAGD"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+- assertNotVisible:
+    text: "ANKHBAYAR ZAGD"
+
+# 수취인 추가 폼 진입
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- extendedWaitUntil:
+    visible:
+      id: "recieverCountrySelectionFormInputField"
+    timeout: 20000
+
+# 국가: MONGOLIA
+# ⚠️ 검색어는 **항목과 다른 부분문자("Mongo")** 로 넣는다 — 검색어와 항목 문구가 같으면
+#   maestro 가 목록 대신 검색창(EditText)을 탭한다(12_청구서결제에서 겪은 함정).
+# ⚠️ 검색이 목록을 거르지 않는 화면도 있어(13 인바운드 국가 목록 실측) 검색 뒤에도 스크롤로 찾는다.
+# ⚠️ 표기가 화면에 따라 `Mongolia` / `MONGOLIA` 로 갈려 양쪽을 받는다(maestro 텍스트는 전체매칭).
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- runFlow:
+    when:
+      visible:
+        id: "searchEditText"
+    commands:
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "Mongo"
+- scrollUntilVisible:
+    element:
+      text: "Mongolia|MONGOLIA"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    text: "Mongolia|MONGOLIA"
+- waitForAnimationToEnd
+
+# 수취 방법: 은행 입금 (스리랑카 폼에는 없는 칸이다)
+- tapOn:
+    id: "recieverPaymentMethodSelectionFormInputField"
+- extendedWaitUntil:
+    visible:
+      text: "${BANK_DEPOSIT_TEXT}"
+    timeout: 15000
+- tapOn: "${BANK_DEPOSIT_TEXT}"
+- waitForAnimationToEnd
+
+# 은행: KHAN BANK
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- runFlow:
+    when:
+      visible:
+        id: "searchEditText"
+    commands:
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "KHAN"
+- scrollUntilVisible:
+    element:
+      text: "KHAN BANK"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn: "KHAN BANK"
+- waitForAnimationToEnd
+
+# 계좌번호
+- tapOn:
+    id: "recieverAccountNoFormInputField"
+- inputText: "5059080618"
+- hideKeyboard
+
+# 이름 (Нэр = First: ANKHBAYAR / Овог = Last: ZAGD)
+#   목록에는 공백으로 이어 붙인 "ANKHBAYAR ZAGD" 로 표시된다 — 아래 단언이 그 형태를 쓴다.
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "ANKHBAYAR"
+- hideKeyboard
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "ZAGD"
+- hideKeyboard
+
+# 키릴 이름·성은 비워 둔다 (위 ⛔ 참조 — maestro 가 비ASCII 를 입력하지 못한다)
+
+# 핸드폰 번호
+- scrollUntilVisible:
+    element:
+      id: "recieverMobileNoFormInputField"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "99165703"
+- hideKeyboard
+
+# 주소
+- scrollUntilVisible:
+    element:
+      id: "recieverAddressFormInputField"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "DARHAN"
+- hideKeyboard
+
+# 구역 — 몽골 폼에는 없다. 화면에 있으면 채우고, 없으면 건너뛴다.
+#   ⚠️ `when visible` 은 **지금 화면에 보이는 것만** 본다. 바로 위 주소 스크롤로 같은 화면에
+#     들어와 있을 때만 잡힌다. 비어 있어 제출이 막히면 여기서 스크롤을 한 번 더 넣을 것.
+- runFlow:
+    when:
+      visible:
+        id: "recieverCityFormInputField"
+    commands:
+      - tapOn:
+          id: "recieverCityFormInputField"
+      - inputText: "DARHAN"
+      - hideKeyboard
+
+# 국적: MONGOLIA (스리랑카 폼에는 없는 칸이다)
+# ⚠️ 피커가 열리면 뒤쪽 폼은 접근성 트리에서 빠진다(`02_02` 실측) → 이미 MONGOLIA 가 찍혀 있는
+#   국가 칸과 섞이지 않는다. 혹시 섞여 엉뚱한 곳을 탭하면, 조건부 대신 피커 안쪽
+#   `searchEditText` 를 `extendedWaitUntil` 로 기다리도록 바꿀 것.
+- scrollUntilVisible:
+    element:
+      id: "recieverNativeCountrySelectionFormInputField"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "recieverNativeCountrySelectionFormInputField"
+- runFlow:
+    when:
+      visible:
+        id: "searchEditText"
+    commands:
+      - tapOn:
+          id: "searchEditText"
+      - inputText: "Mongo"
+- scrollUntilVisible:
+    element:
+      text: "Mongolia|MONGOLIA"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    text: "Mongolia|MONGOLIA"
+- waitForAnimationToEnd
+
+# 관계: 본인
+- scrollUntilVisible:
+    element:
+      id: "recieverRelationSelectionFormInputField"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- extendedWaitUntil:
+    visible:
+      text: "${SELF_TEXT}"
+    timeout: 15000
+- tapOn: "${SELF_TEXT}"
+- waitForAnimationToEnd
+
+# 송금 사유: 급여 / 임금
+- scrollUntilVisible:
+    element:
+      id: "recieverTransferReasonSelectionFormInputField"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- extendedWaitUntil:
+    visible:
+      text: "${SALARY_WAGES_TEXT}"
+    timeout: 15000
+- tapOn: "${SALARY_WAGES_TEXT}"
+- waitForAnimationToEnd
+
+# 제출
+- scrollUntilVisible:
+    element:
+      id: "btn_submit"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- takeScreenshot: "[05]_몽골수취인_입력완료"
+- tapOn:
+    id: "btn_submit"
+
+# 계좌 확인 다이얼로그 — "수취인의 은행 계좌번호 정보를 확인해 주세요." (2026-10-29 실측)
+#   스리랑카 경로에는 없던 단계다. 은행에 계좌를 조회해 **예금주명을 현지어(키릴)로 되돌려 준다.**
+#   ★ 입력이 실제로 먹었는지는 여기서 본다 — 이름·은행·계좌가 넣은 값 그대로여야 한다.
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirm"
+    timeout: 30000
+- assertVisible:
+    id: "nameTxt"
+    text: "ANKHBAYAR ZAGD"
+- assertVisible:
+    id: "bankNameTxt"
+    text: "KHAN BANK"
+- assertVisible:
+    id: "accNoTxt"
+    text: "5059080618"
+- takeScreenshot: "[05]_몽골수취인_계좌확인"
+- tapOn:
+    id: "btnConfirm"
+- waitForAnimationToEnd
+
+# 저장 성공 바텀시트 — "아니요"(이어서 송금하지 않음)로 목록에 돌아온다.
+#   ⛔ `btnVerifyBankAccount`("예")를 누르지 말 것 — 화면에 따라 **자동충전 버튼**이다.
+#   ★ 조건부로 감싸지 않는다. 중복 오류 등으로 시트가 안 뜨면 여기서 **실패해야** 한다
+#     (조건부로 두면 추가에 실패해도 EXIT=0 이 되는 거짓 통과가 된다).
+- extendedWaitUntil:
+    visible:
+      id: "btnContactSupport1"
+    timeout: 30000
+- takeScreenshot: "[05]_몽골수취인_저장성공"
+- tapOn:
+    id: "btnContactSupport1"
+- waitForAnimationToEnd
+
+# 목록 반영 확인 = 이 케이스의 성립 단언
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- assertVisible:
+    text: "ANKHBAYAR ZAGD"
+- takeScreenshot: "[05]_몽골수취인_목록반영"
+
+# 사후 정리: 방금 추가한 수취인 삭제 (맨 위 = 방금 추가분)
+- tapOn:
+    id: "moreIcon"
+    index: 0
+- tapOn:
+    id: "delete"
+    index: 0
+- tapOn: "${BTN_YES}"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- assertNotVisible:
+    text: "ANKHBAYAR ZAGD"
+# ★ 엉뚱한 수취인을 지우지 않았다는 증거 — `GME TEST` 는 `02_02` 가 쓰는 대상이다.
 - assertVisible:
     text: "GME TEST"
 
