@@ -156,6 +156,9 @@ def api_config():
     return {
         "lang": cfg["lang"],
         "default_device": cfg["default_device"],
+        # 화면이 사용자 선택을 고정·잠그는 데 쓴다. 비밀정보가 아니다(이름 하나).
+        #   ⚠️ 권한이 아니다 — 실행 요청의 사용자는 `_known_user` 가 따로 본다.
+        "run_user": cfg.get("run_user", ""),
         "builds": [
             {"value": key, "label": val["label"], "pkg": val["pkg"]}
             for key, val in runner.BUILD_CHOICES.items()

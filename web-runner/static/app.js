@@ -51,6 +51,7 @@ async function boot() {
   markOffline();
   try {
     state.config = await api("/api/config");
+    applyPinnedUser();          // config 가 와야 알 수 있다 → boot 머리의 initRunUser 뒤에 둔다
     state.server = state.config.servers[0].value;
     state.build = state.config.builds[0].value;
     renderBuilds();
@@ -101,6 +102,30 @@ function initRunUser() {
     updateRunState();
     markAdminReady();
   });
+}
+
+/* 이 PC 가 쓰는 사람이 정해져 있으면(`config.local.json` 의 `run_user`) 거기에 **고정하고 잠근다.**
+   ⚠️ 위 주석의 "열 때마다 미선택" 원칙을 **일부러** 깨는 자리다(2026-10-29 사용자 지시).
+     기기가 한 대고 늘 같은 사람이 돌리는데 매번 고르는 것이 번거롭다는 판단이다.
+     ⛔ 그래서 값은 **코드가 아니라 `config.local.json`(git 제외)** 에 둔다 — 저장소에 사람
+       이름을 박으면 다른 PC 가 받자마자 **남의 계정으로 고정된 채** 열린다.
+     ⛔ 비워 두면(기본값) 종전처럼 미선택에서 시작한다.
+   서버는 이 값을 믿지 않는다 — `_known_user` 가 요청마다 다시 확인한다. */
+function applyPinnedUser() {
+  const sel = $("runUser");
+  const pinned = state.config && state.config.run_user;
+  if (!sel || !pinned) return;
+  // 목록에 없는 이름이면 **잠그지 않는다.** 잠가 버리면 고칠 길 없이 아무것도 못 돌린다.
+  if (![...sel.options].some((o) => o.value === pinned)) {
+    console.warn("config 의 run_user 가 목록에 없습니다:", pinned);
+    return;
+  }
+  sel.value = pinned;
+  sel.disabled = true;
+  sel.title = "config.local.json 의 run_user 로 고정돼 있습니다.";
+  state.runUser = pinned;
+  updateRunState();
+  markAdminReady();
 }
 
 /* 아직 데이터가 없어 못 쓰는 조작을 한곳에서 끈다.

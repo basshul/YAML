@@ -4,6 +4,8 @@
   "port": 8765,
   "lang": "ko",
   "default_device": "",
+  "_run_user": "이 PC 를 쓰는 사람. 채우면 화면의 사용자 선택이 그 값으로 고정·잠김이 됩니다. 비우면 매번 고릅니다(남의 계정 방지). 목록 밖 이름이면 잠그지 않습니다.",
+  "run_user": "",
   "pwsh": "pwsh",
   "adb": "adb",
   "admin": {
