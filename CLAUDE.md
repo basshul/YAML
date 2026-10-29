@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [docs/GUIDE.md](docs/GUIDE.md) — 넘겨받은 사람이 처음 돌리기까지
 - [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) — 사전조건(계정·잔액·픽스처·되돌릴 수 없는 실행)과 하드코딩 인벤토리
 - [docs/SUITE.md](docs/SUITE.md) — 스위트 문서였으나 **내용은 `maestro-suite` skill로 옮겼다**(포인터만 남음)
+- [docs/DEFECTS.md](docs/DEFECTS.md) — 🐞 **앱 결함** 기록(보고 대기/완료). 자동화 쪽 문제는 여기 적지 않는다
 
 ⚠️ **`docs\` 로 옮기면 안 되는 md 가 있다** — 경로가 고정이라 옮기면 조용히 로드되지 않는다:
 **이 파일(`CLAUDE.md`, 저장소 루트)** 과 **`.claude\skills\*\SKILL.md`**.
