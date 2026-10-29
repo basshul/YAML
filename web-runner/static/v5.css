@@ -69,6 +69,11 @@
   .runbtns button.primary{flex:1;}
   .sumline{font-size:12px;line-height:1.7;}
   .sumline b{color:var(--blueDk);}
+  /* 정리(원복)는 테스트가 아니다 → 실행 버튼과 **선을 그어** 떼어 놓는다.
+     색은 경고(red)가 아니라 보조(muted)로 둔다 — 위험해서 가른 게 아니라 성격이 달라서다. */
+  .cleanup{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);}
+  .cleanup .runbtns{margin-top:0;}
+  .cleanup #cleanupInfo{font-family:var(--mono);font-size:10px;}
   .runprog{margin-top:16px;padding-top:13px;border-top:1px solid var(--line2);}
   .runprog .barwrap{margin-bottom:7px;}
   .runnow{font-size:11px;color:var(--muted);line-height:1.5;}

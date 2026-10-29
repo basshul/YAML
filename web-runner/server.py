@@ -481,6 +481,39 @@ def api_run(req: RunRequest):
     return run.status()
 
 
+class CleanupRequest(BaseModel):
+    """정리(원복) 실행 요청. 빌드·서버는 **받지 않는다** — 아래에서 고정한다."""
+    device: str
+    user: str = ""
+
+
+@app.post("/api/run/cleanup")
+def api_run_cleanup(req: CleanupRequest):
+    """정리(G5) 전용 실행 — **live 빌드 + live 서버 고정**.
+
+    `/api/run` 과 따로 둔 이유:
+      · 지울 데이터(결제된 KTX 주문 등)는 **운영 DB 에 있다.** stag 로 돌면 아무것도
+        못 지우면서 초록불만 뜬다 → 빌드·서버를 화면에서 고르게 두지 않는다.
+      · 돌릴 대상을 **G5 로 못 박는다.** 이름을 밖에서 받지 않으므로 이 경로로는
+        테스트가 섞여 들어갈 수 없다.
+    ⚠️ `confirm_live` 를 묻지 않는다 — 고를 여지가 없는 고정값이고, 화면이 이미 전용
+      확인 창을 띄운다. 대신 **무엇을 돌렸는지 응답에 담아** 화면이 그대로 보이게 한다.
+    """
+    names = [t["name"] for t in runner.list_tests(include_destructive=True)
+             if t.get("cleanup")]
+    if not names:
+        return JSONResponse(status_code=404, content={
+            "error": "정리 항목이 없습니다 — run_suite.ps1 에 "
+                     f"{runner.CLEANUP_GROUP} 항목이 있는지 확인하세요."})
+    try:
+        run = runner.start_run(names, req.device, "live", "live", _known_user(req.user))
+    except RuntimeError as exc:
+        return JSONResponse(status_code=409, content={"error": str(exc)})
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    return {**run.status(), "cleanup": names}
+
+
 @app.post("/api/run/stop")
 def api_run_stop():
     """실행 중단. ⚠️ 자동 복구도 함께 끊기므로 앱은 중단 시점 화면에 남는다."""

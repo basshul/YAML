@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maestro Web Runner</title>
 <link rel="stylesheet" href="style.css?v=8">
-<link rel="stylesheet" href="v5.css?v=13">
+<link rel="stylesheet" href="v5.css?v=14">
 <!-- 글꼴: 본문 Pretendard, ID·매핑 JetBrains Mono. 막히면 맑은 고딕·Consolas 로 돌아간다. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -116,6 +116,22 @@
         <div class="runnow" id="runNow"></div>
       </div>
       <p class="sidehint">스텝별 로그와 결과는 <a href="/history.html">실행 이력</a>에서 봅니다.</p>
+
+      <!-- 정리(G5)는 **테스트가 아니다** → 시나리오 목록에서 빼고 여기에 전용 버튼을 둔다.
+           빌드·서버는 위 선택을 따르지 않는다. 지울 데이터가 운영 DB 에 있어서
+           서버가 live/live 로 못 박는다(`/api/run/cleanup`). -->
+      <div class="cleanup hidden" id="cleanupBox">
+        <div class="runbtns">
+          <button type="button" id="cleanupBtn" disabled>정리 실행 (원복)</button>
+        </div>
+        <p class="sidehint">
+          <b>테스트가 아닙니다.</b> 앞선 실행이 남긴 데이터를 지웁니다 —
+          <b>운영(live) 빌드·서버 고정</b>이라 위에서 고른 빌드·서버와 무관합니다.<br>
+          실행이 끝난 뒤 <b>직접 눌러야</b> 합니다. 「전체 실행」에는 딸려 가지 않습니다 —
+          빌드·서버가 다르기 때문입니다.<br>
+          <span id="cleanupInfo"></span>
+        </p>
+      </div>
     </section>
 
     <section class="panel tight">
@@ -309,6 +325,6 @@
   </div>
 </div>
 
-<script src="app.js?v=37"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>

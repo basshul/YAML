@@ -75,8 +75,15 @@ GROUP_LABELS = {
     "G2": "한국인 계정 (seungsoo818)",
     "G3": "외국인 계정 (test123 → test251024)",
     "G4": "설정 변경 — 반드시 맨 뒤",
+    "G5": "정리 — 원복 전용 (테스트가 아니다)",
     "G9": "파괴적 — 계정 잠금·비밀번호 초기화 (admin 해제 필요)",
 }
+
+# 정리(원복) 전용 그룹. 검증을 하나도 하지 않으므로 **시나리오 목록에 섞으면 안 된다** —
+#   「전체 실행」에 딸려 들어가고, 중요도·체크리스트 집계에도 테스트인 척 끼어든다.
+#   목록에서 빼더라도 payload 에는 남긴다(`cleanup: true`) — 화면이 전용 버튼을 그려야 한다.
+#   ⚠️ 이 그룹은 **live 빌드 + live 서버 고정**으로 돈다. 지우려는 데이터가 운영 DB 에 있다.
+CLEANUP_GROUP = "G5"
 
 _DEFAULT_CONFIG = {
     "port": 8765,
@@ -365,6 +372,7 @@ def list_tests(include_destructive: bool = False) -> list[dict]:
             "needs_balance": needs.get("balance"),
             "irreversible": bool(item.get("irreversible")),
             "destructive": destructive,
+            "cleanup": item["g"] == CLEANUP_GROUP,
             "push": bool(item.get("push")),
             "cases": read_cases(item.get("f", "")),
         })

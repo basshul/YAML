@@ -12,6 +12,7 @@
 const state = {
   config: null,
   tests: [],
+  cleanup: [],       // 정리(G5) 전용 — 시나리오 목록과 **섞지 않는다**(전용 버튼이 쓴다)
   selected: new Set(),
   build: "stag",
   server: "livetest",
@@ -57,9 +58,14 @@ async function boot() {
     renderEnvWarnings();
 
     const { tests } = await api("/api/tests");
-    state.tests = tests;
+    // ★ 정리(G5)는 **테스트가 아니다** → 여기서 갈라낸다. 목록에 남겨 두면 「전체 실행」에
+    //   딸려 들어가고, 영역 필터·중요도 집계·체크리스트 대조에도 테스트인 척 끼어든다.
+    //   `state.tests` 를 보는 곳이 열 군데가 넘으므로 **한 번 갈라 두는 편**이 안전하다.
+    state.cleanup = tests.filter((t) => t.cleanup);
+    state.tests = tests.filter((t) => !t.cleanup);
     renderAreaFilter();
     renderTable();
+    renderCleanup();
 
     await loadDevices();
     await loadChecklist();
@@ -676,6 +682,8 @@ function updateRunState() {
   const all = $("runAllBtn");
   all.disabled = state.running || vis.length === 0 || blocked;
   all.title = why;
+  // 정리 버튼은 **빌드·서버 조합(`bad`)을 따르지 않는다** — 서버가 live/live 로 고정한다.
+  updateCleanupState();
   // 필터가 걸렸는데 '전체 실행'이라고 적혀 있으면 거짓말이다 → 이름도 바꾼다
   all.textContent = (filterOn() ? "보이는 것 실행" : "전체 실행") + " (" + vis.length + ")";
 
@@ -697,6 +705,63 @@ function updateRunState() {
 /* 필터가 걸려 있는가 — 버튼 이름과 경고 문구가 이 값으로 갈린다 */
 function filterOn() {
   return state.groupFilter !== "all" || state.priFilter !== "all" || state.onlyBadMap;
+}
+
+/* ── 정리(G5) ────────────────────────────────────────────────────────
+   테스트가 아니라 **원복**이다. 시나리오 목록·선택과 완전히 분리해 둔다. */
+
+function renderCleanup() {
+  const wrap = $("cleanupBox");
+  if (!wrap) return;
+  // 스위트에 G5 항목이 없으면 버튼 자체를 감춘다 — 눌러서 404 를 받는 것보다 낫다.
+  wrap.classList.toggle("hidden", state.cleanup.length === 0);
+  if (!state.cleanup.length) return;
+  const minutes = state.cleanup.reduce((sum, t) => sum + t.est, 0);
+  $("cleanupInfo").innerHTML =
+    state.cleanup.map((t) => esc(t.name)).join(", ") +
+    ' <span class="muted">(예상 ' + minutes + "분 · 운영 빌드/서버 고정)</span>";
+  updateCleanupState();
+}
+
+function updateCleanupState() {
+  const btn = $("cleanupBtn");
+  if (!btn || !state.cleanup.length) return;
+  // 빌드·서버는 서버가 고정하므로 **조합 오류는 보지 않는다.** 사람과 기기만 있으면 된다.
+  const why = !state.runUser ? "먼저 사용자를 선택하세요."
+    : !$("dev").value ? "기기를 선택하세요." : "";
+  btn.disabled = state.running || !!why;
+  btn.title = why;
+}
+
+async function onRunCleanup() {
+  if (!state.cleanup.length) return;
+  const names = state.cleanup.map((t) => t.name);
+  const minutes = state.cleanup.reduce((sum, t) => sum + t.est, 0);
+  // ⚠️ 운영 DB 에 붙는다는 사실을 **여기서 한 번만** 묻는다(서버는 고정값이라 되묻지 않는다).
+  const ask =
+    "실행자: " + (state.runUser || "-") + "\n" +
+    "정리(원복)를 실행합니다 — 테스트가 아닙니다. (예상 " + minutes + "분)\n\n" +
+    names.map((n) => " · " + n).join("\n") + "\n\n" +
+    "빌드 live / 서버 live 고정 — 위에서 고른 빌드·서버와 무관합니다.\n" +
+    "⚠️ 운영 DB 입니다. 결제된 주문을 실제로 취소합니다.\n\n계속할까요?";
+  if (!confirm(ask)) return;
+
+  startProgress(names);
+  setRunning(true);
+  try {
+    const res = await fetch("/api/run/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user: state.runUser, device: $("dev").value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "정리를 시작하지 못했습니다.");
+    listen();
+  } catch (err) {
+    setRunNow('<b style="color:var(--red)">시작 실패</b> · ' + esc(err.message));
+    stopProgress();
+    setRunning(false);
+  }
 }
 
 function onRunAll() {
@@ -1357,6 +1422,7 @@ $("refreshDevices").addEventListener("click", loadDevices);
 $("dev").addEventListener("change", updateRunState);
 $("runBtn").addEventListener("click", onRun);
 $("runAllBtn").addEventListener("click", onRunAll);
+$("cleanupBtn")?.addEventListener("click", onRunCleanup);
 $("stopBtn").addEventListener("click", onStop);
 $("btn-pf").addEventListener("click", onPreflight);
 $("btn-fixall").addEventListener("click", onFixAll);
