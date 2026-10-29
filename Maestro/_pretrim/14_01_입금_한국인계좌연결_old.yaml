@@ -1,0 +1,650 @@
+appId: ${APP_ID}
+---
+
+# ================================================================
+# 시나리오: Deposit — **계정별 분리본 1/3 (seungsoo818 / 한국인·은행계좌 연결)**
+# ================================================================
+# 원본 `14_입금_분할전원본_old.yaml`(1845줄)은 3계정을 오가느라 1회 실행이 너무 길어
+# 2026-08-26 사용자 지시로 **계정별 3개 파일로 분리**했다. 각 파일은
+#   공통 진입(앱 실행 → PIN <정상 PIN> → 홈) + 해당 계정 로그인 + 그 계정 케이스
+# 만 담고 있어 독립 실행 가능하다.
+#   - 14_01_입금_한국인계좌연결_old.yaml : [01]~[05] [08] [25]~[27]
+#   - 14_02_입금_외국인계좌미연결_old.yaml     : [06] [07] [09] [14]~[24] [28]~[35]  ← Store Deposit 전부
+#   - 14_03_입금_GMEPay가상계좌_old.yaml  : [10]~[13] + seungsoo818 원복
+# ⚠️ 케이스는 **번호순이 아니다**(계정 묶음 순). 원본은 참고용으로 남겨둔다.
+# 이 파일은 seungsoo818로 끝난다 → 다른 플로우와 계정이 맞으므로 원복 불필요.
+# ================================================================
+# ================================================================
+# 시나리오: Deposit
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 (구 UI 표준 블록) ----------------
+# ⚠️ 개편UI판의 `notVisible: text "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에
+#   매칭돼 PIN 입력을 건너뛰고 잠금화면에 갇히는 사고 이력이 있다 → 잠금화면을 명시적으로 대기한다.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            # ⚠️ 대안 목록에 PIN 생성 화면을 **반드시 같이** 넣어야 한다 — 빠뜨리면
+            #   대상도 배너도 안 보여 그냥 타임아웃된다(2026-08-25 실제 실패).
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+          timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+# ⚠️ 이전 실행이 `loginpwidhidpass` 경로(= 기존 PIN 해지)로 끝났으면 계정에 PIN이 없어
+#   잠금화면 대신 "앱에서 사용할 간편 비밀번호를 생성해 주세요"가 뜬다 → <정상 PIN>로 재등록한다.
+#   (2026-08-25: 실제로 이 상태로 남아 다음 실행 진입이 타임아웃으로 죽었다)
+- runFlow:
+    when:
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# ================================================================
+# [시작 계정 고정] → seungsoo818 (한국인, 은행계좌 연결)
+# ================================================================
+# 계정 전환 추가(2026-07-16): [01]~[05](GME Wallet Deposit)는 "은행 입금"/
+# "즉시 입금" 옵션이 있는 은행계좌 연결 계정을 전제로 작성되어 있으나 명시적
+# 로그인이 없어 "시작 시점에 이미 로그인된 계정"에 의존했음. 직전 실행이
+# test123(은행 미연결)으로 끝나면 재실행 시 [05]의 "은행 입금" 옵션이 없어
+# 실패함(2026-07-16 실기기 재현). 실행 시점 계정과 무관하게 항상 통과하도록
+# 파일 첫머리에서 seungsoo818로 명시적 로그아웃→재로그인함.
+
+# ================================================================
+# [GME Wallet Deposit]
+# ================================================================
+# 진입 경로: Home > "입금"(content-desc 기반 아이콘, Home 화면 "송금" 섹션 내)
+# → "입금 방법을 선택하세요" 바텀시트(GME Wallet / GMEPay 탭, GME Wallet이 기본 선택)
+# → 즉시 입금 / 은행 입금 / 편의점 입금 / ATM 입금 중 선택
+#
+# 실기기 확인 결과(2026-07-10), 원래 TODO가 전제한 "KJ/WSB 가상계좌발급 상태
+# 안내페이지 → [Confirm] → Deposit 페이지 이동" 흐름은 현재 앱 버전에 존재하지
+# 않음: "은행 입금" 탭 시 별도 안내/Confirm 단계 없이 곧바로 최종 계좌정보
+# 화면("GME Wallet 입금")으로 직행하며, 여기 표시되는 입금 계좌가 바로
+# "Welcome Savings Bank"(웰컴저축은행) = WSB로 확인됨. 수신 계좌(KJ vs WSB)는
+# 계정 속성(국적 등)에 따라 서버에서 고정 배정되는 것으로 보이며, 화면 내에서
+# 직접 선택하는 UI는 없음. 현재 테스트 계정은 WSB로 배정되어 있어 KJ 관련
+# 케이스([02]~[04])는 이 계정으로 검증 불가.
+
+# ----------------------------------------------------------------
+# ================================================================
+# ⚠️ 케이스 실행 순서 = **계정별 묶음**이다 (2026-08-25 재배치, 사용자 지시).
+#   구 UI는 재로그인 1회 비용이 크다 — 로그아웃 후 PIN 잠금화면을 거쳐
+#   `loginpwidhidpass`로 들어가야 하고 그때 **기존 PIN이 해지돼 재등록**까지 해야 한다.
+#   개편UI판은 계정을 9번 갈아 이 비용을 9번 냈고, 중간에 끊기면 PIN 없는 상태로 남아
+#   다음 실행 진입 자체가 막혔다(실제 2회 발생).
+#   → 같은 계정이 필요한 케이스를 모아 **로그인 4회**로 줄였다:
+#     seungsoo818: [01]~[05] [08] [25]~[35]  /  test123: [06] [07] [09] [14]~[24]
+#     test251024: [10]~[13]  /  마지막에 seungsoo818로 원복
+#   ⚠️ 그래서 **케이스가 번호순으로 실행되지 않는다.** 케이스를 추가할 때는 번호 위치가
+#     아니라 **필요 계정 묶음** 안에 넣을 것.
+# ================================================================
+
+# 구 UI는 로그아웃이 **프로필 탭에 없고 드로어에만** 있다 → `iv_nav`로 드로어를 연다.
+#   드로어 항목에는 resource-id가 없어 텍스트로만 탭할 수 있다.
+- tapOn:
+    id: "iv_nav"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "${REG_LOGOUT}"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "${REG_LOGOUT}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_LOGOUT_CONFIRM}"
+    commands:
+      - tapOn: "${REG_LOGOUT_CONFIRM}"
+      - waitForAnimationToEnd
+# ⚠️ **구 UI는 로그아웃 후 ID/비밀번호 폼이 아니라 PIN 잠금화면(`ActivityLockScreen`)으로 떨어진다**
+#   (2026-08-25 실측. 개편UI판은 곧바로 `usernameId` 폼을 전제해 여기서 FAILED로 죽었다).
+#   `loginpwidhidpass`("아이디/비밀번호로 로그인")를 타야 `LoginV2Activity`로 간다.
+#   그때 "ID와 비밀번호로 로그인하면 기존 간편 비밀번호는 해지됩니다" 확인 다이얼로그가 뜬다
+#   → `btn_diaog_ok`("예"). ⚠️ id에 앱 오타가 있다(`diaog`) — `dialog`가 아니다.
+#   ※ 이 경로로 들어가면 **기존 PIN이 해지**되므로 아래 간편비밀번호 재설정 블록이 실제로 동작한다.
+- runFlow:
+    when:
+      visible:
+        id: "loginpwidhidpass"
+    commands:
+      - tapOn:
+          id: "loginpwidhidpass"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn_diaog_ok"
+          commands:
+            - tapOn:
+                id: "btn_diaog_ok"
+            - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 30000
+- tapOn:
+    id: "usernameId"
+- eraseText: 50
+- inputText: "${ACCT_MAIN}"
+- tapOn:
+    id: "securityKeyboardEditText"
+# 비밀번호: seungsoo818 = **<정상 비밀번호>** (2026-08-25 `01_01_로그인_정상_old` EXIT=0으로 재확인).
+#   ⚠️ 한때 메모리에 `<구 비밀번호(폐기)>`가 맞다고 적혀 있었으나 **틀렸다** — 순서를 바꿨다가
+#   무효한 값을 먼저 시도하게 되어 되돌렸다. 시도 5회 제한이 있으니 순서를 임의로 바꾸지 말 것.
+- tapOn: "대문자 키보드 변경"
+- tapOn: "Capital G 히읃"
+- tapOn: "m 으"
+- tapOn: "e 디귿"
+- tapOn: "t 시옫"
+- tapOn: "e 디귿"
+- tapOn: "s 니은"
+- tapOn: "t 시옫"
+- tapOn: "1"
+- tapOn: "특수문자변경"
+- tapOn: "느낌표"
+- tapOn: "${TRANSKEY_INPUT_COMPLETE}"
+- waitForAnimationToEnd
+# ⚠️ **폐기 비밀번호 재시도 블록을 제거했다**(2026-09-02).
+#   성공 가능성이 0인 재시도로 로그인 5회 제한을 깎는 건 순손실이다 —
+#   재시도 값은 이미 폐기된 비밀번호이고, 실패하면 카운터만 하나 더 줄어든다.
+#   1차가 실패하면 그대로 **시끄럽게 실패**시키는 편이 진단에도 유리하다.
+#   (같은 블록이 01_02에서는 가드가 항상 참이라 무조건 실행돼 한 번에 2회를 태웠다.)
+- runFlow:
+    when:
+      visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+    commands:
+      - tapOn: "${REG_LATER}"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      # ⚠️ Maestro 텍스트는 **전체매칭**이라 `"간편비밀번호"`는 실제 문구
+      #   "앱에서 사용할 간편 비밀번호를 생성해 주세요"에 **매칭되지 않는다**
+      #   → 이 블록이 SKIP되고 PIN 생성 화면에 갇혀 홈 판정이 죽었다(2026-08-25 실제 실패).
+      #   부분매칭 정규식으로 바꾼다([[project_01_login]], [[feedback_maestro_regex_yaml]]).
+      #   ※ `loginpwidhidpass` 경로로 로그인하면 기존 PIN이 해지되므로 이 화면은 **반드시 뜬다**.
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      # PIN <정상 PIN>를 두 번(생성 → 확인). 키패드가 탭마다 재배치되므로 탭 사이 정착 대기 필수
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - tapOn:
+          id: "btnOk"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+- runFlow:
+    # ⚠️ 원래는 범용 `visible: "닫기"` → `tapOn: "닫기"`였다. 이 화면 저 화면의 아무 "닫기"에
+    #   매칭돼 엉뚱한 X를 누르는 패턴으로, 2026-08-25 실행에서 **앱이 런처로 빠져나가는**
+    #   사고를 냈다(로그인 직후 PIN 생성 화면에서 발동). 인앱 배너는 **id로 정확히** 닫는다.
+    when:
+      visible:
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# [01] [Low] Home - 입금 방법 선택 바텀시트 닫기 동작 확인
+# ----------------------------------------------------------------
+# ⚠️ **구 UI에는 "입금 방법을 선택하세요" 바텀시트가 없다**(2026-08-25 실측).
+#   홈 `txvDepositOrViewStatement`("입금")를 누르면 바텀시트 대신
+#   **`deposit.depositMenu.view.ActivityDepositMenu`("입금 서비스") 전용 화면**으로 직행하고,
+#   개편UI 바텀시트의 옵션들이 여기서 **타일 5개**로 펼쳐져 있다:
+#     GME Wallet 입금 / GMEPay 입금 / ATM 입금 / 자동이체 입금 / 현장 입금
+#   ⚠️ 이 화면의 타일에는 **resource-id가 전혀 없어 텍스트로만 탭할 수 있다.**
+#   → 케이스 의도("입금 진입 → 닫기 → 홈 복귀")는 유지하고 판정 대상만 바꿨다:
+#     바텀시트 노출 확인 → **입금 서비스 화면 + 타일 5개 노출 확인**,
+#     [닫기] → **back**(이 화면엔 닫기 버튼이 없다).
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- extendedWaitUntil:
+    visible:
+      text: "${DEPOSIT_SERVICE}"
+    timeout: 30000
+- assertVisible: "${GME_WALLET_DEPOSIT_TITLE}"
+# 라벨이 개행을 포함한다("GMEPay" + 개행 + "입금") → 개행 매칭은 [\s\S]를 쓴다
+#   ⚠️ YAML 이중인용(")에서는 \s가 escape 오류다 → **단일인용(')**을 써서 정규식을 그대로 넘긴다
+- assertVisible: "${DEPOSIT_TILE_GMEPAY}"
+- assertVisible: "${ATM_DEPOSIT}"
+- assertVisible: "${DEPOSIT_TILE_AUTO_DEBIT}"
+- assertVisible: "${CONVENIENCE_STORE_TEXT}"
+- takeScreenshot: "shots_14_deposit_old/01_입금서비스_진입"
+- pressKey: back
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [02] [High] GME Wallet Deposit - KJ - KJ 가상계좌발급 상태 안내페이지 노출 확인
+#            - [Confirm] 버튼 선택 시 Deposit 페이지 이동 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): 현재 테스트 계정은 수신 계좌가 WSB(Welcome Savings
+# Bank)로 고정 배정되어 있어 KJ 가상계좌 화면 자체에 진입할 수 없음. 화면 내
+# 선택 UI가 없고 계정 속성에 따라 서버에서 결정되는 구조라, KJ 배정 계정을
+# 별도로 확보하기 전까지는 코드 작성 범위에서 제외(사용자 사전 승인).
+
+# - tapOn: "TODO: Deposit 메뉴 진입 → GME Wallet Deposit → KJ"
+# - assertVisible:
+#     text: "TODO: KJ 가상계좌발급 안내 페이지 식별 텍스트"
+# - tapOn: "Confirm"
+# - assertVisible:
+#     text: "TODO: Deposit 페이지 식별 텍스트"
+
+# ----------------------------------------------------------------
+# [03] [Low] GME Wallet Deposit - KJ - [?] 선택시 GME Wallet Deposit Guide 화면 이동 확인
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): [02]와 동일한 사유(KJ 미배정 계정) - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: Deposit → GME Wallet Deposit → KJ"
+# - tapOn: "TODO: ? 버튼"
+# - assertVisible:
+#     text: "TODO: GME Wallet Deposit Guide 화면 텍스트"
+
+# ----------------------------------------------------------------
+# [04] [Medium] GME Wallet Deposit - KJ - 금액 개별/단위 입력 동작 확인
+#              - 입력후 [x]선택시 금액 입력 취소됨
+# ----------------------------------------------------------------
+# BLOCKED (2026-07-10): [02]와 동일한 사유(KJ 미배정 계정) - 코드 작성 범위에서 제외.
+
+# - tapOn: "TODO: Deposit → GME Wallet Deposit → KJ"
+# - tapOn: "TODO: 금액 입력 필드"
+# - inputText: "50000"
+# - assertVisible:
+#     text: "50,000"
+# - tapOn: "TODO: x 버튼"
+# - assertNotVisible:
+#     text: "50,000"
+
+# ----------------------------------------------------------------
+# [05] [Medium] GME Wallet Deposit - WSB - WSB 가상계좌 정보 노출 확인
+# CLICKUP: z8nfn6mabf
+# ----------------------------------------------------------------
+# 참고: 실기기 확인 결과 원래 TODO가 전제한 "안내페이지 → [Confirm] → Deposit
+# 페이지 이동" 단계는 없고, "은행 입금" 탭 시 곧바로 최종 계좌정보 화면으로
+# 이동함 - 케이스 내용을 실제 동작에 맞게 정정하여 작성.
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "${DEPOSIT_SERVICE}"
+    timeout: 30000
+- tapOn: "${GME_WALLET_DEPOSIT_TITLE}"
+- waitForAnimationToEnd
+- assertVisible: "${GME_WALLET_DEPOSIT_TITLE}"
+- assertVisible:
+    id: "txvReceivingBankName"
+- assertVisible: "${COPY_ACCOUNT_NUMBER}"
+
+# 홈 복귀 (이 화면도 앱바 back button만 있고 pressKey: back은 무반응 - id 기반 탭)
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ================================================================
+# [GMEPay Deposit]
+# ================================================================
+# 진입 경로: Home > "GMEPay 가상 계좌"(계좌 목록 카드 내 링크) → "가상 계좌 입금"
+# 화면(카드 UI, 전북은행 등 VA 은행 카드 슬라이드, 복사 아이콘(id: tvCopyBadge)/
+# 공유 버튼(id: btnShare)/우상단 정보 아이콘(id: btnInfo) 노출) 직행.
+#
+# 실기기 확인 결과(2026-07-10), 원래 TODO가 전제한 "Easy Wallet Deposit" 메뉴
+# 항목은 "입금 방법을 선택하세요" 바텀시트(GMEPay 탭: 즉시 입금/가상계좌 입금/
+# GME Wallet에서 입금 3개뿐)에 존재하지 않음 - 화면상 진입 경로 자체가 없어
+# [08] [High] GMEPay Deposit - "GMEPay 가상 계좌 입금" 영역 미노출 확인 (국적: 한국인)
+# CLICKUP-PARTIAL: z8nfn6mabj | 자동화는 *입금 영역 미노출*을 단언 — 케이스는 *이용불가 바텀시트 발생*이라 방향이 다르다
+# ----------------------------------------------------------------
+# 계정 전환: 로그아웃 → seungsoo818(한국인) 재로그인
+
+# Home 화면 계좌 목록에서 "GMEPay 가상 계좌" 배너가 노출되지 않아야 함(한국인 계정 확인).
+# ⚠️ 개편UI판은 `assertNotVisible: "GMEPay 가상 계좌"`였으나 구 UI 실제 텍스트는
+#   "GME Pay 가상 계좌"(공백)라, 배너가 떠 있어도 텍스트가 안 맞아 **무조건 통과하는
+#   거짓 통과**가 된다 → id 기준으로 바꿔 실제 미노출을 검증한다.
+# ⚠️ 홈은 **스크롤 위치를 유지**하므로 상단 카드 영역으로 올려야 판정이 유효하다.
+#   ⚠️ 단 여기서는 **배너가 없는 것이 정상**이라 배너를 앵커로 스크롤하면 안 된다
+#     (없는 요소를 기다려 타임아웃으로 죽는다) → 항상 존재하는 `btnTransfer`를 앵커로 쓴다.
+- scrollUntilVisible:
+    element:
+      id: "btnTransfer"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- assertNotVisible:
+    id: "tv_easywallet_account_title"
+
+# ----------------------------------------------------------------
+# [25] [High] Auto Debit Deposit - 등록된 KFTC 계좌리스트 노출 확인 및 변경동작 확인
+# CLICKUP: z8nfn6maca
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "${DEPOSIT_SERVICE}"
+    timeout: 30000
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "edtBankAccListView"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "rvKftcList"
+# ⚠️ **은행명을 하드코딩하지 않는다**(2026-09-01). 연동 계좌 목록은 계정 상태에 따라 바뀌고,
+#   실제로 `케이뱅크`가 목록에서 사라져 `08_마이QR_수신과송금 [02]`가 멈춘 이력이 있다(2026-08-28).
+#   이 케이스의 정의는 "목록 노출 + 변경 동작"이라 **어느 은행인지는 본질이 아니다** →
+#   목록에서 첫 은행을 골라 그 값으로 검증한다.
+#   ※ `.*(은행|뱅크)`가 안전한 이유: Maestro 텍스트는 **전체매칭**이라 은행/뱅크로 **끝나는**
+#     문자열만 잡는다 → `GME Wallet`(원복 대상)과 `은행 계좌 선택` 같은 헤더는 매칭되지 않는다.
+#   ⛔ 실송금·실결제 케이스에는 이 방식을 쓰지 말 것 — 어느 계좌로 돈이 갔는지가 재현 가능해야 한다.
+# ① 선택 가능한 은행이 최소 1개 있는지 먼저 단언한다(빈 목록에서 조용히 통과하는 것을 막는다)
+- assertVisible:
+    text: "${BANK_NAME_ANY}"
+    index: 0
+# ② 고른 값을 기억한다
+- copyTextFrom:
+    text: "${BANK_NAME_ANY}"
+    index: 0
+- evalScript: ${output.kftcBank = maestro.copiedText}
+- tapOn:
+    text: "${BANK_NAME_ANY}"
+    index: 0
+- waitForAnimationToEnd
+# ③ 고른 값으로 검증한다. 선택 후 필드는 "<은행명>(계좌번호 마스킹)" 형태라 앞뒤를 감싼다
+- assertVisible: ".*${output.kftcBank}.*"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [26] [Medium] Auto Debit Deposit - View Balance 통해 잔액조회 확인
+# CLICKUP: z8nfn6macb
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "${DEPOSIT_SERVICE}"
+    timeout: 30000
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
+- waitForAnimationToEnd
+- tapOn: "${ACCOUNT_BALANCE_BUTTON_TEXT}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "tv_balance"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ----------------------------------------------------------------
+# [27] [Medium] Auto Debit Deposit - 충전 금액 입력 동작 확인
+# CLICKUP: z8nfn6macc
+# ----------------------------------------------------------------
+# ⚠️ 홈은 **스크롤 위치를 유지**한다 → 상단 카드의 `txvDepositOrViewStatement`("입금")가
+#   화면 밖일 수 있으므로 탭 전에 UP 스크롤로 끌어올린다(2026-08-25 실제 FAILED로 확인).
+# 홈 복귀 직후엔 배너가 **뒤늦게** 떠 화면을 덮는다 → 먼저 받아낸다(2026-10-14).
+- runFlow: "_dismiss_popups_late_stag_old.yaml"
+- scrollUntilVisible:
+    element:
+      id: "txvDepositOrViewStatement"
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 20
+- tapOn:
+    id: "txvDepositOrViewStatement"
+- waitForAnimationToEnd
+# 타일 탭 전에 "입금 서비스" 화면 도달을 명시적으로 기다린다(방어적 대기).
+#   ※ 2026-08-25에 이 지점이 "Element not found"로 실패한 적이 있는데, 원인은 비동기 로딩이
+#     아니라 **실행 중 기기에서 알림 패널을 내려 화면을 덮은 것**이었다(사용자 확인).
+#     ⚠️ 이런 사고는 셀렉터 버그처럼 보이므로 오진하기 쉽다 — 실행 중에는 기기를 만지지 말 것.
+- extendedWaitUntil:
+    visible:
+      text: "${DEPOSIT_SERVICE}"
+    timeout: 30000
+- tapOn: "${DEPOSIT_TILE_AUTO_DEBIT}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "edtRechargeAmount"
+- inputText: "50000"
+- assertVisible: "50,000.*"
+
+# 홈 복귀
+- tapOn:
+    id: "btnBackImage"
+- waitForAnimationToEnd
+# ⚠️ 구 UI는 입금 하위 화면에서 **back 1회로 홈까지 나오지 않는다** — 개편UI엔 없던
+#   "입금 서비스"(`ActivityDepositMenu`) 화면을 한 단 더 거치기 때문이다
+#   (2026-08-25 실제 실패: WSB 화면에서 back 1회 후 홈 판정이 죽었다).
+#   → 홈 하단 내비가 보일 때까지 back을 반복한다. 이미 홈이면 루프가 돌지 않으므로
+#     홈에서 back이 눌려 "앱을 종료하시겠습니까?"가 뜨는 일은 없다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "bottom_item_home"
+
+# ================================================================
+# [Store Deposit] 은 **14_02 로 옮겼다** (2026-10-14).
+#   종전엔 `[28][30]~[35]` 가 여기, `[29]` 만 14_02 에 있어 한 섹션이 두 파일에 갈려 있었다.
+#   `[29]` 가 외국인 전용이라 test123 묶음에 있어야 하고, 나머지는 국적 무관이라 따라갔다.
+#   → 지금은 `14_02_입금_외국인계좌미연결_old.yaml` 에 `[28] → [30]~[35] → [29]` 순으로 있다.
+# ================================================================
