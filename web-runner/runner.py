@@ -305,8 +305,16 @@ def read_cases(rel_path: str) -> list[dict]:
             if not num:
                 continue
             prev = found.get(num)
-            # 중요도가 붙은 줄을 우선한다(색인 블록보다 본문이 정확하다)
-            if prev is None or (pri and not prev["pri"]):
+            # ★ **중요도가 적힌 줄 중 마지막**이 이긴다 = 본문. 색인은 머리에 있으니 진다.
+            #   ⛔ 종전 조건 `(pri and not prev["pri"])` 은 주석과 **반대로** 동작했다 —
+            #     색인과 본문에 중요도가 **둘 다** 적혀 있으면 먼저 나온 색인이 이겨서,
+            #     화면이 낡은 목차를 중요도로 읽었다(2026-10-29: 5개 파일 6개 케이스가
+            #     어긋났고, High 필터가 시나리오 4개를 잘못 끌어들였다).
+            #   ⚠️ `fill_case_priority.py --fix` 의 `last_pri_for_id` 와 **같은 규칙**이어야 한다.
+            #     어제 그 스크립트만 본문 기준으로 고쳐 놓아 두 도구가 서로 다른 값을 봤다.
+            #   ⚠️ 중요도 **없는** 줄은 뒤에 와도 덮지 않는다 — 색인·요약 블록이 본문보다
+            #     뒤에 있는 파일이 있다(04_01 447·465행).
+            if prev is None or pri:
                 found[num] = {"id": num, "raw": raw, "pri": pri, "text": text}
     return [found[k] for k in sorted(found)]
 
