@@ -394,6 +394,11 @@ def list_tests(include_destructive: bool = False) -> list[dict]:
             "destructive": destructive,
             "cleanup": item["g"] == CLEANUP_GROUP,
             "push": bool(item.get("push")),
+            # ⛔ 선택 규칙 — 일부만 골랐을 때 이 항목을 **자동으로 끼워 넣는** 조건.
+            #   정본은 run_suite.ps1 의 표(`autoAdd`)이고 실제 적용도 거기서 한다.
+            #   여기로 실어 보내는 건 **화면의 확인 창이 같은 결과를 미리 보여주기 위해서**다
+            #   (안 보내면 "N개 실행" 이라 해 놓고 실제로는 더 돈다).
+            "auto_add": item.get("autoAdd"),
             "cases": read_cases(item.get("f", "")),
         })
     return tests

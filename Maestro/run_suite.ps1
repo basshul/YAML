@@ -142,6 +142,11 @@ $Suite = @(
   @{ n="13_05_해외송금받기_송금인수정삭제";    g="G2"; acct="seungsoo818"; est=7;  f="Old\13_05_해외송금받기_송금인수정삭제_old.yaml"
      note="[13] 삭제 동작 + [14] 베트남 정보 수정. edit 아이콘은 **'승인 대기 중' 행에만** 뜬다 → 13_03 필수" }
   @{ n="13_06_해외송금받기_송금인일괄삭제";      g="G2"; acct="seungsoo818"; est=3;  f="Old\13_06_해외송금받기_송금인일괄삭제_old.yaml"
+     # ⛔ High 가 하나도 없어 중요도 필터에 **통째로 빠진다** — 그런데 앞의 13_01~03 은 High 라 남는다.
+     #   등록만 하고 정리를 안 하면 잔재가 쌓인다 → 셋 중 하나라도 고르면 자동으로 끼워 넣는다.
+     autoAdd=@{ id="SENDER_PURGE"
+                when=@("13_01_해외송금받기_환율과인니등록","13_02_해외송금받기_몽골송금인","13_03_해외송금받기_베트남송금인")
+                why="13_01~13_03 이 송금인을 등록한다. 13_06 이 빠지면 잔재가 쌓여 다음 실행의 등록·행 선택이 어긋난다(13_05 의 edit 아이콘은 '승인 대기 중' 행에만 뜬다)." }
      note="등록된 송금인 일괄 삭제(사양). **반드시 13_05 뒤** — 먼저 지우면 04/05가 쓸 데이터가 사라진다. 잔재가 더 있으면 FAIL로 드러난다(수동 정리)" }
   @{ n="13_07_해외송금받기_요청상태조회";     g="G2"; acct="seungsoo818"; est=2;  f="Old\13_07_해외송금받기_요청상태조회_old.yaml"
      # 2026-10-28: [15]~[19] 제거, High 인 [20] 하나만 남음(310→190줄) → est 5 → 2분.
@@ -228,6 +233,13 @@ $Suite = @(
   @{ n="25_02_프로필_외국인신분증";      g="G3"; acct="test123";     est=3;  f="Old\25_02_프로필_외국인신분증_old.yaml"; push=$true
      note="⛔ **계정 전환 코드가 없다** — 14_02 직후가 아니면 성립하지 않는다" }
   @{ n="14_03_입금_GMEPay가상계좌";           g="G3"; acct="test251024";  est=7;  f="Old\14_03_입금_GMEPay가상계좌_old.yaml"
+     # ⛔ High 가 하나도 없어 중요도 필터에 **통째로 빠진다** — 그런데 G4 셋은 High 라 남는다.
+     #   그러면 G4 가 **test123 그대로** 돌아 남의 계정 PIN·로그인 비밀번호를 바꾼다
+     #   (G3·G4 둘 다 계정 전환 코드가 없다). → 둘이 함께 걸리면 자동으로 끼워 넣는다.
+     autoAdd=@{ id="G3_ACCT_RESTORE"
+                when=@("14_02_입금_외국인계좌미연결","25_02_프로필_외국인신분증","14_03_입금_GMEPay가상계좌")
+                with=@("04_05_메뉴설정_언어변경3종","04_03_메뉴설정_간편비번변경","04_04_메뉴설정_로그인비번변경")
+                why="G3 가 계정을 test123/test251024 로 바꾼다. G4 셋은 계정 전환 코드가 없어 그대로 남의 계정에 PIN·로그인 비밀번호 변경을 건다. 14_03 이 끝에서 seungsoo818 로 되돌린다." }
      note="GMEPay Deposit. 끝에서 seungsoo818로 원복한다" }
 
   # ── G4 설정 변경 — 자기 원복형 (반드시 맨 뒤) ─────────────────
@@ -328,6 +340,68 @@ if ($Names.Count -gt 0) {
     $plan = @($Suite | Where-Object { $Group -contains $_.g })
 }
 if ($Only) { $plan = @($plan | Where-Object { $_.n -like "*$Only*" -or $_.f -like "*$Only*" }) }
+
+# ----------------------------------------------------------------
+# 선택 규칙 — 일부만 골랐을 때 조용히 깨지는 조합을 막는다
+# ----------------------------------------------------------------
+# 스위트 표의 순서는 곧 상태 의존성인데, `-Names` 나 화면의 중요도 필터로 **일부만** 고르면
+# 그 사슬에서 **중간 고리만 빠진다.** 빠진 고리가 "되돌리는 항목"이면 조용히 틀어진다 —
+# 실행은 끝까지 가고 초록불도 뜨는데, 남의 계정에 비밀번호가 걸려 있거나 데이터가 쌓인다.
+#
+# ⛔ 그래서 **자동으로 끼워 넣는다.** 경고만 찍으면 넘기게 되고, 넘긴 대가가 너무 크다
+#   (G3→G4 조합은 test123 의 PIN·로그인 비밀번호가 바뀐다 — admin 이 풀기 전까지 그 계정은 못 쓴다).
+#   끼워 넣은 것은 아래에서 이유와 함께 찍고, `-List` 에도 그대로 나온다.
+#
+# 규칙은 **표의 `autoAdd` 필드**가 정본이다(별도 목록을 두지 않는다 — 어긋날 자리를 만들지 않는다).
+#   when : 이 중 하나라도 골랐고
+#   with : (비어 있지 않다면) 이 중 하나라도 함께 골랐을 때
+#   → 그 항목 자신을 계획에 끼워 넣는다.
+# `-DumpJson` 에 그대로 실려 web-runner 의 확인 창도 같은 판단을 보여준다.
+#
+# 넣는 위치는 **스위트 표 순서**를 따른다. `-Names` 가 적은 순서를 존중하되,
+# 사용자가 적지 않은 항목의 자리는 표가 정한다(표 순서 = 의존 순서).
+#
+# ⚠️ 규칙을 더할 때: `autoAdd` 는 **되돌리는 쪽**(원복·정리)에만 단다. 검증하는 항목에 달지 말 것 —
+#   그건 사용자가 고를 몫이다. 규칙은 "고르지 않으면 틀어지는 것"만 담는다.
+
+# 표에서의 자리 — 끼워 넣을 위치를 정하는 기준이다.
+$suiteIdx = @{}
+for ($i = 0; $i -lt $Suite.Count; $i++) { $suiteIdx[$Suite[$i].n] = $i }
+
+$autoAdded = @()
+foreach ($item in @($Suite | Where-Object { $_.autoAdd })) {
+    $rule = $item.autoAdd
+    # ⛔ `$names` 로 쓰지 말 것 — PowerShell 변수는 **대소문자를 구분하지 않아** 파라미터 `$Names` 를
+    #   덮어쓴다. 그러면 -Names 없이 돌려도 헤더가 "(-Names 지정 순서)" 로 바뀐다(2026-10-30 실측).
+    $planNames = @($plan | ForEach-Object { $_.n })
+    if ($planNames -contains $item.n) { continue }
+    if (@($rule.when | Where-Object { $planNames -contains $_ }).Count -eq 0) { continue }
+    if ($rule.with -and $rule.with.Count -gt 0 -and
+        @($rule.with | Where-Object { $planNames -contains $_ }).Count -eq 0) { continue }
+
+    # 표 순서상 이 항목보다 **뒤에 오는 첫 항목** 앞에 끼운다. 그런 항목이 없으면 맨 뒤에 붙인다.
+    $needIdx = $suiteIdx[$item.n]
+    $rebuilt = @()
+    $done = $false
+    foreach ($p in $plan) {
+        if (-not $done -and $suiteIdx[$p.n] -gt $needIdx) { $rebuilt += $item; $done = $true }
+        $rebuilt += $p
+    }
+    if (-not $done) { $rebuilt += $item }
+    $plan = $rebuilt
+    $autoAdded += $item
+}
+
+if ($autoAdded.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  ⚠️ 고르지 않았지만 자동으로 끼워 넣은 항목이 있습니다 — 빼면 조용히 틀어집니다:" -ForegroundColor Yellow
+    foreach ($a in $autoAdded) {
+        Write-Host ("     + {0}   (규칙 {1}, {2}분)" -f $a.n, $a.autoAdd.id, $a.est) -ForegroundColor Yellow
+        Write-Host ("       {0}" -f $a.autoAdd.why) -ForegroundColor DarkGray
+    }
+    Write-Host ""
+}
+
 
 # -Resume: 지난 실행에서 **완주하지 못한 그룹**부터 재개한다.
 #   ⚠️ 그룹 **경계에서만** 재개한다 — 계정 묶음(G3)이나 clearState 뒤 중간에서 재개하면

@@ -416,6 +416,31 @@ function renderAreaFilter() {
   sel.setAttribute("aria-label", "그룹 필터");
 }
 
+// 선택 규칙 — 고르지 않았지만 **반드시 함께 돌아야 하는** 항목을 끼워 넣는다.
+//   ⛔ 정본은 run_suite.ps1 의 표(`autoAdd`)다. 실제 실행은 거기서 다시 판단하므로,
+//     여기가 틀려도 **돌긴 제대로 돈다** — 다만 확인 창이 거짓말을 하게 된다.
+//     규칙을 바꿀 때는 run_suite.ps1 쪽만 고치면 된다. 이 함수는 그 결과를 읽을 뿐이다.
+//   넣는 자리는 **스위트 표 순서**(state.tests 의 순서)를 따른다 = 의존 순서.
+function withAutoAdded(picked) {
+  const order = state.tests;
+  const idx = (n) => order.findIndex((t) => t.name === n);
+  const out = picked.slice();
+  const added = [];
+  for (const cand of order) {
+    const rule = cand.auto_add;
+    if (!rule) continue;
+    const names = out.map((t) => t.name);
+    if (names.includes(cand.name)) continue;
+    if (!(rule.when || []).some((n) => names.includes(n))) continue;
+    const wth = rule["with"] || [];
+    if (wth.length && !wth.some((n) => names.includes(n))) continue;
+    const at = out.findIndex((t) => idx(t.name) > idx(cand.name));
+    if (at < 0) out.push(cand); else out.splice(at, 0, cand);
+    added.push(cand);
+  }
+  return { list: out, added: added };
+}
+
 function priOf(r) { return (r.priority || "").trim(); }
 
 /* 이 시나리오가 그 중요도를 **하나라도** 품고 있는가.
@@ -799,7 +824,10 @@ function onRunAll() {
 }
 
 async function onRun() {
-  const picked = state.tests.filter((t) => state.selected.has(t.name));
+  // ⛔ 고르지 않았어도 함께 돌아야 하는 항목을 **맨 먼저** 끼운다 — 아래의 실결제·파괴적
+  //   경고와 예상 시간이 전부 이 목록에서 나오므로, 여기서 안 끼우면 확인 창이 실제와 달라진다.
+  const auto = withAutoAdded(state.tests.filter((t) => state.selected.has(t.name)));
+  const picked = auto.list;
   const isLive = isLivePicked();
   const bad = comboError();
   if (bad) { alert(bad); return; }
@@ -812,6 +840,14 @@ async function onRun() {
     picked.length + "개 시나리오를 실행합니다. (예상 " +
     Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분)\n\n";
   ask += "빌드 " + state.build + " / 서버 " + state.server + "\n\n";
+  if (auto.added.length) {
+    ask += "⚠️ 고르지 않았지만 함께 돌려야 하는 항목을 끼워 넣었습니다 — 빼면 조용히 틀어집니다:\n";
+    for (const a of auto.added) {
+      ask += "   + " + a.name + " (" + a.est + "분)\n     "
+        + (a.auto_add.why || "").replace(/\*\*/g, "") + "\n";
+    }
+    ask += "\n";
+  }
   if (isLive) ask += "⚠️ 실계정·실자금 — 결제와 접수가 실제로 일어납니다"
     + (state.server === "livetest" ? " (LiveTest 도 운영 DB 입니다).\n" : ".\n");
   if (destr.length) {
