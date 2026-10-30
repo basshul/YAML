@@ -327,43 +327,52 @@ appId: ${APP_ID}
 # 입력 전 라벨은 "금액 입력"이고, 값을 넣으면 "1 원"으로 바뀐다.
 # ⚠️ 이 바텀시트에는 확인 버튼이 없다 — **시트 바깥을 탭**해야 닫히면서 값이 확정된다.
 #   (이 파일에 남은 유일한 좌표 탭이다. 시트는 화면 하단이라 상단 20% 지점은 항상 바깥이다)
-- assertVisible: "${MYQR_ENTER_AMOUNT}"
-- tapOn:
-    id: "enteramount"
-- extendedWaitUntil:
-    visible:
-      id: "amount"
-    timeout: 15000
-- tapOn:
-    id: "amount"
-- inputText: "1"
-- hideKeyboard
-- tapOn:
-    point: "50%, 20%"
-- extendedWaitUntil:
-    visible:
-      id: "qrimage"
-    timeout: 20000
-- assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
-- takeScreenshot: "[03]_금액입력_1원"
-# 원복 — 금액을 지워 "금액 입력" 상태로 되돌린다
-- tapOn:
-    id: "enteramount"
-- extendedWaitUntil:
-    visible:
-      id: "amount"
-    timeout: 15000
-- tapOn:
-    id: "amount"
-- eraseText: 10
-- hideKeyboard
-- tapOn:
-    point: "50%, 20%"
-- extendedWaitUntil:
-    visible:
-      id: "qrimage"
-    timeout: 20000
-- assertVisible: "${MYQR_ENTER_AMOUNT}"
+# ⏭ [게이트] [03] 전체 — 금액 "1" 입력 → 확인 → **지워서 원복**. 시작과 같은 상태(`MYQR_ENTER_AMOUNT`)로 끝나고 내 QR 화면을 벗어나지 않는다.
+#   ✅ 2026-10-30 확인: 건너뛰어도 **[05][06] High 는 안 깨진다.**
+#     [05] 는 금액을 자기가 세팅하고, [06]("Amount 미입력")이 보는 값은
+#     [03] 이 아니라 **[05] 가 남긴 것**이다. 건너뛰면 금액은 이미 비어 있다(원복 결과와 같다).
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - assertVisible: "${MYQR_ENTER_AMOUNT}"
+      - tapOn:
+          id: "enteramount"
+      - extendedWaitUntil:
+          visible:
+            id: "amount"
+          timeout: 15000
+      - tapOn:
+          id: "amount"
+      - inputText: "1"
+      - hideKeyboard
+      - tapOn:
+          point: "50%, 20%"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+      - assertVisible: ".*1 ${MYQR_CURRENCY_UNIT}.*"
+      - takeScreenshot: "[03]_금액입력_1원"
+      # 원복 — 금액을 지워 "금액 입력" 상태로 되돌린다
+      - tapOn:
+          id: "enteramount"
+      - extendedWaitUntil:
+          visible:
+            id: "amount"
+          timeout: 15000
+      - tapOn:
+          id: "amount"
+      - eraseText: 10
+      - hideKeyboard
+      - tapOn:
+          point: "50%, 20%"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+      - assertVisible: "${MYQR_ENTER_AMOUNT}"
 
 # ----------------------------------------------------------------
 # [04] [Low] Receive - QR코드 저장 동작 확인
