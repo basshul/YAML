@@ -858,6 +858,9 @@ async function onRun() {
     }
   }
   if (money.length) ask += "⚠️ 실결제 포함: " + money.map((t) => t.name).join(", ") + "\n";
+  const skipOpt = $("skipopt").checked;
+  if (skipOpt) ask += "\n⏭ 선택 블록 생략 — 플로우에 게이트로 표시된 구간을 건너뜁니다.\n"
+    + "   빠진 케이스는 Pass 가 아니라 SKIP 으로 남습니다.\n";
   ask += "\n계속할까요?";
   if (!confirm(ask)) return;
 
@@ -875,6 +878,7 @@ async function onRun() {
         server: state.server,
         platform: "android",
         confirm_live: isLive,
+        skip_optional: skipOpt,
       }),
     });
     const data = await res.json();

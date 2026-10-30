@@ -182,6 +182,7 @@
           <select id="f-res" aria-label="결과 필터">
             <option value="all">전체</option><option>Pass</option><option>Fail</option>
             <option>Not Test</option><option>NA</option><option value="none">비어 있음</option></select></label>
+        <label class="modetog" title="플로우에 「게이트」로 표시해 둔 블록(진입→단언→복귀 왕복처럼 건너뛰어도 뒤가 깨지지 않는 구간)을 건너뜁니다. 표시가 없는 플로우에는 아무 효과도 없습니다. ⚠️ 빠진 케이스는 Pass 가 아니라 SKIP 으로 남습니다."><input type="checkbox" id="skipopt"> ⏭ 선택 블록 생략</label>
         <label class="modetog ro-hide"><input type="checkbox" id="mapmode"> 매핑 모드</label>
         <span class="spacer"></span>
         <button class="small" type="button" id="btn-selfail" disabled>최근 실패만 선택</button>
@@ -325,6 +326,6 @@
   </div>
 </div>
 
-<script src="app.js?v=40"></script>
+<script src="app.js?v=42"></script>
 </body>
 </html>

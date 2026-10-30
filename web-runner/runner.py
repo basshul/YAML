@@ -474,12 +474,16 @@ _ELAPSED = re.compile(r"(\d{2}:\d{2})")
 class Run:
     """한 번의 실행. 로그 줄을 모아 두고 구독자에게 흘려보낸다."""
 
-    def __init__(self, names: list[str], device: str, build: str, server: str, user: str):
+    def __init__(self, names: list[str], device: str, build: str, server: str, user: str,
+                 skip_optional: bool = False):
         self.names = names
         self.device = device
         self.build = build
         self.server = server
         self.user = user
+        # ⏭ 플로우에 `게이트` 로 표시해 둔 블록을 건너뛴다. 표시가 없는 플로우엔 효과가 없다.
+        #   ⛔ 케이스를 고르는 스위치가 아니다 — 자세한 규칙은 run_suite.ps1 의 -SkipOptional 주석.
+        self.skip_optional = skip_optional
         self.started_at = datetime.now()
         self.finished = False
         # 끝은 여러 곳에서(정상 종료·중단·감시) 날 수 있다 → **한 번만** 나게 잠근다.
@@ -539,7 +543,12 @@ class Run:
         #   기본값으로 본체를 실행한다(스크립트가 낡으면 남의 계정으로 돌 수 있다).
         #   "Server" 도 확인한다 — 스크립트가 낡아 -Server 를 모르면 pwsh 가 **조용히 무시하고**
         #   기본값(livetest)으로 돈다. 고른 서버와 다른 서버로 도는 쪽이 더 위험하다.
-        require_params(SUITE_SCRIPT, ["Names", "Device", "Build", "Server", "Lang", "User"])
+        need = ["Names", "Device", "Build", "Server", "Lang", "User"]
+        # ★ 스크립트가 낡아 -SkipOptional 을 모르면 pwsh 가 **조용히 무시하고** 전부 돌린다.
+        #   느려질 뿐 해롭진 않지만, 화면은 건너뛴 줄 알게 되므로 여기서 막는다.
+        if self.skip_optional:
+            need.append("SkipOptional")
+        require_params(SUITE_SCRIPT, need)
 
         cfg = load_config()
         build, server = self.build, self.server
@@ -548,14 +557,16 @@ class Run:
             # 작은따옴표는 _SAFE_NAME 이 이미 막지만, 보간에 기대지 않고 한 겹 더 감싼다.
             f"& '{SUITE_SCRIPT}' -Names '{','.join(n.replace(chr(39), chr(39) * 2) for n in self.names)}' "
             f"-Device '{self.device}' -Build {build} -Server {server} -Lang {cfg['lang']} "
-            f"-User {self.user}; "
-            "exit $LASTEXITCODE"
+            f"-User {self.user}"
+            + (" -SkipOptional" if self.skip_optional else "")
+            + "; exit $LASTEXITCODE"
         )
         cmd = [cfg["pwsh"], "-NoProfile", "-Command", inner]
 
         self._emit(f"$ run_suite.ps1 -Names {','.join(self.names)} "
                    f"-Device {self.device} -Build {build} -Server {server} -Lang {cfg['lang']} "
-                   f"-User {self.user}")
+                   f"-User {self.user}"
+                   + (" -SkipOptional" if self.skip_optional else ""))
         self._emit("")
 
         # POSIX 에서는 자식들을 한 묶음으로 끊을 수 있게 프로세스 그룹을 따로 연다(Mac 이전 대비).
@@ -955,7 +966,8 @@ def current_run() -> Run | None:
     return _current
 
 
-def start_run(names: list[str], device: str, build: str, server: str, user: str) -> Run:
+def start_run(names: list[str], device: str, build: str, server: str, user: str,
+              skip_optional: bool = False) -> Run:
     """실행을 시작한다. 이미 돌고 있으면 거절한다(대기열은 이번 범위 밖)."""
     global _current
 
@@ -993,7 +1005,7 @@ def start_run(names: list[str], device: str, build: str, server: str, user: str)
         # G9 도 고를 수 있으므로 순서 표에도 있어야 한다 — 없으면 **조용히 빠진다**.
         order = [t["name"] for t in list_tests(include_destructive=True)]
         ordered = [n for n in order if n in set(names)]
-        run = Run(ordered, device, build, server, user)
+        run = Run(ordered, device, build, server, user, skip_optional)
         _current = run
     run.start()
     return run

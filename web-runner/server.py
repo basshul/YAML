@@ -457,6 +457,10 @@ class RunRequest(BaseModel):
     confirm_live: bool = False
     # 사용자 프로파일. 값 검증은 runner.start_run 이 허용 목록으로 한다.
     user: str = ""
+    # ⏭ 플로우에 `게이트` 로 표시해 둔 블록을 건너뛴다(run_suite.ps1 -SkipOptional).
+    #   ⛔ 케이스를 고르는 스위치가 아니다. 표시가 없는 플로우엔 아무 효과도 없다.
+    #   ⚠️ 빠진 케이스는 체크리스트에 SKIP 으로 남는다 — Pass 가 아니다.
+    skip_optional: bool = False
 
 
 @app.post("/api/run")
@@ -476,7 +480,7 @@ def api_run(req: RunRequest):
             "error": f"{where} 실행은 확인이 필요합니다 — 결제·접수가 실제로 일어납니다."})
     try:
         run = runner.start_run(req.tests, req.device, req.build, req.server,
-                               _known_user(req.user))
+                               _known_user(req.user), req.skip_optional)
     except RuntimeError as exc:
         return JSONResponse(status_code=409, content={"error": str(exc)})
     except ValueError as exc:

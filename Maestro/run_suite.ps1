@@ -64,6 +64,11 @@ param(
     [switch]$SkipLint,
     [switch]$List,
     [switch]$DumpJson,          # 스위트 표를 JSON으로 출력만 하고 끝낸다 (web-runner 용)
+    # ⏭ 각 플로우의 "건너뛰어도 되는" 블록을 건너뛴다 → run_test.ps1 에 SKIP_OPTIONAL=true 로 넘어간다.
+    #   ⛔ 케이스를 **고르는** 스위치가 아니다. 플로우 안에 `게이트` 주석으로 **표시해 둔 블록만** 빠진다.
+    #     표시가 없는 플로우에는 아무 효과도 없다(해가 되지도 않는다).
+    #   ⚠️ 빠진 케이스는 체크리스트에 **SKIP** 으로 남는다(Pass 가 아니다) — 사람이 따로 봐야 한다.
+    [switch]$SkipOptional,
     [string]$Device = "",
     [ValidateSet("stag","livetest","live")][string]$Build = "stag",
     # 앱이 붙을 서버. 빌드와 독립이고 각 run_test.ps1 호출에 그대로 넘긴다.
@@ -818,6 +823,7 @@ foreach ($t in $plan) {
     # 빌드는 **항상 명시**해서 넘긴다 — env 파일 기본값에 기대면 로그만 보고는 어느 빌드였는지 모른다.
     $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId; User = $User; Server = $Server }
     if ($Device) { $flowArgs['device'] = $Device }
+    if ($SkipOptional) { $flowArgs['ExtraEnv'] = @('SKIP_OPTIONAL=true') }
     & (Join-Path $root "run_test.ps1") @flowArgs *>&1 | Tee-Object -FilePath $log | Out-Null
     $code = $LASTEXITCODE
     $sw.Stop()

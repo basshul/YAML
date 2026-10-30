@@ -658,32 +658,38 @@ appId: ${APP_ID}
 # CLICKUP-PARTIAL: z8nfn6madw | 신고 화면 도달 후 취소로 원복. 분실국가·도시·날짜·휴대폰 입력은 미커버
 #              - 분실신고 시 카드 사용 즉시 정지 안내 확인
 # ----------------------------------------------------------------
-- scrollUntilVisible:
-    element:
-      text: "${REPORT_LOST_TEXT}"
-    direction: DOWN
-    centerElement: true
-    timeout: 15000
-- tapOn: "${REPORT_LOST_TEXT}"
-- waitForAnimationToEnd
-# 도달을 먼저 강제한다 — 탭 직후 곧바로 단언하면 다이얼로그가 뜨기 전에 판정할 수 있다.
-- extendedWaitUntil:
-    visible: '${REPORT_CARD_LOSS_TEXT}'
-    timeout: 20000
-- tapOn: "${REG_NO}"
-- waitForAnimationToEnd
-# ⚠️ 취소가 실제로 먹혔는지까지 본다. 안 보면 "분실 신고가 접수됐는데 통과"가 가능하다.
-- extendedWaitUntil:
-    notVisible: '${REPORT_CARD_LOSS_TEXT}'
-    timeout: 15000
-- assertVisible:
-    id: "report_lost_title"
+# ⏭ [게이트] [20] 전체 — 분실신고 → 취소 → back 왕복. 뒤의 `카드 관리` 재앵커는 밖에 둔다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "${REPORT_LOST_TEXT}"
+          direction: DOWN
+          centerElement: true
+          timeout: 15000
+      - tapOn: "${REPORT_LOST_TEXT}"
+      - waitForAnimationToEnd
+      # 도달을 먼저 강제한다 — 탭 직후 곧바로 단언하면 다이얼로그가 뜨기 전에 판정할 수 있다.
+      - extendedWaitUntil:
+          visible: '${REPORT_CARD_LOSS_TEXT}'
+          timeout: 20000
+      - tapOn: "${REG_NO}"
+      - waitForAnimationToEnd
+      # ⚠️ 취소가 실제로 먹혔는지까지 본다. 안 보면 "분실 신고가 접수됐는데 통과"가 가능하다.
+      - extendedWaitUntil:
+          notVisible: '${REPORT_CARD_LOSS_TEXT}'
+          timeout: 15000
+      - assertVisible:
+          id: "report_lost_title"
 
-# ★ [20] 은 분실 신고 화면에서 끝난다. 원래 뒤따르던 [21][22] 가 카드 관리로
-#   돌려놓았는데 그것들이 2026-10-28 에 빠졌다 → 여기서 직접 되돌린다.
-#   바로 아래 [24] 가 **카드 관리 화면의 「정보」 탭**을 누른다.
-- pressKey: back
-- waitForAnimationToEnd
+      # ★ [20] 은 분실 신고 화면에서 끝난다. 원래 뒤따르던 [21][22] 가 카드 관리로
+      #   돌려놓았는데 그것들이 2026-10-28 에 빠졌다 → 여기서 직접 되돌린다.
+      #   바로 아래 [24] 가 **카드 관리 화면의 「정보」 탭**을 누른다.
+      - pressKey: back
+      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "${CARD_MANAGEMENT_TEXT}"
@@ -798,27 +804,33 @@ appId: ${APP_ID}
 # [26] [Medium] Mobile Transportation - 잔액과 교통카드 번호 표시 확인 (Android)
 # CLICKUP-PARTIAL: z8nfn6mae1 | Easy Go 화면과 월/최근 이용내역은 단언, 카드번호·잔액 자체는 미단언
 # ----------------------------------------------------------------
-- scroll
-# ⛔ 종전 `.*교통카드` 는 **월이 앞에 붙는 라벨**(`2026-09 교통카드`)이라 문구로 잡기 나쁘고,
-#   en 은 아예 `2026-09 Transportation` 이다 → 언어·날짜에 안 흔들리는 id 로 바꿨다(2026-09-22 실측).
-- tapOn:
-    id: "txViewTravelHistory"
-# ⛔ 종전 `${EASY_GO_CARD_TEXT}` 단언은 **상품명 하드코딩**이었다 — 이 화면 툴바는 계정이 들고 있는
-#   카드 이름을 보여주므로 `EasyCare` 계정에서는 `EasyGo` 가 나오지 않는다(2026-09-22 실측).
-#   `[22]` 에서 이미 같은 부류를 고쳤다. 다국어와 무관하게 ko 에서도 깨지는 자리였다.
-# ★ 대신 **이 케이스가 검증한다고 적어둔 것**을 실제로 단언한다(카드번호·잔액).
-#   종전에는 `CLICKUP-PARTIAL` 사유가 "카드번호·잔액 자체는 미단언"이었는데 그게 해소된다.
-- extendedWaitUntil:
-    visible:
-      id: "cashbeecardnumber"
-    timeout: 20000
-- assertVisible:
-    id: "txvBalanceAmt"
-- assertVisible:
-    text: "${MONTHLY_USAGE}"
-- assertVisible:
-    text: "${RECENT_USAGE}"
-- pressKey: back
+# ⏭ [게이트] [26] 전체 — 진입 → 단언 → back 왕복. 제자리로 돌아온다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - scroll
+      # ⛔ 종전 `.*교통카드` 는 **월이 앞에 붙는 라벨**(`2026-09 교통카드`)이라 문구로 잡기 나쁘고,
+      #   en 은 아예 `2026-09 Transportation` 이다 → 언어·날짜에 안 흔들리는 id 로 바꿨다(2026-09-22 실측).
+      - tapOn:
+          id: "txViewTravelHistory"
+      # ⛔ 종전 `${EASY_GO_CARD_TEXT}` 단언은 **상품명 하드코딩**이었다 — 이 화면 툴바는 계정이 들고 있는
+      #   카드 이름을 보여주므로 `EasyCare` 계정에서는 `EasyGo` 가 나오지 않는다(2026-09-22 실측).
+      #   `[22]` 에서 이미 같은 부류를 고쳤다. 다국어와 무관하게 ko 에서도 깨지는 자리였다.
+      # ★ 대신 **이 케이스가 검증한다고 적어둔 것**을 실제로 단언한다(카드번호·잔액).
+      #   종전에는 `CLICKUP-PARTIAL` 사유가 "카드번호·잔액 자체는 미단언"이었는데 그게 해소된다.
+      - extendedWaitUntil:
+          visible:
+            id: "cashbeecardnumber"
+          timeout: 20000
+      - assertVisible:
+          id: "txvBalanceAmt"
+      - assertVisible:
+          text: "${MONTHLY_USAGE}"
+      - assertVisible:
+          text: "${RECENT_USAGE}"
+      - pressKey: back
 
 # ----------------------------------------------------------------
 # [27] [High] Mobile Transportation - 교통카드 삭제 동작 확인 (Android)
@@ -861,15 +873,21 @@ appId: ${APP_ID}
 #   실제로 누를 수 있는 건 잔액 행 컨테이너 **`llBalance`**(`clickable=true`)이고,
 #   그걸 누르면 `[30]` 이 보려던 GME Pay 상세(`toolbar_title`="GME Pay")가 열린다(실측).
 # ⚠️ 도달을 강제한다 — 탭이 무반응이어도 조용히 넘어가지 않게.
-- tapOn:
-    id: "llBalance"
-- extendedWaitUntil:
-    visible:
-      text: "${GMEPAY_TITLE}"
-    timeout: 20000
-- assertVisible:
-    text: "${TXT_BALANCE}"
-- pressKey: back
+# ⏭ [게이트] [30] 본문 — 탭 → 단언 → back 왕복. 앞의 탭 재탭·스크롤업은 [31] 전제라 밖에 둔다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - tapOn:
+          id: "llBalance"
+      - extendedWaitUntil:
+          visible:
+            text: "${GMEPAY_TITLE}"
+          timeout: 20000
+      - assertVisible:
+          text: "${TXT_BALANCE}"
+      - pressKey: back
 
 # ----------------------------------------------------------------
 # [31] [High] Recharge (Wallet) - Simple PW 간편비밀번호 일치/불일치 확인
