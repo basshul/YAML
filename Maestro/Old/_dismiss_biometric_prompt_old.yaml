@@ -1,0 +1,44 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 지문(생체) 인증 다이얼로그를 취소해 **PIN 키패드로 떨어뜨린다** (2026-10-30 작성)
+# ================================================================
+# 호출:
+#   - runFlow: "_dismiss_biometric_prompt_old.yaml"
+#
+# 왜 필요한가:
+#   계정에 지문 로그인이 켜져 있으면 **앱 재시작 직후 잠금화면 위에 시스템 다이얼로그가 덮인다.**
+#   그러면 `input_dot_1` 도 "4자리 숫자를 입력하세요" 도 보이지 않는다.
+#     · PIN 블록이 `when:` 조건부면 → 통째로 SKIP 되고 뒤의 홈 대기에서 죽는다(2026-08-20 실측).
+#     · PIN 블록이 하드 대기면 → 그 자리에서 바로 죽는다(2026-10-30 `21_카드` 2스텝 실패 ×2).
+#   ⚠️ 스위트로 돌 때는 앞 항목이 세션을 살려 둬서 **잘 안 드러난다.** 단독 실행에서 터진다.
+#
+#   종전에는 이 처리가 `_change_language_stag_old` 와 `_easycare_coverage_stag_old`
+#   **두 군데에만** 인라인으로 있었다 — 정작 모든 파일이 지나는 진입부에는 없었다.
+#
+# 언제 부르나: `launchApp` 뒤, **PIN 을 기다리기 전.**
+#
+# ⛔ 문구로 잡지 않는다. 이건 **OS 다이얼로그**라 앱 언어가 아니라 **기기 로캘**을 따른다
+#   (`en` 으로 돌려도 기기가 한국어면 "지문 인증" 으로 뜬다). `button_negative` 는 언어 무관이다.
+#   실측 전체 id(SM-S911N / OneUI):
+#     `com.samsung.android.biometrics.app.setting:id/button_negative` (text "취소", clickable=true)
+#   ⚠️ 삼성 전용 패키지다 — 다른 제조사 기기에서는 id 가 다를 수 있다.
+# ================================================================
+
+# ① 다이얼로그가 뜰 틈을 준다 — 잠금화면보다 **늦게** 덮을 수 있다.
+#   PIN 키패드가 먼저 잡히면 그걸로 끝내고, 아무것도 안 잡혀도 optional 이라 죽지 않는다.
+- extendedWaitUntil:
+    visible:
+      id: "button_negative|input_dot_1"
+    timeout: 15000
+    optional: true
+
+# ② 떠 있으면 취소한다. 안 떠 있으면 통째로 SKIP 된다.
+- runFlow:
+    when:
+      visible:
+        id: "button_negative"
+    commands:
+      - tapOn:
+          id: "button_negative"
+      - waitForAnimationToEnd

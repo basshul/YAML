@@ -26,6 +26,9 @@ appId: ${APP_ID}
 #   (헬퍼는 스플래시가 없으면 통째로 SKIP되므로 운영/livetest 빌드에서도 안전하다.
 #    상세: docs/ENVIRONMENT.md §7.3)
 - runFlow: "_server_override_old.yaml"
+# ⛔ 지문 로그인이 켜져 있으면 **잠금화면 위에 OS 다이얼로그가 덮여** 아래 대기가 그냥 죽는다
+#   (2026-10-30 실측: 이 자리에서 2스텝 실패 ×2 — 화면은 FLAG_SECURE 라 스크린샷이 새까맣게 나온다).
+- runFlow: "_dismiss_biometric_prompt_old.yaml"
 - extendedWaitUntil:
     visible:
       text: "${PIN_ENTER_4DIGIT}"
