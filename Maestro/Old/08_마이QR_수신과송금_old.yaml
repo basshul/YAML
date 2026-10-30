@@ -189,83 +189,89 @@ appId: ${APP_ID}
 #   그 화면에서는 수신자를 바꿀 수단이 없다 — 수신자명을 탭해도 반응 없고,
 #   `navigationBack`은 Teams를 그냥 빠져나온다.
 #   → 공유 전에 Teams를 죽이면 항상 **수신자 선택 화면**(검색창 + 목록)으로 열린다.
-- stopApp:
-    appId: "com.microsoft.teams"
-- tapOn:
-    id: "share"
-# ⚠️ **`sem_resolver_recyclerview` 는 삼성 구버전 전용 id 다** — Android 16 에서는 시트가 정상적으로
-#   뜨는데 그 id 가 없어 실패한다(2026-09-18 실측: 패키지 `com.android.intentresolver`,
-#   행 id 는 **`sem_chooser_row_recycler_view`**). `25_01_프로필_정보수정과공유` 과 같이 **시트 제목으로 판정**한다.
-#   ⚠️ 시스템 공유 시트는 **앱 언어를 따르지 않고 기기 언어**를 쓴다(en 실행에서도 `이미지 1개`)
-#     → 양쪽을 함께 받는다.
-- extendedWaitUntil:
-    visible: "이미지 [0-9]+개|[0-9]+ image[s]?|텍스트 공유|Share text"
-    timeout: 20000
-- takeScreenshot: "[01]_QR공유_시트"
-# ⚠️⚠️ **"Teams"라는 이름이 시트에 두 종류로 존재한다 — 잘못 누르면 그룹 채팅으로 보낸다**
-#   ① 시트 최상단 **직접공유(바로가기) 아이콘**: 특정 채팅으로 바로 보내는 항목이고
-#      각 아이콘에 **content-desc "Teams" 배지**가 붙어 있다(예: "In App Message",
-#      "Basshu's question" ← **둘 다 그룹 채팅**이다).
-#   ② 그 아래 **전체 앱 목록의 Teams 앱**(text "Teams") ← 이걸 눌러야 수신자 선택 화면이 열린다.
-#   `scrollUntilVisible`/`tapOn`의 텍스트 매칭은 content-desc도 잡으므로, 스크롤 없이 그냥
-#   `tapOn: "Teams"` 하면 **①의 배지에 먼저 걸려 그룹 채팅 작성 화면으로 들어간다**
-#   (2026-08-19 실제로 "In App Message" 그룹이 수신자로 박힌 화면이 떴다).
-#   ★ 2026-09-18 개정 — **스와이프로 밀어내는 방식을 버렸다.**
-#     ① 직접공유 행의 **대상은 수시로 바뀐다**(사용자 지시) → 무엇이 올지 전제할 수 없다.
-#     ② Android 16 시트(`com.android.intentresolver`)에서는 그 스와이프가 먹지 않아
-#        `tapOn: "Teams"` 가 배지에 걸렸고, **엉뚱한 상대(Santosh)가 수신자로 박힌** 공유 화면까지
-#        갔다(2026-09-18 실측. 전송 직전에 중단했다).
-#   → **앱 목록 행의 라벨(id `text1`)만 집는다.** 직접공유 아이콘의 `text1` 은 *사람 이름*이라
-#     id+text 조합에는 걸리지 않는다. 시트 구조가 바뀌어도 이 조합은 버틴다.
-- scrollUntilVisible:
-    element:
-      id: "text1"
-      text: "Teams"
-    direction: DOWN
-    timeout: 30000
-    visibilityPercentage: 20
-- tapOn:
-    id: "text1"
-    text: "Teams"
-- waitForAnimationToEnd
-# Teams 공유 화면 = `ShareToSkypeTeamsActivity`
-#   `share_search_bar`+`editTextView`("채팅 및 채널 검색") / `people_picker_list`(최근 채팅 목록)
-#   / 우상단 `action_bar_send_share`("메시지 보내기")
-#   ⚠️ "메시지 보내기"는 **항상 보인다** — 그것만 기다리면 수신자를 안 고른 채로 눌러버린다.
-#     반드시 검색해서 수신자를 먼저 선택해야 한다.
-#
-# 🎯 **개인(basshu 본인)에게만 보낸다 — 그룹 채팅에 보내지 않는다 (2026-08-19 사용자 지시)**
-#   "basshu"로 검색하면 결과에 **개인과 그룹이 섞여 나온다**:
-#     · 개인 → id **`userName`**("Basshu(이승수)") + `people_picker_title`("나") + `user_avatar`
-#     · 그룹 → id **`team_or_channel_name`** + `chat_detail`("채팅: Santosh, Adhikari" 처럼 참가자 나열)
-#            예: "Basshu's question", "이승수(Basshu)" ← 이름만 보면 개인처럼 보이지만 **그룹이다**
-#   → **텍스트로 탭하지 말고 `userName` id로 탭한다.** 텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
-- extendedWaitUntil:
-    visible:
-      id: "editTextView"
-    timeout: 40000
-- tapOn:
-    id: "editTextView"
-- inputText: "basshu"
-# 개인 항목이 뜰 때까지 대기(검색 결과 로딩이 수 초 걸린다)
-- extendedWaitUntil:
-    visible:
-      id: "userName"
-    timeout: 30000
-- assertVisible: "Basshu\\(이승수\\)"
-- tapOn:
-    id: "userName"
-- waitForAnimationToEnd
-- tapOn:
-    id: "action_bar_send_share"
-- waitForAnimationToEnd
-# 전송 후 앱으로 복귀한다(내 QR 화면)
-- extendedWaitUntil:
-    visible:
-      id: "qrimage"
-    timeout: 40000
-- assertVisible: "${SCR_MY_QR}"
-- takeScreenshot: "[01]_QR공유_전송후_내QR복귀"
+# ⏭ [게이트] [01] 전체 — 공유 시트 → Teams → 본인 채팅 전송 → 내 QR 복귀 왕복. Teams 를 거치느라 느린 구간이다. 뒤의 [02] 도 내 QR 화면에서 시작한다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - stopApp:
+          appId: "com.microsoft.teams"
+      - tapOn:
+          id: "share"
+      # ⚠️ **`sem_resolver_recyclerview` 는 삼성 구버전 전용 id 다** — Android 16 에서는 시트가 정상적으로
+      #   뜨는데 그 id 가 없어 실패한다(2026-09-18 실측: 패키지 `com.android.intentresolver`,
+      #   행 id 는 **`sem_chooser_row_recycler_view`**). `25_01_프로필_정보수정과공유` 과 같이 **시트 제목으로 판정**한다.
+      #   ⚠️ 시스템 공유 시트는 **앱 언어를 따르지 않고 기기 언어**를 쓴다(en 실행에서도 `이미지 1개`)
+      #     → 양쪽을 함께 받는다.
+      - extendedWaitUntil:
+          visible: "이미지 [0-9]+개|[0-9]+ image[s]?|텍스트 공유|Share text"
+          timeout: 20000
+      - takeScreenshot: "[01]_QR공유_시트"
+      # ⚠️⚠️ **"Teams"라는 이름이 시트에 두 종류로 존재한다 — 잘못 누르면 그룹 채팅으로 보낸다**
+      #   ① 시트 최상단 **직접공유(바로가기) 아이콘**: 특정 채팅으로 바로 보내는 항목이고
+      #      각 아이콘에 **content-desc "Teams" 배지**가 붙어 있다(예: "In App Message",
+      #      "Basshu's question" ← **둘 다 그룹 채팅**이다).
+      #   ② 그 아래 **전체 앱 목록의 Teams 앱**(text "Teams") ← 이걸 눌러야 수신자 선택 화면이 열린다.
+      #   `scrollUntilVisible`/`tapOn`의 텍스트 매칭은 content-desc도 잡으므로, 스크롤 없이 그냥
+      #   `tapOn: "Teams"` 하면 **①의 배지에 먼저 걸려 그룹 채팅 작성 화면으로 들어간다**
+      #   (2026-08-19 실제로 "In App Message" 그룹이 수신자로 박힌 화면이 떴다).
+      #   ★ 2026-09-18 개정 — **스와이프로 밀어내는 방식을 버렸다.**
+      #     ① 직접공유 행의 **대상은 수시로 바뀐다**(사용자 지시) → 무엇이 올지 전제할 수 없다.
+      #     ② Android 16 시트(`com.android.intentresolver`)에서는 그 스와이프가 먹지 않아
+      #        `tapOn: "Teams"` 가 배지에 걸렸고, **엉뚱한 상대(Santosh)가 수신자로 박힌** 공유 화면까지
+      #        갔다(2026-09-18 실측. 전송 직전에 중단했다).
+      #   → **앱 목록 행의 라벨(id `text1`)만 집는다.** 직접공유 아이콘의 `text1` 은 *사람 이름*이라
+      #     id+text 조합에는 걸리지 않는다. 시트 구조가 바뀌어도 이 조합은 버틴다.
+      - scrollUntilVisible:
+          element:
+            id: "text1"
+            text: "Teams"
+          direction: DOWN
+          timeout: 30000
+          visibilityPercentage: 20
+      - tapOn:
+          id: "text1"
+          text: "Teams"
+      - waitForAnimationToEnd
+      # Teams 공유 화면 = `ShareToSkypeTeamsActivity`
+      #   `share_search_bar`+`editTextView`("채팅 및 채널 검색") / `people_picker_list`(최근 채팅 목록)
+      #   / 우상단 `action_bar_send_share`("메시지 보내기")
+      #   ⚠️ "메시지 보내기"는 **항상 보인다** — 그것만 기다리면 수신자를 안 고른 채로 눌러버린다.
+      #     반드시 검색해서 수신자를 먼저 선택해야 한다.
+      #
+      # 🎯 **개인(basshu 본인)에게만 보낸다 — 그룹 채팅에 보내지 않는다 (2026-08-19 사용자 지시)**
+      #   "basshu"로 검색하면 결과에 **개인과 그룹이 섞여 나온다**:
+      #     · 개인 → id **`userName`**("Basshu(이승수)") + `people_picker_title`("나") + `user_avatar`
+      #     · 그룹 → id **`team_or_channel_name`** + `chat_detail`("채팅: Santosh, Adhikari" 처럼 참가자 나열)
+      #            예: "Basshu's question", "이승수(Basshu)" ← 이름만 보면 개인처럼 보이지만 **그룹이다**
+      #   → **텍스트로 탭하지 말고 `userName` id로 탭한다.** 텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
+      - extendedWaitUntil:
+          visible:
+            id: "editTextView"
+          timeout: 40000
+      - tapOn:
+          id: "editTextView"
+      - inputText: "basshu"
+      # 개인 항목이 뜰 때까지 대기(검색 결과 로딩이 수 초 걸린다)
+      - extendedWaitUntil:
+          visible:
+            id: "userName"
+          timeout: 30000
+      - assertVisible: "Basshu\\(이승수\\)"
+      - tapOn:
+          id: "userName"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "action_bar_send_share"
+      - waitForAnimationToEnd
+      # 전송 후 앱으로 복귀한다(내 QR 화면)
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 40000
+      - assertVisible: "${SCR_MY_QR}"
+      - takeScreenshot: "[01]_QR공유_전송후_내QR복귀"
 
 # ----------------------------------------------------------------
 # [02] [Medium] Receive - 받는 계좌 변경 동작 확인 (Default: GME Wallet)
@@ -275,39 +281,45 @@ appId: ${APP_ID}
 #   (2026-08-28 실측: GME Wallet / 신한은행 / 카카오뱅크 3개) 그 탓에 [02]에서 실행이 멈췄다.
 #   `카카오뱅크`는 [05][06]의 실송금 조합이라 건드리지 않고 **`신한은행`** 을 쓴다.
 #   여기서 다시 깨지면 목록부터 덤프로 확인할 것 — 앱 버그가 아니라 계정 연동 상태 변화다.
-- assertVisible: ".*GME Wallet.*"
-- tapOn:
-    id: "accountinfo"
-- extendedWaitUntil:
-    visible:
-      id: "rvKftcList"
-    timeout: 20000
-- assertVisible: "${RECEIVING_ACCOUNT}"
-# ⚠️ **여기는 일부러 하드코딩을 유지한다.** `카카오뱅크`는 [05][06]의 실송금 조합이라
-#   동적 선택으로 집히면 그 분리가 깨진다(`14_01 [25]`와 상황이 다르다).
-#   대신 **전제를 명시적으로 단언**한다 — 이 줄이 없으면 목록이 바뀌었을 때
-#   아래 tapOn이 `Element not found`로 죽어 셀렉터 버그처럼 오진하게 된다.
-- assertVisible: "${BANK_022}"
-- tapOn: "${BANK_022}"
-- extendedWaitUntil:
-    visible:
-      id: "qrimage"
-    timeout: 20000
-- assertVisible: ".*${BANK_022}.*"
-- takeScreenshot: "[02]_받는계좌_신한은행"
-# 원복
-- tapOn:
-    id: "accountinfo"
-- extendedWaitUntil:
-    visible:
-      id: "rvKftcList"
-    timeout: 20000
-- tapOn: "GME Wallet"
-- extendedWaitUntil:
-    visible:
-      id: "qrimage"
-    timeout: 20000
-- assertVisible: ".*GME Wallet.*"
+# ⏭ [게이트] [02] 전체 — 받는 계좌를 바꿨다 **GME Wallet 으로 되돌린다**(멱등). 내 QR 화면에서 시작해 거기로 돌아온다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - assertVisible: ".*GME Wallet.*"
+      - tapOn:
+          id: "accountinfo"
+      - extendedWaitUntil:
+          visible:
+            id: "rvKftcList"
+          timeout: 20000
+      - assertVisible: "${RECEIVING_ACCOUNT}"
+      # ⚠️ **여기는 일부러 하드코딩을 유지한다.** `카카오뱅크`는 [05][06]의 실송금 조합이라
+      #   동적 선택으로 집히면 그 분리가 깨진다(`14_01 [25]`와 상황이 다르다).
+      #   대신 **전제를 명시적으로 단언**한다 — 이 줄이 없으면 목록이 바뀌었을 때
+      #   아래 tapOn이 `Element not found`로 죽어 셀렉터 버그처럼 오진하게 된다.
+      - assertVisible: "${BANK_022}"
+      - tapOn: "${BANK_022}"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+      - assertVisible: ".*${BANK_022}.*"
+      - takeScreenshot: "[02]_받는계좌_신한은행"
+      # 원복
+      - tapOn:
+          id: "accountinfo"
+      - extendedWaitUntil:
+          visible:
+            id: "rvKftcList"
+          timeout: 20000
+      - tapOn: "GME Wallet"
+      - extendedWaitUntil:
+          visible:
+            id: "qrimage"
+          timeout: 20000
+      - assertVisible: ".*GME Wallet.*"
 
 # ----------------------------------------------------------------
 # [03] [Medium] Receive - 금액 입력 동작 확인

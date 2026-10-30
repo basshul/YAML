@@ -177,13 +177,19 @@ appId: ${APP_ID}
 # CLICKUP: z8nfn6ma6g
 # ----------------------------------------------------------------
 # 계정에 등록된 휴대폰 번호가 자동으로 채워진다.
-- assertVisible:
-    id: "mobileno"
-- assertVisible:
-    id: "contact"
-- assertVisible:
-    id: "button_continue"
-- takeScreenshot: "shots_10_domestictopup_old/01_번호_자동입력"
+# ⏭ [게이트] [01] 전체 — 자동입력된 번호가 떴는지 **보기만** 한다. 화면을 옮기지도 값을 바꾸지도 않는다.
+#   `-ExtraEnv SKIP_OPTIONAL=true` 로 넘기면 건너뛴다. 미지정(기본)은 실행한다.
+- runFlow:
+    when:
+      true: ${typeof SKIP_OPTIONAL === 'undefined' || SKIP_OPTIONAL !== 'true'}
+    commands:
+      - assertVisible:
+          id: "mobileno"
+      - assertVisible:
+          id: "contact"
+      - assertVisible:
+          id: "button_continue"
+      - takeScreenshot: "shots_10_domestictopup_old/01_번호_자동입력"
 
 # ----------------------------------------------------------------
 # [02] [Medium] Phone Number - 핸드폰 번호 삭제 후 정상입력동작 확인
