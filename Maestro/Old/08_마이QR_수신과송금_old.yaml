@@ -159,36 +159,59 @@ appId: ${APP_ID}
     text: "Teams"
 - waitForAnimationToEnd
 # Teams 공유 화면 = `ShareToSkypeTeamsActivity`
-#   `share_search_bar`+`editTextView`("채팅 및 채널 검색") / `people_picker_list`(최근 채팅 목록)
+#   수신자 입력창 — ⚠️ **Teams 업데이트로 id 가 바뀐다.** 두 개를 함께 받는다(2026-11-02 실측):
+#     옛: `editTextView`  /  현: `entities_search_box`("이름, 채팅, 채널 또는 이메일 입력")
+#     전체 id 는 `com.microsoft.teams:id/entities_search_box` 다.
+#   / `people_picker_list`(최근 채팅 목록)
 #   / 우상단 `action_bar_send_share`("메시지 보내기")
 #   ⚠️ "메시지 보내기"는 **항상 보인다** — 그것만 기다리면 수신자를 안 고른 채로 눌러버린다.
 #     반드시 검색해서 수신자를 먼저 선택해야 한다.
 #
 # 🎯 **개인(basshu 본인)에게만 보낸다 — 그룹 채팅에 보내지 않는다 (2026-08-19 사용자 지시)**
 #   "basshu"로 검색하면 결과에 **개인과 그룹이 섞여 나온다**:
-#     · 개인 → id **`userName`**("Basshu(이승수)") + `people_picker_title`("나") + `user_avatar`
-#     · 그룹 → id **`team_or_channel_name`** + `chat_detail`("채팅: Santosh, Adhikari" 처럼 참가자 나열)
+#     · 개인 → id **`user_display_name`**("Basshu(이승수)") + `user_display_title`("나")
+#     · 그룹 → id **`thread_display_name`**("Basshu's question") + `thread_display_title`("마지막 메시지: …")
+#   ⚠️ **2026-11-02 Teams 업데이트로 이 id 들이 전부 바뀌었다.** 옛 이름은 트리에 **아예 없다**:
+#     userName→user_display_name · people_picker_title→user_display_title ·
+#     team_or_channel_name→thread_display_name · action_bar_send_share→trailingButton
+#     기기마다 Teams 버전이 다를 수 있어 **옛/현 둘 다** 받는다.
+#     ⚠️ `trailingButton` 은 범용 id 다 — 이 화면엔 하나뿐이고 우상단 전송(→)이다(실측 [936,110]).
+#       Teams 가 또 바뀌어 여러 개가 되면 **엉뚱한 버튼을 누른다** → 그때는 bounds 로 좁힐 것.
 #            예: "Basshu's question", "이승수(Basshu)" ← 이름만 보면 개인처럼 보이지만 **그룹이다**
 #   → **텍스트로 탭하지 말고 `userName` id로 탭한다.** 텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
 - extendedWaitUntil:
     visible:
-      id: "editTextView"
+      id: "editTextView|entities_search_box"
     timeout: 40000
 - tapOn:
-    id: "editTextView"
+    id: "editTextView|entities_search_box"
 - inputText: "basshu"
 # 개인 항목이 뜰 때까지 대기(검색 결과 로딩이 수 초 걸린다)
 - extendedWaitUntil:
     visible:
-      id: "userName"
+      id: "userName|user_display_name"
     timeout: 30000
 - assertVisible: "Basshu\\(이승수\\)"
 - tapOn:
-    id: "userName"
+    id: "userName|user_display_name"
 - waitForAnimationToEnd
 - tapOn:
-    id: "action_bar_send_share"
+    id: "action_bar_send_share|trailingButton"
 - waitForAnimationToEnd
+# ⚠️ **2026-11-02 Teams 업데이트로 공유가 2단계가 됐다.**
+#   1단계(수신자 선택)의 `→` 는 전송이 아니라 **작성 화면으로 넘어간다**:
+#     `share_title`="Teams에 공유" / `recipient_chip` / `message_input`(문구 자동 입력) /
+#     `selected_content_count`="선택한 미디어 (1)"(QR 이미지) / `trailingButton`=**실제 전송**
+#   옛 버전은 1단계에서 바로 전송됐다 → `message_input` 이 있을 때만 한 번 더 누른다.
+#   ⛔ 여기서 실제로 **본인 채팅에 전송된다.** 수신자는 1단계에서 id 로 고른 개인이다.
+- runFlow:
+    when:
+      visible:
+        id: "message_input"
+    commands:
+      - tapOn:
+          id: "trailingButton"
+      - waitForAnimationToEnd
 # 전송 후 앱으로 복귀한다(내 QR 화면)
 - extendedWaitUntil:
     visible:
