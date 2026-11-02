@@ -1,0 +1,102 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 공통 진입 — 앱 실행 → 서버 → 재로그인 → PIN → 팝업 → 홈 (2026-11-02 추출)
+# ================================================================
+# 호출:
+#   - runFlow: "_common_entry_old.yaml"
+#
+# 왜 생겼나:
+#   이 72줄이 **8개 파일에 바이트 단위로 똑같이** 복붙돼 있었다(2026-11-02 측정).
+#   그래서 진입부에 처리를 하나 더하려면 8곳을 고쳐야 했고, 실제로 어긋나 있었다:
+#     · `_relogin_if_autologout_old` 호출 — 49개 중 34개만
+#     · Server Override — 46개가 **인라인 복붙**, 헬퍼 호출은 12개
+#     · 지문 인증 처리 — 1개뿐(2026-10-30 `21_카드` 가 이것 때문에 2스텝에서 두 번 죽었다)
+#   → 한 곳에 모아 두면 다음 처리는 **이 파일만** 고치면 된다.
+#
+# ⚠️ **모든 파일이 이걸 쓸 수 있는 건 아니다.** 2026-11-02 기준 진입부 변종이 **23가지**다
+#   (40개 파일). 로그인 전 화면(`05`), 로그인 자체(`01_01`), 계정 전환이 끼는 것(`14_02`),
+#   언어 루프(`04_05`) 등은 모양이 다르다. **진입부가 이 72줄과 같은 파일에만** 쓸 것.
+#   같은지 확인: `scratchpad/entry2.py` 류로 지문을 떠서 대조한다.
+#
+# 필요한 env: SERVER_PICK · PIN_ENTER_4DIGIT · PIN_NORMAL ·
+#             REG_VOICE_PHISHING · ASK_ME_LATER_TEXT
+#   (`run_test.ps1` 이 runFlow 를 **재귀로** 훑어 모으므로 호출하는 쪽에서 따로 할 일은 없다)
+#
+# ⛔ 이 파일을 고치면 **부르는 파일 전부**가 바뀐다. 한 파일만 다르게 해야 하면
+#   여기 분기를 넣지 말고 그 파일에서 이 헬퍼를 부르지 않는 쪽을 택할 것
+#   (분기가 쌓이면 복붙보다 읽기 어려워진다).
+# ================================================================
+
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
+      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible:
+            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+          timeout: 60000
+# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
+- runFlow: "_relogin_if_autologout_old.yaml"
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+- runFlow:
+    when:
+      visible: "${REG_VOICE_PHISHING}"
+    commands:
+      - tapOn:
+          id: "check_customer"
+      - waitForAnimationToEnd
+      - tapOn: "확인|OK"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${ASK_ME_LATER_TEXT}"
+    commands:
+      - tapOn: "${ASK_ME_LATER_TEXT}"
+      - waitForAnimationToEnd
+# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+- runFlow:
+    when:
+      visible:
+        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
+        id: "btnTwo|btnClose"
+    commands:
+      - tapOn:
+          id: "btnTwo|btnClose"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
