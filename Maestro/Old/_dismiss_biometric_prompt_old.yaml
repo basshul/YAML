@@ -26,14 +26,20 @@ appId: ${APP_ID}
 # ================================================================
 
 # ① 다이얼로그가 뜰 틈을 준다 — 잠금화면보다 **늦게** 덮을 수 있다.
-#   PIN 키패드가 먼저 잡히면 그걸로 끝내고, 아무것도 안 잡혀도 optional 이라 죽지 않는다.
+#   ⚠️ 앵커에 **알려진 진입 화면을 전부** 넣는다. `button_negative|input_dot_1` 만 두면
+#     앱이 이미 홈에 풀려 있을 때 둘 다 안 나타나 **15초를 그냥 버린다.**
+#     공통 진입부에서 부르면 그 비용이 모든 파일에 붙는다(2026-11-02).
+#   아무것도 안 잡혀도 optional 이라 죽지 않는다.
 - extendedWaitUntil:
     visible:
-      id: "button_negative|input_dot_1"
+      id: "button_negative|input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
     timeout: 15000
     optional: true
 
-# ② 떠 있으면 취소한다. 안 떠 있으면 통째로 SKIP 된다.
+# ② 떠 있으면 취소한다. 안 떠 있으면 통째로 SKIP 된다(대기 없음 — 비용 0).
+#   ⚠️ 한계: 다이얼로그가 **잠금화면보다 늦게** 덮으면 여기서 못 잡는다.
+#     2026-10-30 실측에서는 잠금화면과 **함께** 떴다(덤프에 잠금화면이 아예 없었다).
+#     늦게 뜨는 사례가 나오면 PIN 입력 **직전**에도 한 번 더 부를 것.
 - runFlow:
     when:
       visible:
