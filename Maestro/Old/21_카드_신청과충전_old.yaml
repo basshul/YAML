@@ -19,30 +19,14 @@ appId: ${APP_ID}
 # ================================================================
 
 # 앱 실행 및 홈 진입
-# ⚠️ `notVisible: "Home"` 가드는 launchApp 직후 잠깐 보이는 **캐시된 홈**에 매칭돼 PIN 입력을
-#   건너뛰고 잠금화면에 갇힌다 → 잠금화면을 명시적으로 대기한 뒤 PIN을 넣는다.
-- launchApp
-# ⚠️ Server Override 는 **헬퍼로 처리한다** — 빼면 stag 빌드에서 조용히 gmeuat 로 돈다.
-#   (헬퍼는 스플래시가 없으면 통째로 SKIP되므로 운영/livetest 빌드에서도 안전하다.
-#    상세: docs/ENVIRONMENT.md §7.3)
-- runFlow: "_server_override_old.yaml"
-# ⛔ 지문 로그인이 켜져 있으면 **잠금화면 위에 OS 다이얼로그가 덮여** 아래 대기가 그냥 죽는다
-#   (2026-10-30 실측: 이 자리에서 2스텝 실패 ×2 — 화면은 FLAG_SECURE 라 스크린샷이 새까맣게 나온다).
-- runFlow: "_dismiss_biometric_prompt_old.yaml"
-- extendedWaitUntil:
-    visible:
-      text: "${PIN_ENTER_4DIGIT}"
-    timeout: 30000
-# 키패드 재배치 대응: 탭 사이 정착 대기 (파일 상단 주석 참고)
-- runFlow:
-    file: _enter_pin_old.yaml
-    env:
-      PIN: ${PIN_NORMAL}
-# 로그인 세션 만료 다이얼로그(토큰 만료 시) 또는 홈 대기
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 20000
+# ---------------- 공통 진입 ----------------
+# 2026-11-02: 이 파일만 쓰던 진입부를 공통 헬퍼로 바꿨다. 그러면서 늘어난 것 —
+#   · 자동 로그아웃 재인증(`_relogin_if_autologout_old`) — 종전에 **없었다**
+#   · 보이스피싱 안내 · "나중에 하기" · 인앱 배너 닫기 — 종전에 **없었다**
+#   · PIN 대기가 하드 → 조건부. 앞에 잠금/홈/재인증을 **먼저 기다리는 단계**가 있어
+#     "캐시된 홈에 걸려 PIN 을 건너뛴다" 던 종전 문제는 생기지 않는다.
+#   ⚠️ **세션 만료 다이얼로그는 헬퍼가 다루지 않는다.** 바로 아래 fail-fast 가 정본이다.
+- runFlow: "_common_entry_old.yaml"
 # 세션 만료 판정 — 실제 문구는 개행이 섞인 두 문장이라 `"로그인 세션이 만료"` **전체매칭으로는
 #   한 번도 잡히지 않았다**(2026-08-28 확인) → `[\s\S]*` 필요.
 #   구 UI에서 세션이 만료되면 **PIN으로 복구되지 않으므로**(ID/비밀번호 재로그인 필요)

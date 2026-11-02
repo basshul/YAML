@@ -101,6 +101,13 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnTwo|btnClose"
       - waitForAnimationToEnd
+# ⛔ 세션 만료는 **여기서 빨리 죽인다.** 뒤의 홈 대기에 맡기면 30초를 채우고
+#   "bottom_item_home 안 보임" 이라는 엉뚱한 메시지로 죽어 진단이 어려워진다
+#   (2026-09-18 실제로 빌드 문제로 오진할 뻔했고, 2026-10-30 `21_카드` 도 같은 모양이었다).
+#   ⛔ 이 팝업을 닫고 진행하지 말 것 — 구 UI 는 PIN 으로 복구되지 않는다.
+#      복구는 `01_01_로그인_정상_old.yaml`(clearState) 재로그인뿐이다.
+#   (10_국내충전·13_03·16_ATM 에 있던 가드를 헬퍼로 올렸다 — 2026-11-02)
+- assertNotVisible: "${SESSION_EXPIRED}"
 # ⛔ 진입 가드는 `btnTransfer` 가 아니라 `bottom_item_home` 이다 (2026-10-27 수정) —
 #   구 UI 홈은 스크롤 위치를 유지해 상단 `btnTransfer` 가 화면 밖일 수 있다.
 #   여기서 죽으면 그 파일은 케이스를 하나도 못 돌고 끝난다.
