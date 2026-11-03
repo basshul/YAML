@@ -34,8 +34,12 @@ appId: ${APP_ID}
 #
 # ✅ **[05]는 송금 완주까지 커버한다** (`btn_ok2` 이후: 수취인 세부 정보 확인 → 간편비밀번호
 #   → 성공 시트 → 영수증 SUCCESS).
-#   🚫 `btn_ok2` 에서 **"실패 - (…) / Failed"** 만 뜨면 **livetest 환경의 KFTC 서버 연결 불가**를
-#      먼저 의심할 것(환경 이슈 / 앱 결함 아님). 금액·은행을 바꿔도 동일하면 조합 문제가 아니다.
+#   🚫 **"실패 - (계좌번호)" 다이얼로그는 원인이 둘이다 — 뜨는 화면으로 가른다.**
+#     · **QR 스캔 화면**에서 + 부제 "Failed to Read QR Code"
+#         → 고른 이미지가 이 계정의 QR 이 아니다. 십중팔구 **QR 저장이 실패**해서 갤러리
+#           index 0 이 픽스처였던 것이다([04] 주석의 gmeqr 32개 한도 참고. 2026-11-03 실측).
+#     · **`btn_ok2` 직후**(송금 확정 단계) → KFTC 서버 연결 불가를 의심한다.
+#       2026-08-19 에 livetest 에서 그랬다. 2026-11-03 live(mobileapi) 실행은 완주했다.
 #   💰 금액은 **1원으로 유지**한다(사용자 지시). GME Wallet → 카카오뱅크로 실제 1원이 나가지만
 #      **본인 계좌 간 이동이라 손실이 아니다.**
 #   ※ QR 공유(Teams 전송)도 수신자가 본인이라 안전하다([01] 주석 참고).
@@ -51,7 +55,12 @@ appId: ${APP_ID}
 #        (계좌만 세팅한 QR → 스캔 → 금액은 비어 있음 → 직접 입력 → 확인 → PIN → 성공 → 영수증)
 #
 # 실행:
-#   .\run_test.ps1 -lang ko -flow "Old\08_마이QR_수신과송금_old.yaml"
+#   .\run_suite.ps1 -Names 08_마이QR_수신과송금 -User Basshu -Build live -Server live -lang ko
+#   ⚠️ **`-User` 를 빼면 안 된다.** P0 전제검사는 그냥 통과하고, 갤러리 픽스처 push 까지 끝낸 뒤
+#     자식 run_test.ps1 의 Write-Error 로 **스위트가 통째로 죽는다**(SUMMARY 도 안 남는다).
+#     이 플로우의 계정 seungsoo818 은 `env/user.Basshu.env` 다. 2026-11-03 실측.
+#   ⚠️ 단독 실행(run_test.ps1)이면 **`push_test_images.ps1` 을 먼저 돌린다** — [05][06] 의
+#     갤러리 선택과 gmeqr 정리가 거기 들어 있다(run_suite 는 push=true 라 자동으로 돈다).
 # ================================================================
 
 # ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 ----------------
@@ -178,7 +187,8 @@ appId: ${APP_ID}
 #     ⚠️ `trailingButton` 은 범용 id 다 — 이 화면엔 하나뿐이고 우상단 전송(→)이다(실측 [936,110]).
 #       Teams 가 또 바뀌어 여러 개가 되면 **엉뚱한 버튼을 누른다** → 그때는 bounds 로 좁힐 것.
 #            예: "Basshu's question", "이승수(Basshu)" ← 이름만 보면 개인처럼 보이지만 **그룹이다**
-#   → **텍스트로 탭하지 말고 `userName` id로 탭한다.** 텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
+#   → **텍스트로 탭하지 말고 id로 탭한다**(`userName|user_display_name`).
+#     텍스트 매칭은 그룹 이름과 헷갈릴 수 있다.
 - extendedWaitUntil:
     visible:
       id: "editTextView|entities_search_box"
@@ -311,6 +321,17 @@ appId: ${APP_ID}
 # ----------------------------------------------------------------
 # 저장 후 갤러리가 열리는 기기도 있고 토스트만 뜨는 기기도 있어 복귀를 조건부로 처리한다
 # (Note 9는 토스트만 뜬다 — 무조건 back×2를 하면 홈까지 나가버린다).
+#
+# ⛔ **저장 실패는 조용하다 — `download` 탭은 실패해도 COMPLETED 로 찍힌다.**
+#   앱이 `Pictures/gmeqr.jpg` 를 넣으면 MediaStore 가 `gmeqr (1)` … 로 번호를 붙이는데,
+#   AOSP `FileUtils.buildUniqueFile` 은 **원본 + (1)~(31) = 32개까지만** 시도하고 포기한다.
+#   32개가 차면 그 뒤로는 **항상** 실패하고 앱은 "Failed to save image" 토스트만 띄운다
+#   (2026-11-03 실측: `IllegalStateException: Failed to build unique file`).
+#   → 그 실패는 여기가 아니라 **[05] 스캔에서 "Failed to Read QR Code"** 로 드러난다.
+#     저장이 안 됐으니 갤러리 index 0 이 QR 이 아닌 픽스처였던 것이다.
+#   → `push_test_images.ps1` 이 실행 전에 `gmeqr*.jpg` 와 MediaStore 행을 비운다(2026-11-03 추가).
+#     수동 확인: `adb shell 'ls /sdcard/Pictures' | grep -c '^gmeqr'` — 32면 그게 원인이다.
+#   ※ 저장 성공 여부는 logcat 토스트로 가른다: `Image saved` vs `Failed to save image`.
 - tapOn:
     id: "download"
 - waitForAnimationToEnd
@@ -415,9 +436,14 @@ appId: ${APP_ID}
     timeout: 20000
 
 # 스캔 → 갤러리에서 방금 저장한 QR 선택
-# ※ 피커(`com.android.documentsui`)는 최근순 정렬이고 파일명이 `gmeqr*.jpg`다.
-#   run_test.ps1이 push하는 test_*.jpg가 더 최신이라 앞에 오지만,
-#   **`gmeqr` 패턴 중 첫 번째가 방금 저장한 QR**이다(실행마다 (1)(2)(3)… 늘어난다).
+# ※ 피커는 **최근순 정렬**이고, 직전에 저장한 QR 이 가장 최신이므로 **index 0 이 그 QR**이다.
+#   픽스처(`push_test_images.ps1` 이 넣는 `Global QR.jpg` 등 4장)는 플로우 시작 전에 들어가므로
+#   실행 중에 저장한 QR 보다 **오래됐다** → 앞자리를 뺏지 않는다.
+#   ⚠️ 2026-11-03까지 여기에 "run_test.ps1이 push하는 test_*.jpg" 라고 적혀 있었다 — 둘 다 틀렸다.
+#     push 하는 건 `push_test_images.ps1`(run_suite 가 호출)이고 파일명도 `test_*.jpg` 가 아니다.
+#   ⚠️ 파일명으로 찾는 분기(`gmeqr.*`)는 **기기에 따라 아예 안 걸린다** — Android 16 시스템 피커는
+#     Compose 라 파일명이 접근성 트리에 없다(2026-11-03 실측: 두 실행 모두 SKIP 되고 좌표로 갔다).
+#     그래서 **좌표 분기가 사실상 본류**다. 아래 좌표 주석을 먼저 읽을 것.
 - tapOn:
     id: "scanqr"
 - extendedWaitUntil:
@@ -509,6 +535,7 @@ appId: ${APP_ID}
 # 2026-08-19에는 `btn_ok2`를 누르면 "실패 - (06640154622502) / Failed"만 떴다
 # (livetest KFTC 서버 연결 불가 — 환경 이슈였고 앱 결함이 아니었다).
 # 복구 후 실측하니 **정상 송금된다** → 완주 구간을 붙였다.
+# 2026-11-03 live(mobileapi) 재확인: [05][06] 둘 다 영수증 SUCCESS, 각 1 KRW / 수수료 0 KRW.
 #
 # 💰 실제로 1원이 GME Wallet → 카카오뱅크로 나간다. **본인 계좌 간 이동이라 손실이 아니다**
 #   (사용자 승인: "1원 송금도 내 계좌안에서 이동을 하는거라 실제로 송금이 되도 상관없어").
