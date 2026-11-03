@@ -98,8 +98,21 @@ if (-not $device) {
 #   로그인 화면부터 시작하므로 이 화면과 무관하다 → 막으면 **복구 수단 자체가 막힌다.**
 $isClearState = (Test-Path $flow) -and
                 (Select-String -LiteralPath $flow -Pattern 'clearState:\s*true' -Quiet)
-$fg = (adb -s $device shell dumpsys activity activities 2>$null |
-       Select-String 'topResumedActivity' | Select-Object -First 1).ToString()
+# ⚠️ **null 안전하게 읽는다.** `adb dumpsys` 는 기기가 잠깐 바쁘면 빈 출력을 준다.
+#   종전엔 곧바로 `.ToString()` 을 불러 "null 값 식에서 메서드를 호출할 수 없습니다"로 터졌고,
+#   그 오류가 부모로 전파돼 **run_suite 가 첫 항목에서 통째로 죽었다**(2026-11-03 실측).
+#   읽기 실패는 이 가드를 못 쓰는 것일 뿐, 실행을 중단할 이유가 아니다 → 재시도 후 경고만 남긴다.
+#   (자동 로그아웃이 실제로 걸렸다면 플로우의 `_relogin_if_autologout_old` 가 한 번 더 받아낸다)
+$fg = ""
+foreach ($try in 1..3) {
+    $m = adb -s $device shell dumpsys activity activities 2>$null |
+         Select-String 'topResumedActivity' | Select-Object -First 1
+    if ($m) { $fg = $m.ToString(); break }
+    Start-Sleep -Milliseconds 400
+}
+if (-not $fg) {
+    Write-Host "  ⚠️ 포그라운드 액티비티를 못 읽었습니다 — 자동 로그아웃 가드를 건너뜁니다." -ForegroundColor Yellow
+}
 if ((-not $isClearState) -and $fg -match 'autologout') {
     Write-Host ""
     Write-Host "  ⛔ 앱이 자동 로그아웃 잠금 화면(AutoLogoutActivity)에 있습니다." -ForegroundColor Red
