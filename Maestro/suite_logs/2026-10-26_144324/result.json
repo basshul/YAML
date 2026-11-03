@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-26_144324",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:11:52",
+  "estMin": 42.0,
+  "aborted": true,
+  "counts": {
+    "total": 2,
+    "pass": 0,
+    "fail": 2,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 8,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "25_Profile",
+      "status": "FAIL",
+      "steps": 12,
+      "elapsed": "01:48",
+      "reason": "Assertion is false: id: btnTransfer is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_144324\\25_Profile.log"
+    },
+    {
+      "group": "G2",
+      "name": "21_Card",
+      "status": "FAIL",
+      "steps": 11,
+      "elapsed": "01:44",
+      "reason": "Assertion is false: \"4자리 숫자를 입력하세요|Enter the 4-digit number\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_144324\\21_Card.log"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-03_165710",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:06:22",
+  "estMin": 7.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "07_오늘의환율_환율계산",
+      "status": "PASS",
+      "steps": 83,
+      "elapsed": "03:13",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-03_165710\\07_오늘의환율_환율계산.log"
+    },
+    {
+      "group": "G2",
+      "name": "17_월렛거래내역_조회필터",
+      "status": "PASS",
+      "steps": 74,
+      "elapsed": "03:06",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-03_165710\\17_월렛거래내역_조회필터.log"
+    }
+  ]
+}

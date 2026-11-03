@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-27_142629",
+  "reconstructed": "2026-10-27 로그에서 복원 — run_suite 가 중단돼 SUMMARY 를 못 남겼다",
+  "lang": "ko",
+  "groups": [
+    "(-Names 지정 순서)"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "server": "live",
+  "device": "R3CW90MTK9H",
+  "resolution": "",
+  "elapsed": "00:05:13",
+  "estMin": 123,
+  "aborted": true,
+  "counts": {
+    "total": 2,
+    "pass": 0,
+    "fail": 1,
+    "skip": 1,
+    "blocked": 0,
+    "na": 0,
+    "planned": 13
+  },
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "08_마이QR_수신과송금",
+      "status": "FAIL",
+      "steps": "20",
+      "elapsed": "02:06",
+      "reason": "Assertion is false: id: qrimage is visible"
+    },
+    {
+      "group": "G2",
+      "name": "10_국내충전_번호입력",
+      "status": "SKIP",
+      "steps": "",
+      "elapsed": "",
+      "reason": "⛔ 중단 시점에 실행 중이었다 — 결과 없음"
+    }
+  ]
+}

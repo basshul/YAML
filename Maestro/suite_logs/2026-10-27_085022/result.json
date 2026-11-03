@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-27_085022",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:01:57",
+  "estMin": 1.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 7
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 60,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "18_통신서비스_외부웹이동",
+      "status": "PASS",
+      "steps": 24,
+      "elapsed": "01:55",
+      "reason": "",
+      "blocked": [],
+      "na": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_085022\\18_통신서비스_외부웹이동.log"
+    }
+  ]
+}

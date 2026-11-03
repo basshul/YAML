@@ -1,0 +1,138 @@
+{
+ "schema": 1,
+ "_재구성": "run_suite.ps1 이 복구 호출에서 죽어 result.json 을 못 썼다 → 2026-10-27 로그 9개에서 되살렸다. `elapsed` 는 로그 수정시각 기준 **추정**이고, `hosts`(접속 호스트 집계)는 로그에 없어 담지 않았다. `steps` 는 로그의 최상위 스텝을 **다시 센 값**이라 run_suite 가 적던 수와 조금 다를 수 있다(04_02: 354 vs 콘솔 기록 377).",
+ "stamp": "2026-10-27_130716",
+ "lang": "ko",
+ "groups": [
+  "G2"
+ ],
+ "build": "com.gmeremit.online.gmeremittance_native",
+ "live": true,
+ "device": "R3CW90MTK9H",
+ "resolution": "",
+ "elapsed": "00:51:06",
+ "estMin": 61,
+ "aborted": true,
+ "counts": {
+  "total": 9,
+  "pass": 8,
+  "fail": 1,
+  "skip": 0,
+  "blocked": 0,
+  "na": 0
+ },
+ "server": "live",
+ "items": [
+  {
+   "group": "G2",
+   "name": "09_홈화면_요소와진입경로",
+   "status": "PASS",
+   "steps": 318,
+   "elapsed": "",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\09_홈화면_요소와진입경로.log"
+  },
+  {
+   "group": "G2",
+   "name": "04_01_메뉴_드로어와설정",
+   "status": "PASS",
+   "steps": 183,
+   "elapsed": "07:50",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\04_01_메뉴_드로어와설정.log"
+  },
+  {
+   "group": "G2",
+   "name": "17_월렛거래내역_조회필터",
+   "status": "PASS",
+   "steps": 63,
+   "elapsed": "02:44",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\17_월렛거래내역_조회필터.log"
+  },
+  {
+   "group": "G2",
+   "name": "13_01_해외송금받기_환율과인니등록",
+   "status": "PASS",
+   "steps": 113,
+   "elapsed": "06:42",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\13_01_해외송금받기_환율과인니등록.log"
+  },
+  {
+   "group": "G2",
+   "name": "13_02_해외송금받기_몽골송금인",
+   "status": "PASS",
+   "steps": 84,
+   "elapsed": "05:22",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\13_02_해외송금받기_몽골송금인.log"
+  },
+  {
+   "group": "G2",
+   "name": "13_03_해외송금받기_베트남송금인",
+   "status": "PASS",
+   "steps": 57,
+   "elapsed": "04:39",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\13_03_해외송금받기_베트남송금인.log"
+  },
+  {
+   "group": "G2",
+   "name": "13_04_해외송금받기_송금요청등록",
+   "status": "PASS",
+   "steps": 119,
+   "elapsed": "06:33",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\13_04_해외송금받기_송금요청등록.log"
+  },
+  {
+   "group": "G2",
+   "name": "13_07_해외송금받기_요청상태조회",
+   "status": "PASS",
+   "steps": 48,
+   "elapsed": "04:00",
+   "reason": "",
+   "blocked": [],
+   "na": [],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\13_07_해외송금받기_요청상태조회.log"
+  },
+  {
+   "group": "G2",
+   "name": "04_02_메뉴_거래내역",
+   "status": "FAIL",
+   "steps": 354,
+   "elapsed": "13:14",
+   "reason": "Tap on id: iv_back",
+   "blocked": [
+    "115",
+    "117",
+    "122",
+    "127",
+    "131",
+    "135",
+    "138"
+   ],
+   "na": [
+    "149",
+    "150",
+    "151"
+   ],
+   "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_130716\\04_02_메뉴_거래내역.log"
+  }
+ ]
+}

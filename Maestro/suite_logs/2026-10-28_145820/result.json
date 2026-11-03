@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-28_145820",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:11:06",
+  "estMin": 18.0,
+  "aborted": false,
+  "counts": {
+    "total": 3,
+    "pass": 3,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "09_홈화면_요소와진입경로",
+      "status": "PASS",
+      "steps": 79,
+      "elapsed": "02:05",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_145820\\09_홈화면_요소와진입경로.log"
+    },
+    {
+      "group": "G2",
+      "name": "25_01_프로필_정보수정과공유",
+      "status": "PASS",
+      "steps": 108,
+      "elapsed": "03:22",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_145820\\25_01_프로필_정보수정과공유.log"
+    },
+    {
+      "group": "G2",
+      "name": "14_01_입금_한국인계좌연결",
+      "status": "PASS",
+      "steps": 123,
+      "elapsed": "05:18",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_145820\\14_01_입금_한국인계좌연결.log"
+    }
+  ]
+}

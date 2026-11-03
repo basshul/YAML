@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-02_155241",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:05:21",
+  "estMin": 10.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 0,
+    "fail": 1,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "08_마이QR_수신과송금",
+      "status": "FAIL",
+      "steps": 16,
+      "elapsed": "01:52",
+      "reason": "Assertion is false: id: bottom_item_home is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-02_155241\\08_마이QR_수신과송금.log"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-03_154755",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:13:15",
+  "estMin": 14.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "04_01_메뉴_드로어와설정",
+      "status": "PASS",
+      "steps": 81,
+      "elapsed": "03:50",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-03_154755\\04_01_메뉴_드로어와설정.log"
+    },
+    {
+      "group": "G2",
+      "name": "02_01_해외송금_수취인관리",
+      "status": "PASS",
+      "steps": 236,
+      "elapsed": "09:22",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-03_154755\\02_01_해외송금_수취인관리.log"
+    }
+  ]
+}

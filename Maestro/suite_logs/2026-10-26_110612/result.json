@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-26_110612",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:11:26",
+  "estMin": 148.0,
+  "aborted": true,
+  "counts": {
+    "total": 2,
+    "pass": 0,
+    "fail": 2,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 10,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "09_Home",
+      "status": "FAIL",
+      "steps": 22,
+      "elapsed": "02:41",
+      "reason": "Assertion is false: id: bottom_item_home is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_110612\\09_Home.log"
+    },
+    {
+      "group": "G2",
+      "name": "13_02_Sender_Mongolia",
+      "status": "FAIL",
+      "steps": 23,
+      "elapsed": "02:06",
+      "reason": "Assertion is false: id: btnTransfer is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_110612\\13_02_Sender_Mongolia.log"
+    }
+  ]
+}

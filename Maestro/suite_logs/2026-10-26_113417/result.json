@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-26_113417",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "02:15:28",
+  "estMin": 148.0,
+  "aborted": false,
+  "counts": {
+    "total": 14,
+    "pass": 7,
+    "fail": 7,
+    "skip": 0,
+    "blocked": 7,
+    "na": 10
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 100,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "09_Home",
+      "status": "FAIL",
+      "steps": 336,
+      "elapsed": "09:19",
+      "reason": "Assertion is false: false is true",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\09_Home.log"
+    },
+    {
+      "group": "G2",
+      "name": "13_02_Sender_Mongolia",
+      "status": "PASS",
+      "steps": 140,
+      "elapsed": "05:11",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\13_02_Sender_Mongolia.log"
+    },
+    {
+      "group": "G2",
+      "name": "13_03_Sender_Vietnam",
+      "status": "PASS",
+      "steps": 110,
+      "elapsed": "04:36",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\13_03_Sender_Vietnam.log"
+    },
+    {
+      "group": "G2",
+      "name": "04_Menu_History",
+      "status": "FAIL",
+      "steps": 390,
+      "elapsed": "13:07",
+      "reason": "Element not found: Id matching regex: iv_back",
+      "blocked": [
+        "115",
+        "117",
+        "122",
+        "127",
+        "131",
+        "135",
+        "138"
+      ],
+      "na": [
+        "149",
+        "150",
+        "151"
+      ],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\04_Menu_History.log"
+    },
+    {
+      "group": "G2",
+      "name": "18_Telecom",
+      "status": "FAIL",
+      "steps": 32,
+      "elapsed": "02:23",
+      "reason": "Assertion is false: id: btnTransfer is visible",
+      "blocked": [],
+      "na": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\18_Telecom.log"
+    },
+    {
+      "group": "G2",
+      "name": "25_Profile",
+      "status": "FAIL",
+      "steps": 114,
+      "elapsed": "03:34",
+      "reason": "Assertion is false: \".*Yangpyeong dong sam ga Yeongdeungpo District.*\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\25_Profile.log"
+    },
+    {
+      "group": "G2",
+      "name": "14_01_Deposit",
+      "status": "PASS",
+      "steps": 167,
+      "elapsed": "07:05",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\14_01_Deposit.log"
+    },
+    {
+      "group": "G2",
+      "name": "10_DomesticTopup",
+      "status": "PASS",
+      "steps": 95,
+      "elapsed": "05:39",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\10_DomesticTopup.log"
+    },
+    {
+      "group": "G2",
+      "name": "03_Domestic",
+      "status": "FAIL",
+      "steps": 185,
+      "elapsed": "07:00",
+      "reason": "Element not found: Text matching regex: 확인",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\03_Domestic.log"
+    },
+    {
+      "group": "G2",
+      "name": "21_Card",
+      "status": "FAIL",
+      "steps": 508,
+      "elapsed": "15:49",
+      "reason": "Assertion is false: \".*CU 3,000 원.*\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\21_Card.log"
+    },
+    {
+      "group": "G2",
+      "name": "11_IntlTopup",
+      "status": "PASS",
+      "steps": 96,
+      "elapsed": "03:49",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\11_IntlTopup.log"
+    },
+    {
+      "group": "G2",
+      "name": "12_BillPayment",
+      "status": "FAIL",
+      "steps": 47,
+      "elapsed": "02:34",
+      "reason": "Assertion is false: \"휴대폰 번호\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\12_BillPayment.log"
+    },
+    {
+      "group": "G4",
+      "name": "04_06_Change_Languages",
+      "status": "PASS",
+      "steps": 817,
+      "elapsed": "34:04",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\04_06_Change_Languages.log"
+    },
+    {
+      "group": "G4",
+      "name": "04_01_Change_SimplePassword",
+      "status": "PASS",
+      "steps": 226,
+      "elapsed": "09:03",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_113417\\04_01_Change_SimplePassword.log"
+    }
+  ]
+}

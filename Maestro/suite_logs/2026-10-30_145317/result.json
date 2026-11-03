@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-30_145317",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:06:14",
+  "estMin": 13.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 0,
+    "fail": 1,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "21_카드_신청과충전",
+      "status": "FAIL",
+      "steps": 14,
+      "elapsed": "01:44",
+      "reason": "Assertion is false: id: bottom_item_home is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-30_145317\\21_카드_신청과충전.log"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-26_152155",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:24:49",
+  "estMin": 42.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 0,
+    "fail": 2,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 32,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "25_Profile",
+      "status": "FAIL",
+      "steps": 114,
+      "elapsed": "03:48",
+      "reason": "Assertion is false: \".*Yangpyeong dong sam ga Yeongdeungpo District.*\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_152155\\25_Profile.log"
+    },
+    {
+      "group": "G2",
+      "name": "21_Card",
+      "status": "FAIL",
+      "steps": 508,
+      "elapsed": "16:28",
+      "reason": "Assertion is false: \".*CU 3,000 원.*\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-26_152155\\21_Card.log"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-28_101333",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native.livetest",
+  "live": false,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:04:51",
+  "estMin": 5.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 0,
+    "fail": 1,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "livetest",
+  "hosts": {
+    "livetest": 24,
+    "stag": 0,
+    "live": 0,
+    "expected": "livetest"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "25_01_프로필_정보수정과공유",
+      "status": "FAIL",
+      "steps": 12,
+      "elapsed": "01:29",
+      "reason": "Assertion is false: id: bottom_item_home is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_101333\\25_01_프로필_정보수정과공유.log"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-27_150749",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:44:36",
+  "estMin": 75.0,
+  "aborted": false,
+  "counts": {
+    "total": 6,
+    "pass": 4,
+    "fail": 2,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "25_01_프로필_정보수정과공유",
+      "status": "FAIL",
+      "steps": 3,
+      "elapsed": "01:19",
+      "reason": "Assertion is false: id: bottom_item_home is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\25_01_프로필_정보수정과공유.log"
+    },
+    {
+      "group": "G2",
+      "name": "14_01_입금_한국인계좌연결",
+      "status": "FAIL",
+      "steps": 1,
+      "elapsed": "01:46",
+      "reason": "Assertion is false: id: input_dot_1|bottom_item_home|button1|securityKeyboardEditText is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\14_01_입금_한국인계좌연결.log"
+    },
+    {
+      "group": "G2",
+      "name": "16_ATM출금_신청",
+      "status": "PASS",
+      "steps": 96,
+      "elapsed": "03:28",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\16_ATM출금_신청.log"
+    },
+    {
+      "group": "G2",
+      "name": "20_예약_기차표결제와이력",
+      "status": "PASS",
+      "steps": 129,
+      "elapsed": "05:41",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\20_예약_기차표결제와이력.log"
+    },
+    {
+      "group": "G2",
+      "name": "21_카드_신청과충전",
+      "status": "PASS",
+      "steps": 530,
+      "elapsed": "16:03",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\21_카드_신청과충전.log"
+    },
+    {
+      "group": "G3",
+      "name": "14_02_입금_외국인계좌미연결",
+      "status": "PASS",
+      "steps": 342,
+      "elapsed": "11:29",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-27_150749\\14_02_입금_외국인계좌미연결.log"
+    }
+  ]
+}

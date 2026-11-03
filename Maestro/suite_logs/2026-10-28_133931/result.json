@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-28_133931",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:04:15",
+  "estMin": 4.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "04_02_메뉴_거래내역",
+      "status": "PASS",
+      "steps": 122,
+      "elapsed": "04:13",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_133931\\04_02_메뉴_거래내역.log"
+    }
+  ]
+}

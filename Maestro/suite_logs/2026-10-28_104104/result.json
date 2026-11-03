@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-28_104104",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:15:52",
+  "estMin": 29.0,
+  "aborted": false,
+  "counts": {
+    "total": 3,
+    "pass": 0,
+    "fail": 3,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "04_02_메뉴_거래내역",
+      "status": "FAIL",
+      "steps": 66,
+      "elapsed": "02:48",
+      "reason": "[잔액 부족(환경)] Assert that \"${SEND_INSUFFICIENT_BALANCE}\" is not visible... FAILED",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_104104\\04_02_메뉴_거래내역.log"
+    },
+    {
+      "group": "G2",
+      "name": "25_01_프로필_정보수정과공유",
+      "status": "FAIL",
+      "steps": 19,
+      "elapsed": "01:35",
+      "reason": "Assertion is false: \"직장인\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_104104\\25_01_프로필_정보수정과공유.log"
+    },
+    {
+      "group": "G2",
+      "name": "21_카드_신청과충전",
+      "status": "FAIL",
+      "steps": 227,
+      "elapsed": "07:22",
+      "reason": "Scrolling DOWN until \"${MYQR_GLOBAL_QR}\" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering enabled... FAILED",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_104104\\21_카드_신청과충전.log"
+    }
+  ]
+}

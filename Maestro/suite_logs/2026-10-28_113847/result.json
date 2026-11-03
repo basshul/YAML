@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "stamp": "2026-10-28_113847",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:15:41",
+  "estMin": 24.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 1,
+    "fail": 1,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "21_카드_신청과충전",
+      "status": "PASS",
+      "steps": 414,
+      "elapsed": "11:58",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_113847\\21_카드_신청과충전.log"
+    },
+    {
+      "group": "G2",
+      "name": "04_02_메뉴_거래내역",
+      "status": "FAIL",
+      "steps": 83,
+      "elapsed": "03:07",
+      "reason": "[기기 연결 끊김(환경)]",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-10-28_113847\\04_02_메뉴_거래내역.log"
+    }
+  ]
+}
