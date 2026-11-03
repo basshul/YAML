@@ -26,30 +26,7 @@ env:
 # ================================================================
 
 # 앱 실행 및 홈 화면 진입 (02_01과 동일한 표준 진입 보일러플레이트)
-- launchApp
-- runFlow: "_server_override_old.yaml"
-- extendedWaitUntil:
-    visible:
-      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
-    timeout: 60000
-# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
-- runFlow: "_relogin_if_autologout_old.yaml"
-- runFlow:
-    when:
-      visible:
-        text: "${PIN_ENTER_4DIGIT}"
-    commands:
-      - runFlow:
-          file: _enter_pin_old.yaml
-          env:
-            PIN: ${PIN_NORMAL}
-- runFlow: "_server_override_old.yaml"
-- assertNotVisible:
-    text: "${SESSION_EXPIRED}"
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 20000
+- runFlow: "_common_entry_old.yaml"
 - runFlow:
     when:
       visible:

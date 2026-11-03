@@ -2,12 +2,14 @@ appId: ${APP_ID}
 ---
 # ================================================================
 # 헬퍼: 공통 진입 — 앱 실행 → 서버 → 재로그인 → PIN → 팝업 → 홈 (2026-11-02 추출)
+#   2026-11-03 보강: 변형들이 갖고 있던 처리 4개를 끌어올렸다(아래 "보강" 절).
 # ================================================================
 # 호출:
 #   - runFlow: "_common_entry_old.yaml"
 #
 # 왜 생겼나:
 #   이 72줄이 **8개 파일에 바이트 단위로 똑같이** 복붙돼 있었다(2026-11-02 측정).
+#   2026-11-03 에 변형 5그룹(11개 파일 / 793줄)을 더 접어 **24개 파일**이 이 한 줄을 부른다.
 #   그래서 진입부에 처리를 하나 더하려면 8곳을 고쳐야 했고, 실제로 어긋나 있었다:
 #     · `_relogin_if_autologout_old` 호출 — 49개 중 34개만
 #     · Server Override — 46개가 **인라인 복붙**, 헬퍼 호출은 12개
@@ -17,11 +19,22 @@ appId: ${APP_ID}
 # ⚠️ **모든 파일이 이걸 쓸 수 있는 건 아니다.** 2026-11-02 기준 진입부 변종이 **23가지**다
 #   (40개 파일). 로그인 전 화면(`05`), 로그인 자체(`01_01`), 계정 전환이 끼는 것(`14_02`),
 #   언어 루프(`04_05`) 등은 모양이 다르다. **진입부가 이 72줄과 같은 파일에만** 쓸 것.
-#   같은지 확인: `scratchpad/entry2.py` 류로 지문을 떠서 대조한다.
+#   같은지 확인: 진입 블록(`- launchApp` ~ 첫 `id: "bottom_item_home"`)만 떼어 주석·공백을
+#     지운 뒤 해시로 묶는다. ⚠️ 끝 표시를 `bottom_item_home` **문자열**로 찾으면 안 된다 —
+#     `"input_dot_1|bottom_item_home|..."` 안에 걸리거나(가짜 4줄 블록),
+#     맹목적 닫기 블록의 `notVisible:` 가드에 걸린다(04_01·25_01·07).
+#     **다음 줄에 `timeout` 이 있는 `id: "bottom_item_home"` 단독 줄**이 진짜 끝이다.
 #
-# 필요한 env: SERVER_PICK · PIN_ENTER_4DIGIT · PIN_NORMAL ·
-#             REG_VOICE_PHISHING · ASK_ME_LATER_TEXT
+# 필요한 env: SERVER_PICK · PIN_ENTER_4DIGIT · PIN_NORMAL · LOCK_CREATE_PROMPT ·
+#             REG_VOICE_PHISHING · ASK_ME_LATER_TEXT · SESSION_EXPIRED
 #   (`run_test.ps1` 이 runFlow 를 **재귀로** 훑어 모으므로 호출하는 쪽에서 따로 할 일은 없다)
+#
+# 2026-11-03 보강 — **공통 진입이 일부 변형보다 약했다.** 조사해서 끌어올린 것:
+#   ① 배너 1회 탭 → `_dismiss_popups_stag_old.yaml`(팝업 5종 × 6회 루프)   [20_예약·90_정리]
+#   ② Server Override 인라인 20줄 → `_server_override_old.yaml` 호출      [02_01·TS7295]
+#   ③ 간편비번 **생성** 독립 블록 추가                                      [14_01/02/03]
+#   ④ `balloonClose` 추가                                                  [11_해외충전·12_청구서]
+#   → ①~④ 전부 **조건부**라 해당 화면이 없으면 SKIP 된다. 평소 실행 시간은 거의 안 늘어난다.
 #
 # ⛔ 이 파일을 고치면 **부르는 파일 전부**가 바뀐다. 한 파일만 다르게 해야 하면
 #   여기 분기를 넣지 말고 그 파일에서 이 헬퍼를 부르지 않는 쪽을 택할 것
@@ -38,32 +51,16 @@ appId: ${APP_ID}
     visible:
       id: "input_dot_1|bottom_item_home|button1|securityKeyboardEditText"
     timeout: 60000
-- runFlow:
-    when:
-      visible:
-        text: "Server Override"
-    commands:
-      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
-      - tapOn:
-          text: "${SERVER_PICK}"
-      - waitForAnimationToEnd
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
-      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
-      - launchApp
-      - extendedWaitUntil:
-          visible:
-            text: "Server Override"
-          timeout: 60000
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-      - extendedWaitUntil:
-          visible:
-            id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
-          timeout: 60000
+# Server Override 스플래시(livetest/stag 빌드). 운영 빌드엔 없어 통째로 SKIP 된다.
+#   ⚠️ 2026-11-03까지 여기에 **인라인 20줄**이 들어 있었다 — 같은 로직의 헬퍼가 이미 있는데도.
+#     중복을 없애려고 만든 파일이 중복을 들고 있었다. 로직은 헬퍼 쪽이 정본이다.
+- runFlow: "_server_override_old.yaml"
+# 헬퍼가 APPLY & QUIT 로 앱을 재실행했을 수 있다 → 잠금/홈이 다시 뜰 때까지 기다린다.
+#   스플래시가 없었으면 이미 만족된 상태라 즉시 통과한다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
+    timeout: 60000
 # 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
 - runFlow: "_relogin_if_autologout_old.yaml"
 # PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 탭 사이 정착 대기 필수(오입력 누적 = 계정 잠금)
@@ -76,6 +73,31 @@ appId: ${APP_ID}
           file: _enter_pin_old.yaml
           env:
             PIN: ${PIN_NORMAL}
+# 간편 비밀번호 **생성** 프롬프트 — `_relogin_if_autologout_old` 도 이걸 처리하지만
+#   **재로그인이 일어난 경우에만** 본다(`securityKeyboardEditText` 분기 안에 있다).
+#   세션은 살아 있는데 PIN 만 초기화된 상태(앱 갱신·clearState 뒤)에서는 거기 안 걸린다
+#   → 독립 블록으로 한 번 더 받아낸다(14_01/02/03 이 쓰던 처리를 2026-11-03 올렸다).
+#   PIN 을 **두 번** 넣는다(입력 + 확인). 뒤에 확인 다이얼로그가 붙는 빌드가 있어 btnOk 도 본다.
+- runFlow:
+    when:
+      visible: "${LOCK_CREATE_PROMPT}"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible:
+              id: "btnOk"
+          commands:
+            - tapOn:
+                id: "btnOk"
+            - waitForAnimationToEnd
 - runFlow:
     when:
       visible: "${REG_VOICE_PHISHING}"
@@ -91,16 +113,23 @@ appId: ${APP_ID}
     commands:
       - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
-# 인앱 배너 팝업은 id로 정확히 닫는다(범용 "닫기" 문자열 탭은 다른 X를 눌러 사고 이력이 있다)
+# 홈 위에 뜨는 말풍선 코치마크(11_해외충전·12_청구서가 쓰던 처리를 2026-11-03 올렸다)
 - runFlow:
     when:
       visible:
-        # ⚠️ 배너 닫기 id는 빌드마다 다르다 — btnTwo(7.19.x) | btnClose(7.20.0). docs/ENVIRONMENT.md §7.6
-        id: "btnTwo|btnClose"
+        id: "balloonClose"
     commands:
       - tapOn:
-          id: "btnTwo|btnClose"
+          id: "balloonClose"
       - waitForAnimationToEnd
+# ⛔ **팝업은 하나가 아니라 큐로 연달아 뜬다** — 하나만 닫고 홈을 기다리면 다음 팝업에 가려 죽는다.
+#   2026-11-03까지 여기는 `btnTwo|btnClose` 를 **1회만** 탭했다. 그런데 20_예약·90_정리 는
+#   이미 팝업 큐 헬퍼(5종 × 최대 6회 루프)를 쓰고 있었다 — **공통 쪽이 더 약했다.**
+#   헬퍼 주석의 실사고: 배너 B 를 닫았더니 그 아래에 비밀번호 변경 안내가 깔려 있었다.
+#   ⚠️ 헬퍼는 `btnChangeNow`(비번 변경 진입)·`btn_okay`(자동이체 갱신)·`updateBtn`(서류 업로드)을
+#     **누르지 않는다** — 무해한 쪽만 고른다. 새 팝업이 생기면 그 헬퍼에 추가할 것.
+- runFlow:
+    file: _dismiss_popups_stag_old.yaml
 # ⛔ 세션 만료는 **여기서 빨리 죽인다.** 뒤의 홈 대기에 맡기면 30초를 채우고
 #   "bottom_item_home 안 보임" 이라는 엉뚱한 메시지로 죽어 진단이 어려워진다
 #   (2026-09-18 실제로 빌드 문제로 오진할 뻔했고, 2026-10-30 `21_카드` 도 같은 모양이었다).

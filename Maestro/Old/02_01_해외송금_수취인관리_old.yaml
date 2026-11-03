@@ -27,46 +27,7 @@ env:
 #   잠금화면이 떠서 "해외송금" 탭이 실패. 04_02_메뉴_거래내역.yaml의 검증된 패턴대로 잠금화면을
 #   **명시적으로** 기다렸다가 PIN을 넣도록 변경. PIN 키패드는 매번 랜덤 배치라 좌표가 아닌
 #   text("1"/"2")로 탭. PIN <정상 PIN>.
-- launchApp
-# Server Override(livetest 빌드 서버선택 스플래시)가 먼저 뜨면 처리
-- runFlow: "_server_override_old.yaml"
-# 간편비밀번호 잠금화면을 명시적으로 대기 후 PIN <정상 PIN>
-- extendedWaitUntil:
-    visible:
-      id: "input_dot_1|bottom_item_home|securityKeyboardEditText"
-    timeout: 60000
-# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
-- runFlow: "_relogin_if_autologout_old.yaml"
-# PIN <정상 PIN>. 키패드는 숫자를 누를 때마다 배치가 재섞이므로 각 탭 사이에 정착 대기를 넣어야
-#   maestro가 직전 스냅샷의 stale 좌표를 눌러 오입력하는 사고를 막을 수 있음
-#   (2026-08-04 실제로 "비밀번호가 맞지 않습니다"/"로그인 실패" 2회 발생 → 잠금 위험)
-# ⚠️ **조건부로 감쌌다**(2026-08-28) — 세션이 살아 있으면 잠금화면 없이 홈으로 바로 떨어지는데,
-#   그때 무조건 "1"을 누르면 홈에서 엉뚱한 요소를 탭한다(02_02와 동일한 수정).
-- runFlow:
-    when:
-      visible:
-        text: "${PIN_ENTER_4DIGIT}"
-    commands:
-      - runFlow:
-          file: _enter_pin_old.yaml
-          env:
-            PIN: ${PIN_NORMAL}
-- runFlow: "_server_override_old.yaml"
-# 세션 만료 판정 — 실제 문구는 "로그인 세션이 만료되었습니다.
-#   서비스를 이용하려면 다시 로그인해 주세요." 로 **개행이 섞인 두 문장**이다.
-#   Maestro 텍스트는 전체매칭이라 `"로그인 세션이 만료"` 로는 **한 번도 잡히지 않았다**
-#   (2026-08-28 확인) → 부분매칭엔 `[\s\S]*`가 필요하다.
-#   그리고 구 UI에서 세션이 만료되면 **PIN으로 복구되지 않는다**(ID/비밀번호 재로그인 필요).
-#   그래서 다이얼로그를 닫고 진행하는 대신 **여기서 실패시킨다** — 원인이 로그에 남아야
-#   `01_01_로그인_정상_old.yaml`로 복구한 뒤 재실행할 수 있다.
-#   ⚠️ 홈 대기보다 **앞**에 둔다. 뒤에 두면 홈 대기가 먼저 타임아웃 나서 원인이 가려진다.
-- assertNotVisible:
-    text: "${SESSION_EXPIRED}"
-# 홈 도달 대기
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 20000
+- runFlow: "_common_entry_old.yaml"
 # 지문인증/팝업 처리
 - runFlow:
     when:

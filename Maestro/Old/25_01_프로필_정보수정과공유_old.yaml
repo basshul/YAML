@@ -81,72 +81,7 @@ appId: ${APP_ID}
 # ================================================================
 
 # ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 → 프로필 탭 ----------------
-- launchApp
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      visible:
-        text: "Server Override"
-    commands:
-      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
-      - tapOn:
-          text: "${SERVER_PICK}"
-      - waitForAnimationToEnd
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
-      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
-      - launchApp
-      - extendedWaitUntil:
-          visible:
-            text: "Server Override"
-          timeout: 60000
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-# 자동 로그아웃(세션 10분 만료)으로 재인증 화면에 떨어졌으면 비밀번호로 로그인한다
-- runFlow: "_relogin_if_autologout_old.yaml"
-# 잠금화면을 명시적으로 대기한 뒤 PIN 입력(탭 사이 정착 대기 필수 — 키패드가 매 탭 재배치됨)
-- runFlow:
-    when:
-      visible:
-        text: "${PIN_ENTER_4DIGIT}"
-    commands:
-      - runFlow:
-          file: _enter_pin_old.yaml
-          env:
-            PIN: ${PIN_NORMAL}
-- runFlow:
-    when:
-      visible: "${REG_VOICE_PHISHING}"
-    commands:
-      - tapOn:
-          id: "check_customer"
-      - waitForAnimationToEnd
-      - tapOn: "확인|OK"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "${ASK_ME_LATER_TEXT}"
-    commands:
-      - tapOn: "${ASK_ME_LATER_TEXT}"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "${BTN_CLOSE}"
-      # ⚠️ 맹목적 팝업 닫기 — 상세 사유는 07_오늘의환율_환율계산_old.yaml 의 같은 블록 주석 참고.
-      #   요약: 런처 이탈 사고 이력이 있으나, id로 안 닫히는 팝업이 남아 진입이 막힐 수 있어
-      #   지우지 않고 **이미 홈에 도달했으면 누르지 않도록** 가드만 좁혔다.
-      notVisible:
-        id: "bottom_item_home"
-    commands:
-      - tapOn: "${BTN_CLOSE}"
-      - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: "bottom_item_home"
-    timeout: 30000
+- runFlow: "_common_entry_old.yaml"
 
 # 프로필 탭 진입 — 하단 내비 라벨은 content-desc라 id로 탭한다.
 # ※ 탭을 재선택하면 직전에 열었던 서브화면이 백스택에서 복원되는 함정이 있으므로
