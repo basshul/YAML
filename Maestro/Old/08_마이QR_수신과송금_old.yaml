@@ -413,6 +413,24 @@ appId: ${APP_ID}
       id: "paymentSourceListRv"
     timeout: 20000
 - assertVisible: "${SCR_SELECT_WITHDRAW}"
+# ⛔ 출금 계좌를 **명시적으로** 고른다 — 기본 선택에 기대면 안 된다.
+#   앱은 출금 계좌와 수취 계좌가 **같으면 거부**한다("동일한 계좌번호로 거래할 수 없습니다").
+#   2026-11-02 실측: 기본 선택이 수취 계좌(카카오)와 같아져 여기서 죽었다.
+#   규칙(사용자 지시): 수취=카카오 → 출금=GME Wallet / 수취=GME Wallet → 출금=카카오.
+#   이 블록은 수취를 `${KFTC_BANK}`(카카오뱅크)로 두므로 **GME Wallet** 을 고른다.
+#   ⚠️ 계좌번호를 박지 않는다(계정마다 다르다) — 목록 행이 "GME <번호>" 라 숫자 패턴으로 잡는다.
+#     조건부로 감싸지 않는다: 못 찾으면 **여기서 실패해야** 한다(조용히 기본값으로 가면
+#     다시 같은 계좌를 골라 뒤에서 엉뚱한 메시지로 죽는다).
+- assertVisible: "${WITHDRAW_GME_WALLET}"
+#   ⚠️ 행 자체는 `clickable=false` 다 — 누를 수 있는 건 조상 `mainlayout` 이고,
+#     텍스트 중심 좌표가 그 안에 들어가므로 문구로 탭하면 먹는다(2026-11-02 실측 bounds 확인).
+#     `mainlayout` 은 행마다 반복되는 범용 id 라 그걸로는 못 고른다.
+- tapOn: "${WITHDRAW_GME_WALLET}"
+- waitForAnimationToEnd
+#   탭이 **정말로 먹었는지**를 결과로 확인한다 — 안 먹으면 기본 선택(수취와 같은 계좌)이
+#   그대로 남아 앱이 거부한다. 그 메시지가 안 뜨는 것으로 판정한다.
+#   (`clickable=false` 노드는 COMPLETED 로 찍히고도 아무 일이 없을 수 있다 — 그 부류를 막는다)
+- assertNotVisible: "${ERR_SAME_ACCOUNT}"
 - assertVisible:
     id: "btn_ok"
 - tapOn:
@@ -684,6 +702,24 @@ appId: ${APP_ID}
     visible:
       id: "paymentSourceListRv"
     timeout: 20000
+# ⛔ 출금 계좌를 **명시적으로** 고른다 — 기본 선택에 기대면 안 된다.
+#   앱은 출금 계좌와 수취 계좌가 **같으면 거부**한다("동일한 계좌번호로 거래할 수 없습니다").
+#   2026-11-02 실측: 기본 선택이 수취 계좌(카카오)와 같아져 여기서 죽었다.
+#   규칙(사용자 지시): 수취=카카오 → 출금=GME Wallet / 수취=GME Wallet → 출금=카카오.
+#   이 블록은 수취를 `${KFTC_BANK}`(카카오뱅크)로 두므로 **GME Wallet** 을 고른다.
+#   ⚠️ 계좌번호를 박지 않는다(계정마다 다르다) — 목록 행이 "GME <번호>" 라 숫자 패턴으로 잡는다.
+#     조건부로 감싸지 않는다: 못 찾으면 **여기서 실패해야** 한다(조용히 기본값으로 가면
+#     다시 같은 계좌를 골라 뒤에서 엉뚱한 메시지로 죽는다).
+- assertVisible: "${WITHDRAW_GME_WALLET}"
+#   ⚠️ 행 자체는 `clickable=false` 다 — 누를 수 있는 건 조상 `mainlayout` 이고,
+#     텍스트 중심 좌표가 그 안에 들어가므로 문구로 탭하면 먹는다(2026-11-02 실측 bounds 확인).
+#     `mainlayout` 은 행마다 반복되는 범용 id 라 그걸로는 못 고른다.
+- tapOn: "${WITHDRAW_GME_WALLET}"
+- waitForAnimationToEnd
+#   탭이 **정말로 먹었는지**를 결과로 확인한다 — 안 먹으면 기본 선택(수취와 같은 계좌)이
+#   그대로 남아 앱이 거부한다. 그 메시지가 안 뜨는 것으로 판정한다.
+#   (`clickable=false` 노드는 COMPLETED 로 찍히고도 아무 일이 없을 수 있다 — 그 부류를 막는다)
+- assertNotVisible: "${ERR_SAME_ACCOUNT}"
 - tapOn:
     id: "btn_ok"
 - extendedWaitUntil:

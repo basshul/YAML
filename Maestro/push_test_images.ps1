@@ -12,7 +12,8 @@
 #   "OCR이 유효하지 않습니다"로 업로드를 거부했다.
 #
 # 무엇을 하는가:
-#   Test Files\ 의 4장을 /sdcard/Pictures 로 push하고 **오래된 것부터 touch**해서
+#   ① 누적된 `gmeqr*.jpg`(08_마이QR 의 "QR 저장" 산출물)를 지우고,
+#   ② Test Files\ 의 4장을 /sdcard/Pictures 로 push하고 **오래된 것부터 touch**해서
 #   최신순 인덱스를 고정한 뒤, MediaStore에 개별 스캔시킨다.
 #     index 0 = Global QR / 1 = ARC / 2 = ID Card(주민등록증) / 3 = Passport
 #
@@ -42,6 +43,23 @@ if (-not $serial) {
     exit 1
 }
 Write-Host "DEVICE = $serial"
+
+# ---- 누적된 QR 저장본 정리 ----
+# 08_마이QR 의 "QR 저장"은 매 실행 `Pictures/gmeqr.jpg` 를 넣고 MediaStore 가
+# `gmeqr (1).jpg`, `gmeqr (2).jpg` … 로 번호를 붙여 준다.
+# ⛔ **그 번호는 31에서 끝난다.** AOSP `FileUtils.buildUniqueFile` 은 원본 + (1)~(31),
+#   즉 **32개까지만** 시도하고 포기한다. 32개가 차면 그 뒤로는 저장이 **항상** 실패하고
+#   앱은 "Failed to save image" 토스트만 띄운다 (2026-11-03 실측:
+#   `IllegalStateException: Failed to build unique file: .../Pictures/gmeqr.jpg`).
+#   → 실패가 저장 시점이 아니라 **한참 뒤 [05] QR 스캔에서** "Failed to Read QR Code"로
+#     드러나므로 원인을 찾기 어렵다. 매 실행 전에 비워 두는 편이 싸다.
+# 파일만 지우면 MediaStore 에 유령 행이 남아 피커 인덱스를 밀 수 있다 → 행도 같이 지운다.
+$stale = @(adb -s $serial shell "ls /sdcard/Pictures" 2>$null | Select-String '^gmeqr').Count
+if ($stale -gt 0) {
+    adb -s $serial shell "rm -f /sdcard/Pictures/gmeqr*.jpg" | Out-Null
+    adb -s $serial shell "content delete --uri content://media/external/images/media --where ""_display_name LIKE 'gmeqr%'""" | Out-Null
+    Write-Host "  purged  gmeqr*.jpg ${stale}개"
+}
 
 # 오래된 것 → 최신 순서로 넣는다. 최신이 index 0 이 된다.
 $order = @(
