@@ -86,6 +86,52 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # env 값의 | 가 cmd 파이프로
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # ----------------------------------------------------------------
+# ⛔ 자식 스크립트 호출은 **전부 이걸로** 감싼다 — 직접 `&` 로 부르지 말 것
+# ----------------------------------------------------------------
+# 이 스크립트는 `$ErrorActionPreference = "Stop"` 이다. 그래서 자식이 `Write-Error`
+# 한 줄만 뱉거나 안에서 예외가 나도 `*>&1` 파이프를 타고 올라와 **스위트가 통째로 죽는다.**
+# 그러면 그 항목을 실패로 세지도 못하고 **SUMMARY·result.json 도 못 쓴다** —
+# 몇 시간짜리 실행이 이력에서 통째로 사라진다.
+#
+# 실측 3건(전부 같은 구조다):
+#   2026-10-27  복구 호출이 운영 빌드 가드(`Write-Error`)에 걸림 → 27개 중 9개에서 중단
+#   2026-11-03  `-User` 누락 → 린터·기기 검사를 다 통과하고 픽스처 push 까지 끝낸 뒤 즉사
+#   2026-11-03  `adb dumpsys` 가 빈 값 → run_test.ps1 의 null 메서드 호출 예외
+#
+# ★ **복구가 깨지는 것과 실행 기록을 잃는 것은 다른 일이다.** 여기서 잡아 실패로 세면
+#   루프가 정상적으로 다음 항목(또는 중단 판정)으로 넘어가고 요약을 쓴다.
+#
+# 2026-11-03 이전에는 호출부 4곳 중 **복구 한 곳만** 감싸져 있었다. 한 곳만 막아 두면
+# 다음에 생기는 호출부가 또 뚫린다 → 함수로 만들어 **기본이 안전**하게 바꿨다.
+function Invoke-ChildScript {
+    param(
+        [Parameter(Mandatory)][string]$Script,      # $root 기준 파일명
+        [hashtable]$ScriptArgs = @{},
+        [string]$LogPath = "",                      # 비우면 파일로 남기지 않는다
+        [string]$Label = ""                         # 예외 메시지에 붙일 이름
+    )
+    # ⚠️ 기본값을 1(실패)로 둔다 — 호출이 예외로 끊기면 `$LASTEXITCODE` 에는
+    #   **직전 명령의 값**이 그대로 남아 있다. 그걸 믿으면 실패를 성공으로 읽는다.
+    $code = 1
+    try {
+        if ($LogPath) {
+            & (Join-Path $root $Script) @ScriptArgs *>&1 | Tee-Object -FilePath $LogPath | Out-Null
+        } else {
+            & (Join-Path $root $Script) @ScriptArgs *>&1 | Out-Null
+        }
+        $code = $LASTEXITCODE
+        # 자식이 `exit` 없이 끝나면 $LASTEXITCODE 가 비어 있다 → 성공으로 본다
+        if ($null -eq $code) { $code = 0 }
+    } catch {
+        $who = if ($Label) { $Label } else { $Script }
+        $msg = "[{0}] 호출이 예외로 끊겼습니다: {1}" -f $who, $_.Exception.Message
+        if ($LogPath) { $msg | Out-File -FilePath $LogPath -Append -Encoding UTF8 }
+        Write-Host ("    ⚠️ " + $msg) -ForegroundColor Red
+    }
+    return $code
+}
+
+# ----------------------------------------------------------------
 # 스위트 정의
 #   g     : 그룹(G1/G2/G3/G9)
 #   acct  : 이 항목이 전제하는 계정
@@ -596,8 +642,10 @@ $skip = @{}
 
 # ① 정적 검사 — 실행으로는 원리적으로 안 잡히는 부류를 여기서 막는다
 if (-not $SkipLint) {
-    & (Join-Path $root "lint_flows.ps1") -Quiet | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    # 린터는 P0 전제검사라 실패하면 **중단하는 게 맞다**(아직 아무것도 안 돌았으니 잃을 것도 없다).
+    #   다만 린터 자신이 예외로 터지면 PowerShell 스택이 아니라 아래 한 줄이 보여야 한다.
+    $lintCode = Invoke-ChildScript -Script "lint_flows.ps1" -ScriptArgs @{ Quiet = $true } -Label "린터"
+    if ($lintCode -ne 0) {
         Write-Host "  린터 ERROR — 돌리기 전에 고치세요 (lint_Old.md). -SkipLint 로 무시 가능" -ForegroundColor Red
         exit 1
     }
@@ -773,8 +821,9 @@ foreach ($t in $plan) {
                     $cArgs = @{ lang = $Lang; flow = "Old" + [char]92 + "_suite_charge_old.yaml"; AppId = $EffAppId; User = $User; Server = $Server }
                     if ($Device) { $cArgs['device'] = $Device }
                     $clog = Join-Path $logDir ("_charge_{0}_{1}.log" -f $t.n, $ci)
-                    & (Join-Path $root "run_test.ps1") @cArgs *>&1 | Tee-Object -FilePath $clog | Out-Null
-                    if ($LASTEXITCODE -eq 0) {
+                    $cCode = Invoke-ChildScript -Script "run_test.ps1" -ScriptArgs $cArgs `
+                                 -LogPath $clog -Label ("충전 {0}/{1}회차" -f $ci, $wantN)
+                    if ($cCode -eq 0) {
                         $okN++; $projBal += 1000; $chargeSpent += 1000
                     } else {
                         # 충전이 깨졌으면 **더 시도하지 않는다.** 반복하면 실계좌에서 돈만 나가고
@@ -809,7 +858,13 @@ foreach ($t in $plan) {
 
     if ($t.push) {
         Write-Host "  · 갤러리 픽스처 push..." -ForegroundColor DarkGray
-        & (Join-Path $root "push_test_images.ps1") *>&1 | Out-File (Join-Path $logDir "$($t.n)_push.log") -Encoding UTF8
+        # push 가 깨져도 **항목은 돌린다** — 갤러리 의존 케이스만 실패하고 나머지는 유효하다.
+        #   (여기서 스위트를 끝내면 갤러리와 무관한 케이스까지 통째로 잃는다)
+        $pCode = Invoke-ChildScript -Script "push_test_images.ps1" `
+                     -LogPath (Join-Path $logDir "$($t.n)_push.log") -Label "픽스처 push"
+        if ($pCode -ne 0) {
+            Write-Host ("    ⚠️ 픽스처 push 실패(코드 {0}) — 갤러리 의존 케이스가 깨질 수 있습니다" -f $pCode) -ForegroundColor Yellow
+        }
     }
 
     Write-Host ("▶ {0,-34} " -f $t.n) -NoNewline
@@ -824,8 +879,7 @@ foreach ($t in $plan) {
     $flowArgs = @{ lang = $Lang; flow = $t.f; AppId = $EffAppId; User = $User; Server = $Server }
     if ($Device) { $flowArgs['device'] = $Device }
     if ($SkipOptional) { $flowArgs['ExtraEnv'] = @('SKIP_OPTIONAL=true') }
-    & (Join-Path $root "run_test.ps1") @flowArgs *>&1 | Tee-Object -FilePath $log | Out-Null
-    $code = $LASTEXITCODE
+    $code = Invoke-ChildScript -Script "run_test.ps1" -ScriptArgs $flowArgs -LogPath $log -Label $t.n
     $sw.Stop()
 
     $txt      = Get-Content $log -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -848,7 +902,21 @@ foreach ($t in $plan) {
 
     $done     = ([regex]::Matches($body, "COMPLETED")).Count
     $failLine = ($bodyLines | Where-Object { $_ -match "FAILED\s*$" } | Select-Object -First 1)
-    $reason   = ($errLines  | Where-Object { $_ -match "Element not found|Assertion is false|Screenshot returned null|insufficient|Duplicate|already exist|세션이 만료|device .* not found" } | Select-Object -First 1)
+    #   `호출이 예외로 끊겼습니다` 는 Invoke-ChildScript 가 남기는 문구다 — 자식이 Maestro 에
+    #   닿기도 전에 죽은 경우(인자 누락·env 파일 없음·adb 예외 등)라 Maestro 문구가 아예 없다.
+    $reason   = ($errLines  | Where-Object { $_ -match "Element not found|Assertion is false|Screenshot returned null|insufficient|Duplicate|already exist|세션이 만료|device .* not found|호출이 예외로 끊겼습니다" } | Select-Object -First 1)
+    # ⛔ **이유 없는 FAIL 을 만들지 말 것.** 위 allowlist 와 `FAILED` 줄 어느 쪽에도 안 걸리면
+    #   리포트의 Reason 칸이 비어 "왜 죽었는지 로그를 열어 봐야" 한다. 그건 스위트가 통째로
+    #   사라지는 것 다음으로 나쁘다 — 실패가 기록돼도 진단이 안 되면 결국 다시 돌려야 한다.
+    #   → 최후 수단으로 **첫 오류 줄**을 쓴다. 정확하진 않아도 어디를 볼지는 알려 준다.
+    if ((-not $reason) -and (-not $failLine) -and $code -ne 0) {
+        $firstErr = ($errLines | Where-Object { $_.Trim() } | Select-Object -First 1)
+        if ($firstErr) {
+            $firstErr = $firstErr.Trim()
+            if ($firstErr.Length -gt 160) { $firstErr = $firstErr.Substring(0, 160) + "…" }
+            $reason = "(분류 불가) " + $firstErr
+        }
+    }
 
     # 환경 전제 미충족으로 죽은 것은 코드 결함과 갈라서 표시한다(진단 가능성)
     $envHint = ""
@@ -948,15 +1016,7 @@ foreach ($t in $plan) {
         #   빠져나가 요약을 쓴다. ★ 복구가 깨지는 것과 실행 기록을 잃는 것은 다른 일이다.
         #   기본값을 1(실패)로 두는 이유: 호출이 터지면 `$LASTEXITCODE` 는 **직전 명령의 값**이
         #   그대로 남아 있어, 그걸 믿으면 실패를 성공으로 읽는다.
-        $rCode = 1
-        try {
-            & (Join-Path $root "run_test.ps1") @rArgs *>&1 | Tee-Object -FilePath $rlog | Out-Null
-            $rCode = $LASTEXITCODE
-        } catch {
-            # 사유는 복구 로그에 남긴다 — 화면에는 아래에서 "실패 (n회 연속)" 한 줄만 찍는다.
-            ("복구 호출이 예외로 끊겼습니다: " + $_.Exception.Message) |
-                Out-File -FilePath $rlog -Append -Encoding UTF8
-        }
+        $rCode = Invoke-ChildScript -Script "run_test.ps1" -ScriptArgs $rArgs -LogPath $rlog -Label "복구"
         if ($rCode -eq 0) {
             Write-Host " OK" -ForegroundColor DarkGray
             $recoverFail = 0
