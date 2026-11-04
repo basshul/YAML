@@ -434,8 +434,16 @@ function withAutoAdded(picked) {
     if (!(rule.when || []).some((n) => names.includes(n))) continue;
     const wth = rule["with"] || [];
     if (wth.length && !wth.some((n) => names.includes(n))) continue;
-    const at = out.findIndex((t) => idx(t.name) > idx(cand.name));
-    if (at < 0) out.push(cand); else out.splice(at, 0, cand);
+    /* 표 순서상 **앞에 오는 마지막 항목 뒤**에 끼운다.
+       ⛔ 종전엔 "뒤에 오는 **첫** 항목 앞" 이었다 — 그건 고른 순서가 표 순서일 때만 맞다.
+          다르면 의존이 뒤집힌다(2026-11-04 실측: 13_06(송금인 **삭제**)이
+          13_01(송금인 **등록**)보다 앞에 들어가 정리가 무의미해졌다).
+       ※ 정본은 run_suite.ps1 이고 여기는 확인 창용 미리보기다 — 같은 답을 내야 한다. */
+    let at = 0;
+    for (let i = 0; i < out.length; i++) {
+      if (idx(out[i].name) < idx(cand.name)) at = i + 1;
+    }
+    out.splice(at, 0, cand);
     added.push(cand);
   }
   return { list: out, added: added };

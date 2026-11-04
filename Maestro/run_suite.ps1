@@ -201,7 +201,10 @@ $Suite = @(
      note="등록된 송금인 일괄 삭제(사양). **반드시 13_05 뒤** — 먼저 지우면 04/05가 쓸 데이터가 사라진다. 잔재가 더 있으면 FAIL로 드러난다(수동 정리)" }
   @{ n="13_07_해외송금받기_요청상태조회";     g="G2"; acct="seungsoo818"; est=2;  f="Old\13_07_해외송금받기_요청상태조회_old.yaml"
      # 2026-10-28: [15]~[19] 제거, High 인 [20] 하나만 남음(310→190줄) → est 5 → 2분.
-     note="[15]~[20] 요청 상태. 13_04가 만든 Request(72시간 만료)가 전제. 송금인과 무관해 13_06 뒤여도 성립" }
+     # ⛔ 단독 실행하면 **반드시 FAIL 한다** — 전제(완료된 인바운드 요청)가 없기 때문이다.
+     #   실패 메시지가 `Assertion is false: "받는 계좌|요청 완료" is visible` 라 셀렉터 버그처럼
+     #   읽히지만 아니다(2026-11-02·11-03 두 번 다 단독 실행이라 그랬다. 11-04 확인).
+     note="[15]~[20] 요청 상태. ⛔13_04가 만든 Request(72시간 만료)가 **전제** — 단독 실행은 FAIL 한다. 송금인과 무관해 13_06 뒤여도 성립" }
   @{ n="04_02_메뉴_거래내역";         g="G2"; acct="seungsoo818"; est=4;  f="Old\04_02_메뉴_거래내역_old.yaml"
      # 2026-10-28: **[03]~[43] 제거**(실행 시간 단축). 48케이스 중 High 는 [01][02] 둘뿐이었다
      #   → est 13 → 4분. 되살리는 법은 yaml 꼬리 배너에 있다.
@@ -437,15 +440,29 @@ foreach ($item in @($Suite | Where-Object { $_.autoAdd })) {
     if ($rule.with -and $rule.with.Count -gt 0 -and
         @($rule.with | Where-Object { $planNames -contains $_ }).Count -eq 0) { continue }
 
-    # 표 순서상 이 항목보다 **뒤에 오는 첫 항목** 앞에 끼운다. 그런 항목이 없으면 맨 뒤에 붙인다.
+    # 표 순서상 이 항목보다 **앞에 오는 마지막 항목 뒤**에 끼운다.
+    #   그런 항목이 없으면 맨 앞에 붙인다(계획이 전부 이 항목보다 뒤라는 뜻이다).
+    #
+    # ⛔ 종전에는 "뒤에 오는 **첫** 항목 앞" 이었다. 그건 **계획이 표 순서일 때만** 맞다.
+    #   `-Names` 가 표와 다른 순서면 의존이 뒤집힌다 — 2026-11-04 실측:
+    #     -Names 14_01,13_01,25_01  →  plan=[14_01(235), 13_01(185), 25_01(224)], 13_06=195
+    #     첫 항목 14_01(235) > 195 이라 **맨 앞**에 들어갔고,
+    #     13_06(송금인 **삭제**)이 13_01(송금인 **등록**)보다 먼저 돌아 정리가 무의미해졌다.
+    #     조용히 틀어지는 부류다 — 실행은 초록불로 끝나고 잔재만 남는다.
+    #   새 기준은 "앞에 오는 마지막 항목 뒤" 라 의존 항목이 전부 앞서게 되고,
+    #   계획 순서와 무관하게 성립한다.
     $needIdx = $suiteIdx[$item.n]
-    $rebuilt = @()
-    $done = $false
-    foreach ($p in $plan) {
-        if (-not $done -and $suiteIdx[$p.n] -gt $needIdx) { $rebuilt += $item; $done = $true }
-        $rebuilt += $p
+    $cur = @($plan)
+    $pos = 0
+    for ($i = 0; $i -lt $cur.Count; $i++) {
+        if ($suiteIdx[$cur[$i].n] -lt $needIdx) { $pos = $i + 1 }
     }
-    if (-not $done) { $rebuilt += $item }
+    $rebuilt = @()
+    for ($i = 0; $i -lt $cur.Count; $i++) {
+        if ($i -eq $pos) { $rebuilt += $item }
+        $rebuilt += $cur[$i]
+    }
+    if ($pos -ge $cur.Count) { $rebuilt += $item }
     $plan = $rebuilt
     $autoAdded += $item
 }
