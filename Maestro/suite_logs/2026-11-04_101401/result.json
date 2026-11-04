@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-04_101401",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:07:30",
+  "estMin": 16.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 1,
+    "fail": 1,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "11_해외충전_통신사상품결제",
+      "status": "PASS",
+      "steps": 86,
+      "elapsed": "03:19",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_101401\\11_해외충전_통신사상품결제.log"
+    },
+    {
+      "group": "G2",
+      "name": "12_청구서결제_해외빌러",
+      "status": "FAIL",
+      "steps": 44,
+      "elapsed": "02:22",
+      "reason": "Assertion is false: \"휴대폰 번호\" is visible",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_101401\\12_청구서결제_해외빌러.log"
+    }
+  ]
+}

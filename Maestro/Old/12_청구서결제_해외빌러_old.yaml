@@ -140,10 +140,19 @@ appId: ${APP_ID}
 # [05] [Medium] Biller별 입력 필드 노출 확인 (모바일 충전 → "휴대폰 번호")
 # CLICKUP: z8nfn6ma79
 # ----------------------------------------------------------------
-- extendedWaitUntil:
-    visible:
+# ⚠️ **2026-11-04 앱 변경** — 청구인을 고르면 화면에 **출금 계좌 목록이 먼저** 붙고
+#   입력 필드(`휴대폰 번호`/`금액`/`비고`)가 그 아래로 밀린다. 종전엔 바로 보였다.
+#   ⛔ 그 필드들은 `rvField`(RecyclerView) 안이라 **스크롤해서 화면에 들어오기 전에는
+#     뷰가 생성조차 되지 않는다** → 계층에 아예 없다. Maestro 가 계층 전체를 봐도 못 찾는다.
+#     (화면 밖이라도 계층엔 있는 보통의 경우와 다르다 — `extendedWaitUntil` 로는 영영 못 기다린다)
+#   → 기다리지 말고 **끌어내린다.**
+- scrollUntilVisible:
+    element:
       text: "${REG_PHONE}"
-    timeout: 15000
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 20
+- assertVisible: "${REG_PHONE}"
 - takeScreenshot: "shots_12_billpayment_old/05_입력필드"
 
 # ----------------------------------------------------------------
@@ -166,6 +175,16 @@ appId: ${APP_ID}
 - tapOn: "${REMARKS_TEXT}"
 - inputText: "TEST"
 - hideKeyboard
+# ⚠️ 계좌 목록은 입력 필드 **위**에 있다(위 [05] 주석) → 필드를 채운 지금은 화면 밖이다.
+#   끌어올려서 누른다. 이미 선택돼 있어도 다시 눌러 문제없다(라디오형 — 2026-11-04 실측:
+#   선택된 행을 다시 눌러도 해제되지 않는다).
+#   ※ `진행` 버튼은 스크롤 영역(`scrollView2`) **밖 하단 고정**이라 올려도 그대로 보인다.
+- scrollUntilVisible:
+    element:
+      text: "GME Wallet"
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 20
 - tapOn: "GME Wallet"
 # 모든 필드 충족 → 진행 활성화
 - extendedWaitUntil:
