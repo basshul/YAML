@@ -47,94 +47,13 @@ env:
 # ================================================================
 
 # ---------------- 공통 진입: 앱 실행 → PIN <정상 PIN> → 홈 → 설정 ----------------
-- launchApp
-- waitForAnimationToEnd
-- runFlow:
-    when:
-      visible:
-        text: "Server Override"
-    commands:
-      # ⚠️ LIVETEST 강제 — 판별이 불가능해 항등 시퀀스로 간다. 상세: docs/ENVIRONMENT.md §7.3
-      - tapOn:
-          text: "${SERVER_PICK}"
-      - waitForAnimationToEnd
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-      # APPLY & QUIT로 앱이 죽었을 수 있으므로 재실행한다.
-      # ⚠️ 여기서 clearState를 쓰면 방금 저장한 선택이 **또 초기화**된다 → 절대 쓰지 말 것.
-      - launchApp
-      - extendedWaitUntil:
-          visible:
-            text: "Server Override"
-          timeout: 60000
-      - tapOn:
-          id: "button1"
-      - waitForAnimationToEnd
-# 잠금화면 판정은 문구가 아니라 id로 한다
-- runFlow:
-    when:
-      visible:
-        id: "input_dot_1"
-    commands:
-      - runFlow:
-          file: _enter_pin_old.yaml
-          env:
-            PIN: ${PIN_NORMAL}
-- runFlow:
-    when:
-      visible: "${REG_VOICE_PHISHING}"
-    commands:
-      - tapOn:
-          id: "check_customer"
-      - waitForAnimationToEnd
-      - tapOn: "확인|OK"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "${ASK_ME_LATER_TEXT}"
-    commands:
-      - tapOn: "${ASK_ME_LATER_TEXT}"
-      - waitForAnimationToEnd
-# ⚠️ **홈 팝업은 큐로 뜨고 문구가 가드와 다르다**(2026-09-01, 04_02_메뉴_거래내역에서 실측).
-#   "중요 공지사항/최신 신분증을 업로드해 주세요" 팝업의 버튼은 **"다음에 하기"(`btnCancel`)** 라
-#   위 `"나중에 하기"` **전체매칭** 가드로는 잡히지 않고 조용히 SKIP된다.
-#   그러면 팝업이 홈을 덮어 아래 `iv_nav` 대기가 실패한다.
-#   ⛔ 이 파일에서 그 실패가 나면 **[13] 원복이 중단돼 계정이 `<비밀번호 앞부분>${PW_NEW_LAST}` 로 남는다**
-#     → 검증된 공용 헬퍼로 큐를 비운다(전부 조건부라 팝업이 없으면 그냥 통과).
-- runFlow: "_dismiss_popups_stag_old.yaml"
-# ⚠️ **`launchApp` 은 마지막에 보던 화면을 복원한다**(2026-09-15 실측).
-#   21_카드_신청과충전 뒤에는 카드 탭, 그 다음엔 **카드 상세**(하단 탭조차 없는 깊은 화면)로 떴다.
-#   그 화면에는 홈 요소가 없어 진입이 4스텝째에 죽는다 → 홈까지 **빠져나온다**:
-#     하단 탭이 보이면 홈 탭을 누르고, 안 보이면 back 으로 한 겹 올라온다.
-#   판정은 `btnTransfer` 가 아니라 **`iv_nav`**(홈 툴바 드로어) 다 — 홈은 스크롤 위치를 유지해
-#   상단 카드가 화면 밖일 수 있고, 바로 다음 스텝이 그 `iv_nav` 탭이다.
-- repeat:
-    times: 6
-    commands:
-      - runFlow:
-          when:
-            notVisible:
-              id: "iv_nav"
-          commands:
-            - runFlow:
-                when:
-                  visible:
-                    id: "bottom_item_home"
-                commands:
-                  - tapOn:
-                      id: "bottom_item_home"
-            - runFlow:
-                when:
-                  notVisible:
-                    id: "bottom_item_home"
-                commands:
-                  - pressKey: back
-            - waitForAnimationToEnd
+- runFlow: "_common_entry_old.yaml"
+# 홈 툴바 드로어까지 확인하고 들어간다 — 공통 진입은 `bottom_item_home`(하단 내비)까지만
+#   보장한다. 바로 다음 줄이 이 아이콘 탭이라 여기서 한 번 더 못 박는다.
 - extendedWaitUntil:
     visible:
       id: "iv_nav"
-    timeout: 60000
+    timeout: 30000
 - tapOn:
     id: "iv_nav"
 - waitForAnimationToEnd
