@@ -1,0 +1,465 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: 쿠폰 딥링크 — **웹 랜딩 페이지**(Airbridge URL 클릭 ~ 앱 전환) — 구 UI
+# 출처: Jira S2-59 [QA] Coupon link generator: switch from Firebase to Airbridge
+#       (에픽 S2-36) — TC-01~05 / TC-08 / TC-09 / TC-10 의 **웹 구간**
+# ================================================================
+# ⚠️⚠️ **이 파일은 아직 실기기에서 한 번도 돌지 않았다.** 2026-11-04 작성 시점에
+#   실제 Airbridge 쿠폰 URL 이 없어 랜딩 페이지를 **열어 보지 못했다**.
+#   아래 웹 셀렉터는 전부 ① 티켓 본문의 기대 문구와 ② APK 리소스 문자열에서 끌어온
+#   **추정값**이다. 첫 실행 때 반드시 아래 "실측해서 고칠 것" 목록을 처리할 것.
+#
+#   실측해서 고칠 것 (우선순위 순):
+#     (1) **화살표 CTA 버튼** — 티켓에 "화살표 CTA"라고만 적혀 있어 문구가 없다.
+#         지금은 `pressKey: enter`(폼 기본 제출)로 눌렀다고 **가정**한다. 실제 페이지를
+#         `uiautomator dump` 로 떠서 버튼의 text/content-desc 를 확인하고 바꿀 것.
+#         ⛔ 좌표 탭으로 때우지 말 것 — 빗나가도 에러가 없어 거짓 통과가 된다
+#            (린터 `W11_COORD_NO_ASSERT` 가 잡는 부류).
+#     (2) **CTA 비활성(회색) 판정** — 색은 접근성 트리에 없다. 지금은 "눌러도 다음 화면으로
+#         가지 않는다"는 **동작**으로 본다. 버튼에 `enabled=false` 가 실제로 실리면
+#         `enabled: false` 셀렉터로 바꾸는 쪽이 정확하다.
+#     (3) 랜딩 문구(`WEB_*`) — 웹은 앱과 **다른 번역 경로**일 수 있다. 실제 문구로 좁힐 것.
+#     (4) 앱 전환 뒤 돌아오는 경로 — 크롬 커스텀 탭인지 전체 탭인지에 따라 닫기가 다르다
+#         (`18_통신서비스_외부웹이동_old` 의 `close_button` → back 순서를 그대로 따랐다).
+#
+# ---------------------------------------------------------------
+# ★★ 2026-11-04 실측으로 드러난 것 — **이 파일의 전제가 흔들렸다**
+# ---------------------------------------------------------------
+#   실제 쿠폰 링크(`https://abr.ge/h3ssc1s`)를 풀어 보니:
+#     https://gmeremit.airbridge.io/gmeremit.coupon.redeem/?couponCode=<코드>&discountValue=10&...
+#   이고, 이 페이지는 **Airbridge 바운스 페이지**다 — `<meta al:android:url>` 과
+#   `DeeplinkPage({...}).redirect()` 뿐이고 **전화번호 입력칸도 쿠폰 문구도 없다.**
+#   앱이 없으면 `fallbacks:{android:"google-play"}` 로 스토어에 보낸다(= TC-06 경로).
+#
+#   ⇒ **티켓이 말하는 "웹 쿠폰 랜딩 페이지"는 이 URL 이 아닐 가능성이 크다.**
+#     APK 안에 랜딩과 똑같은 재료가 전부 있다 —
+#       `FREE SERVICE FEE COUPON` / `dialog_cupon_message.xml`
+#       (`txt_dialog_title`=Welcome Back! / `this_phone_number_already_reg_text` /
+#        `btn_diaog_cancel`=Customer Support / `btn_diaog_ok`=Login /
+#        `register_diaog_ok`=Register Now / `sign_btn_diaog_ok`=Have a GME accout? Sign in)
+#     → 전화번호 입력 → Welcome Back → Login 이 **앱 화면**일 수 있다.
+#
+#   ⚠️ **확정하지 못했다.** 미로그인(`pm clear`) 상태에서 링크를 던져 화면을 떠야 하는데
+#     2026-11-04 그 시점에 기기를 다른 세션이 쓰고 있어 중단했다.
+#     확인 순서:
+#       1) stag 를 `pm clear` → Server Override 에서 LIVETEST → 온보딩 통과 → 미로그인 확정
+#       2) `openLink https://abr.ge/<id>` → 앱 선택 다이얼로그에서 stag → `uiautomator dump`
+#       3) 전화번호 입력칸이 **앱 화면**이면 이 파일을 통째로 `28_01` 쪽으로 옮기고,
+#          **브라우저 화면**이면 아래 `WEB_*` 셀렉터를 실측값으로 바꾼다.
+#     ⇒ 그 전까지 이 파일은 **돌리지 말 것.**
+#
+#   · ⛔ 앱 선택 다이얼로그는 여기도 똑같이 뜬다(GME 빌드 3개) →
+#     모든 `openLink` 뒤에 `_pick_app_from_chooser_old.yaml` 을 붙였다.
+#
+# ---------------------------------------------------------------
+# 왜 Maestro 로 웹을 만질 수 있나
+# ---------------------------------------------------------------
+#   브라우저도 결국 안드로이드 앱이라 **접근성 트리에 웹 본문이 올라온다**.
+#   이 저장소에도 선례가 있다 — `18_통신서비스_외부웹이동_old [01]` 이 크롬 주소창의
+#   `gmemobile.com` 을 **텍스트로** 잡아 외부 웹 이동을 판정한다.
+#   ⛔ 크롬 전용 id(`url_bar`)로 잡지 않는다 — 기본 브라우저가 바뀌면 통째로 달라진다.
+#   ⛔ 웹 페이지 **제목**으로 판정하지 않는다 — 사이트가 정하는 값이라 앱 언어와 무관하게 바뀐다.
+#
+# ---------------------------------------------------------------
+# 케이스 (번호 = 티켓의 TC 번호)
+# ---------------------------------------------------------------
+#   [09] [Medium] 비정상 전화번호 입력 → CTA 가 진행되지 않음 / 에러 안내
+#   [02] [High]   기존 회원 + 만료 링크 → Welcome Back 팝업 → [Login] → **앱 로그인 화면**
+#                 ※ 로그인 이후(쿠폰 팝업 → 쿠폰함)는 `28_01 [02-3][02-4]` 가 본다
+#   [08] [Medium] 하단 `Have a GME account? Sign in` 직링크 → 번호 입력 없이 앱 로그인 화면
+#   [03] [High]   미가입 번호 + 유효 링크 → 가입 유도 팝업 ([Register Now])
+#                 ⛔ **가입을 진행하지 않는다** — 계정이 생기면 재실행이 안 되고(비멱등)
+#                    회원가입 자체는 `06_회원가입_신규계정생성_old` 의 영역이다.
+#   [04] [Medium] 미가입 번호 + 만료 링크 → 만료 안내 / 가입 안내
+#   [10] [Medium] 변조·깨진 Airbridge URL → 백화면·크래시 없이 오류 화면
+#   [07-M][Medium] 앱에 로그인된 계정과 **다른 번호**를 웹에 입력 → 불일치 처리 (데이터 있을 때만)
+#
+# ---------------------------------------------------------------
+# 실행 — URL·전화번호는 **반드시 `-ExtraEnv` 로** 넘긴다
+# ---------------------------------------------------------------
+#   URL 은 어디서 얻나: Core 어드민 > OTHER SERVICE > Coupon > Coupon Link Generator
+#     → 쿠폰 생성/수정 → Download Excel → 그 안의 Airbridge URL.
+#
+#   .\run_test.ps1 -lang ko -User Basshu -flow "Old\28_02_쿠폰딥링크_웹랜딩_old.yaml" `
+#       -ExtraEnv COUPON_URL_EXPIRED=<만료·소진 쿠폰의 Airbridge URL>,PHONE_REGISTERED=01012345678
+#
+#   선택 데이터(없으면 그 케이스만 SKIP):
+#       COUPON_URL_VALID=<유효한 쿠폰 URL>        → [03]
+#       PHONE_UNREGISTERED=<GME 미가입 번호>       → [03][04]
+#       PHONE_OTHER_ACCOUNT=<앱 로그인 계정과 다른, 가입된 번호> → [07-M]
+#
+#   ⚠️ URL 에 `&` 가 들어간다 — 러너가 인용해서 넘기지만, `-ExtraEnv` 전체를 따옴표로
+#     감싸서 주는 편이 안전하다([[feedback_run_test_env_pipe]] 와 같은 부류의 함정).
+#
+# ---------------------------------------------------------------
+# ⚠️ 전제
+# ---------------------------------------------------------------
+#   · 티켓 사전조건이 **"앱 설치 + 미로그인"** 이다 → 이 파일은 `clearState` 로 그 상태를 만든다.
+#   · 끝나면 **미로그인 상태로 남는다**. 스위트에 넣는다면 바로 뒤에
+#     `01_01_로그인_정상_old.yaml` 이 와야 한다.
+#   · 브라우저에 GME 쿠폰 랜딩의 이전 세션이 남아 있을 수 있다 → 케이스마다 URL 을 새로 연다.
+# ================================================================
+
+# ----------------------------------------------------------------
+# [00] 실행 전제 — URL 과 가입된 전화번호가 없으면 아무것도 검증하지 못한다
+# ----------------------------------------------------------------
+# ⛔ 조용히 SKIP 시키지 않는다. 데이터 없이 EXIT=0 으로 끝나면 "통과"로 읽힌다.
+- assertTrue: ${typeof COUPON_URL_EXPIRED !== 'undefined' && COUPON_URL_EXPIRED.length > 0}
+- assertTrue: ${typeof PHONE_REGISTERED !== 'undefined' && PHONE_REGISTERED.length > 0}
+
+# ----------------------------------------------------------------
+# 미로그인 상태 만들기 (티켓 사전조건: 앱 설치 / 미로그인)
+# ----------------------------------------------------------------
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Server Override|서비스 이용 안내|신규 회원"
+    timeout: 30000
+# LIVETEST 강제 — 항등 시퀀스(docs/ENVIRONMENT.md §7.3)
+- runFlow:
+    when:
+      visible:
+        text: "Server Override"
+    commands:
+      - tapOn:
+          text: "${SERVER_PICK}"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "Server Override"
+          timeout: 60000
+      - tapOn:
+          id: "button1"
+      - waitForAnimationToEnd
+- runFlow: "_onboarding_gate_old.yaml"
+- runFlow:
+    when:
+      visible: "${LANG_SWITCH_TRIGGER}"
+    commands:
+      - tapOn:
+          id: "selectLangBg"
+      - waitForAnimationToEnd
+      - tapOn: "${LANG_SWITCH_TARGET}"
+      - waitForAnimationToEnd
+      - runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn"
+    timeout: 30000
+- takeScreenshot: "[00]_미로그인_확정"
+
+# ================================================================
+# [09] [Medium] 비정상 전화번호 입력 밸리데이션
+# ================================================================
+# 티켓: 자릿수 부족(`010-123`) / 문자·특수문자 / 해외 번호 형식 →
+#   CTA 비활성 유지 또는 입력 필드 하단 에러 메시지.
+# ⚠️ 색(회색/노란색)은 접근성 트리에 없다 → **동작**으로 본다:
+#   제출을 시도해도 Welcome Back / 가입 유도 팝업이 **뜨지 않아야** 한다.
+- openLink:
+    link: "${COUPON_URL_EXPIRED}"
+# ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+- runFlow: "_pick_app_from_chooser_old.yaml"
+- waitForAnimationToEnd
+# 랜딩 도달 — 쿠폰 랜딩 문구가 그려질 때까지 넉넉히 기다린다(웹 로딩).
+- extendedWaitUntil:
+    visible: "${WEB_COUPON_LANDING_TITLE}"
+    timeout: 60000
+- assertVisible: "${WEB_SIGNIN_LINK_TEXT}"
+- takeScreenshot: "[09-1]_랜딩_초기화면"
+# 자릿수 부족
+- tapOn: "${WEB_PHONE_INPUT}"
+- inputText: "010123"
+- hideKeyboard
+# ⚠️ (실측 전) 폼 기본 제출로 CTA 를 대신한다 — 실제 버튼 셀렉터를 알면 바꿀 것
+- pressKey: enter
+- waitForAnimationToEnd
+- assertNotVisible: "${WEB_WELCOME_BACK_TITLE}"
+- assertNotVisible: "${WEB_REGISTER_NOW_TEXT}"
+- takeScreenshot: "[09-2]_자릿수부족_진행불가"
+# 문자·특수문자
+- tapOn: "${WEB_PHONE_INPUT}"
+- eraseText: 30
+- inputText: "abc-!@#"
+- hideKeyboard
+- pressKey: enter
+- waitForAnimationToEnd
+- assertNotVisible: "${WEB_WELCOME_BACK_TITLE}"
+- assertNotVisible: "${WEB_REGISTER_NOW_TEXT}"
+- takeScreenshot: "[09-3]_문자입력_진행불가"
+
+# ================================================================
+# [02] [High] 기존 회원 + 만료 링크 → Welcome Back 팝업 → [Login] → 앱 로그인 화면
+# ================================================================
+# 티켓 Step 1~4. **Step 5 이후(쿠폰 팝업 → 쿠폰함)는 `28_01` 이 본다.**
+- openLink:
+    link: "${COUPON_URL_EXPIRED}"
+# ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+- runFlow: "_pick_app_from_chooser_old.yaml"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${WEB_COUPON_LANDING_TITLE}"
+    timeout: 60000
+- tapOn: "${WEB_PHONE_INPUT}"
+- eraseText: 30
+- inputText: "${PHONE_REGISTERED}"
+- hideKeyboard
+- takeScreenshot: "[02-1]_번호입력_완료"
+- pressKey: enter
+- waitForAnimationToEnd
+# 이미 가입된 번호 → Welcome Back 팝업
+- extendedWaitUntil:
+    visible: "${WEB_WELCOME_BACK_TITLE}"
+    timeout: 30000
+- assertVisible: "${WEB_PHONE_ALREADY_REG_MSG}"
+- assertVisible: "${WEB_CUSTOMER_SUPPORT_TEXT}"
+- assertVisible: "${WEB_LOGIN_TEXT}"
+- takeScreenshot: "[02-2]_WelcomeBack_팝업"
+# [Login] → 앱 전환
+- tapOn: "${WEB_LOGIN_TEXT}"
+- waitForAnimationToEnd
+# 딥링크가 SplashScreen 을 콜드로 깨운다 → Server Override 가 다시 뜰 수 있다
+- runFlow: "_server_override_old.yaml"
+# 판정 ① 앱 로그인 화면에 도달했다
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn|usernameId"
+    timeout: 60000
+- assertVisible: "${LOGIN_TITLE_TEXT}"
+# 판정 ② **브라우저를 벗어났다** — 주소 문자열이 더 이상 보이지 않는다
+- assertNotVisible: "${WEB_COUPON_LANDING_TITLE}"
+- takeScreenshot: "[02-3]_앱_로그인화면_도달"
+
+# ================================================================
+# [08] [Medium] 하단 `Have a GME account? Sign in` 직링크
+# ================================================================
+# 전화번호를 **입력하지 않고** 하단 링크만 눌렀을 때 바로 앱 로그인 화면으로 가는지.
+- openLink:
+    link: "${COUPON_URL_EXPIRED}"
+# ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+- runFlow: "_pick_app_from_chooser_old.yaml"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${WEB_COUPON_LANDING_TITLE}"
+    timeout: 60000
+- assertVisible: "${WEB_SIGNIN_LINK_TEXT}"
+- tapOn: "${WEB_SIGNIN_LINK_TEXT}"
+- waitForAnimationToEnd
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn|usernameId"
+    timeout: 60000
+- assertVisible: "${LOGIN_TITLE_TEXT}"
+- takeScreenshot: "[08]_SignIn_직링크_앱도달"
+# ⚠️ 티켓의 "로그인 후 쿠폰 파라미터 유지" 확인은 로그인까지 가야 한다 →
+#   그 구간은 `28_01 [02-3]` 과 같은 경로라 여기서 중복으로 돌리지 않는다.
+
+# ================================================================
+# [03] [High] 미가입 번호 + 유효한 쿠폰 링크 → 가입 유도 팝업
+# ================================================================
+# 데이터 2개가 다 있을 때만 돈다.
+# ⛔ **가입 버튼을 눌러 회원가입을 진행하지 않는다** — 계정이 생기면 재실행이 막히고
+#   (`06_회원가입_신규계정생성_old` 가 계정을 소모하는 것과 같은 문제), 이 케이스의
+#   검증 대상은 "가입 유도로 분기하는가" 까지다.
+- runFlow:
+    when:
+      true: ${typeof COUPON_URL_VALID !== 'undefined' && COUPON_URL_VALID.length > 0 && typeof PHONE_UNREGISTERED !== 'undefined' && PHONE_UNREGISTERED.length > 0}
+    commands:
+      - openLink:
+          link: "${COUPON_URL_VALID}"
+      # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible: "${WEB_COUPON_LANDING_TITLE}"
+          timeout: 60000
+      - tapOn: "${WEB_PHONE_INPUT}"
+      - eraseText: 30
+      - inputText: "${PHONE_UNREGISTERED}"
+      - hideKeyboard
+      - pressKey: enter
+      - waitForAnimationToEnd
+      # 가입 유도 — Welcome Back(기존 회원) 이 **아니어야** 한다
+      - extendedWaitUntil:
+          visible: "${WEB_REGISTER_NOW_TEXT}"
+          timeout: 30000
+      - assertNotVisible: "${WEB_WELCOME_BACK_TITLE}"
+      - takeScreenshot: "[03]_미가입번호_가입유도"
+
+# ================================================================
+# [04] [Medium] 미가입 번호 + 만료된 쿠폰 링크
+# ================================================================
+# 기대: 만료 안내 + 일반 회원가입 안내. (가입 완료 후 미지급 확인은 수동 — 위 [03] 과 같은 이유)
+- runFlow:
+    when:
+      true: ${typeof PHONE_UNREGISTERED !== 'undefined' && PHONE_UNREGISTERED.length > 0}
+    commands:
+      - openLink:
+          link: "${COUPON_URL_EXPIRED}"
+      # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible: "${WEB_COUPON_LANDING_TITLE}"
+          timeout: 60000
+      - tapOn: "${WEB_PHONE_INPUT}"
+      - eraseText: 30
+      - inputText: "${PHONE_UNREGISTERED}"
+      - hideKeyboard
+      - pressKey: enter
+      - waitForAnimationToEnd
+      # ⚠️ 만료 안내와 가입 안내 중 **무엇이 먼저 뜨는지 미확정**이다 → 대안 매칭으로 받는다.
+      - extendedWaitUntil:
+          visible: "${WEB_REGISTER_NOW_TEXT}|${COUPON_LINK_EXPIRED_MSG}"
+          timeout: 30000
+      - takeScreenshot: "[04]_미가입번호_만료링크"
+
+# ================================================================
+# [07-M] [Medium] 앱 로그인 계정과 **다른 번호**를 웹에 입력 (계정 불일치)
+# ================================================================
+# 티켓 TC-07 의 뒷부분. 앱이 **로그인된 상태**여야 성립한다 →
+#   이 파일은 미로그인으로 시작하므로 여기서 한 번 로그인하고 본다.
+#   데이터(`PHONE_OTHER_ACCOUNT`)가 있을 때만 돈다.
+- runFlow:
+    when:
+      true: ${typeof PHONE_OTHER_ACCOUNT !== 'undefined' && PHONE_OTHER_ACCOUNT.length > 0}
+    commands:
+      # 앱 로그인 상태 만들기
+      - launchApp
+      - runFlow: "_server_override_old.yaml"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_lgn|usernameId|bottom_item_home|input_dot_1"
+          timeout: 60000
+      - runFlow:
+          when:
+            visible:
+              id: "btn_lgn"
+          commands:
+            - tapOn:
+                id: "btn_lgn"
+            - extendedWaitUntil:
+                visible:
+                  id: "usernameId"
+                timeout: 20000
+            - tapOn:
+                id: "usernameId"
+            - eraseText: 50
+            - inputText: "${ACCT_MAIN}"
+            - tapOn:
+                id: "securityKeyboardEditText"
+            - runFlow: "_enter_login_pw_old.yaml"
+            - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible: "${FINGERPRINT_AUTH_PROMPT_TITLE_TEXT}"
+                commands:
+                  - tapOn: "${REG_LATER}"
+                  - waitForAnimationToEnd
+            - runFlow:
+                when:
+                  visible: "${LOCK_CREATE_PROMPT}"
+                commands:
+                  - runFlow:
+                      file: _enter_pin_old.yaml
+                      env:
+                        PIN: ${PIN_NORMAL}
+                  - runFlow:
+                      file: _enter_pin_old.yaml
+                      env:
+                        PIN: ${PIN_NORMAL}
+      - runFlow:
+          when:
+            visible: "${PIN_ENTER_4DIGIT}"
+          commands:
+            - runFlow:
+                file: _enter_pin_old.yaml
+                env:
+                  PIN: ${PIN_NORMAL}
+      - runFlow:
+          file: _dismiss_popups_stag_old.yaml
+      - extendedWaitUntil:
+          visible:
+            id: "bottom_item_home"
+          timeout: 60000
+      # 웹에서 **다른 계정의 번호**로 진행
+      - openLink:
+          link: "${COUPON_URL_EXPIRED}"
+      # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible: "${WEB_COUPON_LANDING_TITLE}"
+          timeout: 60000
+      - tapOn: "${WEB_PHONE_INPUT}"
+      - eraseText: 30
+      - inputText: "${PHONE_OTHER_ACCOUNT}"
+      - hideKeyboard
+      - pressKey: enter
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible: "${WEB_WELCOME_BACK_TITLE}"
+          timeout: 30000
+      - tapOn: "${WEB_LOGIN_TEXT}"
+      - waitForAnimationToEnd
+      # ⚠️ **기대 동작이 확정되지 않았다**(티켓도 "불일치 안내 처리 여부 확인"으로 열어 두었다).
+      #   그래서 단언하지 않고 **증적만 남긴다.** 사양이 정해지면 여기에 단언을 넣을 것.
+      - extendedWaitUntil:
+          visible:
+            id: "bottom_item_home|btn_lgn|usernameId"
+          timeout: 60000
+      - takeScreenshot: "[07-M]_계정불일치_결과"
+
+# ================================================================
+# [10] [Medium] 변조 / 깨진 Airbridge URL
+# ================================================================
+# 기대: 백화면·크래시 없이 "유효하지 않은 링크" 오류 화면.
+# 변조 URL 은 주어진 URL 뒤에 쓰레기 파라미터를 붙여 만든다(데이터가 더 필요 없다).
+- openLink:
+    link: "${COUPON_URL_EXPIRED}&couponCode=QA-INVALID-0000000000"
+# ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
+- runFlow: "_pick_app_from_chooser_old.yaml"
+- waitForAnimationToEnd
+# 판정 — **무언가가 그려졌다.** 백화면이면 본문 텍스트가 하나도 없다.
+#   ⚠️ 오류 문구가 확정되지 않아(웹 쪽 사양 미확인) 랜딩 문구 **또는** 오류 문구 중
+#     하나가 보이면 통과로 본다. 실측 후 오류 문구 하나로 좁힐 것.
+- extendedWaitUntil:
+    visible: "${WEB_COUPON_LANDING_TITLE}|${WEB_INVALID_LINK_MSG}"
+    timeout: 60000
+- takeScreenshot: "[10]_변조URL_결과"
+# 앱이 죽지 않았는지 — 브라우저를 닫고 앱으로 돌아올 수 있어야 한다
+#   (`18_통신서비스_외부웹이동_old` 와 같은 순서: 커스텀 탭 닫기 → 없으면 back)
+- runFlow:
+    when:
+      visible:
+        id: "close_button"
+    commands:
+      - tapOn:
+          id: "close_button"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_lgn|bottom_item_home"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- launchApp
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "btn_lgn|bottom_item_home|input_dot_1"
+    timeout: 60000
+- takeScreenshot: "[10]_앱_생존확인"
+
+# ================================================================
+# 종료 상태: [07-M] 을 돌렸으면 로그인됨, 아니면 **미로그인**.
+#   스위트에 넣는다면 바로 뒤에 `01_01_로그인_정상_old.yaml` 을 둘 것.
+# ================================================================

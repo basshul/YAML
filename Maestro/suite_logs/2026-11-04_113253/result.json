@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-04_113253",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:17:14",
+  "estMin": 15.0,
+  "aborted": false,
+  "counts": {
+    "total": 3,
+    "pass": 3,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G3",
+      "name": "14_02_입금_외국인계좌미연결",
+      "status": "PASS",
+      "steps": 150,
+      "elapsed": "06:46",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_113253\\14_02_입금_외국인계좌미연결.log"
+    },
+    {
+      "group": "G3",
+      "name": "25_02_프로필_외국인신분증",
+      "status": "PASS",
+      "steps": 123,
+      "elapsed": "04:23",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_113253\\25_02_프로필_외국인신분증.log"
+    },
+    {
+      "group": "G3",
+      "name": "14_03_입금_GMEPay가상계좌",
+      "status": "PASS",
+      "steps": 138,
+      "elapsed": "05:34",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_113253\\14_03_입금_GMEPay가상계좌.log"
+    }
+  ]
+}

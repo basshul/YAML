@@ -1,0 +1,56 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: `openLink` 직후 뜨는 **안드로이드 앱 선택 다이얼로그**를 통과시킨다 (2026-11-04 작성)
+# ================================================================
+# 호출:
+#   - openLink: { link: "..." }
+#   - runFlow: "_pick_app_from_chooser_old.yaml"
+#
+# 왜 필요한가 — 2026-11-04 실기기 실측(SM-S911N):
+#   기기에 GME 빌드가 **3개** 깔려 있다(운영 / livetest / stag). 세 패키지가 전부
+#   `gmeremit://` 스킴과 Airbridge 호스트를 선언하고 있어서, 쿠폰 딥링크를 던지면
+#   앱으로 바로 가지 않고 **"연결 앱" 선택 다이얼로그**(`ResolverActivity`)가 먼저 뜬다.
+#     `adb shell am start -a android.intent.action.VIEW -d "gmeremit://gmeremit.coupon.redeem/?..."`
+#       → mCurrentFocus = `android/com.android.internal.app.ResolverActivity`
+#   ⛔ 이걸 처리하지 않으면 뒤 스텝이 전부 "Element not found" 로 죽는다.
+#     그런데 화면만 보면 **앱이 안 열린 것처럼** 보여서 딥링크가 안 먹었다고 오진하기 쉽다.
+#
+# 실측 화면 구조 (AOSP 표준 id — 패키지 접두사는 붙이지 않는다, 린터 E01):
+#   `sem_resolver_header` > `title`("연결 앱")
+#   `resolver_list` > 행마다 `icon` + `text1`
+#     text1 실측값: **"GME 해외송금" / "GME 해외송금(livetest)" / "GME 해외송금(stag)"**
+#   `button_bar` > `button_once`("한 번만") / `button_always`("항상")
+#
+# ⛔ **`button_always`("항상")를 누르지 말 것.** 기본 앱이 기기에 **영구 저장**되고
+#   `pm clear` 로도 지워지지 않는다(패키지 매니저의 preferred-activity 설정이라
+#   앱 데이터가 아니다). 다른 빌드를 테스트할 때 조용히 엉뚱한 앱이 열린다.
+#   → 항상 `button_once`("한 번만").
+#
+# ⚠️ 어느 항목을 고를지는 `APP_CHOOSER_LABEL`(env) 이 정한다. 기본값은 **stag** 다
+#   (`-Build stag` 가 저장소 기본이라 — [[project_stag_build_run]]).
+#   ⛔ `-Build live` 로 돌리려면 `env\{ko,en}.env` 의 `APP_CHOOSER_LABEL` 을 같이 바꿔야 한다.
+#     `-ExtraEnv` 로는 못 덮는다(러너가 "env 파일에도 있습니다" 로 거부한다).
+#   ⚠️ 라벨 "GME 해외송금" 은 나머지 둘의 **접두**다. Maestro 는 기본이 전체매칭이라
+#     운영 항목을 고를 땐 오히려 안전하지만, 부분매칭 정규식(`.*GME.*`)으로 쓰면
+#     **세 항목 중 아무거나** 집힌다 → 반드시 괄호까지 포함해 특정할 것.
+#
+# 다이얼로그가 없으면(기본 앱이 하나뿐이거나 이미 정해졌으면) 통째로 SKIP 된다.
+# ================================================================
+
+- runFlow:
+    when:
+      visible:
+        id: "resolver_list|sem_resolver_header"
+    commands:
+      - tapOn: "${APP_CHOOSER_LABEL}"
+      - waitForAnimationToEnd
+      # "한 번만" 이 없는 기기/상황(항목 1개를 바로 여는 변형)도 있어 조건부로 둔다.
+      - runFlow:
+          when:
+            visible:
+              id: "button_once"
+          commands:
+            - tapOn:
+                id: "button_once"
+            - waitForAnimationToEnd

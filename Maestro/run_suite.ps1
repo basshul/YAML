@@ -308,7 +308,8 @@ $Suite = @(
      note="24개 언어 순회 후 한국어 복귀. ⚠️ 중단되면 앱이 **외국어로 남아** 뒤 항목이 전부 깨진다(수동 복구 필요). est 는 추정치" }
   @{ n="04_03_메뉴설정_간편비번변경"; g="G4"; acct="seungsoo818"; est=8; f="Old\04_03_메뉴설정_간편비번변경_old.yaml"
      note="PIN 정상→대체→원복. ⚠️ 중단되면 **대체 PIN 으로 남아** 모든 진입 블록이 깨진다. env PW_CUR_LAST 는 04_04 와 함께 맞출 것" }
-  @{ n="04_04_메뉴설정_로그인비번변경";  g="G4"; acct="seungsoo818"; est=12; f="Old\04_04_메뉴설정_로그인비번변경_old.yaml"
+  # 2026-11-04 실측 21:20 → est 12 → 21분(표 주석대로 추정이 크게 어긋나면 전체 예상이 왜곡된다).
+  @{ n="04_04_메뉴설정_로그인비번변경";  g="G4"; acct="seungsoo818"; est=21; f="Old\04_04_메뉴설정_로그인비번변경_old.yaml"
      note="[06]~[13] 로그인 비밀번호 변경→원복(멱등). ⚠️ [13] 이 실패하면 PW_NEW 로 남는다 → env 두 줄을 서로 바꿔 다음 실행을 맞춘다" }
 
   # ── G5 정리 — 테스트가 아니다. 앞선 항목이 남긴 데이터를 지운다 ─
@@ -760,7 +761,24 @@ $canCharge  = ($Balance -ge 0) -and $AutoCharge
 
 Write-BalancePlan -Pad '  잔액            ' -Ind '                  '
 
+# ③-1 대상이 아닌 GME 빌드를 **정리한다** — 켜져 있으면 두 가지를 망가뜨린다
+#   ① 호스트 집계가 패키지를 가리지 않는다(아래 ④). 남의 빌드가 제 기본 서버로 거는
+#      콜드스타트 호출이 "기대한 서버 밖 트래픽"으로 잡혀 **스위트를 통째로 멈춘다.**
+#   ② 우리 앱의 액티비티 스택이 비는 순간(로그아웃 등) 남은 태스크가 **포그라운드를 가로챈다.**
+#   2026-11-04 실측: `14_02` 로그아웃 직후
+#     `Start proc …gmeremittance_native.stag for next-top-activity` → livetest 2건 →
+#     `[STOP]` 으로 G3 사슬이 1번 항목에서 끊겼다(계정은 test123 로그인 중간에 남았다).
+#   ※ force-stop 은 데이터를 지우지 않는다. 다음에 그 빌드를 쓸 때 그대로 뜬다.
+$otherPkgs = @(adb shell pm list packages 2>$null |
+               ForEach-Object { ($_ -replace '^package:', '').Trim() } |
+               Where-Object { $_ -like 'com.gmeremit.online.gmeremittance_native*' -and $_ -ne $EffAppId })
+if ($otherPkgs.Count -gt 0) {
+    foreach ($p in $otherPkgs) { adb shell am force-stop $p 2>$null | Out-Null }
+    Write-Host ("  다른 빌드        {0}개 정리 ({1})" -f $otherPkgs.Count, ($otherPkgs -join ', ')) -ForegroundColor DarkGray
+}
+
 # ④ 접속 호스트 판정 준비 — 코드가 아니라 **실제 트래픽**으로 본다
+#   ⚠️ **패키지를 가리지 않는다** — logcat 전체에서 호스트를 센다. 그래서 ③-1 이 먼저다.
 adb logcat -c 2>$null | Out-Null
 $earlyHostChecked = $false
 Write-Host "  logcat          초기화 (종료 시 접속 호스트 집계)" -ForegroundColor Green
