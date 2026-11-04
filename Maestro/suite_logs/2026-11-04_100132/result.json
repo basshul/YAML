@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-04_100132",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:05:18",
+  "estMin": 4.0,
+  "aborted": false,
+  "counts": {
+    "total": 1,
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "10_국내충전_번호입력",
+      "status": "PASS",
+      "steps": 87,
+      "elapsed": "05:16",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_100132\\10_국내충전_번호입력.log"
+    }
+  ]
+}
