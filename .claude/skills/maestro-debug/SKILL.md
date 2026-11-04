@@ -13,7 +13,7 @@ description: Maestro 플로우 실행이 실패했을 때 원인을 진단한다
 스위트 로그는 **CRLF + 한글이 콘솔에서 깨진다.** 반드시 `tr -d '\r'`를 거친다.
 
 ```bash
-cd "<Maestro>/suite_logs" && D=$(ls -dt */ | head -1)
+cd "<Maestro>/YAML/suite_logs" && D=$(ls -dt */ | head -1)
 tr -d '\r' < "$D/<이름>.log" | grep -vE "^\s+at |^Caused by" | grep -B10 "FAILED" | head -14
 ```
 

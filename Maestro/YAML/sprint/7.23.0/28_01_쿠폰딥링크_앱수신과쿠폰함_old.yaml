@@ -113,7 +113,7 @@ env:
 #   코드를 어디서 얻나: Core 어드민 > OTHER SERVICE > Coupon > Coupon Link Generator
 #     → 쿠폰 생성/수정 → Download Excel → Airbridge URL 의 `couponCode` 파라미터.
 #
-#   .\run_test.ps1 -lang ko -User Basshu -flow "Old\28_01_쿠폰딥링크_앱수신과쿠폰함_old.yaml" `
+#   .\run_test.ps1 -lang ko -User Basshu -flow "sprint\7.23.0\28_01_쿠폰딥링크_앱수신과쿠폰함_old.yaml" `
 #       -ExtraEnv COUPON_CODE_EXPIRED=<만료·소진된 코드>
 #
 #   선택 데이터(없으면 그 케이스만 SKIP 된다):
@@ -176,7 +176,7 @@ env:
           id: "button1"
       - waitForAnimationToEnd
 # 서비스 이용 안내 + OS 권한 다이얼로그 여러 개
-- runFlow: "_onboarding_gate_old.yaml"
+- runFlow: "../../Old/_onboarding_gate_old.yaml"
 # clearState 로 앱 언어가 한국어로 초기화된다 → en 실행이면 되돌린다.
 #   ko 는 `LANG_SWITCH_TRIGGER=__NEVER_MATCH__` 라 통째로 SKIP 된다.
 - runFlow:
@@ -188,7 +188,7 @@ env:
       - waitForAnimationToEnd
       - tapOn: "${LANG_SWITCH_TARGET}"
       - waitForAnimationToEnd
-      - runFlow: "_server_override_old.yaml"
+      - runFlow: "../../Old/_server_override_old.yaml"
 # 미로그인 확정 — 초기화면에 로그인 버튼이 있다
 - extendedWaitUntil:
     visible:
@@ -203,10 +203,10 @@ env:
 - openLink:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-- runFlow: "_pick_app_from_chooser_old.yaml"
+- runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
 - waitForAnimationToEnd
 # 딥링크는 SplashScreen 을 콜드로 깨우므로 Server Override 가 다시 뜰 수 있다.
-- runFlow: "_server_override_old.yaml"
+- runFlow: "../../Old/_server_override_old.yaml"
 - extendedWaitUntil:
     visible:
       id: "btn_lgn|usernameId"
@@ -236,7 +236,7 @@ env:
 - tapOn:
     id: "securityKeyboardEditText"
 # 비밀번호는 사용자 프로파일에서 온다(`env\user.<이름>.local.env`). ⛔ 하드코딩 금지.
-- runFlow: "_enter_login_pw_old.yaml"
+- runFlow: "../../Old/_enter_login_pw_old.yaml"
 - waitForAnimationToEnd
 # 지문 등록 제안 → 나중에
 - runFlow:
@@ -251,11 +251,11 @@ env:
       visible: "${LOCK_CREATE_PROMPT}"
     commands:
       - runFlow:
-          file: _enter_pin_old.yaml
+          file: ../../Old/_enter_pin_old.yaml
           env:
             PIN: ${PIN_NORMAL}
       - runFlow:
-          file: _enter_pin_old.yaml
+          file: ../../Old/_enter_pin_old.yaml
           env:
             PIN: ${PIN_NORMAL}
       - runFlow:
@@ -272,7 +272,7 @@ env:
       visible: "${PIN_ENTER_4DIGIT}"
     commands:
       - runFlow:
-          file: _enter_pin_old.yaml
+          file: ../../Old/_enter_pin_old.yaml
           env:
             PIN: ${PIN_NORMAL}
 - runFlow:
@@ -295,7 +295,7 @@ env:
 #   `remindLaterBtn`/`btnClose|btnTwo`)에는 쿠폰 팝업 버튼(`btn_diaog_*`)이 없으므로
 #   쿠폰 팝업을 대신 닫아 버릴 일은 없다(2026-11-04 헬퍼 확인).
 - runFlow:
-    file: _dismiss_popups_stag_old.yaml
+    file: ../../Old/_dismiss_popups_stag_old.yaml
 # ⛔ 세션 만료는 여기서 빨리 죽인다(뒤 대기에 맡기면 엉뚱한 메시지로 죽는다)
 - assertNotVisible: "${SESSION_EXPIRED}"
 # 쿠폰 상태 팝업 — 티켓 Step 5
@@ -327,7 +327,7 @@ env:
     id: "iv_back"
 - waitForAnimationToEnd
 - runFlow:
-    file: _dismiss_popups_stag_old.yaml
+    file: ../../Old/_dismiss_popups_stag_old.yaml
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
@@ -347,7 +347,7 @@ env:
       - openLink:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_LINK_EXPIRED_MSG}"
           timeout: 60000
@@ -378,7 +378,7 @@ env:
             - pressKey: back
             - waitForAnimationToEnd
       - runFlow:
-          file: _dismiss_popups_stag_old.yaml
+          file: ../../Old/_dismiss_popups_stag_old.yaml
       - extendedWaitUntil:
           visible:
             id: "bottom_item_home"
@@ -395,7 +395,7 @@ env:
 - openLink:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-- runFlow: "_pick_app_from_chooser_old.yaml"
+- runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
 - extendedWaitUntil:
     visible: "${COUPON_LINK_EXPIRED_MSG}"
     timeout: 20000
@@ -434,7 +434,7 @@ env:
       - openLink:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_CLAIMED}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_DUPLICATE_MSG}"
           timeout: 60000
@@ -476,7 +476,7 @@ env:
 - openLink:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_TAMPERED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-- runFlow: "_pick_app_from_chooser_old.yaml"
+- runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
 - waitForAnimationToEnd
 # 판정 ① 오류/안내 팝업이 뜬다(만료·삭제·처리오류 중 하나로 떨어진다)
 - extendedWaitUntil:
@@ -518,7 +518,7 @@ env:
 - openLink:
     link: "gmeremit://gmeremit.coupon.redeem"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-- runFlow: "_pick_app_from_chooser_old.yaml"
+- runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -567,7 +567,7 @@ env:
       - openLink:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_VALID}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_REDEEMED_MSG}"
           timeout: 60000
@@ -591,7 +591,7 @@ env:
       - openLink:
           link: "${DEEPLINK_COUPON_BOX}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-      - runFlow: "_pick_app_from_chooser_old.yaml"
+      - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
       - extendedWaitUntil:
           visible:
             id: "rvCouponCategories"

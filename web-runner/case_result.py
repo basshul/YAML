@@ -27,7 +27,8 @@ import json
 import re
 from pathlib import Path
 
-MAESTRO_DIR = Path(__file__).resolve().parent.parent / "Maestro"
+# ⚠️ 2026-11-04: `Maestro\` → `Maestro\YAML\` (같은 상수가 `runner.py`·`user_profile.py` 에도 있다)
+MAESTRO_DIR = Path(__file__).resolve().parent.parent / "Maestro" / "YAML"
 
 # 이름이 바뀐 플로우를 되짚는 표. 과거 로그에는 **그때의 파일명**이 적혀 있어서
 # (`flow_path_from_log` 참고) 리네임 뒤에는 그 경로가 없다 → 이력의 「케이스별
@@ -224,7 +225,7 @@ def analyze(log_path: Path, item: dict) -> dict:
         if moved is None:
             raise NoCases(
                 f"`{flow.name}` 을 찾을 수 없습니다. 이름을 바꿨다면 "
-                "`Maestro\\flow_renames.json` 에 한 줄 추가하세요.")
+                "`Maestro\\YAML\\flow_renames.json` 에 한 줄 추가하세요.")
         renamed_from, flow = flow.name, moved
 
     per, order, titles = yaml_cases(flow)

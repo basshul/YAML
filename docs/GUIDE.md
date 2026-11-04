@@ -27,9 +27,10 @@ GME Remittance 안드로이드 앱의 **Maestro E2E 자동화**를 처음 받는
 ### 폴더 구조
 
 ```
-C:\GME\qa-automation\Maestro\   ← 편집·실행 폴더. CWD는 항상 여기다
-├── Old\*.yaml            ★ 실행 대상 66개 — 구 UI(V2)용, `_old` 접미사
-├── *.yaml                개편 UI(V3)용 사본 — 배포 전까지 손대지 않는다
+C:\GME\qa-automation\Maestro\YAML\   ← 편집·실행 폴더. CWD는 항상 여기다
+├── Old\*.yaml            ★ 실행 대상 — 구 UI(V2)용, `_old` 접미사 (80개)
+├── New\*.yaml            개편 UI(V3)용 사본 — 배포 전까지 손대지 않는다 (35개)
+├── sprint\<버전>\        스프린트 회차별 산출물 (2026-11-04 신설 예정)
 ├── env\ko.env, en.env    화면 문구 사전(${VAR}로 참조)
 ├── Test Files\           갤러리 업로드용 이미지 픽스처 4장
 ├── run_test.ps1          단일 플로우 실행기
@@ -126,7 +127,7 @@ git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
 
 **저장소 사본만으로도 실행된다.** 러너에 절대경로가 없고 전부 **CWD 기준**으로 동작한다
 (2026-09-17 실측: `run_test.ps1`·`run_suite.ps1`·`push_test_images.ps1`·`lint_flows.ps1` 에
-정본 경로 하드코딩 **0건**, `$PSScriptRoot` 도 안 쓴다). CWD 를 clone 한 `Maestro\` 로 잡으면 된다.
+정본 경로 하드코딩 **0건**, `$PSScriptRoot` 도 안 쓴다). CWD 를 clone 한 `Maestro\YAML\` 로 잡으면 된다.
 
 ⚠️ 단 **편집은 정본에서만** 한다(§1) — 저장소에서 고치면 다음 동기화가 지운다.
 정본(OneDrive)이 붙어 있는 환경이라면 그쪽을 CWD 로 쓰는 것이 맞다.
@@ -158,10 +159,10 @@ git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
 
 | 항목 | 수 |
 |---|---|
-| `Maestro\Old\*.yaml` — 실행 대상 50 + 헬퍼 17 | 67 |
-| `Maestro\env\ko.env` · `en.env` — 각 418키, **키 집합이 같아야 한다** | 2 |
+| `Maestro\YAML\Old\*.yaml` — 실행 대상 50 + 헬퍼 17 | 67 |
+| `Maestro\YAML\env\ko.env` · `en.env` — 각 418키, **키 집합이 같아야 한다** | 2 |
 | `run_test.ps1` · `run_suite.ps1` · `push_test_images.ps1` | 3 |
-| `Maestro\Test Files\` — 갤러리 픽스처 | 4 |
+| `Maestro\YAML\Test Files\` — 갤러리 픽스처 | 4 |
 | `lint_flows.ps1` · `lint_labels.json` · `lint_whitelist.txt` | 3 |
 | `CLAUDE.md` · `.claude\skills\` 4 · `docs\` 4 | 9 |
 
@@ -169,13 +170,13 @@ git clone https://github.com/basshul/YAML.git C:\GME\qa-automation
 
 | 항목 | 수 | 무엇인가 |
 |---|---|---|
-| `Maestro\*.yaml` (루트) | 44 | **개편 UI(V3) 사본.** 폐기가 아니라 **보류** — 개편 빌드를 못 받아서다. 재개하면 쓴다 |
-| `Maestro\lint_selftest\` + `lint_selftest.ps1` | 23 | 린터 **자기검사 픽스처** |
-| `Maestro\_archive\` · `Old\_archive\` | 18 | 보관본 |
+| `Maestro\YAML\New\*.yaml` | 43 | **개편 UI(V3) 사본.** 폐기가 아니라 **보류** — 개편 빌드를 못 받아서다. 재개하면 쓴다. 전용 헬퍼 2개와 아래 "실험·단편" 8개를 포함한 수다(2026-11-04 루트에서 모았다) |
+| `Maestro\YAML\lint_selftest\` + `lint_selftest.ps1` | 23 | 린터 **자기검사 픽스처** |
+| `Maestro\YAML\_archive\` · `Old\_archive\` | 18 | 보관본 |
 | `lint_*.json` | 2 | 린터 **산출물**(돌리면 재생성) |
 | `flows_index.json` | 1 | **낡았다**(2026-06-25, V3 기준). 쓰기 전에 재생성하거나 무시 |
-| `k_*.yaml` · `_stag_login*.yaml` · `charge.yaml` | 7 | 실험·단편 |
-| `Automation Report.bat/.txt` · 루트 `run_test.ps1` | 3 | 데일리 리포트 / `Maestro\` 쪽과 중복 |
+| `k_*.yaml` · `_stag_login*.yaml` · `charge.yaml` | 8 | 실험·단편. 2026-11-04 `YAML\` 루트에서 **`New\` 로** 옮겼다(위 43개에 포함). 부르는 곳도 부르는 것도 없다 |
+| `Automation Report.bat/.txt` · 루트 `run_test.ps1` | 3 | 데일리 리포트 / `Maestro\YAML\` 쪽과 중복 |
 
 ### 체크리스트 기입 도구 — 결과를 적을 사람만
 
@@ -198,7 +199,7 @@ python gme_excel.py login              # 최초 1회, 브라우저 인증
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'    # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
-cd "C:\GME\qa-automation\Maestro"
+cd "C:\GME\qa-automation\Maestro\YAML"
 .\run_test.ps1 -lang ko -flow "Old\09_홈화면_요소와진입경로_old.yaml"
 ```
 
@@ -491,8 +492,8 @@ adb logcat -d | Select-String -Pattern '(livetest|gmeuat)\.gmeremit\.com'
 | `gme_excel.py` (저장소 루트) | `GME_CLIENT_ID`·`GME_TENANT_ID` 환경변수, 대상은 **SharePoint 공유 링크**(`-f`) | 링크가 바뀌면 `HTTP 404`. 토큰은 `~/.gme_excel_token.json` 에 계정별로 남는다 |
 
 ⚠️ **저장소 루트의 `run_test.ps1` 은 갤러리 픽스처 전용 래퍼**다 — 이미지를
-`/sdcard/DCIM` 에 push 한 뒤 `Maestro\run_test.ps1` 로 그대로 넘긴다(인자 동일).
-`21_카드_신청과충전 [24]`·`06_회원가입_신규계정생성` 처럼 갤러리가 필요한 것만 이걸 쓰고, 나머지는 `Maestro\` 쪽을 쓴다.
+`/sdcard/DCIM` 에 push 한 뒤 `Maestro\YAML\run_test.ps1` 로 그대로 넘긴다(인자 동일).
+`21_카드_신청과충전 [24]`·`06_회원가입_신규계정생성` 처럼 갤러리가 필요한 것만 이걸 쓰고, 나머지는 `Maestro\YAML\` 쪽을 쓴다.
 
 ### 10.4 ③ skill·문서
 

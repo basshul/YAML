@@ -1,7 +1,7 @@
 # web-runner — 브라우저에서 Maestro 테스트 실행 (데모)
 
 브라우저에서 테스트를 골라 실행하고, 로그와 pass/fail 결과를 보는 로컬 데모입니다.
-실행은 기존 `Maestro\run_test.ps1` / `run_suite.ps1` 이 그대로 합니다 — 이 폴더는 그걸 부르는 껍데기입니다.
+실행은 기존 `Maestro\YAML\run_test.ps1` / `run_suite.ps1` 이 그대로 합니다 — 이 폴더는 그걸 부르는 껍데기입니다.
 
 ## 처음 한 번만
 
@@ -35,9 +35,9 @@ Copy-Item config.example.json config.local.json
 
 - **서버 선택**은 빌드 이름이 아니라 **어느 서버에 붙는가**로 고릅니다.
   `LiveTest` → stag 빌드(플로우가 서버를 LIVETEST 로 강제) / `운영(Live)` → 실서비스.
-- **실행 이력의 정본은 `Maestro\suite_logs\<시각>\SUMMARY.md`** 입니다. run_suite.ps1 이 매 실행마다
+- **실행 이력의 정본은 `Maestro\YAML\suite_logs\<시각>\SUMMARY.md`** 입니다. run_suite.ps1 이 매 실행마다
   쓰기 때문에, **웹에서 돌리든 PowerShell 로 직접 돌리든 이력 페이지에 함께 나옵니다.**
-- **테스트 목록의 정본은 `Maestro\run_suite.ps1` 의 `$Suite` 표**입니다.
+- **테스트 목록의 정본은 `Maestro\YAML\run_suite.ps1` 의 `$Suite` 표**입니다.
   여기에 목록을 따로 적지 않습니다 — 표가 바뀌면 화면도 자동으로 바뀝니다.
 - **G9(파괴적) 항목은 목록에 뜨지 않습니다.** 계정 잠금·비밀번호 초기화처럼 admin 개입이
   있어야 복구되는 것들이라 데모 범위에서 뺐습니다.

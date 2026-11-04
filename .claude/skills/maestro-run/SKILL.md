@@ -10,14 +10,14 @@ description: GME Remittance 앱의 Maestro 플로우/스위트를 실기기에�
 
 ## CWD와 셸 전제
 
-CWD는 항상 `Maestro\` 루트다. 플로우 경로는 그 기준 상대경로.
+CWD는 항상 `Maestro\YAML\` 루트다. 플로우 경로는 그 기준 상대경로.
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
 ```
 
 작업 파일은 **이 저장소 안에** 있다(2026-09-22 폴더 병합, OneDrive 정본 폐지):
-`C:\GME\qa-automation\Maestro\`
+`C:\GME\qa-automation\Maestro\YAML\`
 편집 대상은 **`Old\`**(구 UI). 루트의 동일 사본은 개편 UI용이라 건드리지 않는다.
 
 ## 실행 명령
@@ -31,7 +31,7 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
 - `-device` 생략 시 자동 감지하고 **2대 이상이면 실행을 거부**한다. 시리얼을 하드코딩하지 말 것.
 - `run_test.ps1`이 `env\<lang>.env`를 파싱해 `--env KEY="VALUE"`로 넘긴다. 값의 인용은 필수.
 - 저장소 루트의 `run_test.ps1` 은 **갤러리 픽스처 전용 래퍼**다 — 이미지를 push 하고
-  `Maestro\run_test.ps1` 로 넘긴다(인자 동일). `21_카드_신청과충전 [24]`·`06_회원가입_신규계정생성` 만 이걸 쓴다.
+  `Maestro\YAML\run_test.ps1` 로 넘긴다(인자 동일). `21_카드_신청과충전 [24]`·`06_회원가입_신규계정생성` 만 이걸 쓴다.
 - 스위트 상세는 `maestro-suite` 스킬 참고.
 
 ### 빌드 2종 (2026-09-03 사용자 선언)

@@ -20,7 +20,10 @@ from pathlib import Path
 
 WEB_RUNNER_DIR = Path(__file__).resolve().parent
 REPO_ROOT = WEB_RUNNER_DIR.parent
-MAESTRO_DIR = REPO_ROOT / "Maestro"
+# ⚠️ 2026-11-04: yaml 트리가 `Maestro\` → `Maestro\YAML\` 로 한 단계 내려갔다.
+#   러너·env·Old/New/sprint 가 전부 그 아래다. 같은 상수가 `case_result.py` ·
+#   `user_profile.py` 에도 있다 — 또 옮기면 **셋을 같이** 고칠 것.
+MAESTRO_DIR = REPO_ROOT / "Maestro" / "YAML"
 SUITE_SCRIPT = MAESTRO_DIR / "run_suite.ps1"
 RUN_LOG_DIR = WEB_RUNNER_DIR / "run_logs"
 PARAM_BLOCK_RE = r"^param\s*\((.*?)^\)"

@@ -16,7 +16,8 @@ import re
 from pathlib import Path
 
 WEB_RUNNER_DIR = Path(__file__).resolve().parent
-ENV_DIR = WEB_RUNNER_DIR.parent / "Maestro" / "env"
+# ⚠️ 2026-11-04: `Maestro\env` → `Maestro\YAML\env` (`runner.py`·`case_result.py` 와 같이 움직인다)
+ENV_DIR = WEB_RUNNER_DIR.parent / "Maestro" / "YAML" / "env"
 
 # 이름에 경로 문자가 섞이면 상위 폴더로 빠져나갈 수 있다 → 글자·숫자만 받는다.
 SAFE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,31}$")

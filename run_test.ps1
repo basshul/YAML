@@ -27,7 +27,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
-$maestroDir  = Join-Path $scriptDir "Maestro"
+# ⚠️ 2026-11-04: yaml 트리가 `Maestro\` → `Maestro\YAML\` 로 한 단계 내려갔다.
+#   본 러너·`Test Files\`·CWD 가 전부 그 아래다 → 아래 세 곳(31·63·106행)이 이 값을 따라간다.
+$maestroDir  = Join-Path $scriptDir "Maestro\YAML"
 $innerRunner = Join-Path $maestroDir "run_test.ps1"
 
 if (-not (Test-Path $innerRunner)) {

@@ -573,6 +573,9 @@ yaml 1개       =  1 시나리오  (그 안에 케이스가 여럿)
    Maestro/suite_logs/*/*
    !Maestro/suite_logs/*/result.json
    ```
+   ⚠️ **2026-11-04 경로 변경** — 트리가 `Maestro\YAML\` 로 내려가 실제 규칙은
+   `Maestro/YAML/suite_logs/...` 다. 위 네 줄은 그때 기록 그대로 두었으니 **복사해 쓰지 말 것**
+   (정본은 저장소 루트 `.gitignore`).
    → 다른 PC 실행분이 **git pull 만으로 합류**한다. 별도 공유 폴더나 DB 가 필요 없다.
 3. ⏳ **실행 시점 스냅샷을 굳힌다.** `suite_logs/<시각>/checklist.json` 에
    그때의 ID·문구·결과를 박는다. 이게 없으면 **행 하나 지웠다고 지난달 결과가 달라진다.**

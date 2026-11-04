@@ -13,16 +13,20 @@ shots_*/
 #   (SUMMARY 28건: 이메일 0 / 계정ID 0). PII 는 항목 로그(*.log) 쪽에만 있다(이메일 13 / 계정ID 32).
 #   이걸 git 에 두면 **다른 PC 실행분이 git 으로 합류하고 백업이 생긴다.**
 #   ⛔ 폴더를 통째로 제외하면 하위 파일을 되살릴 수 없다 → `/*` 로 내용만 막고 폴더는 열어 둔다.
-Maestro/suite_logs/*
-!Maestro/suite_logs/*/
-Maestro/suite_logs/*/*
-!Maestro/suite_logs/*/result.json
+#   ⚠️ 2026-11-04: yaml 트리가 `Maestro\` → `Maestro\YAML\` 로 한 단계 내려가면서 경로를 맞췄다.
+Maestro/YAML/suite_logs/*
+!Maestro/YAML/suite_logs/*/
+Maestro/YAML/suite_logs/*/*
+!Maestro/YAML/suite_logs/*/result.json
 
 # 개인정보·자격정보는 정본에만 둔다. run_test.ps1 이 env\<lang>.env 다음에 읽는다.
 #   user.<이름>.env       = 계정 ID 등 비밀 아닌 값 → **저장소에 올린다**
 #   user.<이름>.local.env = PIN·로그인 비밀번호     → **올리지 않는다**
 #   2026-09-01 에 평문 자격정보를 전부 걷어냈다(ENVIRONMENT.md §3.10). 되돌리지 말 것.
-Maestro/env/user.*.local.env
+#   ⛔ **경로를 박지 않는다.** 2026-11-04 에 `Maestro\` → `Maestro\YAML\` 로 폴더가 한 단계
+#     내려가자 `Maestro/env/...` 규칙이 아무것도 못 걸러 **자격정보가 ignore 밖으로 나와 있었다.**
+#     다음에 또 옮겨도 안전하도록 깊이에 의존하지 않는 패턴으로 둔다.
+**/env/user.*.local.env
 
 #   체크리스트 쓰기 기준(지문) — 이 PC 가 '마지막으로 쓴 내용' 기록. 공유 대상이 아니다.
 web-runner/checklist_write_state.json

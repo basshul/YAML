@@ -41,12 +41,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 C:\GME\qa-automation\            ★ 편집·실행·커밋이 전부 여기서 일어난다
-├── Maestro\
-│   ├── *.yaml            # 개편 UI(V3)용 사본 — 건드리지 않는다
+├── Maestro\YAML\        # ★ 2026-11-04 재편: 트리가 `Maestro\` 에서 한 단계 내려왔다
 │   ├── Old\*.yaml       # ★ 편집 대상: 구 UI(V2)용, `_old` 접미사
+│   ├── New\*.yaml       # 개편 UI(V3)용 사본 — 건드리지 않는다(옛 `Maestro\*.yaml`)
+│   ├── sprint\<버전>\   # 스프린트 회차별 산출물(2026-11-04 신설 예정)
 │   ├── env\{ko,en}.env  # i18n 문자열
 │   ├── Test Files\      # 갤러리 업로드용 이미지 픽스처 4장
-│   ├── run_test.ps1      # 실행 러너 (CWD 는 항상 `Maestro\`)
+│   ├── run_test.ps1      # 실행 러너 (CWD 는 항상 `Maestro\YAML\`)
 │   ├── run_suite.ps1 · lint_flows.ps1 · push_test_images.ps1
 │   └── shots_runs\ · suite_logs\   # 실행 산출물(gitignore)
 ├── Checklist\          # SharePoint 마스터 바로가기(.url) + 참고 사본 xlsx
@@ -55,10 +56,10 @@ C:\GME\qa-automation\            ★ 편집·실행·커밋이 전부 여기서 
 ```
 
 **OneDrive 쪽에 남은 것 — 증적뿐이다. 작업 파일은 없다.**
-`개인용 - Automation\` 에는 스크린샷(`Maestro\shots_*`, `Screenshot\`)·실행 로그(`suite_logs\`)·
+`개인용 - Automation\` 에는 스크린샷(`Maestro\YAML\shots_*`, `Screenshot\`)·실행 로그(`suite_logs\`)·
 오래된 백업 폴더만 남겨 클라우드 백업을 유지한다. 실행 로그에는 **계정 ID·잔액·거래내역·실 이메일**이
 그대로 남아 git 에 올리지 않는다.
-- 앞으로 생기는 증적은 `Maestro\shots_runs\` 에 쌓인다(gitignore) → 클라우드 보관이 필요하면
+- 앞으로 생기는 증적은 `Maestro\YAML\shots_runs\` 에 쌓인다(gitignore) → 클라우드 보관이 필요하면
   주기적으로 OneDrive 로 옮긴다(수동).
 - 롤백용 `_pre_merge_20260922\` 는 **2026-09-23 삭제했다** — 176개 중 175개가 저장소에 그대로
   있었고(빠진 1개는 재생성되는 린터 산출물), 병합은 파일을 옮기기만 했으므로 병합 전 내용은
@@ -95,7 +96,7 @@ C:\GME\qa-automation\            ★ 편집·실행·커밋이 전부 여기서 
 
 ## 실행 명령
 
-CWD는 항상 `Maestro\` 루트다. 플로우 경로는 그 기준의 상대경로로 넘긴다.
+CWD는 항상 `Maestro\YAML\` 루트다. 플로우 경로는 그 기준의 상대경로로 넘긴다.
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`가 cmd 파이프로 해석돼 즉사
@@ -123,8 +124,8 @@ $PSNativeCommandArgumentPassing = 'Legacy'   # ★ 생략하면 env 값의 `|`�
   돌려야 한다. `icon_thumbnail`의 index가 "테스트 이미지 4장이 갤러리 최신 4개"라는 전제에 기대므로,
   다른 이미지가 쌓이면 앱이 "OCR이 유효하지 않습니다"로 거부한다(앱 버그가 아니다).
 - 저장소 루트에도 `run_test.ps1` 이 있다 — **갤러리 픽스처가 필요한 케이스 전용 래퍼**다
-  (`21_카드_신청과충전 [24]` 글로벌 QR, `06_회원가입_신규계정생성` OCR). 이미지를 push 한 뒤 `Maestro\run_test.ps1` 로
-  **그대로 넘긴다**(2026-09-23 재작성). 인자는 같고 `-flow` 는 `Maestro\` 기준이다.
+  (`21_카드_신청과충전 [24]` 글로벌 QR, `06_회원가입_신규계정생성` OCR). 이미지를 push 한 뒤 `Maestro\YAML\run_test.ps1` 로
+  **그대로 넘긴다**(2026-09-23 재작성). 인자는 같고 `-flow` 는 `Maestro\YAML\` 기준이다.
   ⚠️ 종전엔 러너 전체를 **복사해 갖고 있어** `Maestro\` 쪽에만 들어간 개선(플로우가 쓰는 env 만 추리기)이
   여기엔 없었고, env 가 475개로 늘자 **"The command line is too long."** 로 죽었다.
 
@@ -137,7 +138,7 @@ Maestro에는 케이스 선택 옵션이 없다. 한 파일이 곧 한 실행 �
 
 ### 회귀 스위트
 
-`Maestro\run_suite.ps1`이 `Old\` 플로우를 정해진 순서로 묶어 돌린다.
+`Maestro\YAML\run_suite.ps1`이 `Old\` 플로우를 정해진 순서로 묶어 돌린다.
 **태그·순서 제약·제외 파일·재작성 계획은 `maestro-suite` skill에 있다**
 (`.claude/skills/maestro-suite/SKILL.md`) — 스위트를 건드리기 전에 읽을 것.
 
@@ -166,7 +167,7 @@ cd web-runner
 - **서버는 Python 으로 쓴다.** 나중에 Mac 으로 옮긴다.
 - **`run_test.ps1` / `run_suite.ps1` 호출은 `runner.py` 한 파일에만 둔다.** 다른 파일에서
   직접 부르지 말 것 — Mac 이전 때 고칠 지점을 하나로 묶으려는 것이다.
-- **웹 코드는 `web-runner\` 안에만** 둔다. `Maestro\` 쪽에 섞지 않는다.
+- **웹 코드는 `web-runner\` 안에만** 둔다. `Maestro\YAML\` 쪽에 섞지 않는다.
 - **비밀정보는 `web-runner\config.local.json`**(gitignore)에. 공유용 템플릿은 `config.example.json`.
   테스트 계정 값 자체는 지금도 `env\*.env` 에 있다(위 "저장소에 올라가는 값" 절의 결정 그대로).
 - **이번 데모에 넣지 않는 것**: 대기열, iOS 실행, 로그인 기능, 외부 연동.

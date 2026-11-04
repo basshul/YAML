@@ -5,7 +5,7 @@ description: 구 UI 회귀 스위트(run_suite.ps1)를 실행하거나 수정할
 
 # 구 UI 회귀 스위트
 
-실행기는 `Maestro\run_suite.ps1`(2026-09-02 재작성). 개별 플로우 실행 규약은 `maestro-run` 스킬 참고.
+실행기는 `Maestro\YAML\run_suite.ps1`(2026-09-02 재작성). 개별 플로우 실행 규약은 `maestro-run` 스킬 참고.
 
 **현재 39항목 / 예상 약 5시간 19분** (기본 G1~G4. G9는 제외).
 

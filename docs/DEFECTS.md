@@ -3,7 +3,7 @@
 > 2026-10-29 신설. 실행 중에 발견한 **앱 결함**을 보고할 수 있는 형태로 남긴다.
 > 자동화 쪽 문제(셀렉터·환경·env)는 여기 적지 않는다 — 그건 `PROGRESS.md` 와 각 yaml 주석이다.
 >
-> ⚠️ **증적 경로는 `.gitignore` 대상이다**(`Maestro\shots_runs\`). 저장소를 받아도 스크린샷은 없다.
+> ⚠️ **증적 경로는 `.gitignore` 대상이다**(`Maestro\YAML\shots_runs\`). 저장소를 받아도 스크린샷은 없다.
 > 보고할 때는 아래 경로의 png 를 **따로 첨부**할 것.
 >
 > ⚠️ 보고 채널은 ClickUp 태스크 `86exntjkz` **댓글**이다.
@@ -39,9 +39,9 @@
 (`.\run_test.ps1 -lang ko -User <이름> -flow "Old\02_01_해외송금_수취인관리_old.yaml"`)
 
 ### 증적
-- 한국어 — `Maestro\shots_runs\20261029_103731__tmp_02_01_몽골수취인_old\[05]_몽골수취인_계좌확인.png`
-- 몽골어 — `Maestro\shots_runs\20261029_105427__tmp_02_01_몽골수취인_old\[05]_몽골수취인_계좌확인.png`
-- 뷰계층 — `Maestro\shots_runs\20261029_103155__tmp_02_01_몽골수취인_old\_maestro\step-100-*.json`
+- 한국어 — `Maestro\YAML\shots_runs\20261029_103731__tmp_02_01_몽골수취인_old\[05]_몽골수취인_계좌확인.png`
+- 몽골어 — `Maestro\YAML\shots_runs\20261029_105427__tmp_02_01_몽골수취인_old\[05]_몽골수취인_계좌확인.png`
+- 뷰계층 — `Maestro\YAML\shots_runs\20261029_103155__tmp_02_01_몽골수취인_old\_maestro\step-100-*.json`
   (`localnametitle` = "성명 (한국어)" / `localnameTxt` = "ЗАГД АНХБАЯР")
 
 ### 원인으로 보이는 것 — 문자열 리소스

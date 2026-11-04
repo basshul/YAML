@@ -1,6 +1,6 @@
 # SUITE.md
 
-구 UI(V2) 회귀 스위트 문서. 실행기는 `Maestro\run_suite.ps1`이다.
+구 UI(V2) 회귀 스위트 문서. 실행기는 `Maestro\YAML\run_suite.ps1`이다.
 
 > **⚠️ 상세 내용은 skill로 옮겼다 — [`.claude/skills/maestro-suite/SKILL.md`](.claude/skills/maestro-suite/SKILL.md)**
 >

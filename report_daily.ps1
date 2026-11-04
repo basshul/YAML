@@ -88,7 +88,9 @@ function Invoke-ClaudeWithTimeout {
     return [pscustomobject]@{ Output = "TIMEOUT: claude 가 $TimeoutMinutes 분 안에 끝나지 않았다"; ExitCode = 124 }
 }
 
-$suiteRoot = Join-Path $repo "Maestro\suite_logs"
+# ⚠️ 2026-11-04: `Maestro\suite_logs` → `Maestro\YAML\suite_logs` (트리가 한 단계 내려갔다).
+#   ※ 아래 `Get-Commits "Maestro"` 는 git pathspec 이라 접두가 그대로 맞는다 — 손대지 않는다.
+$suiteRoot = Join-Path $repo "Maestro\YAML\suite_logs"
 $outFull   = Join-Path $repo $OutDir
 New-Item -ItemType Directory -Force -Path $outFull | Out-Null
 

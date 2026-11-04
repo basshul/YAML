@@ -147,11 +147,23 @@ if (Test-Path $envDir) {
     }
 }
 #   ⚠️ 헬퍼는 다른 폴더의 플로우가 runFlow의 env: 로 값을 넘겨줄 수 있다 →
-#      -Path 와 무관하게 **루트와 Old 를 모두** 훑어야 "정의되지 않음" 판정이 정확해진다.
-$envScanFiles = @()
-foreach ($d in @($root, (Join-Path $root "Old"))) {
-    if (Test-Path $d) { $envScanFiles += Get-ChildItem $d -Filter "*.yaml" -File }
+#      -Path 와 무관하게 **플로우가 있는 폴더를 모두** 훑어야 "정의되지 않음" 판정이 정확해진다.
+#   ⚠️ 2026-11-04 폴더 재편(`Maestro\YAML\{Old,New,sprint\<버전>}`) 때 넓혔다.
+#      종전엔 루트와 `Old` 만 봤다 → `sprint\7.23.0` 을 검사하자 **그 파일 자신의 `env:` 블록과
+#      `typeof` 계약을 못 읽어 E04 오탐 26건**이 났다(플로우는 멀쩡했다).
+#      검사 대상 폴더(`$scanDir`)도 반드시 포함한다 — 어디를 지정하든 자기 자신은 읽어야 한다.
+$envScanDirs = [System.Collections.Generic.List[string]]::new()
+foreach ($d in @($root, (Join-Path $root "Old"), (Join-Path $root "New"), $scanDir)) {
+    if ((Test-Path $d) -and -not $envScanDirs.Contains($d)) { [void]$envScanDirs.Add($d) }
 }
+$sprintRoot = Join-Path $root "sprint"
+if (Test-Path $sprintRoot) {
+    foreach ($d in (Get-ChildItem $sprintRoot -Directory)) {
+        if (-not $envScanDirs.Contains($d.FullName)) { [void]$envScanDirs.Add($d.FullName) }
+    }
+}
+$envScanFiles = @()
+foreach ($d in $envScanDirs) { $envScanFiles += Get-ChildItem $d -Filter "*.yaml" -File }
 #   ⚠️ CLI `--env` 로 주입하는 변수는 **일부러 flow env: 에 두지 않는다** —
 #      두면 `--env` 로 넘긴 값이 무시되기 때문이다. 대신 잘 짠 플로우는
 #      `assertTrue: ${typeof VAR !== 'undefined' && …}` 로 **주입 여부를 스스로 검증**한다.
