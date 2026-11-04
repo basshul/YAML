@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "stamp": "2026-11-04_094617",
+  "lang": "ko",
+  "groups": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "build": "com.gmeremit.online.gmeremittance_native",
+  "live": true,
+  "device": "R3CW90MTK9H",
+  "resolution": "1080x2340 @ 480dpi",
+  "elapsed": "00:08:40",
+  "estMin": 9.0,
+  "aborted": false,
+  "counts": {
+    "total": 2,
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "na": 0
+  },
+  "server": "live",
+  "hosts": {
+    "livetest": 0,
+    "stag": 0,
+    "live": 0,
+    "expected": "mobileapi"
+  },
+  "items": [
+    {
+      "group": "G2",
+      "name": "13_04_해외송금받기_송금요청등록",
+      "status": "PASS",
+      "steps": 148,
+      "elapsed": "06:24",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_094617\\13_04_해외송금받기_송금요청등록.log"
+    },
+    {
+      "group": "G2",
+      "name": "13_07_해외송금받기_요청상태조회",
+      "status": "PASS",
+      "steps": 39,
+      "elapsed": "02:13",
+      "reason": "",
+      "blocked": [],
+      "na": [],
+      "log": "C:\\GME\\qa-automation\\Maestro\\suite_logs\\2026-11-04_094617\\13_07_해외송금받기_요청상태조회.log"
+    }
+  ]
+}
