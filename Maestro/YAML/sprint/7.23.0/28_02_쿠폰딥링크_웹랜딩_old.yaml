@@ -24,33 +24,35 @@ appId: ${APP_ID}
 #         (`18_통신서비스_외부웹이동_old` 의 `close_button` → back 순서를 그대로 따랐다).
 #
 # ---------------------------------------------------------------
-# ★★ 2026-11-04 실측으로 드러난 것 — **이 파일의 전제가 흔들렸다**
+# ⛔⛔ 2026-11-04 실기기 실측 — **이 파일은 현재 빌드에서 실행 불가다. 돌리지 말 것.**
 # ---------------------------------------------------------------
-#   실제 쿠폰 링크(`https://abr.ge/h3ssc1s`)를 풀어 보니:
-#     https://gmeremit.airbridge.io/gmeremit.coupon.redeem/?couponCode=<코드>&discountValue=10&...
-#   이고, 이 페이지는 **Airbridge 바운스 페이지**다 — `<meta al:android:url>` 과
-#   `DeeplinkPage({...}).redirect()` 뿐이고 **전화번호 입력칸도 쿠폰 문구도 없다.**
-#   앱이 없으면 `fallbacks:{android:"google-play"}` 로 스토어에 보낸다(= TC-06 경로).
+# 전제였던 "브라우저에 쿠폰 랜딩 페이지가 뜬다"가 **사실이 아님을 확인했다.**
+# 실측(SM-S911N / 7.22.0-stag / 실제 링크 `https://abr.ge/h3ssc1s`):
 #
-#   ⇒ **티켓이 말하는 "웹 쿠폰 랜딩 페이지"는 이 URL 이 아닐 가능성이 크다.**
-#     APK 안에 랜딩과 똑같은 재료가 전부 있다 —
-#       `FREE SERVICE FEE COUPON` / `dialog_cupon_message.xml`
-#       (`txt_dialog_title`=Welcome Back! / `this_phone_number_already_reg_text` /
-#        `btn_diaog_cancel`=Customer Support / `btn_diaog_ok`=Login /
-#        `register_diaog_ok`=Register Now / `sign_btn_diaog_ok`=Have a GME accout? Sign in)
-#     → 전화번호 입력 → Welcome Back → Login 이 **앱 화면**일 수 있다.
+#   ① 짧은 링크는 **Airbridge 바운스 페이지**로 풀린다 — `DeeplinkPage(...).redirect()` 뿐이고
+#      전화번호 입력칸도 쿠폰 문구도 없다. 앱이 없으면 Play 스토어로 보낸다.
+#   ② **https 링크는 브라우저를 거치지 않고 운영 앱으로 바로 들어간다.**
+#      `pm get-app-links` 실측 — 운영(`native`)만 `gmeremit.abr.ge`·`gmeremit.airbridge.io` 가
+#      **verified** 이고 stag·livetest 는 셋 다 `1024`(미검증)다.
+#      → 자동화는 https 를 쓸 수 없다(쓰면 운영 앱이 열린다). stag 를 겨냥하려면 커스텀 스킴뿐이다.
+#   ③ **미로그인 상태로 쿠폰 딥링크가 들어오면 앱이 그냥 버린다.**
+#        D SplashScreen: checkSessionAndHandle - deepLink: null
+#        D SplashScreen: checkSessionAndHandle - User NOT logged in, going to proceedIfLoggedOutZalo
+#      화면은 평소의 로그인 전 초기화면(`ActivityMain` / `btn_lgn`·`btn_rgstr`)이고
+#      **랜딩도 Welcome Back 팝업도 뜨지 않는다.** 로그인 뒤로 쿠폰이 이어지지도 않는다.
 #
-#   ⚠️ **확정하지 못했다.** 미로그인(`pm clear`) 상태에서 링크를 던져 화면을 떠야 하는데
-#     2026-11-04 그 시점에 기기를 다른 세션이 쓰고 있어 중단했다.
-#     확인 순서:
-#       1) stag 를 `pm clear` → Server Override 에서 LIVETEST → 온보딩 통과 → 미로그인 확정
-#       2) `openLink https://abr.ge/<id>` → 앱 선택 다이얼로그에서 stag → `uiautomator dump`
-#       3) 전화번호 입력칸이 **앱 화면**이면 이 파일을 통째로 `28_01` 쪽으로 옮기고,
-#          **브라우저 화면**이면 아래 `WEB_*` 셀렉터를 실측값으로 바꾼다.
-#     ⇒ 그 전까지 이 파일은 **돌리지 말 것.**
+#   ⇒ 티켓의 Step 1~4(랜딩 → 전화번호 → Welcome Back → Login)에 해당하는 동작이
+#     **7.22.0-stag 에는 없다.** 에픽 S2-36 이 아직 "해야 할 일" 인 것과 맞아떨어진다.
+#     ⚠️ "자동화가 안 된다" 가 아니라 **"기능이 아직 없다"** 는 쪽이다 → 티켓에 확인 요청할 것.
 #
-#   · ⛔ 앱 선택 다이얼로그는 여기도 똑같이 뜬다(GME 빌드 3개) →
-#     모든 `openLink` 뒤에 `_pick_app_from_chooser_old.yaml` 을 붙였다.
+# 그래서 이 파일은 **지우지 않고 보류**한다. 랜딩이 실제로 배포되면 그때 아래 셀렉터를
+# 실측값으로 바꿔 살린다. 그 전까지 커버되는 것은 `28_01`(로그인 후 경로)뿐이다.
+#
+# 다시 살릴 때 확인할 것:
+#   · 랜딩이 **웹**인지 **앱 화면**인지부터 판정한다(APK 에 `FREE SERVICE FEE COUPON` 과
+#     `dialog_cupon_message.xml` 이 있어 앱 화면일 가능성이 남아 있다).
+#   · 앱 화면이면 이 파일을 `28_01` 로 접는다. 웹이면 아래 `WEB_*` 를 실측값으로 바꾼다.
+#   · 화살표 CTA 는 지금 `pressKey: enter`(폼 기본 제출)로 **가정**해 둔 상태다.
 #
 # ---------------------------------------------------------------
 # 왜 Maestro 로 웹을 만질 수 있나

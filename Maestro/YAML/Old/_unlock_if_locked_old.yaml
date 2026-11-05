@@ -1,0 +1,55 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: 딥링크(`openLink`) 직후의 **잠금화면을 풀어** 다음 화면으로 넘긴다 (2026-11-04 작성)
+# ================================================================
+# 호출:
+#   - openLink: { link: "..." }
+#   - runFlow: "_pick_app_from_chooser_old.yaml"
+#   - runFlow: "_unlock_if_locked_old.yaml"
+#
+# 왜 필요한가 — 2026-11-04 실기기 실측(SM-S911N / 7.22.0-stag):
+#   **딥링크는 앱이 이미 포그라운드에 떠 있어도 `SplashScreen` 을 거쳐 잠금화면으로 떨어진다.**
+#   홈(`HomeActivityV2`)에 있던 상태에서 쿠폰 딥링크를 던졌더니
+#   `mCurrentFocus = …password.lockscreen.view.ActivityLockScreen` 이 됐고,
+#   PIN 을 넣은 **뒤에야** 쿠폰 바텀시트가 떴다.
+#   ⛔ 이걸 빼먹으면 뒤의 `extendedWaitUntil` 이 잠금화면 앞에서 타임아웃하고
+#     **"쿠폰 팝업이 안 보인다"** 로 죽는다 — 원인과 전혀 다른 메시지라 앱 결함으로 오진한다.
+#
+# 설계 메모
+#   ⛔ `when: visible: input_dot_1` 만으로는 안 된다 — 딥링크 직후엔 아직 아무것도 안 그려져
+#     조건이 거짓이 되고 블록이 **통째로 SKIP** 된다(`_onboarding_gate_old` 와 같은 함정).
+#     → **"잠금화면 또는 도착했을 법한 화면" 중 먼저 뜨는 쪽**을 기다린 뒤에 판정한다.
+#   · 대기 목록에 `btn_lgn` 을 넣어 **미로그인 상태에서 불러도 안전**하게 했다(그땐 PIN 을 건너뛴다).
+#   · `txvCaption` 은 쿠폰 결과 바텀시트다 — 잠금 없이 바로 팝업이 뜨는 경우를 받는다.
+#   · `button1` 은 Server Override 다(콜드 재실행 시 먼저 뜬다) → 헬퍼로 처리하고 다시 기다린다.
+#   · 지문 프롬프트가 잠금화면을 덮으면 계층에서 잠금화면이 사라진다 → 먼저 받아낸다.
+#
+# 필요한 env: PIN_NORMAL (`_enter_pin_old.yaml` 이 쓴다)
+# 잠겨 있지 않으면 PIN 블록은 SKIP 된다 — 홈에서 불러도 안전하다.
+# ================================================================
+
+# 지문 로그인이 켜져 있으면 OS 다이얼로그가 잠금화면을 덮는다 → 먼저 치운다.
+- runFlow: "_dismiss_biometric_prompt_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|txvCaption|btn_lgn|button1"
+    timeout: 60000
+# 콜드 재실행이면 Server Override 가 먼저다(아니면 통째로 SKIP).
+- runFlow: "_server_override_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1|bottom_item_home|txvCaption|btn_lgn"
+    timeout: 60000
+# PIN <정상 PIN> — 키패드는 탭마다 재배치되므로 헬퍼가 탭 사이 정착을 기다린다.
+#   ⛔ 오입력이 누적되면 계정이 잠긴다 → 조건이 확실할 때만 누른다.
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - runFlow:
+          file: _enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - waitForAnimationToEnd

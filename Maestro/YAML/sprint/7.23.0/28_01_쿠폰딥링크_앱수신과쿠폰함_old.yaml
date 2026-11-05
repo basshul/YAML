@@ -15,8 +15,14 @@ env:
   #   ⚠️ `.redeem` 뒤에 **슬래시가 있다**(처음엔 없는 줄 알았다). 앱이 쿼리에서 읽는 키는
   #     dex 기준 `couponCode`(`QUERY_PARAM_COUPON_CODE`) 하나다. `discountValue` 를 빼도
   #     되는지는 **미확인** → 실측 후 필요하면 아래 값 뒤에 붙일 것.
-  DEEPLINK_COUPON_REDEEM: "gmeremit://gmeremit.coupon.redeem/?couponCode="
-  DEEPLINK_COUPON_BOX: "gmeremit://gmeremit.coupon.view.list/couponavailable"
+  # ⛔⛔ **`airbridge_referrer` 가 없으면 Airbridge SDK 가 딥링크를 버린다** (2026-11-04 실측):
+  #     I Airbridge: Drop the deeplink event because the deep link is not from Airbridge
+  #   그러면 앱은 그냥 평소대로 열리고 **쿠폰 처리가 아예 일어나지 않는다.**
+  #   ✅ 값은 아무거나가 아니라 **`airbridge=true` 하나면 충분하다**(실측). 그래서 실행마다
+  #     살아 있는 Airbridge 단축링크를 받아올 필요 없이 플로우가 링크를 직접 만든다.
+  #   ※ 파라미터 순서는 상관없다(referrer 를 앞에 둔 형태로 실측 통과).
+  DEEPLINK_COUPON_REDEEM: "gmeremit://gmeremit.coupon.redeem/?airbridge_referrer=airbridge%3Dtrue&couponCode="
+  DEEPLINK_COUPON_BOX: "gmeremit://gmeremit.coupon.view.list/couponavailable?airbridge_referrer=airbridge%3Dtrue"
 ---
 # ================================================================
 # 시나리오: 쿠폰 딥링크 — **앱 수신부**(Airbridge 링크가 앱에 넘긴 뒤) — 구 UI
@@ -61,8 +67,10 @@ env:
 #       `btn_diaog_cancel`(Customer Support) / `btn_diaog_ok`(Login) /
 #       `register_diaog_ok`(Register Now) / `sign_btn_diaog_ok`(Have a GME accout? Sign in)
 #     ⚠️ 오타가 리소스 이름 그대로다(`cupon`, `diaog`). 고치지 말 것.
-#     ⚠️ **쿠폰 결과 팝업(만료/중복/발급)이 이 레이아웃을 재사용하는지는 미확인**이다.
-#       그래서 아래 케이스는 **문구**로 잡고, id 단언은 실측 뒤에 넣는다.
+#     ★ 2026-11-04 실측 결과 **쿠폰 결과 팝업은 이 레이아웃이 아니다.** 바텀시트다:
+#         `design_bottom_sheet` > `txvCaption`(문구) / `btnOne`(다른 쿠폰 찾아보기) /
+#         `btnTwo`(고객센터 연결하기)
+#       → 문구와 함께 이 id 들로 단언한다. `dialog_cupon_message` 는 다른 화면용이다.
 #   · 쿠폰함 `NewCouponBoxHistoryActivity` (2026-10-02 실측, `_pretrim/04_02` 에 기록):
 #       `toolbar_title`("쿠폰함") / `iv_back` / `transactionTabLayout`(탭 3종은 id 없음 → 문구) /
 #       `rvCouponCategories`(행 = `imgvCategoryImage` + `txvTitle` + `txvItemCount`)
@@ -204,6 +212,8 @@ env:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
 - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+# ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+- runFlow: "../../Old/_unlock_if_locked_old.yaml"
 - waitForAnimationToEnd
 # 딥링크는 SplashScreen 을 콜드로 깨우므로 Server Override 가 다시 뜰 수 있다.
 - runFlow: "../../Old/_server_override_old.yaml"
@@ -290,20 +300,29 @@ env:
     commands:
       - tapOn: "${ASK_ME_LATER_TEXT}"
       - waitForAnimationToEnd
-# ⚠️ 홈 팝업은 **큐**다. 쿠폰 팝업이 배너 **밑에** 깔릴 수 있으므로 먼저 큐를 비운다.
-#   헬퍼가 누르는 id(`btn6MonthsLater`/`btnCancel`/`btnDontShowToday`/`imgvCross`/
-#   `remindLaterBtn`/`btnClose|btnTwo`)에는 쿠폰 팝업 버튼(`btn_diaog_*`)이 없으므로
-#   쿠폰 팝업을 대신 닫아 버릴 일은 없다(2026-11-04 헬퍼 확인).
-- runFlow:
-    file: ../../Old/_dismiss_popups_stag_old.yaml
+# ⛔⛔ **여기서 `_dismiss_popups_stag_old.yaml` 을 부르지 않는다** (2026-11-04 실측으로 뒤집힘).
+#   헬퍼는 루프 안에서 `id: "btnClose|btnTwo"` 를 누르는데, **쿠폰 바텀시트의 `btnTwo` 가
+#   바로 `고객센터 연결하기`** 다 → 배너(`imgvCross`)가 같이 떠 있으면 루프가 돌면서
+#   쿠폰 안내를 닫는 대신 **고객센터를 열어 버린다.**
+#   ✅ 안 불러도 된다 — 실측상 쿠폰 바텀시트는 인앱 배너 **위에** 그려지고 바로 눌린다
+#     (배너 `inAppBannersViewPager`·`imgvCross` 와 공존한 상태에서 `btnOne` 탭 성공).
+#   배너 정리는 쿠폰 시트를 처리한 **뒤에** 한다.
 # ⛔ 세션 만료는 여기서 빨리 죽인다(뒤 대기에 맡기면 엉뚱한 메시지로 죽는다)
 - assertNotVisible: "${SESSION_EXPIRED}"
 # 쿠폰 상태 팝업 — 티켓 Step 5
 - extendedWaitUntil:
     visible: "${COUPON_LINK_EXPIRED_MSG}"
     timeout: 60000
-- assertVisible: "${BROWSE_OTHER_COUPONS_TEXT}"
-- assertVisible: "${CONTACT_SUPPORT_TEXT}"
+# 2026-11-04 실측 id — 바텀시트 `design_bottom_sheet` 안의 세 요소다.
+- assertVisible:
+    id: "txvCaption"
+    text: "${COUPON_LINK_EXPIRED_MSG}"
+- assertVisible:
+    id: "btnOne"
+    text: "${BROWSE_OTHER_COUPONS_TEXT}"
+- assertVisible:
+    id: "btnTwo"
+    text: "${CONTACT_SUPPORT_TEXT}"
 - takeScreenshot: "[02-3]_만료쿠폰_팝업"
 
 # ---------------- [02-4] Browse Other Coupons → 쿠폰함 ----------------
@@ -348,6 +367,8 @@ env:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
       - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+      # ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+      - runFlow: "../../Old/_unlock_if_locked_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_LINK_EXPIRED_MSG}"
           timeout: 60000
@@ -396,6 +417,8 @@ env:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
 - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+# ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+- runFlow: "../../Old/_unlock_if_locked_old.yaml"
 - extendedWaitUntil:
     visible: "${COUPON_LINK_EXPIRED_MSG}"
     timeout: 20000
@@ -415,6 +438,9 @@ env:
 - tapOn:
     id: "iv_back"
 - waitForAnimationToEnd
+# 홈 복귀 시 팝업 큐(배너·Easy Wallet 안내 등)가 하단 내비를 덮는다 — 2026-11-05 실측
+- runFlow:
+    file: ../../Old/_dismiss_popups_stag_old.yaml
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
@@ -435,6 +461,8 @@ env:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_CLAIMED}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
       - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+      # ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+      - runFlow: "../../Old/_unlock_if_locked_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_DUPLICATE_MSG}"
           timeout: 60000
@@ -463,6 +491,9 @@ env:
           commands:
             - pressKey: back
             - waitForAnimationToEnd
+      # 홈 복귀 시 팝업 큐(배너·Easy Wallet 안내 등)가 하단 내비를 덮는다 — 2026-11-05 실측
+      - runFlow:
+          file: ../../Old/_dismiss_popups_stag_old.yaml
       - extendedWaitUntil:
           visible:
             id: "bottom_item_home"
@@ -477,6 +508,8 @@ env:
     link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_TAMPERED}"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
 - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+# ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+- runFlow: "../../Old/_unlock_if_locked_old.yaml"
 - waitForAnimationToEnd
 # 판정 ① 오류/안내 팝업이 뜬다(만료·삭제·처리오류 중 하나로 떨어진다)
 - extendedWaitUntil:
@@ -507,18 +540,26 @@ env:
     commands:
       - pressKey: back
       - waitForAnimationToEnd
+# 홈 복귀 시 팝업 큐(배너·Easy Wallet 안내 등)가 하단 내비를 덮는다 — 2026-11-05 실측
+- runFlow:
+    file: ../../Old/_dismiss_popups_stag_old.yaml
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
     timeout: 60000
 
 # ---------------- [10-2] couponCode 파라미터가 아예 없는 링크 ----------------
-# 깨진 링크(파라미터 유실)로 앱이 죽지 않는지. 기대 동작이 "아무 일도 안 일어남"일 수 있어
-#   **오류 팝업을 요구하지 않는다** — 앱이 살아서 홈에 있으면 통과다.
+# 깨진 링크(파라미터 유실)로 앱이 죽지 않는지.
+# ★ 2026-11-04 실측: `airbridge_referrer` 가 없으면 **Airbridge SDK 단계에서 버려진다**
+#   (`Drop the deeplink event because the deep link is not from Airbridge`) → 앱은 평소대로
+#   열리고 쿠폰 처리가 일어나지 않는다. 즉 **오류 팝업을 요구하지 않는다** — 앱이 살아서
+#   홈에 있으면 통과다. (앱 코드까지 가지 않으므로 앱 결함 검증은 [10-1] 쪽이 담당한다)
 - openLink:
     link: "gmeremit://gmeremit.coupon.redeem"
 # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
 - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+# ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+- runFlow: "../../Old/_unlock_if_locked_old.yaml"
 - waitForAnimationToEnd
 - runFlow:
     when:
@@ -546,6 +587,9 @@ env:
     commands:
       - pressKey: back
       - waitForAnimationToEnd
+# 홈 복귀 시 팝업 큐(배너·Easy Wallet 안내 등)가 하단 내비를 덮는다 — 2026-11-05 실측
+- runFlow:
+    file: ../../Old/_dismiss_popups_stag_old.yaml
 - extendedWaitUntil:
     visible:
       id: "bottom_item_home"
@@ -568,6 +612,8 @@ env:
           link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_VALID}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
       - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+      # ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+      - runFlow: "../../Old/_unlock_if_locked_old.yaml"
       - extendedWaitUntil:
           visible: "${COUPON_REDEEMED_MSG}"
           timeout: 60000
@@ -592,6 +638,8 @@ env:
           link: "${DEEPLINK_COUPON_BOX}"
       # ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
       - runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
+      # ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
+      - runFlow: "../../Old/_unlock_if_locked_old.yaml"
       - extendedWaitUntil:
           visible:
             id: "rvCouponCategories"
@@ -624,6 +672,9 @@ env:
           commands:
             - pressKey: back
             - waitForAnimationToEnd
+      # 홈 복귀 시 팝업 큐(배너·Easy Wallet 안내 등)가 하단 내비를 덮는다 — 2026-11-05 실측
+      - runFlow:
+          file: ../../Old/_dismiss_popups_stag_old.yaml
       - extendedWaitUntil:
           visible:
             id: "bottom_item_home"
