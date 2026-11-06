@@ -38,7 +38,7 @@ appId: ${APP_ID}
     times: 6
     while:
       visible:
-        id: "btn6MonthsLater|btnCancel|btnDontShowToday|imgvCross|remindLaterBtn|btnClose"
+        id: "btn6MonthsLater|btnCancel|btnDontShowToday|imgvCross|remindLaterBtn|btnClose|check_customer"
     commands:
       - tapOn:
           id: "btn6MonthsLater"
@@ -60,4 +60,17 @@ appId: ${APP_ID}
       - tapOn:
           id: "btnClose|btnTwo"
           optional: true
+      # 6) **보이스 피싱 주의**  check_customer(체크박스) + "확인"  ← 2026-11-06 추가
+      #    체크를 먼저 하지 않으면 "확인" 이 눌리지 않는다 → 단발 탭으로는 못 닫는다.
+      #    `01_01`·`_common_entry_old` 가 로그인 직후에만 처리하고 있었는데, **홈 팝업 큐에서
+      #    뒤늦게 뜨는 경우**가 있어(2026-11-06 `28_01 [02-4]` 복귀에서 실측) 여기로 올렸다.
+      - runFlow:
+          when:
+            visible:
+              id: "check_customer"
+          commands:
+            - tapOn:
+                id: "check_customer"
+            - waitForAnimationToEnd
+            - tapOn: "확인|OK"
       - waitForAnimationToEnd

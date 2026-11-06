@@ -29,12 +29,12 @@ env:
 # 출처: Jira S2-59 [QA] Coupon link generator: switch from Firebase to Airbridge
 #       (에픽 S2-36) — TC-01 ~ TC-10 매트릭스
 # ================================================================
-# ★ 이 파일이 **커버하는 범위**는 "쿠폰 코드가 앱에 전달된 다음"이다.
-#   랜딩 웹페이지(전화번호 입력 → Welcome Back 팝업 → Login)는
-#   **`28_02_쿠폰딥링크_웹랜딩_old.yaml`** 이 본다. 둘을 나눈 이유:
-#     · 앱 쪽은 APK 리소스/딥링크 스킴을 **실측**해서 셀렉터가 확실하다.
-#     · 웹 쪽은 **실제 Airbridge URL 이 있어야** 화면을 볼 수 있어 아직 미검증이다.
-#       한 파일에 두면 웹에서 죽을 때 앱 검증까지 통째로 못 돌린다.
+# ★ **TC-01 ~ TC-10 을 이 파일 하나가 본다**(2026-11-06 통합).
+#   종전엔 `28_02_쿠폰딥링크_웹랜딩_old.yaml` 을 따로 두었다 — 랜딩이 브라우저에 뜬다고
+#   보고 "앱=확실 / 웹=미검증" 으로 나눴기 때문이다. **실측 결과 그 전제가 틀렸다.**
+#   랜딩은 웹페이지가 아니라 **앱 화면**(`splash_screen.view.ActivityMain`)이라
+#   나눌 이유가 사라졌고, TC-02·03·04·08·09 가 전부 같은 화면에서 이어진다.
+#   → `28_02` 는 삭제하고 그 케이스를 여기로 옮겼다.
 #
 # ---------------------------------------------------------------
 # 실측 근거 (2026-11-04, `base.apk` = 7.22.0-stag / versionCode 72200001)
@@ -81,14 +81,22 @@ env:
 #   · 짧은 링크는 **Airbridge 바운스 페이지**로 풀린다. 그 페이지 자체에는 전화번호 입력칸이
 #     없고 스크립트가 바로 앱 딥링크를 던지며, 앱이 없으면 Play 스토어로 보낸다
 #     (`fallbacks:{android:"google-play"}`). PC UA 로 열면 `www.gmeremit.com` 으로 간다.
-#     → **티켓의 "웹 쿠폰 랜딩 페이지"는 이 페이지가 아니다.** 앱 안의 화면일 가능성이 크다
-#       (APK 에 `FREE SERVICE FEE COUPON` · `dialog_cupon_message.xml` 이 다 있다).
-#       확정은 미로그인 상태 실측이 필요하다 → `28_02` 머리말 참고.
+#     → **티켓의 "웹 쿠폰 랜딩 페이지"는 이 페이지가 아니다.**
+#       ★ 2026-11-06 확정: 랜딩은 **앱 화면**이다(아래 "로그인 전 쿠폰 랜딩 구간" 참고).
 #   · ⛔ **앱 선택 다이얼로그가 먼저 뜬다.** 기기에 GME 빌드가 3개(운영/livetest/stag) 깔려
 #     있고 셋 다 `gmeremit://` 를 선언한다 → `ResolverActivity`.
 #     → 모든 `openLink` 뒤에 `_pick_app_from_chooser_old.yaml` 을 붙였다.
 #   · Server Override 다이얼로그 실측: 목록 3종 + `button1`. stag 는 이미 LIVETEST 선택 상태라
 #     항목을 눌러도 버튼이 `CONTINUE` 그대로였다(= 항등 시퀀스가 의도대로 동작한다).
+#
+# ---------------------------------------------------------------
+# ★ 2026-11-06 실측 (7.23.0-stag / versionCode 72300077) — **미로그인 경로가 들어왔다**
+# ---------------------------------------------------------------
+#   7.22.0-stag 에서는 미로그인 딥링크가 그냥 버려졌다(`checkSessionAndHandle - deepLink: null`).
+#   **7.23.0-stag 에서 랜딩이 뜨고 TC-02 전 구간이 재현된다**(미로그인 → 랜딩 → 번호 →
+#   Welcome Back → 로그인 → 홈 쿠폰 팝업). 즉 그때 "기능이 없다" 고 본 것이 맞았다.
+#   · `GME-FTEA5M` = **만료/소진된 쿠폰**으로 확정 → TC-02 픽스처. 소모되지 않는다.
+#   · 가입 전화번호는 `${ACCT_MAIN_PHONE}`(사용자 프로파일). 기본값은 주 계정의 실제 번호다.
 #
 # ---------------------------------------------------------------
 # 케이스 (번호 = 티켓의 TC 번호. 추적성을 위해 일부러 맞췄다)
@@ -101,7 +109,14 @@ env:
 #   [10] [Medium] 파라미터 변조 / 코드 없는 링크 → 크래시·백화면 없이 오류 안내
 #   [01] [High]   유효 쿠폰 → 발급 완료 팝업 → 쿠폰함 Available      (코드 있을 때만, 비멱등)
 #   [06] 🚫 BLOCKED — 앱 미설치 유입(Deferred Deep Link). 아래 "BLOCKED" 절 참고.
-#   [03][04][08][09] → 웹 랜딩 전용. `28_02_쿠폰딥링크_웹랜딩_old.yaml`
+#   [09] [Medium] 비정상 전화번호 입력 → 랜딩 CTA / 제출 결과 (⚠️ 기대값 미정, 증적 위주)
+#   [08] [Medium] 랜딩 하단 `Have a GME account? Sign in` → 앱 로그인 화면
+#   [03] [High]   미가입 번호 + 유효 링크 → 가입 유도 팝업          (번호·코드 있을 때만)
+#   [04] [Medium] 미가입 번호 + 만료 링크                          (번호 있을 때만)
+#
+#   ※ 실행 순서는 **앱 상태**를 따른다 — 로그인 전 랜딩([09][08][03][04][02-2]) →
+#     로그인([02-3][02-4]) → 로그인 후([02-C][07][05][10][01]). 번호를 입력하는 랜딩은
+#     **미로그인 상태에서만** 뜨므로 이 순서를 바꾸면 조용히 깨진다.
 #
 # ---------------------------------------------------------------
 # 🚫 BLOCKED — [06] 앱 미설치 상태 유입 (Deferred Deep Link)
@@ -204,26 +219,233 @@ env:
     timeout: 30000
 - takeScreenshot: "[02-1]_미로그인_초기화면"
 
-# ---------------- [02-2] 쿠폰 딥링크 수신 → 로그인 화면 ----------------
-# 티켓의 Step 3~4(랜딩에서 [Login] 선택 → 앱 실행)에 해당하는 **앱 쪽 입력**이다.
-#   웹을 거치는 경로는 `28_02` 가 본다. 여기서는 같은 딥링크를 직접 넣어
-#   "앱이 쿠폰 코드를 들고 로그인 화면으로 간다"는 앱 동작만 분리해 본다.
-- openLink:
-    link: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
-# ⛔ 기기에 GME 빌드가 3개 깔려 있어 **앱 선택 다이얼로그**가 먼저 뜬다(2026-11-04 실측)
-- runFlow: "../../Old/_pick_app_from_chooser_old.yaml"
-# ⛔ 딥링크는 앱이 떠 있어도 잠금화면을 거친다(2026-11-04 실측) → PIN 을 먼저 푼다
-- runFlow: "../../Old/_unlock_if_locked_old.yaml"
-- waitForAnimationToEnd
-# 딥링크는 SplashScreen 을 콜드로 깨우므로 Server Override 가 다시 뜰 수 있다.
-- runFlow: "../../Old/_server_override_old.yaml"
+# ================================================================
+# ★ 로그인 전 **쿠폰 랜딩** 구간 — [09] [08] [03] [04] 그리고 [02-2]
+# ================================================================
+# 2026-11-06 실측(7.23.0-stag 72300077)으로 확정한 것:
+#   티켓이 "웹 쿠폰 랜딩 페이지" 라고 적었지만 실제로는 **앱 화면**이다
+#   (`splash_screen.view.ActivityMain` 안에 그려진다). 그래서 `28_02`(웹 랜딩)를
+#   이 파일로 합쳤다 — 브라우저를 거치지 않으므로 나눌 이유가 없어졌다.
+#
+# 랜딩 요소(실측 id):
+#   `coupon_input_top_text`("즐기세요") · `phone_body_text`("서비스 수수료 무료 쿠폰")
+#   `phone_message_text`("핸드폰 번호를 입력하세요")
+#   `noti_coupon_edittet`  전화번호 입력(hint "Ex. 01012341234")
+#   `noti_coupon_edittet1` 표시용(항상 `enabled=false`) — ⛔ 여기에 입력하지 말 것
+#   `sign_in_coupon_text`  "Have a GME account? Sign in"
+#   `iv_next`              화살표 CTA
+#
+# 번호 제출 뒤 다이얼로그 = `dialog_cupon_message.xml` (리소스 이름의 오타가 정본이다):
+#   가입된 번호 → `txt_dialog_title`("다시 오신 것을 환영합니다!") +
+#                 `btn_diaog_ok`("로그인") / `btn_diaog_cancel`("고객센터")
+#   미가입 번호 → `txt_dialog_title`("쿠폰이 저장되었습니다.") +
+#                 `register_diaog_ok`("지금 가입하기") / `sign_btn_diaog_ok`(로그인하기)
+#
+# ⚠️ **IME 함정** — 번호를 넣은 뒤 키보드를 내리지 않고 `iv_next` 를 누르면 키패드가 눌린다
+#   (실측: 번호에 `0` 이 하나 끼어 들어갔다). 입력 직후 반드시 `hideKeyboard`.
+#
+# 랜딩은 딥링크로만 들어간다 → 케이스마다 딥링크를 새로 넣어 **깨끗한 랜딩**에서 시작한다.
+
+# ----------------------------------------------------------------
+# [09] [Medium] 비정상 전화번호 입력 밸리데이션
+# ----------------------------------------------------------------
+# 티켓 기대: 자릿수 부족·문자 입력 시 **CTA 비활성 유지 또는 에러 메시지**.
+# ⚠️ 2026-11-06 실측은 **그렇지 않았다** — `iv_next` 는 입력이 비어 있지 않기만 하면
+#   활성화되고(자릿수·형식을 보지 않는다), `0101230`(7자리)로 제출하니 에러 없이
+#   **미가입 번호로 취급**되어 가입 유도 팝업이 떴다.
+#   → 제품 사양인지 결함인지 **확인 필요**. 그래서 여기서는 "에러가 나야 한다"고 단언하지 않고
+#     **빈 입력에서 CTA 가 비활성인 것**(확실한 사실)만 단언하고 나머지는 증적으로 남긴다.
+#   ⛔ 사양이 정해지기 전에 단언을 추가하지 말 것 — 지금 단언하면 사양이 무엇이든 한쪽은 거짓이 된다.
+# Server Override 를 먼저 치우고 딥링크를 넣는다 — 순서가 뒤집히면 딥링크가 날아간다
+- runFlow:
+    file: ../../Old/_open_coupon_deeplink_old.yaml
+    env:
+      COUPON_DEEPLINK: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
 - extendedWaitUntil:
     visible:
-      id: "btn_lgn|usernameId"
+      id: "noti_coupon_edittet"
     timeout: 60000
-# 로그인 화면 문구 — "Welcome to Global Money Express" / "글로벌머니익스프레스에 오신 것을 환영합니다."
+# 랜딩이 제대로 그려졌는지 — 티켓 Step 1
+- assertVisible: "${COUPON_LANDING_TITLE}"
+- assertVisible: "${COUPON_LANDING_PHONE_PROMPT}"
+- assertVisible:
+    id: "sign_in_coupon_text"
+    text: "${COUPON_SIGNIN_LINK}"
+- takeScreenshot: "[09-1]_랜딩_초기화면"
+# 빈 입력이면 CTA 가 비활성이다(실측) — 티켓의 "회색 화살표" 에 해당한다.
+#   ✅ `enabled` 는 접근성 트리에 실리므로 **색과 달리 판정할 수 있다.**
+- assertVisible:
+    id: "iv_next"
+    enabled: false
+# 자릿수가 모자란 번호
+- tapOn:
+    id: "noti_coupon_edittet"
+- inputText: "010123"
+- hideKeyboard
+- takeScreenshot: "[09-2]_자릿수부족_입력"
+# ⚠️ 여기서 CTA 상태를 단언하지 않는다 — 위 주석대로 기대값이 미정이다.
+- tapOn:
+    id: "iv_next"
+- extendedWaitUntil:
+    visible:
+      id: "txt_dialog_title"
+    timeout: 30000
+- takeScreenshot: "[09-3]_자릿수부족_제출결과"
+# ⛔ `pressKey: back` 으로 빠져나오지 않는다 — 랜딩/로그인 화면에서 back 하면 앱이 어중간한 상태로 남고,
+#   다음 딥링크가 그 위로 들어오면 **빈 SplashScreen 에서 굳는다**(2026-11-06 실측). 앱을 끊고 콜드로 다시 받는다.
+- stopApp
+
+# ----------------------------------------------------------------
+# [08] [Medium] 하단 `Have a GME account? Sign in` 직링크
+# ----------------------------------------------------------------
+# 전화번호를 **입력하지 않고** 하단 링크만 눌렀을 때 바로 앱 로그인 화면으로 가는지.
+# Server Override 를 먼저 치우고 딥링크를 넣는다 — 순서가 뒤집히면 딥링크가 날아간다
+- runFlow:
+    file: ../../Old/_open_coupon_deeplink_old.yaml
+    env:
+      COUPON_DEEPLINK: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
+- extendedWaitUntil:
+    visible:
+      id: "sign_in_coupon_text"
+    timeout: 60000
+- tapOn:
+    id: "sign_in_coupon_text"
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 60000
 - assertVisible: "${LOGIN_TITLE_TEXT}"
-- takeScreenshot: "[02-2]_딥링크_로그인화면"
+- takeScreenshot: "[08]_SignIn_직링크_로그인화면"
+# ⚠️ 로그인 후 쿠폰 파라미터가 유지되는지는 `[02-3]` 과 같은 경로라 여기서 중복 실행하지 않는다.
+# ⛔ `pressKey: back` 으로 빠져나오지 않는다 — 랜딩/로그인 화면에서 back 하면 앱이 어중간한 상태로 남고,
+#   다음 딥링크가 그 위로 들어오면 **빈 SplashScreen 에서 굳는다**(2026-11-06 실측). 앱을 끊고 콜드로 다시 받는다.
+- stopApp
+
+# ----------------------------------------------------------------
+# [03] [High] 미가입 번호 + 유효한 쿠폰 링크 → 가입 유도
+# ----------------------------------------------------------------
+# ⛔ **가입을 진행하지 않는다** — 계정이 생기면 재실행이 막히고(`06_회원가입_신규계정생성` 과
+#   같은 문제) 이 케이스의 검증 대상은 "가입 유도로 분기하는가" 까지다.
+# 데이터 2개가 다 있을 때만 돈다.
+- runFlow:
+    when:
+      true: ${typeof COUPON_CODE_VALID !== 'undefined' && COUPON_CODE_VALID.length > 0 && typeof PHONE_UNREGISTERED !== 'undefined' && PHONE_UNREGISTERED.length > 0}
+    commands:
+      # Server Override 를 먼저 치우고 딥링크를 넣는다 — 순서가 뒤집히면 딥링크가 날아간다
+      - runFlow:
+          file: ../../Old/_open_coupon_deeplink_old.yaml
+          env:
+            COUPON_DEEPLINK: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_VALID}"
+      - extendedWaitUntil:
+          visible:
+            id: "noti_coupon_edittet"
+          timeout: 60000
+      - tapOn:
+          id: "noti_coupon_edittet"
+      - inputText: "${PHONE_UNREGISTERED}"
+      - hideKeyboard
+      - tapOn:
+          id: "iv_next"
+      # 가입 유도 — "쿠폰이 저장되었습니다." + [지금 가입하기]
+      - extendedWaitUntil:
+          visible:
+            id: "register_diaog_ok"
+          timeout: 30000
+      - assertVisible:
+          id: "txt_dialog_title"
+          text: "${COUPON_SAVED_TITLE}"
+      - assertVisible:
+          id: "register_diaog_ok"
+          text: "${COUPON_REGISTER_NOW}"
+      - assertVisible:
+          id: "sign_btn_diaog_ok"
+      # 기존 회원 분기로 새지 않았는지 — 같은 레이아웃이라 **제목으로** 가른다
+      - assertNotVisible: "${COUPON_WELCOME_BACK_TITLE}"
+      - takeScreenshot: "[03]_미가입번호_가입유도"
+      # ⛔ `pressKey: back` 으로 빠져나오지 않는다 — 랜딩/로그인 화면에서 back 하면 앱이 어중간한 상태로 남고,
+      #   다음 딥링크가 그 위로 들어오면 **빈 SplashScreen 에서 굳는다**(2026-11-06 실측). 앱을 끊고 콜드로 다시 받는다.
+      - stopApp
+
+# ----------------------------------------------------------------
+# [04] [Medium] 미가입 번호 + 만료된 쿠폰 링크
+# ----------------------------------------------------------------
+# ⚠️ 만료 안내와 가입 안내 중 **무엇이 먼저 뜨는지 미확정**이다(미가입+만료 조합은 미실측).
+#   → 제목을 둘 중 하나로 받고 증적을 남긴다. 실측 후 하나로 좁힐 것.
+- runFlow:
+    when:
+      true: ${typeof PHONE_UNREGISTERED !== 'undefined' && PHONE_UNREGISTERED.length > 0}
+    commands:
+      # Server Override 를 먼저 치우고 딥링크를 넣는다 — 순서가 뒤집히면 딥링크가 날아간다
+      - runFlow:
+          file: ../../Old/_open_coupon_deeplink_old.yaml
+          env:
+            COUPON_DEEPLINK: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
+      - extendedWaitUntil:
+          visible:
+            id: "noti_coupon_edittet"
+          timeout: 60000
+      - tapOn:
+          id: "noti_coupon_edittet"
+      - inputText: "${PHONE_UNREGISTERED}"
+      - hideKeyboard
+      - tapOn:
+          id: "iv_next"
+      - extendedWaitUntil:
+          visible:
+            id: "txt_dialog_title"
+          timeout: 30000
+      - takeScreenshot: "[04]_미가입번호_만료링크"
+      # ⛔ `pressKey: back` 으로 빠져나오지 않는다 — 랜딩/로그인 화면에서 back 하면 앱이 어중간한 상태로 남고,
+      #   다음 딥링크가 그 위로 들어오면 **빈 SplashScreen 에서 굳는다**(2026-11-06 실측). 앱을 끊고 콜드로 다시 받는다.
+      - stopApp
+
+# ---------------- [02-2] 랜딩 → 가입된 번호 → Welcome Back → [로그인] ----------------
+# 티켓 Step 1~4. 2026-11-06 전 구간 실측 통과.
+# Server Override 를 먼저 치우고 딥링크를 넣는다 — 순서가 뒤집히면 딥링크가 날아간다
+- runFlow:
+    file: ../../Old/_open_coupon_deeplink_old.yaml
+    env:
+      COUPON_DEEPLINK: "${DEEPLINK_COUPON_REDEEM}${COUPON_CODE_EXPIRED}"
+- extendedWaitUntil:
+    visible:
+      id: "noti_coupon_edittet"
+    timeout: 60000
+- assertVisible: "${COUPON_LANDING_TITLE}"
+- tapOn:
+    id: "noti_coupon_edittet"
+- eraseText: 20
+- inputText: "${ACCT_MAIN_PHONE}"
+# ⚠️ 키보드를 내리지 않으면 아래 CTA 탭이 키패드에 떨어진다(실측)
+- hideKeyboard
+- takeScreenshot: "[02-2]_번호입력_완료"
+- tapOn:
+    id: "iv_next"
+# 이미 가입된 번호 → Welcome Back
+- extendedWaitUntil:
+    visible:
+      id: "btn_diaog_ok"
+    timeout: 30000
+- assertVisible:
+    id: "txt_dialog_title"
+    text: "${COUPON_WELCOME_BACK_TITLE}"
+# ⚠️ 본문은 **한국어 모드에서도 영문**이다 — 해당 리소스에 ko 번역이 없다(실측).
+#   그래서 env 값이 ko/en 대안 매칭이다. 번역이 들어오면 좁힐 것.
+- assertVisible:
+    id: "txt_dialog_message"
+    text: "${COUPON_PHONE_ALREADY_REG}"
+- assertVisible:
+    id: "btn_diaog_cancel"
+    text: "${CUSTOMER_SUPPORT_TEXT}"
+- takeScreenshot: "[02-2]_WelcomeBack_팝업"
+- tapOn:
+    id: "btn_diaog_ok"
+# 앱 로그인 화면 도달 — 티켓 Step 4
+- extendedWaitUntil:
+    visible:
+      id: "usernameId"
+    timeout: 60000
+- assertVisible: "${LOGIN_TITLE_TEXT}"
+- takeScreenshot: "[02-2]_앱_로그인화면_도달"
 
 # ---------------- [02-3] 로그인 완료 → 쿠폰 상태 팝업 ----------------
 - runFlow:
@@ -426,7 +648,8 @@ env:
     id: "btn_lgn|usernameId|securityKeyboardEditText"
 - takeScreenshot: "[07]_기로그인_즉시팝업"
 # ⚠️ 티켓의 "웹에 입력한 번호 ≠ 앱 로그인 계정" 불일치 처리는 **웹에서 번호를 넣어야**
-#   성립한다 → `28_02 [07-M]` 로 넘긴다(여기서는 번호를 넣을 화면이 없다).
+#   성립한다. 랜딩이 앱 화면으로 확정됐으니 **구현 가능**하지만 ⚠️ **티켓에도 기대 동작이
+#   미정**("불일치 안내 처리 여부 확인")이라 단언할 것이 없다 → 사양이 정해지면 추가한다.
 - tapOn: "${BROWSE_OTHER_COUPONS_TEXT}"
 - extendedWaitUntil:
     visible:
