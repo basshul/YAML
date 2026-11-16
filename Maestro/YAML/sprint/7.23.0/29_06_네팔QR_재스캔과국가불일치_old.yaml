@@ -1,0 +1,220 @@
+appId: ${APP_ID}
+env:
+  # ⛔⛔ **갤러리 좌표는 기기 상태에 따라 바뀐다. 돌리기 전에 반드시 확인할 것.**
+  #   adb shell "ls -lt /sdcard/Pictures | head -7"
+  #
+  # 3열 그리드(최신순). 2026-11-12 선택기 트리 실측:
+  #   1번 칸 bounds [0,951][358,1309] → 중심 (179,1130) / 1080×2340 = (17%, 48%)
+  #   열 중심 x = 17% / 50% / 83%   ·   1행 y = 48%, 2행 y = 64%, 3행 y = 79%
+  #
+  # 2026-11-13 **QR 픽스처 푸시 후** 배치(다른 세션이 MediaStore 로 확인):
+  #   1=변조본  2=KHQR  3=손상본  |  4=네팔 은행 QR  5=Khalti QR
+  #   → 네팔 QR 2장이 **2행으로 내려갔다.** 아래 값이 그 상태다.
+  # 픽스처를 지우면 다시 1행(17%/50%, 48%)으로 올라온다 → 그때 이 줄을 되돌릴 것.
+  # ⛔ `--env` 로는 못 바꾼다 — flow-level `env:` 가 CLI `--env` 를 덮어쓴다.
+  GAL_1: "17%, 64%"
+  GAL_2: "50%, 64%"
+  QR1_NAME: "SAPHAL SHRESTHA"
+  QR2_NAME: "Shrestha"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **재스캔 / 선택 국가와 다른 국가 QR**
+# 출처: DRF-S2-1 v1.4 정책 2-b · 2-p / 9장 E1
+# 커버: TC-NPL-046(QR 재스캔) · TC-NPL-086 일부(Cambodia 선택 + 네팔 QR)
+# ================================================================
+# ✅ **지금 기기 상태로 바로 돌아간다.** 추가 픽스처가 필요 없다.
+#   갤러리 최신 2장이 네팔 QR 2종이다(2026-11-12 15:02 추가, 실측 확인):
+#     1번 칸 = 네팔 은행 계좌 QR — accountName "SAPHAL SHRESTHA"
+#     2번 칸 = Khalti Wallet QR — name "Abhishek Shrestha"
+#   ⛔ 갤러리에 이미지가 추가되면 칸이 밀린다. 그래서 **집힌 QR 을 수취인명으로 검증**한다
+#     (29_02 [05] 가 좌표 의존으로 거짓 통과할 뻔한 전례가 있다).
+#
+# ⛔ **TC-NPL-086 은 절반만 덮는다.** 기대하는 두 방향 중
+#     ① 국가 Nepal + KHQR  → KHQR(`Global QR.jpg`)이 갤러리 **8번째**라 좌표가 불안정하고,
+#        결과가 양쪽 다 "오류" 라 엉뚱한 이미지를 집어도 **거짓 통과**가 된다.
+#        → `29_07` 에서 픽스처를 푸시한 뒤 다룬다.
+#     ② 국가 Cambodia + 네팔 QR → 네팔 QR 이 1번 칸이라 안정적이다. **이 파일이 맡는다.**
+#
+# ⚠️ **거래는 생성되지 않는다.** 결제 화면까지만 가고 Pay 를 누르지 않는다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_06_네팔QR_재스캔과국가불일치_old.yaml"
+#
+# 케이스
+#   [01] [High] 1번 QR 스캔 → 수취인 확인                       TC-NPL-046
+#   [02] [High] 재스캔 → 2번 QR → 정보 교체 확인                 TC-NPL-046
+#   [03] [High] 국가 Cambodia 선택 + 네팔 QR → qr_unsupported   TC-NPL-086 ②
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 첫 번째 QR 스캔 (TC-NPL-046 1단계)
+# ================================================================
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+# ★ 스캐너 도달 확정 — 헬퍼는 도달을 기다리지 않는다(헬퍼 머리말: "도달 대기는 호출자 몫").
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_1}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(${QR1_NAME}|지원하지 않|오류|Error)[\\s\\S]*"
+    timeout: 90000
+# ★ 1번 QR 이 맞게 집혔는지 확정한다. 여기서 틀리면 [02] 의 "교체됐다" 판정이 무의미해진다.
+- assertVisible:
+    id: "storename_value"
+    text: "${QR1_NAME}"
+- takeScreenshot: "[01]_1번QR_수취인"
+
+# ================================================================
+# [02] [High] 재스캔 → 두 번째 QR → 정보 교체 (TC-NPL-046)
+# ================================================================
+# ⚠️ "Re-Scan" 전용 버튼은 확인된 바 없다. 뒤로 가기로 스캐너에 돌아가는 경로를 쓴다.
+#   스캐너 도달을 **확정**하고 진행한다 — 못 돌아가면 아래가 전부 엉뚱한 화면에서 돈다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "scanToPay|galleryImagePick"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- assertVisible:
+    id: "countryCode"
+    text: "Nepal"
+
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_2}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(${QR2_NAME}|지원하지 않|오류|Error|다시 시도)[\\s\\S]*"
+    timeout: 90000
+- takeScreenshot: "[02]_2번QR_수취인"
+- tapOn:
+    id: "__dump_rescan__"
+    optional: true
+
+# ★ 기대 1·3 — 기존 QR 정보가 초기화되고 첫 번째 정보가 남아 있지 않다.
+#   ⚠️ 이 단언이 이 케이스의 핵심이다. "두 번째가 보인다" 보다 **"첫 번째가 사라졌다"** 가 중요하다.
+- assertNotVisible:
+    id: "storename_value"
+    text: "${QR1_NAME}"
+# ★ 기대 2 — 두 번째 QR 정보가 표시된다(Khalti 수취인명).
+- assertVisible:
+    id: "storename_value"
+    text: "[\\s\\S]*${QR2_NAME}[\\s\\S]*"
+
+# ================================================================
+# [03] [High] 국가 Cambodia + 네팔 QR → qr_unsupported (TC-NPL-086 ②)
+# ================================================================
+# 스캐너로 돌아가 하단에서 국가를 Cambodia 로 바꾼다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "scanToPay|galleryImagePick"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- tapOn:
+    id: "countryLayout"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+# ⛔ 스캐너의 국가 시트는 국가선택 시트와 **다른 화면**이다 — `countryName`(통화 없음)·`cancelText`
+- tapOn:
+    id: "countryName"
+    text: "Cambodia"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- assertVisible:
+    id: "countryCode"
+    text: "Cambodia"
+
+# 국가는 Cambodia 인데 네팔 QR 을 올린다
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_1}
+
+# 결과 도달을 먼저 강제한다(성공·실패 양쪽을 넣어 아무것도 안 떠도 통과하지 않게 한다)
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(지원하지 않|다시 시도|오류|Error|Try again|${QR1_NAME})[\\s\\S]*"
+    timeout: 90000
+- takeScreenshot: "[03]_국가불일치_오류"
+- tapOn:
+    id: "__dump_country_mismatch__"
+    optional: true
+
+# ★ 기대 2·4 — 거래가 생성되지 않고 잘못된 수취인 정보가 표시되지 않는다.
+#   결제 화면으로 넘어갔다면 실패다.
+- assertNotVisible:
+    id: "storename_value"
+- assertNotVisible:
+    id: "btnConfirm"
+# ★ 기대 3 — qr_unsupported 오류 시트 + [Try again]
+- assertVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도|Try again)[\\s\\S]*"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+# ⛔ `bottom_item_home` 이 **보이는 것**은 홈이라는 뜻이 아니다 — 하단 탭 버튼이라
+#   거래내역·카드 어디서나 보인다(2026-11-13 실측 사고). 헬퍼가 **눌러서** 홈으로 간다.
+- runFlow: "_return_home_old.yaml"

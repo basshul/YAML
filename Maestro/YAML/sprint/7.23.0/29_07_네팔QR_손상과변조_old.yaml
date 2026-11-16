@@ -1,0 +1,277 @@
+appId: ${APP_ID}
+env:
+  # 갤러리 3열 그리드 좌표(최신순). 열 중심 x = 17% / 50% / 83%, 1행 중심 y = 48%
+  #   ⛔ 아래 기본값은 **픽스처를 머리말 순서대로 푸시한 직후**를 가정한다.
+  # ⛔⛔ **선택기는 `date_added` 가 아니라 파일 mtime(date_modified) 으로 정렬한다.**
+  #   2026-11-13 실측: MediaStore date_added 순서와 선택기 칸 순서가 **달랐다**.
+  #   원인은 `adb push` 가 **원본 파일의 mtime 을 그대로 보존**하는 것 — KHQR 사본이
+  #   16:15 로 찍혀 1행 3번 칸으로 밀렸고, 2번 칸을 집었더니 네팔 은행 QR 이 나왔다.
+  #   → 푸시 전에 **원본 mtime 을 분 단위로 벌려** 순서를 고정한다(최신이 1번 칸):
+  #       tampered 10:10 > khqr 10:05 > malformed 10:00
+  #   확인은 `ls -lt --full-time` 또는 선택기 칸의 접근성 라벨("…에 촬영한 사진").
+  #   ⛔ 손상본·변조본의 mtime 이 **같은 분**이면 라벨로도 구분되지 않는다.
+  #
+  # ★ 2026-11-13 푸시 후 확정(mtime DESC):
+  #     1번 칸 = qrfix_tampered_TC-NPL-035.png   (변조본)
+  #     2번 칸 = qrfix_khqr_TC-NPL-086.jpg       (KHQR)
+  #     3번 칸 = qrfix_malformed_TC-NPL-008.png  (손상본)
+  #   ⛔ 종전 기본값은 MALFORMED 와 KHQR 이 **서로 바뀌어** 있었다 — 그대로 돌리면
+  #     손상본 자리에서 KHQR 을 집어 "서버가 거른 것" 으로 오판한다. 2026-11-13 바로잡음.
+  # ⛔ `--env` 로 덮어쓰려 하지 말 것 — flow-level `env:` 가 CLI `--env` 를 이긴다.
+  #   바꿀 때는 **이 블록을 직접 수정**한다.
+  GAL_TAMPERED: "17%, 48%"
+  GAL_KHQR: "50%, 48%"
+  GAL_MALFORMED: "83%, 48%"
+  QR_RECIPIENT: "SAPHAL SHRESTHA"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **손상 QR / 변조 QR / 국가 불일치(Nepal + KHQR)**
+# 출처: DRF-S2-1 v1.4 정책 2-b · 2-p / 3.3 Lokalise / 9장 E1
+# 커버: TC-NPL-008(Malformed Payload) · TC-NPL-035(송금 불가 계좌 QR 사전 차단) · TC-NPL-086 ①
+#
+# ⛔⛔ **[02] 는 "변조 탐지" 를 보는 게 아니다.** 2026-11-13 재정의(시트 N43 참조).
+#   네팔 QR 은 **CRC·서명이 없는 평문 JSON** 이라 변조를 탐지할 방법이 구조적으로 없다.
+#   (대조: 캄보디아 KHQR 은 EMVCo 규격이라 끝에 CRC16 — 예 `6304F8C9` — 이 붙는다.
+#    실측 디코딩으로 확인했다.)
+#   위협 모델로 봐도 수취인이 자기 QR 을 바꾸는 것은 자해이고, 제3자 바꿔치기의 경우
+#   공격자의 QR 은 **그 자체로 유효한 QR** 이라 탐지할 대상이 없다.
+#   → [02] 가 보는 것은 **"존재하지 않는 계좌가 담긴 QR 이 돈이 나가기 전에 막히는가"**
+#     (정책 2-p: "송금 불가 계좌의 QR 은 거래를 만들기 전에 스캔 단계에서 차단한다") 이다.
+#   ⚠️ 파일명 `qrfix_tampered_…` 는 그대로 둔다(푸시 절차·그쪽 세션 기록이 그 이름을 쓴다).
+#     이름은 "변조" 지만 **검증 대상은 계좌 유효성**이라는 점을 여기 적어 둔다.
+# ================================================================
+# ⛔⛔ **실행 전에 픽스처를 기기에 푸시해야 한다. 순서가 좌표를 정한다.**
+#   픽스처는 `D:\Automation\Sprint Test\7.23.0\qr_fixtures\` 에 있다(2026-11-12 생성).
+#
+#   adb push 를 **아래 순서 그대로** 한다. 갤러리는 최신순이라 **마지막에 푸시한 것이 1번 칸**이다.
+#     1) adb push "qr_fixtures\qrfix_malformed_TC-NPL-008.png" /sdcard/Pictures/
+#     2) adb push "<KHQR 사본>"                                /sdcard/Pictures/
+#     3) adb push "qr_fixtures\qrfix_tampered_TC-NPL-035.png"  /sdcard/Pictures/
+#     4) adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+#          -d file:///sdcard/Pictures   (또는 재부팅 없이 갤러리가 잡을 때까지 기다린다)
+#   → 1번 칸 = 변조본, 2번 칸 = KHQR, 3번 칸 = 손상본
+#   ⚠️ KHQR 사본은 기기의 `/sdcard/Pictures/Global QR.jpg` 를 복사해 쓰면 된다
+#     (가맹점 CHANSOKOL MORK, 금액 0, 2026-11-12 디코딩 확인).
+#   ⚠️ 푸시 뒤 `ls -lt /sdcard/Pictures | head -4` 로 순서를 **눈으로 확인**할 것.
+#     순서가 다르면 **이 파일의 `env:` 블록을 직접 고쳐서** 맞춘다.
+#     ⛔ `--env` 로는 안 된다 — **flow-level `env:` 가 CLI `--env` 를 덮어쓴다.**
+#       (`_enter_pin_old.yaml` 머리말에 같은 경고가 있다. 2026-11-13 에 이것 때문에
+#        덮어쓴 줄 알고 돌렸다가 거래가 하나 더 생긴 사고가 있었다.)
+#
+# ⛔ **이 케이스들은 거짓 통과가 쉽다.** 세 경우 모두 결과가 "오류" 라서,
+#   엉뚱한 이미지를 집어도 오류가 떠 Pass 로 읽힌다.
+#   → 그래서 **오류 문구의 종류를 구분해서 단언**한다. DRF 3.3 / 9장 E1 이 둘을 나눈다:
+#     · 이미지 해석 실패(앱)        → `unsupported_qr_text`
+#     · 서버 qrRead 거부            → `qr_unsupported` + [Try again]
+#   손상본은 **디코딩 자체가 안 되고**(앱 경로), 변조본은 **정상 디코딩되지만 계좌가 가짜**다
+#   (서버 경로). 둘이 같은 문구로 뜨면 그 자체가 보고할 거리다.
+#   ⚠️ 두 키의 실제 한국어 문구를 아직 대조하지 못했다 → 지금은 **문구를 떠서 남기고**,
+#     Lokalise 대조 뒤 단언을 좁힐 것. 그 전까지 Pass 는 스크린샷 확인이 전제다.
+#
+# ⚠️ **거래는 생성되지 않는다.** 전부 스캔 단계에서 차단된다(정책 2-p).
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_07_네팔QR_손상과변조_old.yaml"
+#
+# 픽스처 payload (qr_fixtures\qrfix_payloads.txt)
+#   원본 : {"accountNumber":"0169390531524001","accountName":"SAPHAL SHRESTHA",
+#           "bankCode":"BOALNPKA","accountType":"..."}
+#   변조 : accountNumber 를 "9999999999999999" 로 바꿔 재인코딩(나머지 동일)
+#   손상 : 원본 이미지 가운데를 덮어 디코딩 불가. 생성 직후 디코딩 0건 확인함.
+#
+# 케이스
+#   [01] [High] 손상 QR 업로드 → 해석 실패·재시도 가능         TC-NPL-008
+#   [02] [High] 변조 QR 업로드 → 서버 거부·송금 차단            TC-NPL-035
+#   [03] [High] 국가 Nepal + KHQR → qr_unsupported            TC-NPL-086 ①
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ---------------- 공통: 홈 QR → 네팔 → 스캐너 ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+
+# ================================================================
+# [01] [High] 손상 QR — 앱 이미지 해석 실패 경로 (TC-NPL-008)
+# ================================================================
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_MALFORMED}
+
+# 결과 도달을 먼저 강제한다 — 성공(수취인명)까지 넣어 "아무것도 안 떠도 통과" 를 막는다
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(지원하지 않|읽을 수 없|해석|다시 시도|오류|Error|Try again|${QR_RECIPIENT})[\\s\\S]*"
+    timeout: 90000
+- takeScreenshot: "[01]_손상QR_오류"
+# 실제 문구·키를 떠 둔다. Lokalise 대조 뒤 아래 단언을 좁힐 것.
+- tapOn:
+    id: "__dump_malformed__"
+    optional: true
+
+# ★ 기대 1 — Validation 실패. 수취인 정보로 넘어가면 안 된다.
+- assertNotVisible:
+    id: "storename_value"
+# ★ 기대 3 — 앱이 비정상 종료되지 않는다. 스캐너 또는 오류 시트가 살아 있어야 한다.
+- assertVisible:
+    text: "[\\s\\S]*(지원하지 않|읽을 수 없|해석|다시 시도|Try again)[\\s\\S]*"
+
+# ★ 기대 4 — 재스캔 가능. 오류를 닫고 스캐너로 돌아갈 수 있어야 한다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "galleryImagePick"
+    commands:
+      # ⛔ **텍스트가 아니라 id 로 누른다.** Maestro 의 text 는 **전체 매칭**이라
+      #   "다시 시도" 로는 실제 버튼 "다시 시도하세요" 를 못 잡고 **조용히 SKIP** 된다
+      #   (2026-11-13 실측: 이 자리에서 다이얼로그가 안 닫혀 [02] 로 못 넘어갔다).
+      #   오류 다이얼로그 측정값: `txvDialogTitle` / `txvDialogDescription` / `contactSupport`
+      # ⛔ **`back` 을 넣지 말 것.** 오류 다이얼로그는 **스캐너 위에** 떠 있으므로
+      #   `contactSupport` 로 닫으면 그대로 스캐너다. 여기서 back 까지 누르면 스캐너를
+      #   벗어나고, 반복되면 **"앱을 종료하시겠습니까?" 까지 나간다**(2026-11-13 실측).
+      - tapOn:
+          id: "contactSupport"
+          optional: true
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+
+# ================================================================
+# [02] [High] 존재하지 않는 계좌 QR — 스캔 단계 사전 차단 (TC-NPL-035 / 정책 2-p)
+# ================================================================
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_TAMPERED}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(지원하지 않|다시 시도|오류|Error|Try again|${QR_RECIPIENT})[\\s\\S]*"
+    timeout: 90000
+- takeScreenshot: "[02]_변조QR_오류"
+- tapOn:
+    id: "__dump_tampered__"
+    optional: true
+
+# ★ 기대 1·2 — 검증 실패, 송금 진행 차단.
+#   ⛔ 변조본은 **정상 디코딩된다**. 그래서 수취인 화면으로 넘어가면 그건 서버가
+#     가짜 계좌번호를 걸러내지 못했다는 뜻이고 **결함**이다.
+- assertNotVisible:
+    id: "storename_value"
+- assertNotVisible:
+    id: "btnConfirm"
+# ★ 기대 3 — 보안 전용 문구가 아니라 공통 오류 문구.
+- assertVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도|Try again)[\\s\\S]*"
+
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "galleryImagePick"
+    commands:
+      # ⛔ **텍스트가 아니라 id 로 누른다.** Maestro 의 text 는 **전체 매칭**이라
+      #   "다시 시도" 로는 실제 버튼 "다시 시도하세요" 를 못 잡고 **조용히 SKIP** 된다
+      #   (2026-11-13 실측: 이 자리에서 다이얼로그가 안 닫혀 [02] 로 못 넘어갔다).
+      #   오류 다이얼로그 측정값: `txvDialogTitle` / `txvDialogDescription` / `contactSupport`
+      # ⛔ **`back` 을 넣지 말 것.** 오류 다이얼로그는 **스캐너 위에** 떠 있으므로
+      #   `contactSupport` 로 닫으면 그대로 스캐너다. 여기서 back 까지 누르면 스캐너를
+      #   벗어나고, 반복되면 **"앱을 종료하시겠습니까?" 까지 나간다**(2026-11-13 실측).
+      - tapOn:
+          id: "contactSupport"
+          optional: true
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+
+# ================================================================
+# [03] [High] 국가 Nepal + KHQR (TC-NPL-086 ①)
+# ================================================================
+# 국가는 Nepal 그대로 두고 캄보디아 QR 을 올린다.
+- assertVisible:
+    id: "countryCode"
+    text: "Nepal"
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_KHQR}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(지원하지 않|다시 시도|오류|Error|Try again|CHANSOKOL)[\\s\\S]*"
+    timeout: 90000
+- takeScreenshot: "[03]_Nepal선택_KHQR_오류"
+- tapOn:
+    id: "__dump_khqr_on_nepal__"
+    optional: true
+
+# ★ 기대 1·2·4 — 앱이 국가를 자체 비교하지 않고 Backend 판별 결과로 처리하며,
+#   거래가 생성되지 않고 잘못된 수취인 정보가 표시되지 않는다.
+- assertNotVisible:
+    id: "storename_value"
+- assertNotVisible:
+    id: "btnConfirm"
+# ★ 기대 3 — qr_unsupported 오류 시트 + [Try again]
+- assertVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도|Try again)[\\s\\S]*"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+# ⛔ **오류 다이얼로그는 `back` 으로 안 닫힌다**(2026-11-13 실측: back 4회에도 그대로였다).
+#   `contactSupport`("다시 시도하세요")를 눌러 먼저 걷어낸 뒤 back 으로 빠져나간다.
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - tapOn:
+          id: "contactSupport"
+          optional: true
+      - back
+      - waitForAnimationToEnd
+# ⛔ `bottom_item_home` 이 **보이는 것**은 홈이라는 뜻이 아니다 — 하단 탭 버튼이라
+#   거래내역·카드 어디서나 보인다(2026-11-13 실측 사고). 헬퍼가 **눌러서** 홈으로 간다.
+- runFlow: "_return_home_old.yaml"

@@ -1,0 +1,398 @@
+appId: ${APP_ID}
+env:
+  # 결제 금액(NPR). DRF 1.1 최소금액은 USD 10.00 이고 1 NPR ≈ 12 KRW 이므로
+  #   1,200 NPR ≈ 15,354 KRW. 여기에 수수료 5,000 KRW 가 더 붙어 총 20,354 KRW.
+  QR_AMOUNT_NPR: "1200"
+  # 갤러리 QR 이 담고 있는 수취인명. **집힌 이미지가 맞는지 이걸로 검증한다.**
+  #   은행 계좌 QR : "SAPHAL SHRESTHA"   (QR_GALLERY_POINT "17%, 64%")
+  #   Khalti 월렛 QR: "Abhishek Shrestha" (QR_GALLERY_POINT "50%, 64%")
+  #   ⚠️ 좌표는 2026-11-13 픽스처 푸시 **이후** 기준이다. 아래 좌표 주석 참고.
+  # ⛔ **`-ExtraEnv` 로 덮어쓰려 하지 말 것.** flow-level `env:` 가 CLI `--env` 를 이긴다
+  #   (2026-11-12 실측: `--env QR_RECIPIENT="Abhishek Shrestha"` 를 넘겼는데 플로우는
+  #    "SAPHAL SHRESTHA" 를 썼고, 은행 QR 로 **의도치 않은 거래 1건**이 생겼다).
+  #   → 바꿀 때는 **이 블록을 직접 수정**한다.
+  QR_RECIPIENT: "Abhishek Shrestha"
+  # ★ 반대쪽 QR 의 식별 토큰. **틀린 걸 집었을 때 걸리도록** 배제 단언에 쓴다.
+  #   ⛔ `QR_RECIPIENT` 하나로만 판정하면 그 변수가 틀어졌을 때 가드도 함께 틀어진다
+  #     (2026-11-12 사고의 원인). 그래서 **독립된 음성 조건**을 하나 더 둔다.
+  #   "SHRESTHA" 는 두 이름에 모두 있으므로 쓰지 말 것 → "SAPHAL" / "Abhishek" 로 가른다.
+  QR_NOT_RECIPIENT: "SAPHAL"
+  # 시스템 사진 선택기에서 집을 칸의 좌표(3열 그리드 최신순).
+  #   3열 그리드: 열 중심 x = 17% / 50% / 83%,  행 중심 y = 48% / 64% / 79%
+  #   근거: 2026-11-12 선택기 트리 실측 — 1행 셀 bounds [0,951][358,1309] · [361,951][719,1309]
+  #        · [722,951][1080,1309] (1080×2340)
+  #
+  # ⛔ **2026-11-13 픽스처 푸시로 네팔 QR 2장이 1행 → 2행으로 밀렸다.** 현재 배치:
+  #     1행 : 1=변조본 · 2=KHQR · 3=손상본        (29_07 용 픽스처)
+  #     2행 : 4=네팔 은행 QR · 5=Khalti 월렛 QR   ← 이 파일이 쓰는 것
+  #   → 은행 QR "17%, 64%" / Khalti "50%, 64%".
+  #   픽스처를 지우면 1행으로 되돌아가므로 그때는 y 를 48% 로 되돌린다.
+  #   확인: adb shell "ls -lt /sdcard/Pictures | head -7"
+  #        또는 content query --uri content://media/external/images/media --sort 'date_added DESC'
+  #
+  # ⚠️ 갤러리에 이미지가 추가되면 **조용히 밀린다.** 집힌 이미지는 아래에서
+  #    `QR_RECIPIENT`(양성) + `QR_NOT_RECIPIENT`(음성) 두 조건으로 검증하므로,
+  #    틀리면 **결제 전에** 죽는다.
+  QR_GALLERY_POINT: "50%, 64%"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **스캔부터 결제 완주까지** (구 UI)
+# 출처: DRF-S2-1 네팔 QR Pay 송금 (IME Ltd.) v1.4 — 8장 Business Flow 3~8단계 / 9장 N2~N7
+# ================================================================
+# ⛔⛔ **이 플로우는 실제 거래를 만든다.**
+#   서버는 stag(gmeuat) 전용이다. 운영 DB 와 분리돼 있어 실자금은 아니지만
+#   **UAT 거래·원장은 실제로 생성된다.** 되돌릴 수 없다.
+#   ⛔ `-Server livetest` 또는 `live` 로 절대 돌리지 말 것 — 운영 DB 에 실제 송금이 된다.
+#
+# ⛔ **잔액 부족이면 KFTC 자동이체가 걸린다**(정책 2-n, N3 의 `noteView`:
+#   "참고: 잔액이 부족한 경우, 자동으로 충전됩니다."). 연결 계좌에서 출금이 일어난다.
+#   → [04] 에서 **출금 계좌가 `GME Wallet` 인지 확인하고**, 아니면 Pay 전에 죽는다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_03_네팔QR_결제완주_old.yaml"
+#
+# 전제:
+#   · stag(gmeuat) 계정으로 **수동 로그인**돼 있을 것(29_02 머리말 참고).
+#     UAT 계정은 `env\user.*.env` 의 계정과 다르고, 간편비밀번호는 `PIN_NORMAL` 과 같아야 한다.
+#   · 갤러리 **최신 이미지**가 네팔 은행 QR 일 것(2026-11-12 기준 `tmp_2f389db0….png`).
+#     `{"accountNumber":"0169390531524001","accountName":"SAPHAL SHRESTHA",
+#       "bankCode":"BOALNPKA","accountType":"…"}`
+#   · GME Wallet 잔액 ≥ 약 21,000 KRW.
+#
+# ================================================================
+# 2026-11-12 프로브 4회로 실측한 함정 — 추측으로 쓰면 전부 밟는다
+# ================================================================
+# ⛔ **`다음`(`btnConfirm`)을 두 번 눌러야 한다.** 금액 입력 직후 1차 탭은 네비게이션이
+#   아니라 **환율 재계산**이다(`exRate` "환율: 1 NPR = 12 KRW" → "환율: 1,200 NPR = 15,354 KRW",
+#   화면은 N3 그대로). 재계산은 **자동이 아니다** — 탭 없이 30초를 기다려도 그대로였다.
+#   2차 탭에서야 N4 로 넘어간다. → 계산 반영을 조건으로 **눌러 가며** 기다린다.
+# ⛔ **id `amount` 가 N3 와 N4 양쪽에 있다.** N4 바텀시트가 N3 위에 덮이므로 둘 다 트리에
+#   남는다. N4 는 `store`·`amount_krw`·`totalAmountValue` 같은 **고유 id** 로만 잡을 것.
+# ⛔ **`storename_icon` 은 상점 아이콘이다**(개인 아이콘 아님). DRF 9장 N3 미반영 —
+#   TC-NPL-073 Fail 근거. 이 플로우는 그 사실을 **단언으로 고정**한다([02] 참고).
+# ⛔ 갤러리 선택은 **최신순 좌표**다. 3열 그리드 1번 칸 = (17%, 48%)
+#   (2026-11-12 선택기 트리 실측: 1번 칸 bounds [0,951][358,1309], 중심 (179,1130) / 1080×2340).
+#   Android 16 시스템 선택기는 탭이 선택일 뿐이고 **`완료`** 를 눌러야 닫힌다.
+#   ⚠️ 좌표는 깨지기 쉽다 → **수취인명(`QR_RECIPIENT`)으로 집힌 이미지를 검증**한다.
+#
+# ================================================================
+# 측정한 셀렉터 (2026-11-12 stag / SM-S911N)
+# ================================================================
+#   N3 결제금액: `title`("결제") · `total_balance_view` · `storename_icon` ·
+#                `storename_value` · `paymentAmountInput` > `amount` · `exRate` ·
+#                `serviceFeeView` · `noteView` · `btnConfirm`("다음")
+#   N4 확인시트: `design_bottom_sheet` · `paymentDetails`("결제 세부 정보 확인") · `close` ·
+#                `store` · `amount`(NPR) · `amount_krw` · `deductingAc` ·
+#                `paymentAmountValue` · `fee` · `totalAmountValue` · `confirmBtn`("Pay")
+#
+# ================================================================
+# 케이스
+# ================================================================
+#   [01] [High]   홈 QR → 네팔 → 스캔하기 (진입)
+#   [02] [High]   갤러리 QR 업로드 → 수취인명 매핑 · 아이콘            TC-034 · 073 (정책 2-e)
+#   [03] [High]   N3: 금액 비이월 · NPR 입력 · 환율 · 수수료           TC-063 · 065 · 085
+#   [04] [High]   N4: 총액 = 결제금액 + 수수료 · 출금계좌               TC-065 (정책 2-n 가드)
+#   [05] [High]   Pay → 인증 → 결과                                   (8장 6~8단계)
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 홈 QR → 글로벌 QR → Nepal(NPR) → 스캔하기
+# ================================================================
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+# ★ TC-NPL-085 준비 — 오늘의 환율에 **금액이 들어 있는 상태**로 넘어간다.
+#   기본값(100,000)이 이미 들어 있으므로 따로 입력하지 않는다. 이 값이 N3 로
+#   **넘어오지 않아야** 한다(정책 2-i / DRF 2-i "오늘의 환율 금액은 결제 화면으로 넘어가지 않습니다").
+- assertVisible:
+    id: "sendAmountEdTxt"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+- takeScreenshot: "[01]_오늘의환율_금액있음"
+
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+
+# ================================================================
+# [02] [High] 갤러리에서 네팔 은행 QR 업로드 → 수취인명 매핑 (TC-034 · 073)
+# ================================================================
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- tapOn:
+    id: "galleryImagePick"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    notVisible:
+      id: "galleryImagePick"
+    timeout: 30000
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible:
+        id: "icon_thumbnail"
+    commands:
+      - tapOn:
+          id: "icon_thumbnail"
+          index: 0
+- runFlow:
+    when:
+      notVisible:
+        id: "icon_thumbnail"
+    commands:
+      - tapOn:
+          point: "${QR_GALLERY_POINT}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "완료|Done|Add|추가"
+    commands:
+      - tapOn:
+          text: "완료|Done|Add|추가"
+      - waitForAnimationToEnd
+
+# qrRead → IME QrValidation. 성공·실패 양쪽을 넣어 아무것도 안 떠도 통과하는 일을 막는다.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(${QR_RECIPIENT}|지원하지 않|오류|Error|다시 시도)[\\s\\S]*"
+    timeout: 90000
+# ⛔ 실패 경로를 명시적으로 배제한다 — 유효한 네팔 QR 이 거부되면 여기서 죽어야 한다.
+- assertNotVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도)[\\s\\S]*"
+
+# ★ 집힌 이미지가 **맞는 QR** 인지 수취인명으로 검증한다(좌표 선택의 유일한 안전장치).
+# ⛔ **양성·음성 두 조건을 모두 건다.** 양성 단언 하나만 두면 `QR_RECIPIENT` 자체가
+#   틀어졌을 때(2026-11-12 `-ExtraEnv` 사고) 가드가 같이 틀어져 **엉뚱한 QR 로 결제된다.**
+#   음성 조건은 반대쪽 QR 의 고유 토큰이라 변수가 꼬여도 독립적으로 걸린다.
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+- assertNotVisible:
+    id: "storename_value"
+    text: "[\\s\\S]*${QR_NOT_RECIPIENT}[\\s\\S]*"
+- assertVisible:
+    id: "title"
+    text: "결제|Payment"
+
+# ⛔ TC-NPL-073 — DRF 9장 N3 는 "가게 아이콘 대신 **개인 아이콘**(새 디자인 필요)" 을 요구한다.
+#   2026-11-12 실측은 **상점 아이콘 그대로**였다. 고쳐지면 이 단언이 깨지면서 알려 준다.
+#   ⚠️ 아이콘 이미지 자체는 접근성 트리로 구분할 수 없다 → **뷰가 있다는 것만** 본다.
+#     실제 판정은 스크린샷 [02] 로 사람이 한다. 시트 TC-NPL-073 주석 참조.
+- assertVisible:
+    id: "storename_icon"
+- takeScreenshot: "[02]_결제화면_수취인명과아이콘"
+
+# ================================================================
+# [03] [High] N3: 금액 비이월 · NPR 입력 · 환율 · 수수료 (TC-063 · 065 · 085)
+# ================================================================
+# ★ TC-NPL-085 기대 1·2 — 오늘의 환율에서 넣은 금액이 **넘어오지 않아야** 한다.
+#   입력란은 비어 있고 hint("결제 금액")만 보여야 한다.
+- assertNotVisible:
+    id: "amount"
+    text: "[\\s\\S]*100,000[\\s\\S]*"
+
+- assertVisible:
+    id: "total_balance_view"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "exRate"
+    text: "[\\s\\S]*NPR[\\s\\S]*KRW[\\s\\S]*"
+# ⛔ TC-NPL-063 — N3 도 NPR 단일 통화다. USD 가 보이면 안 된다(정책 2-s).
+- assertNotVisible:
+    id: "exRate"
+    text: "[\\s\\S]*USD[\\s\\S]*"
+
+- tapOn:
+    id: "amount"
+- waitForAnimationToEnd
+- inputText: "${QR_AMOUNT_NPR}"
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+
+- assertVisible:
+    id: "serviceFeeView"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- takeScreenshot: "[03]_N3_금액입력"
+
+# ================================================================
+# [04] [High] N4 결제 확인 시트: 총액·출금계좌·수수료 (TC-065 / 정책 2-n 가드)
+# ================================================================
+# ★ 2026-11-12 재측정으로 **왜 두 번 눌러야 했는지 원인이 밝혀졌다.**
+#   한도 검증은 **키패드의 [완료] 키**(`IME_ACTION_DONE`)에서 돈다
+#   (Global QR Pay Release Note v2.0, 5.A "Triggered upon tapping [Done]").
+#   그런데 이 플로우는 `hideKeyboard` 를 쓴다 — 그건 BACK 으로 IME 만 내릴 뿐
+#   `IME_ACTION_DONE` 을 쏘지 않는다. 그래서 검증이 안 돈 채로 넘어가고,
+#   **첫 `btnConfirm` 탭이 그 검증을 대신 돌리느라 소비된다.** 두 번째 탭에서야 N4 로 간다.
+#   → `hideKeyboard` 대신 **키패드 [완료] 를 text 로 탭**하면 탭 1회로 끝난다.
+#     (키패드 키는 접근성 트리에 텍스트로 잡힌다: `-=1 | -=2 | … | -=완료`)
+#   지금은 아래 루프가 횟수에 무관하게 동작하므로 그대로 둔다 — 다만 검증 **시점**을
+#   보는 케이스(TC-NPL-016 등)에서는 `hideKeyboard` 를 쓰면 **거짓 실패**가 난다.
+#
+# ⛔ `다음`(`btnConfirm`) 을 **몇 번 눌러야 하는지는 실행마다 다르다.**
+#   2026-11-12 프로브에서는 1차 탭이 환율 재계산만 하고 화면은 N3 그대로였는데,
+#   같은 날 29_03 1회차에서는 **1회로 바로 N4 가 떴다**.
+#   → 횟수를 가정하지 말고 **N4 시트가 뜰 때까지** 누른다.
+# ⛔ 금액 문자열로 판정하지 말 것 — 앱은 `1,200 NPR` 처럼 **천 단위 쉼표**를 넣는데
+#   env 값은 `1200` 이라 영영 일치하지 않는다(29_03 1회차가 이걸로 죽었다).
+# ⚠️ 버튼은 시트가 덮으면 사라진다 → `optional: true` 로 둬야 마지막 바퀴에서 안 죽는다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "design_bottom_sheet"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+          optional: true
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "design_bottom_sheet"
+    timeout: 60000
+- assertVisible:
+    id: "paymentDetails"
+- assertVisible:
+    id: "store"
+    text: "${QR_RECIPIENT}"
+- assertVisible:
+    id: "amount_krw"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "paymentAmountValue"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "fee"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "totalAmountValue"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+
+# ⛔⛔ **자동이체 가드 — Pay 직전의 마지막 방어선.**
+#   출금 계좌가 `GME Wallet` 이 아니면 잔액이 모자라 KFTC 자동이체 경로로 들어간 것이다
+#   (정책 2-n). 그대로 Pay 하면 **연결 계좌에서 실제 출금**이 일어난다 → 여기서 죽인다.
+- assertVisible:
+    id: "deductingAc"
+    text: "GME Wallet"
+- assertNotVisible:
+    text: "[\\s\\S]*(자동이체|충전하기|계좌 연결|잔액이 부족)[\\s\\S]*"
+- takeScreenshot: "[04]_N4_결제확인시트"
+
+# ================================================================
+# [05] [High] Pay → 인증(N5) → 결과(N6) — ⛔ 여기서 거래가 생긴다
+# ================================================================
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+
+# 생체 인증은 OS 다이얼로그라 Maestro 가 제어할 수 없다 → 내리고 PIN 경로로 간다.
+- runFlow: "../../Old/_dismiss_biometric_prompt_old.yaml"
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: ../../Old/_enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+
+# 결과 도달을 먼저 강제한다 — 성공·처리중·실패를 모두 넣어 아무것도 안 떠도 통과하지 않게 한다.
+#   DRF 2-j: IME 즉시 PAID → 성공(→영수증), PENDING/RELEASED → qr_tran_processing,
+#            거절 → qr_tran_failed, UNDORELEASED → qr_tran_cancel.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|실패|오류|취소|Success|Processing|Failed|Receipt)[\\s\\S]*"
+    timeout: 180000
+- takeScreenshot: "[05]_결제결과"
+# ⚠️ N6~N8 은 아직 **실측 전**이다. 계층을 떠 둔다(실패하지 않는다).
+- tapOn:
+    id: "__dump_result__"
+    optional: true
+
+# ⛔ 실패·취소 경로를 명시적으로 배제한다.
+#   ⚠️ 2026-11-12 1회차에서 **취소를 성공으로 읽는 거짓 통과**가 났다. 결과 시트가
+#     제목 "성공" + 체크 아이콘인데 본문이 "거래가 취소되었습니다. 해당 금액은 GME
+#     계좌로 환불될 예정입니다." 였다(qr_tran_cancel 문구). 배제 목록에 `실패|거절`만
+#     있어서 걸리지 않았고, `성공` 단언은 제목에 걸려 통과했다.
+#   → **취소·환불·반환 문구를 배제에 넣는다.** 제목만 보고 판정하면 안 된다.
+- assertNotVisible:
+    text: "[\\s\\S]*(실패|거절|취소되었|환불될|Failed|Declined|cancelled|Cancelled|refund)[\\s\\S]*"
+- assertVisible:
+    text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|Success|Processing|Receipt)[\\s\\S]*"
+
+# 결과 시트는 **제목과 본문이 별도 뷰**다(2026-11-12 실측):
+#   `comingSoonText` = 제목("성공"), `messageText` = 본문, `imageView` = 아이콘,
+#   `btnConfirm` = "확인".  → 상태 판정은 **본문 id 로 한 번 더** 못 박는다.
+#   위 화면 전체 매칭은 배경(N3)의 글자까지 훑으므로, 본문 지정이 더 정확하다.
+- assertVisible:
+    id: "messageText"
+- assertNotVisible:
+    id: "messageText"
+    text: "[\\s\\S]*(취소|환불|실패|거절|Cancel|Refund|Failed|Declined)[\\s\\S]*"
+
+# ---------------- 정리: 결과 시트를 닫고 홈으로 ----------------
+# ⛔ 결제 화면(`ZeroPayPaymentActivity`)은 **`back` 으로 빠져나오지 못한다**
+#   (2026-11-12 실측: back 6회에도 그대로였고, 29_03 1·2회차가 모두 이 자리에서 죽었다.
+#    복구는 앱 강제종료뿐이었다). → 결과 시트의 **"확인"** 을 눌러 정상 복귀시킨다.
+# ⚠️ id `btnConfirm` 은 N3 의 "다음" 과 결과 시트의 "확인" **양쪽**에 쓰인다 → text 로 좁힌다.
+- runFlow:
+    when:
+      visible:
+        id: "btnConfirm"
+        text: "확인|OK|Confirm"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+          text: "확인|OK|Confirm"
+      - waitForAnimationToEnd
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000

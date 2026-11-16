@@ -1,0 +1,167 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **스캔 취소 / 카메라 권한 거부**
+# 출처: DRF-S2-1 v1.4 9장 N2
+# 커버: TC-NPL-047(QR 스캔 취소) · TC-NPL-048(카메라 권한 거부)
+# ================================================================
+# ✅ **QR 이 필요 없다.** 스캐너에 들어갔다 나오는 것만 본다. 거래도 생기지 않는다.
+#
+# ⛔⛔ **[02] 는 기기 상태를 바꾼다. 실행 전후로 사람이 손대야 한다.**
+#   전제 — 카메라 권한을 **거부 상태**로 만들어 둘 것:
+#     adb shell pm revoke com.gmeremit.online.gmeremittance_native.stag android.permission.CAMERA
+#   복구 — 끝나면 반드시 되돌릴 것. 안 하면 **뒤의 모든 QR 플로우가 깨진다**:
+#     adb shell pm grant  com.gmeremit.online.gmeremittance_native.stag android.permission.CAMERA
+#   ⚠️ Maestro 는 권한을 회수할 수 없다(부여만 한다). 그래서 이 전제는 자동화 밖이다.
+#   ⚠️ 권한 다이얼로그에서 **거부를 두 번** 누르면 Android 가 "다시 묻지 않음" 으로 굳힌다.
+#     이 파일은 **한 번만** 거부한다. 반복 실행 전에 위 grant 로 되돌릴 것.
+#
+# ⛔ `_allow_permission_old.yaml` 을 부르지 않는다 — 그 헬퍼는 권한을 **자동 허용**해서
+#   이 케이스의 검증 대상을 없애 버린다. [01] 에서도 부르지 않는다(이미 허용 상태 전제).
+#
+# ⛔ **스캐너에 "취소" 버튼은 없다.** 2026-11-13 확인:
+#   · 문서 근거 없음 — 네팔 DRF·Global QR DRF·Manual v1.0·Release Note v2.0 어디에도
+#     스캔 화면의 취소 컨트롤 규정이 없다(문서의 Cancel 은 전부 **거래 취소**다).
+#   · 실기기 덤프 3회(2026-11-05, 11-12 ×2)에서 스캐너 뷰가 매번 동일했고 취소 컨트롤이 없었다.
+#   · `cancelText` 는 존재하지만 **스캐너의 국가 선택 바텀시트** 닫기 버튼이다(29_02 참조).
+#   → 실재하는 것은 **상단 좌측 뒤로 가기 `back`** 하나뿐이고, [01] 은 그것을 검증한다.
+#   → 시트 TC-NPL-047 의 상세·절차·기대도 2026-11-13 에 같은 근거로 정정했다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_08_네팔QR_스캔취소와권한_old.yaml"
+#
+# 케이스
+#   [01] [Medium] 스캐너 진입 → 취소 → 이전 화면 복귀        TC-NPL-047
+#   [02] [Medium] 권한 거부 상태에서 스캔 → 팝업·제한·안내     TC-NPL-048
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [Medium] 스캔 취소 (TC-NPL-047)
+# ================================================================
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- takeScreenshot: "[01-1]_스캐너_진입"
+# 취소 컨트롤의 실제 id 를 떠 둔다(실패하지 않는다)
+- tapOn:
+    id: "__dump_scanner__"
+    optional: true
+
+# ✅ 2026-11-13 확정 — **상단 좌측 뒤로 가기의 id 는 `back`** 이다.
+#   덤프 3회(2026-11-05, 11-12 ×2)에서 스캐너 뷰가 매번 동일했다:
+#     action_bar_root · **back** · bottomCountry · countryCode · countryFlag · countryLayout ·
+#     gallery · galleryImagePick · gme_and · header_toolbar · locationchoose · overlay ·
+#     previewView · scanToPay · toggleFlashLight
+#   ⛔ **취소 버튼은 없다.** 종전에 이 케이스가 "취소 버튼 선택" 이라고 적혀 있었으나
+#     문서(네팔 DRF·Global QR DRF·Manual v1.0·Release Note)에도 근거가 없었다.
+#     `cancelText` 는 존재하지만 **스캐너의 국가 선택 바텀시트** 닫기 버튼이다(29_02 참조).
+#   → 시트 TC-NPL-047 의 절차도 2026-11-13 에 "뒤로 가기" 로 정정했다.
+# ⚠️ 기기 back 으로 떨어지는 대체 경로를 두지 않는다 — 그러면 **화면의 버튼을 검증한 게 아니다.**
+#   `back` 이 안 눌리면 여기서 시끄럽게 실패하는 쪽이 맞다.
+- tapOn:
+    id: "back"
+- waitForAnimationToEnd
+
+# ★ 기대 1 — 이전 화면(오늘의 환율 N1a)으로 정상 이동한다.
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+# ★ 기대 2 — 오류 메시지가 표시되지 않는다.
+- assertNotVisible:
+    text: "[\\s\\S]*(오류|실패|Error|Failed|지원하지 않)[\\s\\S]*"
+# ★ 기대 3 — 앱이 정상 동작한다. 화면 요소가 살아 있고 다시 진입할 수 있다.
+- assertVisible:
+    id: "exRateCalculateButton"
+    text: "스캔하기|Scan"
+- takeScreenshot: "[01-2]_취소후_오늘의환율"
+
+# ================================================================
+# [02] [Medium] 카메라 권한 거부 (TC-NPL-048)
+# ================================================================
+# ⛔ 전제: 머리말의 `pm revoke` 가 선행돼야 한다. 권한이 이미 허용돼 있으면
+#   다이얼로그가 뜨지 않아 아래 대기가 타임아웃되며 **시끄럽게 실패**한다.
+#   조용히 지나가 거짓 통과하는 것보다 낫다.
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+
+# ★ 기대 1 — 권한 요청 팝업이 표시된다.
+- extendedWaitUntil:
+    visible:
+      id: "grant_dialog|permission_message"
+    timeout: 30000
+- takeScreenshot: "[02-1]_카메라권한_요청팝업"
+- tapOn:
+    id: "__dump_permission_dialog__"
+    optional: true
+
+# 거부를 **한 번만** 누른다(두 번이면 Android 가 "다시 묻지 않음" 으로 굳힌다)
+- tapOn:
+    id: "permission_deny_button"
+    optional: true
+- runFlow:
+    when:
+      visible:
+        text: "거부|Deny|허용 안 함|Don't allow"
+    commands:
+      - tapOn:
+          text: "거부|Deny|허용 안 함|Don't allow"
+- waitForAnimationToEnd
+- takeScreenshot: "[02-2]_권한거부_직후"
+- tapOn:
+    id: "__dump_after_deny__"
+    optional: true
+
+# ★ 기대 2 — 스캔 기능 사용이 제한된다. 카메라 프리뷰로 들어가면 안 된다.
+- assertNotVisible:
+    id: "previewView"
+
+# ★ 기대 3 — 설정 화면 이동 안내가 제공된다.
+#   ⚠️ 문구·버튼 id 가 실측 전이라 좁히지 않는다. 안내가 **존재**하는지만 본다.
+#     첫 실행의 `[02-2]` 덤프를 보고 좁힐 것.
+- assertVisible:
+    text: "[\\s\\S]*(설정|권한|Settings|permission)[\\s\\S]*"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+# ⚠️ 권한은 되돌아가지 않는다. 머리말의 `pm grant` 를 **반드시** 실행할 것.
+# ⛔ `bottom_item_home` 이 **보이는 것**은 홈이라는 뜻이 아니다 — 하단 탭 버튼이라
+#   거래내역·카드 어디서나 보인다(2026-11-13 실측 사고). 헬퍼가 **눌러서** 홈으로 간다.
+- runFlow: "_return_home_old.yaml"

@@ -1,0 +1,317 @@
+appId: ${APP_ID}
+env:
+  QR_AMOUNT_NPR: "1200"
+  # ★ 2026-11-13: **Khalti 월렛 QR** 을 쓴다(갤러리 2행 2칸 = "50%, 64%").
+  #   근거 — 은행 계좌 QR 은 29_03 에서 **2회 모두 IME UNDORELEASED(취소)** 로 끝나
+  #   영수증(N7)이 나오지 않았다. Khalti QR 은 같은 날 **성공**했다.
+  #   이 플로우의 목적에 영수증 포착이 포함되므로 성공 확률이 높은 쪽을 쓴다.
+  #   ⛔ 바꿀 때는 `GAL_POINT` 와 `QR_NOT_RECIPIENT` 도 함께 바꿀 것.
+  QR_RECIPIENT: "Abhishek Shrestha"
+  # 반대쪽 QR 의 고유 토큰 — 엉뚱한 칸을 집었을 때 **독립적으로** 걸리게 한다.
+  QR_NOT_RECIPIENT: "SAPHAL"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **결제 인증(N5)** : 오입력 1회 → 정상 PIN
+# 출처: DRF-S2-1 v1.4 8장 7단계 / 9장 N5
+# 커버: TC-NPL-024(잘못된 PIN 입력) · TC-NPL-022(PIN 인증 성공)
+# ================================================================
+# ⛔ **이 플로우는 실제 거래를 만든다.** stag(gmeuat) 전용. 운영 DB 와 분리돼 있어 실자금은
+#   아니지만 UAT 거래·원장은 실제로 생성된다. `-Server livetest`/`live` 로 돌리지 말 것.
+#
+# ⛔⛔ **PIN 오입력은 "계정 잠금" 이 아니다 — "로그아웃" 이다.**
+#   근거: `Old\01_02_로그인_간편비번오류5회_old.yaml` 머리말(2026-09-02 사용자 확정).
+#   5회를 채우면 간편비밀번호가 초기화되고 ID/비밀번호 재로그인 + PIN 재등록으로 복구된다.
+#   admin 개입이 필요 없다.
+#   ⚠️ **혼동 금지** — 계정 잠금은 **로그인 비밀번호** 5회 오입력이고 그건 별개다
+#     (`01_04_로그인_비번오류계정잠금_old.yaml`, admin 해제 필요).
+#   → 이 파일은 **1회만** 틀린다. 5회 구간은 `29_05_네팔QR_PIN재시도제한_old.yaml` 이 맡는다.
+#
+# ⚠️ **N5(인증) 화면은 아직 실측하지 않았다.** 29_03 은 PIN 구간을 조건부로만 지나갔고
+#   오류 문구·회차 카운터의 실제 모양을 뜨지 못했다. 그래서 이 파일의 [02] 는
+#   **문구를 좁히지 않고 존재만 보며**, 계층 덤프를 함께 남긴다.
+#   첫 실행은 검증 겸 **측정**이다. 결과를 보고 단언을 좁힐 것.
+#   ⛔ 좁히기 전까지 이 케이스의 Pass 는 **스크린샷을 사람이 확인한 실행에서만** 유효하다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_04_네팔QR_결제인증_old.yaml"
+#
+# 전제:
+#   · stag(gmeuat) 계정으로 **수동 로그인** + 간편비밀번호가 `PIN_NORMAL` 과 동일
+#   · 갤러리 최신 이미지가 네팔 은행 QR(`SAPHAL SHRESTHA`)
+#   · GME Wallet 잔액 ≥ 약 21,000 KRW
+#   · 프로파일에 `PIN_WRONG` 이 있을 것(`env\user.<이름>.local.env`)
+#
+# ⚠️ 측정된 함정은 29_03 헤더에 모두 적혀 있다. 요약하면:
+#   · `paymentModeRV` 는 가로 스크롤 목록, `QR Pay` 칸을 누르면 스캐너로 넘어간다
+#   · `btnConfirm`("다음")은 탭 횟수가 실행마다 다르다 → **N4 시트가 뜰 때까지** 누른다
+#   · 금액 문자열로 판정하지 말 것(앱이 천 단위 쉼표를 넣는다)
+#   · id `amount` 가 N3·N4 양쪽에 있다 → N4 는 `store`·`totalAmountValue` 로 잡는다
+#
+# 케이스
+#   [01] [High] 진입 → QR 업로드 → N3 금액 입력 → N4 (공통 전제)
+#   [02] [High] Pay → 잘못된 PIN 1회 → 오류·차단·재입력 가능      TC-NPL-024
+#   [03] [High] 이어서 정상 PIN → 인증 성공 → 결제 진행            TC-NPL-022
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 진입 → QR 업로드 → N3 → N4
+# ================================================================
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+
+# 갤러리에서 네팔 은행 QR 업로드
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+# ⚠️ 갤러리 업로드는 **헬퍼**를 쓴다(README "헬퍼는 복제하지 않는다").
+#   선택기 분기·`완료` 확정·오류 바텀시트 함정이 전부 그 한 파일에 모여 있다.
+# ⛔⛔ **갤러리 좌표는 기기 상태에 따라 바뀐다. 돌리기 전에 확인할 것.**
+#   adb shell "ls -lt /sdcard/Pictures | head -7"
+#   3열 그리드(최신순): 열 x = 17% / 50% / 83%, 행 y = 48% / 64% / 79%
+#   2026-11-13 **픽스처 푸시 후**: 1=변조본 2=KHQR 3=손상본 | **4=네팔 은행 QR** 5=Khalti
+#     → 은행 QR 이 2행 1열(17%, 64%)로 내려갔다. 픽스처를 지우면 (17%, 48%)로 돌아온다.
+#   다행히 틀려도 조용히 넘어가지 않는다 — 아래 수취인명 단언이 잡는다.
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: "50%, 64%"
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(${QR_RECIPIENT}|지원하지 않|오류|Error|다시 시도)[\\s\\S]*"
+    timeout: 90000
+- assertNotVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도)[\\s\\S]*"
+# ★ 집힌 이미지가 맞는 QR 인지 수취인명으로 검증한다(좌표 선택의 유일한 안전장치)
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+# ⛔ 양성 단언만 두면 `QR_RECIPIENT` 가 틀어졌을 때 가드도 함께 틀어진다(2026-11-12 사고).
+- assertNotVisible:
+    id: "storename_value"
+    text: "[\\s\\S]*${QR_NOT_RECIPIENT}[\\s\\S]*"
+
+# N3 금액 입력
+- tapOn:
+    id: "amount"
+- waitForAnimationToEnd
+- inputText: "${QR_AMOUNT_NPR}"
+- waitForAnimationToEnd
+
+# ⛔ **키패드의 [완료] 를 누른다. `hideKeyboard` 를 쓰지 말 것.**
+#   근거: Release Note v2.0 5.A "Validation Trigger Points: Triggered upon tapping [Done]
+#   or dismissing the keyboard. (Real-time validation avoided…)" — 검증은 [완료] 에서 발화한다.
+#   2026-11-12 실측: Maestro `hideKeyboard` 는 BACK 으로 IME 만 내려 `IME_ACTION_DONE` 을
+#   쏘지 않는다 → 검증이 돌지 않은 채 넘어가고, 뒤따르는 `다음` **첫 탭이 그 검증을 대신
+#   돌리느라 소비**된다. 29_03 에서 "다음을 두 번 눌러야 한다" 고 본 것의 정체가 이것이다.
+#   [완료] 를 쓰면 탭 1회로 끝나고, 앱 동작을 사람이 쓰는 경로 그대로 재현한다.
+# ⛔⛔ **`hideKeyboard` 를 대체 경로로 두지 말 것.** 2026-11-13 실측 사고:
+#   키보드가 **이미 내려간** 상태에서 `hideKeyboard` 가 돌면 BACK 으로 동작해 **화면을 벗어난다.**
+#   29_09 가 그래서 N3 가 아니라 스캐너에서 죽었다(뒤의 `btnConfirm` 탭이 전부 WARNED).
+#   → [완료]가 **보일 때만** 누르고, 안 보이면 아무것도 하지 않는다.
+- runFlow:
+    when:
+      visible:
+        text: "완료"
+    commands:
+      - tapOn:
+          text: "완료"
+      - waitForAnimationToEnd
+
+# ⛔ **키보드가 내려가야 `btnConfirm` 이 접근성 트리에 나타난다.** N3 는 도착 시 금액 입력란에
+#   자동 포커스되어 키패드가 올라와 있고, 그동안 `btnConfirm` 은 트리에 **없다**(2026-11-13 실측).
+#   여기서 기다리지 않으면 아래 탭이 빈 화면을 친다.
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirm"
+    timeout: 15000
+
+# N4 시트가 뜰 때까지 `다음` 을 누른다.
+#   [완료] 를 썼으면 보통 1회로 끝나지만, 횟수를 가정하지 않는 편이 안전하다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "design_bottom_sheet"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+          optional: true
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "design_bottom_sheet"
+    timeout: 60000
+- assertVisible:
+    id: "store"
+    text: "${QR_RECIPIENT}"
+
+# ⛔ 자동이체 가드 — 잔액이 모자라면 KFTC 경로로 빠져 연결 계좌에서 실제 출금이 일어난다.
+- assertVisible:
+    id: "deductingAc"
+    text: "GME Wallet"
+- assertNotVisible:
+    text: "[\\s\\S]*(자동이체|충전하기|계좌 연결|잔액이 부족)[\\s\\S]*"
+- takeScreenshot: "[01]_N4_결제확인시트"
+
+# ================================================================
+# [02] [High] Pay → 잘못된 PIN 1회 (TC-NPL-024)
+# ================================================================
+- tapOn:
+    id: "confirmBtn"
+- waitForAnimationToEnd
+
+# 생체 프롬프트가 뜨면 내려 PIN 경로로 간다(OS 다이얼로그라 성공시킬 수는 없다)
+- runFlow: "../../Old/_dismiss_biometric_prompt_old.yaml"
+
+# ★ 인증 화면 도달을 **확정**한다. 여기서 못 닿으면 아래 오입력이 엉뚱한 화면에 들어간다.
+- extendedWaitUntil:
+    visible:
+      id: "input_dot_1"
+    timeout: 60000
+- takeScreenshot: "[02-1]_인증화면"
+
+# ⚠️ 1회만 틀린다. 5회 구간은 29_05 가 맡는다.
+- runFlow:
+    file: ../../Old/_enter_pin_old.yaml
+    env:
+      PIN: ${PIN_WRONG}
+- waitForAnimationToEnd
+
+# ★ 기대 1·2 — 검증 실패와 오류 메시지.
+# ✅ 2026-11-13 실측 확정 — 결제 인증 화면(N5)은 **로그인 잠금화면과 같은 형식**이다.
+#     '간편 비밀번호를 입력하세요'
+#     '비밀번호가 맞지 않습니다. 1/5'   ← 회차 카운터 포함
+#   ⛔ **두 줄 모두 id 가 없다**(덤프에 `-` 로 나온다) → **text 로만** 잡을 수 있다.
+#   ⚠️ 회차 숫자를 박지 않는다 — 화면 글자가 직전 값을 보일 때가 있다(01_02 실측).
+#     `\d/5` 꼴은 언어에 흔들리지 않으므로 그것으로 본다.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*비밀번호가 맞지 않습니다[\\s\\S]*\\d/5[\\s\\S]*"
+    timeout: 20000
+- takeScreenshot: "[02-2]_오입력_오류문구"
+# 계층 덤프 — 실제 문구·id 를 떠서 다음 판에 단언을 좁힌다(실패하지 않는다)
+- tapOn:
+    id: "__dump_pin_error__"
+    optional: true
+
+# ★ 기대 3 — 송금 진행 차단. 결과 시트로 넘어가지 않았어야 한다.
+- assertNotVisible:
+    text: "[\\s\\S]*(성공|완료|영수증|Success|Receipt)[\\s\\S]*"
+
+# ★ 기대 4 — 재입력 가능. 인증 화면이 그대로 남아 있어야 한다.
+- assertVisible:
+    id: "input_dot_1"
+
+# ================================================================
+# [03] [High] 이어서 정상 PIN → 인증 성공 (TC-NPL-022)
+# ================================================================
+- runFlow:
+    file: ../../Old/_enter_pin_old.yaml
+    env:
+      PIN: ${PIN_NORMAL}
+
+# 결과 도달을 먼저 강제한다(성공·처리중·실패·취소를 모두 넣어 거짓 통과를 막는다)
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|실패|오류|취소|Success|Processing|Failed|Receipt)[\\s\\S]*"
+    timeout: 180000
+- takeScreenshot: "[03]_인증성공_결제결과"
+- tapOn:
+    id: "__dump_result__"
+    optional: true
+
+# ★ 기대 1·3 — PIN 검증 성공, 오류 메시지 미노출.
+#   ⚠️ 2026-11-12 실측: 결과 시트가 제목 "성공" + 본문 "거래가 취소되었습니다" 로
+#     **모순 표시**된 사례가 있다(TC-NPL-013 Fail). 제목만 보고 판정하면 거짓 통과다.
+#     → 취소·환불 문구를 배제에 넣는다.
+- assertNotVisible:
+    text: "[\\s\\S]*(맞지 않|일치하지 않|Incorrect|not match)[\\s\\S]*"
+- assertNotVisible:
+    text: "[\\s\\S]*(실패|거절|취소되었|환불될|Failed|Declined|cancelled)[\\s\\S]*"
+- assertVisible:
+    text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|Success|Processing|Receipt)[\\s\\S]*"
+
+# ================================================================
+# [04] 결제 **이후** 화면 포착 — 영수증(N7) / 내역 (⚠️ 실측 전, 판정하지 않는다)
+# ================================================================
+# 목적: TC-NPL-029 · 031 · 032 · 033 · 084 · 088 을 쓰려면 N7 과 내역 화면의
+#   셀렉터가 필요한데 **아직 한 번도 뜨지 못했다**(29_03 은 결과 시트에서 끝난다).
+#   이 블록은 **단언하지 않는다** — 화면을 띄우고 계층만 남긴다. 실패하지 않는다.
+# ⚠️ 취소(UNDORELEASED)로 끝나면 영수증이 없을 수 있다. 그 경우도 그대로 기록된다.
+# ⛔ 결과 시트는 `back` 으로 닫히지 않는다 → `btnConfirm`("확인")을 눌러 닫는다.
+#   ⚠️ id `btnConfirm` 은 N3 의 "다음" 과 결과 시트의 "확인" 양쪽에 쓰인다 → text 로 좁힌다.
+- runFlow:
+    when:
+      visible:
+        id: "btnConfirm"
+        text: "확인|OK|Confirm"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+          text: "확인|OK|Confirm"
+      - waitForAnimationToEnd
+- waitForAnimationToEnd
+# ⛔ **코치마크 말풍선이 계층 덤프를 가린다.** 2026-11-13 실측: 상세 내역 화면에서
+#   `balloonText`("거래번호가 유출되지 않도록 보호해 주세요.") **하나만** 잡히고
+#   영수증 필드 id 가 전부 묻혔다. → 덤프 전에 반드시 닫는다(`balloonClose`).
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- takeScreenshot: "[04-1]_결과시트_확인후"
+- tapOn:
+    id: "__dump_after_ok__"
+    optional: true
+
+# 영수증이 열렸거나 이전 화면으로 돌아갔을 수 있다. 어느 쪽이든 한 번 더 뜬다.
+- waitForAnimationToEnd
+- takeScreenshot: "[04-2]_영수증_또는_복귀화면"
+- tapOn:
+    id: "__dump_receipt__"
+    optional: true
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+# ⛔ `bottom_item_home` 이 **보이는 것**은 홈이라는 뜻이 아니다 — 하단 탭 버튼이라
+#   거래내역·카드 어디서나 보인다(2026-11-13 실측 사고). 헬퍼가 **눌러서** 홈으로 간다.
+- runFlow: "_return_home_old.yaml"

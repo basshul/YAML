@@ -1,0 +1,520 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **QR 없이 검증 가능한 구간** (구 UI)
+# 출처: DRF-S2-1 네팔 QR Pay 송금 (IME Ltd.) v1.4
+#       체크리스트 `7.23.0.xlsx > Nepal QR` — TC-NPL-005 · 049 · 050 · 063 · 067 · 085 · 089 · 090
+# ================================================================
+# ★ 이 파일이 커버하는 범위는 **QR 을 스캔하기 전까지**다.
+#   IME 가 UAT·운영 테스트 QR 을 제공하기 전(DRF 4장, 2026-11-05 기준 미수령)이라
+#   스캔 이후 구간(수취인 확인 → 금액 → 결제 → 영수증)은 자동화할 수 없다.
+#   QR 을 받으면 `29_03_네팔QR_스캔과결제_old.yaml` 로 이어 붙인다.
+#   ✅ 다만 **[05] 갤러리 업로드 실패 경로는 QR 없이도 된다** — 유효하지 않은 이미지를
+#      올리는 케이스라서다(TC-NPL-005).
+#
+# ---------------------------------------------------------------
+# ⛔⛔ 실행 전제 — 이 파일은 **UAT 서버에서만 성립한다** (2026-11-05 실측)
+# ---------------------------------------------------------------
+#   livetest(운영 DB) 로 돌리면 국가 선택 시트에 **Cambodia(KHR)/Cambodia(USD) 2행뿐**이고
+#   Nepal 행이 없다. DRF 6장 AS-IS 표와 일치한다:
+#     "QR Pay 국가 — 운영: Cambodia(KHR), Cambodia(USD) / UAT: Nepal(NPR) 노출 중"
+#   → 서버를 UAT 로 지정해야 한다: `-Server stag` (= `SERVER_PICK=.*gmeuat.*`)
+#
+#   ⛔ **UAT 에는 테스트 계정이 없다.** 2026-11-05 에 `seungsoo818` 로 로그인하면
+#      바텀시트 `txvDialogTitle`="오류 - ()" / `txvDialogDescription`="이 ID는 존재하지 않습니다."
+#      가 뜬다. → UAT 계정을 먼저 받아야 이 파일을 돌릴 수 있다.
+#      ⚠️ 로그인 실패 5회 제한이 있다. 계정을 받기 전에 반복 실행하지 말 것.
+#
+#   정리하면 이 파일을 돌리기 위한 선행조건은 둘이다:
+#     ① UAT(gmeuat) 계정    ② 그 계정의 간편비밀번호(PIN) — `env\user.<이름>.env` 에 둔다
+#
+# ---------------------------------------------------------------
+# 셀렉터 근거 (2026-11-05 실측, SM-S911N / stag 7.22.0-stag)
+# ---------------------------------------------------------------
+#   화면 구조·id 는 **캄보디아 경로에서 실측**했다. DRF 1.4 의 원칙이
+#   "화면·흐름·문구·동작은 캄보디아 구현을 그대로 따르고 네팔 데이터 때문에 달라지는
+#    부분만 정의한다" 이므로 같은 id 가 그대로 쓰인다.
+#   전체 목록은 자매 파일 `29_01_글로벌QR_캄보디아_회귀_old.yaml` 머리말에 있다. 요약:
+#     QR Send 시트  `llQrContainer`("글로벌 QR") / `llLocalTransfer`
+#     국가 선택(N1) `selectCountryText` / `iv_cancel` / `overseas_guide` /
+#                   `rvCountryList` > `flagImageView` + `countryNameTxt`
+#     오늘의환율(N1a) `paymentModeRV` + `paymentModeTitleTxt` / `transferFeeTxtView` /
+#                   `recepientCurrencyTextView` / `exchangeRateTxtView` / `gmeExratePC` /
+#                   `tv_year_limit` / `exRateCalculateButton`("스캔하기")
+#     스캐너(N2)    `gme_and`(상단 로고) / `locationchoose` / `previewView` /
+#                   `galleryImagePick` / `toggleFlashLight` / `scanToPay` /
+#                   `bottomCountry` > `countryLayout` > `countryFlag` + `countryCode`
+#
+#   ⚠️ **네팔 행의 정확한 표기는 미확인이다.** 캄보디아가 "Cambodia(KHR)" 이므로
+#     "Nepal(NPR)" 로 보지만 서버(qrInfo)가 내려주는 값이다 → 공백·괄호 변형을 함께 받는다
+#     (`Nepal[\s\S]*NPR`). 첫 UAT 실행에서 실제 문자열을 확인해 좁힐 것.
+#
+# ⛔ 값(환율·한도)은 실시간이다 → 모양만 본다. **수수료만 예외**로 0원을 단언한다
+#   (DRF 1.1 / 정책 2-k: OT-2408 프로모션으로 2026-12-31 까지 0원, 이후 KRW 5,000).
+#   2027-01-01 이후에는 [02] 의 수수료 단언이 **정상적으로** 깨진다 → 그때 TC-NPL-066 쪽으로 옮긴다.
+#
+# 케이스 목록:
+#   [01] [High]   국가 선택 시트에 Nepal(NPR) 추가 · 캄보디아 2행 유지        TC-090 · 076
+#   [02] [High]   Nepal → 오늘의 환율: QR Pay · NPR 단일 통화 · 수수료 0원 · "스캔하기"
+#                                                                        TC-063 · 065 · 085
+#   [03] [High]   스캔하기 → 스캐너: 상단 로고 영역 · 하단 국가 Nepal          TC-049
+#   [04] [High]   스캐너 하단에서 국가 전환 Nepal ↔ Cambodia                  TC-050 (정책 2-u)
+#   [05] [Medium] 갤러리 업로드 — QR 이 아닌 이미지 차단                       TC-005
+#   [06] [Medium] 해외 QR Pay 가이드 Country 탭에 Nepal                       TC-089 (정책 2-m)
+#
+# 실행 (CWD = C:\GME\qa-automation\Maestro\YAML):
+#   .\push_test_images.ps1          # [05] 갤러리 픽스처. 실행 직전에 돌린다
+#   .\run_test.ps1 -lang ko -User <UAT계정프로필> -Server stag `
+#       -flow "sprint\7.23.0\29_02_네팔QR_국가와스캐너_old.yaml"
+#   정적 검사: .\lint_flows.ps1 -Path "sprint\7.23.0" -Track v2
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → 서버 → PIN → 홈 ----------------
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 국가 선택 시트에 Nepal(NPR) 추가 · 캄보디아 2행 유지
+# ================================================================
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+
+# ★ 네팔 행. 서버(qrInfo)가 내려주는 문자열이라 표기 변형을 함께 받는다.
+- assertVisible:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+
+# ⛔ 네팔 추가가 기존 캄보디아 행을 밀어내면 안 된다(DRF 1.3 "캄보디아 흐름·화면 변경 없음")
+- assertVisible:
+    id: "countryNameTxt"
+    text: "Cambodia\\(KHR\\)"
+- assertVisible:
+    id: "countryNameTxt"
+    text: "Cambodia\\(USD\\)"
+
+# ⛔ 네팔은 **NPR 하나**다. 캄보디아처럼 USD 행을 만들지 않는다(정책 2-s / DRF 1.3 제외 항목).
+- assertNotVisible:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*USD[\\s\\S]*"
+- takeScreenshot: "[01]_국가선택_네팔추가"
+
+# ================================================================
+# [02] [High] Nepal → 오늘의 환율: QR Pay · NPR 단일 통화 · 수수료 0원 · "스캔하기"
+# ================================================================
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+
+- assertVisible:
+    id: "paymentModeRV"
+# ⛔ `paymentModeRV` 는 **가로 스크롤 목록**이다 — 29_01 헤더의 설명과 같은 함정이다.
+#   2026-11-12 stag 실측: 네팔 칸은 `계좌 입금 / 현금 지급 / 모바일 월렛` 3개였고
+#   세 번째가 RV 우측 경계에서 잘려 있었다 → 오른쪽으로 밀어 가며 QR Pay 를 찾는다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "paymentModeTitleTxt"
+        text: "QR Pay"
+    commands:
+      - swipe:
+          start: "88%, 22%"
+          end: "15%, 22%"
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "paymentModeTitleTxt"
+    text: "QR Pay"
+
+# ⛔ **QR Pay 칸을 누르면 안 된다** — "선택"이 아니라 **스캐너 진입 버튼**이다.
+#   2026-11-12 실측: 누르는 즉시 N2 스캐너(`scanToPay`)로 넘어가 이 화면의 나머지
+#   검증이 전부 불가능해졌다. 결제방식은 **보이는지만** 본다.
+
+# 통화 표기는 NPR 하나. USD 가 어디에도 보이면 안 된다(정책 2-s).
+- assertVisible:
+    id: "recepientCurrencyTextView"
+    text: "NPR"
+- assertNotVisible:
+    id: "recepientCurrencyTextView"
+    text: "USD"
+
+# 두 구간 환율(KRW→USD GME 환율 + USD→NPR Deal rate)을 합친 값이 고객 환율로 보인다.
+#   값은 실시간이라 **비어 있지 않은지**만 본다(정책 2-s, DRF 1.1).
+- assertVisible:
+    id: "exchangeRateTxtView"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+- assertVisible:
+    id: "gmeExratePC"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+- assertVisible:
+    id: "tv_year_limit"
+
+# 여기서는 수수료 **표기 유무**만 본다. **값**(0원이어야 한다)은 맨 뒤 [07] 에서 본다 —
+#   2026-11-12 실측에서 이 자리에 `5,000 KRW` 가 떠 실패하는데, 그 실패가 [03]~[06] 을
+#   막지 않도록 뒤로 뺐다. 근거는 [07] 헤더 참조.
+- assertVisible:
+    id: "transferFeeTxtView"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+
+- assertVisible:
+    id: "exRateCalculateButton"
+    text: "스캔하기|Scan"
+- takeScreenshot: "[02]_오늘의환율_NPR_수수료0"
+
+# ================================================================
+# [03] [High] 스캔하기 → 스캐너: 상단 로고 영역 · 하단 국가 Nepal
+# ================================================================
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "scanToPay|galleryImagePick"
+    timeout: 30000
+
+# ★ 정책 2-u — 상단 로고는 서버가 내려주는 국가별 로고(네팔=IME)로 바뀐다.
+#   Maestro 는 **그림을 읽지 못한다** → 요소 존재만 단언하고 그림은 스크린샷으로 남긴다.
+#   값이 없으면 GME 로고만 표시되는 것이 정상이므로(TC-NPL-059) 이 단언은 "자리가 비지 않았다"까지다.
+- assertVisible:
+    id: "gme_and"
+- assertVisible:
+    id: "previewView"
+- assertVisible:
+    id: "galleryImagePick"
+- assertVisible:
+    id: "toggleFlashLight"
+- assertVisible:
+    id: "locationchoose"
+
+- assertVisible:
+    id: "countryCode"
+    text: "Nepal"
+- takeScreenshot: "[03]_스캐너_IME로고"
+
+# ================================================================
+# [04] [High] 스캐너 하단에서 국가 전환 Nepal ↔ Cambodia
+# ================================================================
+# 정책 2-u 의 핵심 동작: "고객이 하단에서 국가를 바꾸면 로고도 그 국가 값으로 바뀐다."
+# 로고 그림은 읽을 수 없으므로 **국가 표시가 따라 바뀌는지**로 판정하고,
+# 로고 전환은 전/후 스크린샷 2장을 증적으로 남긴다.
+#
+# ⛔⛔ **스캐너 국가 전환 시트는 N1 국가 선택 시트와 다른 화면이다**(2026-11-05 실측):
+#   행 id 가 `countryNameTxt` 가 아니라 **`countryName`** 이고 표기에 **통화가 없다**("Cambodia").
+#   닫기도 `iv_cancel` 이 아니라 `cancelText`("취소")다. 섞어 쓰면 조용히 실패한다.
+- tapOn:
+    id: "countryLayout"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- assertVisible:
+    id: "searchLayout"
+- tapOn:
+    id: "countryName"
+    text: "Cambodia"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "scanToPay|galleryImagePick"
+    timeout: 30000
+- assertVisible:
+    id: "countryCode"
+    text: "Cambodia"
+- assertVisible:
+    id: "gme_and"
+- takeScreenshot: "[04]_스캐너_캄보디아전환"
+
+# 네팔로 되돌린다 — 뒤 케이스가 네팔 기준이다
+- tapOn:
+    id: "countryLayout"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+# 스캐너 전환 시트는 통화 없는 국가명이다(위 ⛔ 참고)
+- tapOn:
+    id: "countryName"
+    text: "Nepal"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "scanToPay|galleryImagePick"
+    timeout: 30000
+- assertVisible:
+    id: "countryCode"
+    text: "Nepal"
+
+# ================================================================
+# [05] [Medium] 갤러리 업로드 — QR 이 아닌 이미지 차단 (TC-NPL-005)
+# ================================================================
+# ⛔ 실행 직전에 `.\push_test_images.ps1` 를 돌려 둘 것. 픽스처 4장이 갤러리 최신 4개라는
+#   전제에 기댄다(다른 이미지가 쌓이면 엉뚱한 파일을 골라 판정이 흐려진다).
+#   인덱스는 `push_test_images.ps1` 기준 **0=QR / 1=ARC / 2=주민등록증 / 3=여권**.
+#   → 여기서는 **2(주민등록증)** 를 고른다. QR 이 아예 없는 일반 사진이라 TC-NPL-005
+#     "일반 이미지 업로드" 와 맞는다. 0 번은 국내 QR 이라 서버까지 가는 다른 경로다.
+# 기대: 앱이 QR 데이터를 못 읽어 `unsupported_qr_text` 계열 문구로 차단한다(DRF 3.3 / E1).
+#   ⚠️ 서버까지 간 오류(qrRead)는 `qr_unsupported` 라 문구가 다르다 — 여기는 **앱 자체 해석 실패**다.
+- tapOn:
+    id: "galleryImagePick"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+
+# ⚠️ **OS 에 따라 사진 선택 도구가 다르다**(06_회원가입 머리말, 2026-09-09 SM-S911N 실측).
+#   구 기기: 삼성 갤러리 — 썸네일 id `icon_thumbnail` + index
+#   Android 16: 시스템 사진 피커(Compose) — resource-id 가 없고 접근성 라벨도 매칭되지 않는다
+#               → **좌표 탭만 가능**. 3열 그리드 기준 index 2 = (83%, 48%).
+#   ⚠️ 해상도가 바뀌면 이 좌표부터 깨진다.
+#
+# ⛔⛔ **이 케이스는 거짓 통과가 가능하다 — 집히는 이미지를 플로우가 검증하지 못한다.**
+#   좌표 (83%,48%) 는 "최신순 그리드의 **첫 줄 3번째**" 다(2026-11-12 선택기 트리 실측:
+#   선택된 칸 bounds [722,951][1080,1309] 의 중심이 정확히 이 좌표였다).
+#   → **갤러리에 이미지가 2장 추가될 때마다 집히는 대상이 한 칸씩 밀린다.**
+#   2026-11-12 15:02 에 네팔 테스트 QR 2장이 들어오면서 실제로 밀렸고, 그 결과 집힌 것은
+#   `Screenshot_20261111_115717_GME Remit.jpg`(QR 아님)라 **운 좋게** 통과했다.
+#   한 칸만 더 밀렸으면 **유효한 네팔 QR** 을 집었을 것이고, 그때 뜨는 "지원하지 않는 QR" 은
+#   정상 차단이 아니라 **결함**인데 플로우는 그대로 Pass 로 읽는다.
+#   ⚠️ 그래서 이 케이스의 Pass 는 **집힌 이미지를 사람이 확인한 실행에서만** 유효하다.
+#     확인 방법: `adb pull` 로 Pictures 를 받아 QR 디코딩(= 그 실행에서 쓴 방법).
+#   🔧 제대로 된 해결: 전용 픽스처를 정해 **접근성 텍스트("…에 촬영한 사진")로 집는다.**
+#     `test_*.jpg` 는 datetaken 이 NULL 이고 date_added/date_modified 가 서로 다른 분에
+#     걸려 있어 선택기 표시 시각을 추론으로 확정할 수 없었다 → 선택기를 한 번 열어
+#     트리를 떠서 실제 라벨을 확인한 뒤 박을 것.
+#   피커 종류를 가리지 않는 도달 판정: 스캐너 화면을 **벗어났는지**로 본다.
+- extendedWaitUntil:
+    notVisible:
+      id: "galleryImagePick"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "icon_thumbnail"
+    commands:
+      - tapOn:
+          id: "icon_thumbnail"
+          index: 2
+- runFlow:
+    when:
+      notVisible:
+        id: "icon_thumbnail"
+    commands:
+      - tapOn:
+          point: "83%, 48%"
+- waitForAnimationToEnd
+
+# ⛔ Android 16 시스템 사진 선택기는 **탭이 곧 확정이 아니다** — 탭하면 "1" 선택 상태가
+#   될 뿐이고, 아래 `완료`(Done/Add)를 눌러야 앱으로 돌아온다. 삼성 갤러리는 단일 탭에
+#   바로 닫히므로 이 차이를 2026-11-12 실행에서 처음 맞았다(선택기가 열린 채 남아
+#   "지원하지 않음" 문구를 30초 기다리다 죽었다 — 실패화면에 `1`·`미리보기`·`완료` 가 찍혀 있다).
+#   → 확정 버튼이 있으면 누른다. 없으면(삼성 갤러리) 통째로 SKIP 된다.
+- runFlow:
+    when:
+      visible:
+        text: "완료|Done|Add|추가"
+    commands:
+      - tapOn:
+          text: "완료|Done|Add|추가"
+      - waitForAnimationToEnd
+
+# ⛔ 여기서 "스캐너로 돌아왔는지"(`scanToPay` 등)를 보면 **안 된다** — 2026-11-12 실측에서
+#   오류가 **바텀시트**로 뜨면서 스캐너 요소를 통째로 덮어 접근성 트리에서 사라졌다.
+#   가드를 넣었다가 정상 동작을 실패로 잡았다. 판정은 아래 **오류 문구** 하나로 충분하다.
+
+# 결과 도달을 먼저 강제한다(성공·실패 양쪽을 넣어 아무것도 안 떠도 통과하는 일을 막는다)
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(지원하지 않|not supported|읽을 수 없|Error while reading|다시 시도|Try again)[\\s\\S]*"
+    timeout: 30000
+# 수취인 정보 화면으로 넘어가면 안 된다 — 차단이 성립하지 않은 것이다
+- assertNotVisible:
+    id: "exRateCalculateButton"
+- takeScreenshot: "[05]_갤러리_비QR이미지_차단"
+
+# 오류 시트를 닫고 스캐너로 돌아온다
+- runFlow:
+    when:
+      visible:
+        text: "[\\s\\S]*(다시 시도|Try again)[\\s\\S]*"
+    commands:
+      - tapOn:
+          text: "[\\s\\S]*(다시 시도|Try again)[\\s\\S]*"
+      - waitForAnimationToEnd
+
+# ================================================================
+# [06] [Medium] 해외 QR Pay 가이드 Country 탭에 Nepal (정책 2-m / N8)
+# ================================================================
+# ⛔ 스캐너에서 back 만으로 국가 선택 시트까지 되돌아오지 못한다 → **홈으로 내린 뒤 다시 탄다.**
+#   `repeat: while` 을 횟수 없이 쓰면 back 을 무한히 눌러 앱이 런처로 빠진다(2026-11-05 실측)
+#   → `times` 로 묶고 도달은 `extendedWaitUntil` 로 단언한다.
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "overseas_guide"
+    timeout: 20000
+- tapOn:
+    id: "overseas_guide"
+- waitForAnimationToEnd
+
+# 가이드 콘텐츠는 서버 설정이다(어드민 기능을 만들지 않는다, 정책 2-m)
+#   → 문구를 고정하지 않고 **Nepal 항목이 생겼고 캄보디아가 남아 있는지**로 본다.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(Nepal|네팔)[\\s\\S]*"
+    timeout: 30000
+- assertVisible:
+    text: "[\\s\\S]*(Cambodia|캄보디아)[\\s\\S]*"
+- takeScreenshot: "[06]_가이드_네팔"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# ================================================================
+# [07] [High] 오늘의 환율(N1a): QR Pay 자동선택 · 서비스 수수료 0원
+# ================================================================
+# 근거 — DRF v1.4:
+#   · 8장 Business Flow 2단계: "오늘의 환율이 열립니다. **결제방식 QR Pay가 자동선택되고**,
+#     NPR 환율·수수료가 보이며, 버튼이 Scan입니다."
+#   · 1.1 서비스 파라미터: "서비스 수수료 **0원**(OT-2408 IME Nepal 프로모션,
+#     2026-12-31까지). 이후 KRW 5,000"
+#   · 정책 2-k: "앱은 Backend 가 계산한 수수료를 그대로 표시한다."
+#
+# ⛔ **이 케이스는 2026-11-12 stag 실측에서 실패한다.** 일부러 남겨 둔다.
+#   실측: Nepal(NPR) · 송금할 금액 100,000원 입력 상태에서
+#     - 송금 방법 칸 = `계좌 입금` / `현금 지급` / `모바일 월렛` / `QR Pay`(4번째, 화면 밖)
+#     - **어느 칸도 선택 표시가 없다**(스크린샷 육안 확인)
+#     - 수수료 = **5,000 KRW** (프로모션 0원 미반영)
+#   캄보디아(29_01)도 같은 모양이라 네팔 전용 문제는 아닐 수 있다.
+#   → 결함으로 보고하되, 운영/livetest 대조와 PO 확인이 필요하다.
+#
+# ⚠️ 자동선택 **자체**는 접근성 속성(`selected`·`checked`)이 전부 false 라 단언할 수 없다.
+#   그래서 그 **결과**인 수수료 값으로 판정한다 — QR Pay 가 선택돼 있으면 0원이어야 한다.
+#   스크린샷 [07] 을 함께 남겨 사람이 선택 표시를 확인할 수 있게 한다.
+# ⚠️ 케이스를 **맨 뒤**에 둔 이유: 여기서 실패해도 [01]~[06] 결과가 이미 확보된다.
+
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- takeScreenshot: "[07]_오늘의환율_수수료"
+
+# ★ 0원이어야 한다(OT-2408). 5,000 KRW 가 보이면 프로모션이 반영되지 않은 것이다.
+- assertNotVisible:
+    id: "transferFeeTxtView"
+    text: "[\\s\\S]*5,000[\\s\\S]*"
+- assertVisible:
+    id: "transferFeeTxtView"
+    text: "[\\s\\S]*0[\\s\\S]*"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000

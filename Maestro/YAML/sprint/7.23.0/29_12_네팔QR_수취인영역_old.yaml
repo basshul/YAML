@@ -1,0 +1,141 @@
+appId: ${APP_ID}
+env:
+  # ── 갤러리 슬롯 (2026-11-13 mtime 기준, 2026-11-16 재확인) ──────────────
+  #   1행: 17%,48%=변조(10:10) · 50%,48%=KHQR(10:05) · 83%,48%=손상(10:00)
+  #   2행: 17%,64%=**네팔 은행 QR**(11-12) · 50%,64%=Khalti 월렛(11-12)
+  #   ⛔ 확인 없이 쓰지 말 것: adb shell "ls -lt --full-time /sdcard/Pictures | head -6"
+  #   ⛔ 저장소 루트 `run_test.ps1`(래퍼)로 돌리지 말 것 — DCIM 에 OCR 픽스처를
+  #     현재 시각으로 밀어 넣어 이 순서를 깨뜨린다. 본 러너(Maestro\YAML\run_test.ps1)를 쓴다.
+  GAL_BANK_QR: "17%, 64%"
+
+  # 이 케이스는 **계좌번호를 포함한 은행 QR** 이어야 한다(사전조건). Khalti 월렛 QR 은
+  # payload 에 계좌번호가 없어 기대 2·5 를 볼 수 없다.
+  QR_RECIPIENT:     "SAPHAL SHRESTHA"
+  QR_NOT_RECIPIENT: "Abhishek Shrestha"     # 독립 음성 단언용(다른 QR 의 수취인)
+  QR_ACCOUNT_NO:    "0169390531524001"      # 이 QR payload 의 계좌번호
+---
+# ================================================================
+# 29_12 네팔 QR — 수취인 영역 구성 (N3)
+# ================================================================
+# 커버: **TC-NPL-015** (수취인 영역 구성 / 계좌번호 미노출)
+#
+# 기대 5개 중 **1~4 를 본다. 5 는 못 본다.**
+#   1. 아이콘 아래 수취인명(AccountName) 한 줄만          → 볼 수 있다
+#   2. 계좌번호·은행명 등 추가 정보·라벨 미노출            → 볼 수 있다
+#   3. 수취인 영역은 읽기 전용(편집·입력 불가)             → 볼 수 있다(계층 속성)
+#   4. "null" 등 기술 문자열 미노출                        → 볼 수 있다
+#   5. QR 의 계좌번호가 영수증(N7)에서 확인된다            → ⛔ **결제 완주 필요**
+#
+# ⛔ **이 플로우는 거래를 만들지 않는다.** 금액을 입력하지 않고 N3 확인까지만 간다.
+#   기대 5 를 보려면 실거래가 필요하다 — 별도 판단 후 29_04 계열로 돌릴 것.
+#
+# ⚠️ 첫 실행이 **측정을 겸한다.** N3 수취인 영역의 아이콘·라벨 id 를 실측한 적이 없어
+#   `__dump_n3_recipient__` 를 심어 두었다(WARNED 로 남고 실패시키지 않는다).
+#   덤프를 읽고 단언을 조이는 것이 두 번째 실행의 일이다.
+#
+# 실행:
+#   cd Maestro\YAML
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_12_네팔QR_수취인영역_old.yaml"
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ---------------- [01] 홈 QR → 네팔 → 스캐너 ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: 'Nepal[\s\S]*NPR[\s\S]*'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- assertVisible:
+    id: "countryCode"
+    text: "Nepal"
+
+# ---------------- [02] 은행 QR 업로드 → N3 ----------------
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_BANK_QR}
+
+- extendedWaitUntil:
+    visible:
+      id: "storename_value"
+    timeout: 90000
+- takeScreenshot: "[02]_N3_수취인영역"
+# ★ 측정용 — 아이콘·라벨 id 와 `storename_value` 의 클래스/편집 가능 여부를 본다.
+- tapOn:
+    id: "__dump_n3_recipient__"
+    optional: true
+
+# ⛔ 올바른 QR 을 집었는지 확정한다. 양성 단언만 두면 엉뚱한 칸을 집어도 통과할 수 있다.
+#   (2026-11-13 사고: `-ExtraEnv` 가 flow 의 env 를 덮지 못해 다른 수취인으로 실거래가 생겼다)
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+- assertNotVisible:
+    id: "storename_value"
+    text: "[\\s\\S]*${QR_NOT_RECIPIENT}[\\s\\S]*"
+
+# ---------------- [03] 기대 2 — 계좌번호·은행명 미노출 ----------------
+# ★ 정책 2-e: 결제 화면은 수취인명만 보여 준다.
+- assertNotVisible:
+    text: "[\\s\\S]*${QR_ACCOUNT_NO}[\\s\\S]*"
+# 은행명/기관명이 어떤 형태로든 나오면 안 된다(이 QR 의 bankCode 는 BOALNPKA = Bank of Asia).
+- assertNotVisible:
+    text: "[\\s\\S]*(BOALNPKA|Bank of Asia|계좌번호|Account Number|은행명|Bank Name)[\\s\\S]*"
+
+# ---------------- [04] 기대 4 — 기술 문자열 미노출 ----------------
+- assertNotVisible:
+    text: "[\\s\\S]*(null|undefined|NaN|N/A)[\\s\\S]*"
+
+# ---------------- [05] 기대 3 — 읽기 전용 ----------------
+# ⚠️ Maestro 에는 "편집 가능 여부" 단언이 없다. **눌러 보고 키보드가 뜨지 않는 것**으로 본다.
+#   키보드가 뜨면 금액 입력란 등 다른 요소를 잘못 짚은 것일 수도 있으니, 덤프로 교차 확인한다.
+- tapOn:
+    id: "storename_value"
+- waitForAnimationToEnd
+- takeScreenshot: "[05]_수취인영역_탭후"
+- tapOn:
+    id: "__dump_after_tap_recipient__"
+    optional: true
+# 탭 후에도 수취인명이 그대로여야 한다(편집 모드로 바뀌지 않는다).
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+
+# ---------------- 정리 ----------------
+# ⛔ 금액을 입력하지 않는다 — 거래를 만들지 않기 위해서다.
+- runFlow: "_return_home_old.yaml"

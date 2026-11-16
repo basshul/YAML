@@ -1,0 +1,62 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 헬퍼: **송금 거래 상세 내역을 연다.**
+# ================================================================
+# 호출:
+#   - runFlow:
+#       file: _open_tx_detail_old.yaml
+#       env:
+#         CONTROL_NO: "80695186313"     # 열 거래의 GME 거래번호
+#
+# ⛔ **거래번호로 집는다.** 목록 첫 항목을 탭하면 새 거래가 생길 때마다 **다른 건이 열린다**
+#   (실거래가 쌓이는 시트라 특히 위험하다). 호출자가 번호를 넘기게 강제한다.
+#
+# ────────────────────────────────────────────────────────────────
+# ⛔ 2026-11-16 실측으로 확정한 두 가지 — 둘 다 모르면 반드시 막힌다.
+#
+# ① **`bottom_item_history` 는 목록이 아니라 허브다.**
+#    송금 / 계좌 / GME Pay / 선불폰 충전 / 청구서 다섯 갈래가 나온다.
+#    송금 목록은 거기서 **"송금" → "해외송금"** 으로 **두 단계** 더 들어간다.
+#
+# ② **상세 내역에 들어가면 코치마크가 접근성 트리를 통째로 가린다.**
+#    `balloonText` = "거래번호가 유출되지 않도록 보호해 주세요."
+#    이게 떠 있으면 **[영수증] 버튼조차 못 잡는다**(2026-11-16 에 실제로 실패했다).
+#    → `balloonClose` 를 **무조건 한 번 치고** 간다. README 메모만으로는 또 밟는다.
+#
+# 목록 항목 id: `tv_date` · `tv_gme_control_no` · `tv_user_id` · `tv_amount`
+#               · `tv_payment_mode` · `tv_status`
+# 상세 화면: "상태" · "거래번호:" · 보낸 금액 · 환율 · 수수료 · 수취 금액 · [영수증] · [확인]
+# ⛔ [영수증] 을 누르면 **저장 대화상자**가 뜬다(`button1`="저장"). 열어 둔 채 끝내면
+#   **다음 실행의 `launchApp` 이 깨진다.** 누를 거면 반드시 닫고 끝낼 것.
+# ================================================================
+
+- tapOn:
+    id: "bottom_item_history"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_dismiss_popups_stag_old.yaml"
+
+# ① 허브 → 송금 → 해외송금
+- tapOn:
+    text: "송금"
+- waitForAnimationToEnd
+- tapOn:
+    text: "해외송금"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "tv_gme_control_no"
+    timeout: 20000
+
+# ⛔ 거래번호로 집는다(첫 항목 탭 금지).
+- tapOn:
+    id: "tv_gme_control_no"
+    text: "${CONTROL_NO}"
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# ② 코치마크를 먼저 치운다 — 안 그러면 아래 요소를 아무것도 못 잡는다.
+- tapOn:
+    id: "balloonClose"
+    optional: true
+- waitForAnimationToEnd

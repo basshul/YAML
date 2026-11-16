@@ -1,0 +1,285 @@
+appId: ${APP_ID}
+env:
+  # ⛔ 이 플로우는 `tv_gme_control_no` **index 0 = 가장 최근 거래**를 연다.
+  #   따라서 여기 이름은 **최신 거래의 수취인**이어야 한다. 고정 이름을 박으면 새 거래가
+  #   생길 때마다 어긋난다(2026-11-13 실측: "SAPHAL SHRESTHA" 로 둬서 [03] 에서 죽었다 —
+  #   최신 건이 Khalti 거래라 화면에는 "Abhishek Shrestha" 가 떠 있었다).
+  #   확인: 송금 내역 목록의 첫 행 `tv_user_id` 값.
+  #   2026-11-13 11:28 거래(29_04, 거래번호 80112960151, Khalti 월렛 QR) 기준.
+  QR_RECIPIENT: "Abhishek Shrestha"
+  TXN_METHOD: "QR Pay"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **송금 내역 / 상세 내역 / 영수증 / 수취인 미저장**
+# 출처: DRF-S2-1 v1.4 정책 2-h · 2-o / 8장 10단계 / 9장 N7
+# 커버: TC-NPL-029(성공 거래 이력) · 031(영수증 생성) · 033(영수증 금액) ·
+#       084(QR 결제 수취인 미저장) · 088(Control No·미보유 값 공란)
+# ================================================================
+# ✅ **거래를 만들지 않는다.** 이미 있는 QR Pay 거래를 **조회만** 한다.
+#   29_04 가 2026-11-13 11:28 에 만든 건(거래번호 80112960151, 1,200 NPR)이 대상이다.
+#   → 실거래 승인이 필요 없고, 몇 번이든 반복해도 안전하다.
+#
+# ⛔⛔ **결제 직후 화면과 내역 화면에는 코치마크 말풍선이 뜬다.**
+#   2026-11-13 실측: `balloonText`("거래번호가 유출되지 않도록 보호해 주세요.") **하나만** 잡히고
+#   나머지 id 가 전부 묻혔다 — 계층 덤프가 통째로 비었다.
+#   → 화면마다 **`balloonClose` 를 먼저 닫는다.** 이 파일은 진입 지점마다 그 블록을 둔다.
+#
+# ⚠️ **상세 내역의 id 는 아직 없다.** 위 말풍선 때문에 덤프가 비어 **텍스트만** 확보돼 있다.
+#   그래서 이 파일은 **라벨 텍스트로 단언**하고 계층 덤프를 함께 남긴다.
+#   첫 실행 뒤 id 가 나오면 좁힐 것. ⚠️ 그 전까지 Pass 는 스크린샷 확인이 전제다.
+#
+# 2026-11-13 실측한 상세 내역 텍스트 (결과 시트 → [확인] 으로 도달):
+#   송금 상태 알림 / 지급        해외송금 1,200 NPR
+#   거래 일자  2026-11-13 11:28:12      거래번호  80112960151   ← Control No
+#   상태  지급                          국가  NEPAL
+#   송금 방법  QR Pay                   ← TC-029 가 찾던 결제방식 구분 표시
+#   보낸 금액  20,354 KRW               환율  1NPR = 12.79KRW
+#   수수료  5,000 KRW                   수취 금액  1,200 NPR
+#   [영수증] [확인]                     ← 영수증은 **여기서 한 번 더** 눌러야 한다
+#
+# ⛔ **상세 내역에는 수취인명·은행·계좌번호가 없다.** 정책 2-o 가 요구하는 그 필드들은
+#   **[영수증]** 쪽에 있다 → TC-088 판정은 [03] 에서 한다. 상세 내역만 보고 적지 말 것.
+#
+# ⚠️ 환율 표기: 상세 내역은 `1NPR = 12.79KRW` 인데 결제 화면(N3)은 `1 NPR = 12 KRW` 로
+#   소수가 잘린다(2026-11-13 확정). 금액(20,354)은 세 화면이 모두 일치하므로 **계산은 정확하고
+#   N3 표시만 다르다.** TC-019·020 참조.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_11_네팔QR_내역과영수증_old.yaml"
+#
+# 케이스
+#   [01] [High] 송금 내역에 QR Pay 거래 표시            TC-NPL-029
+#   [02] [High] 상세 내역 금액·환율·거래번호             TC-NPL-033 · 088(일부)
+#   [03] [High] 영수증 필드·공란·기술문자열 미노출        TC-NPL-031 · 033 · 088
+#   [04] [High] 수취인 목록에 QR 수취인이 없다            TC-NPL-084
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 송금 내역에 QR Pay 거래 표시 (TC-NPL-029)
+# ================================================================
+# 코치마크가 뜨면 하단 nav 가 가려진다 — 먼저 닫는다(04_02 가 쓰는 처리와 같다).
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- tapOn:
+    id: "bottom_item_history"
+- waitForAnimationToEnd
+- tapOn: "${TAB_REMITTANCE}"
+- waitForAnimationToEnd
+- assertVisible: "${TXT_OVERSEAS_REMIT}"
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- takeScreenshot: "[01]_송금내역_목록"
+- tapOn:
+    id: "__dump_history_list__"
+    optional: true
+
+# ★ 기대 1 — 거래가 History 에 표시된다. 목록에 거래번호 행이 있어야 한다.
+- assertVisible:
+    id: "tv_gme_control_no"
+
+# ================================================================
+# [02] [High] 상세 내역 (TC-NPL-033 · 088 일부)
+# ================================================================
+# ⚠️ 목록 맨 위(index 0)가 최신 건이다. 다른 건을 보려면 여기를 고칠 것.
+- tapOn:
+    id: "tv_gme_control_no"
+    index: 0
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+- takeScreenshot: "[02]_상세내역"
+# ⛔ 말풍선을 닫은 뒤에 떠야 id 가 나온다(닫기 전엔 balloonText 하나만 잡혔다).
+- tapOn:
+    id: "__dump_detail__"
+    optional: true
+
+# ★ TC-NPL-029 기대 2·3 — QR Pay 거래임이 구분되고 금액·수취인 정보가 일치한다.
+#   `송금 방법 = QR Pay` 가 그 구분 표시다(DRF 1.4 /qrHistory "송금내역의 결제방식 표시").
+- assertVisible:
+    text: "[\\s\\S]*${TXN_METHOD}[\\s\\S]*"
+# ★ TC-NPL-088 기대 1(일부) — Control No(거래번호)가 표시된다.
+# ⛔ **라벨이 아니라 값을 본다.** 종전처럼 "거래번호" 문구만 확인하면 값이 비어 있어도
+#   통과한다(거짓 통과). 실측 id 는 `txvControlNoValue`("80112960151").
+- assertVisible:
+    id: "txvControlNoValue"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+# ⛔ TC-NPL-088 기대 3 — "null" 등 기술 문자열이 노출되면 안 된다.
+- assertNotVisible:
+    text: "[\\s\\S]*(null|NULL|undefined|None)[\\s\\S]*"
+# ★ TC-NPL-033 — 금액·환율·수수료가 표시된다. 숫자는 거래마다 다르므로 **모양만** 본다.
+# ⛔ **라벨과 값이 서로 다른 뷰다.** "보낸 금액" 은 라벨 뷰이고 금액은 `txvSentAmountValue` 다.
+#   한 문자열로 "라벨 + 숫자" 를 찾으면 Maestro 의 **전체 매칭**에 걸려 영영 실패한다
+#   (2026-11-13 실측: 이 자리에서 죽었다). → **값 id 로 잡는다.**
+#   상세 내역 측정값(2026-11-13, 말풍선 `balloonClose` 를 닫은 뒤라야 나온다):
+#     `txvSentAmountValue`("20,354 KRW") · `txvExRateValue`("1NPR = 12.79KRW") ·
+#     `txvBankAgentValue`(수수료 "5,000 KRW") · `txvSendAmountValue`("1,200 NPR") ·
+#     `txvControlNoValue` · `txvStatusValue` · `txvCountryValue` · `txvPaymentModeValue` ·
+#     `tvTransactionDateValue` · `txvNotificationDescription`("지급")
+- assertVisible:
+    id: "txvSentAmountValue"
+    text: "[\\s\\S]*\\d[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "txvBankAgentValue"
+    text: "[\\s\\S]*\\d[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "txvSendAmountValue"
+    text: "[\\s\\S]*\\d[\\s\\S]*NPR[\\s\\S]*"
+# ★ 환율은 소수가 살아 있어야 한다(N3 와 달리 상세 내역은 12.79 로 나온다).
+- assertVisible:
+    text: "[\\s\\S]*NPR = \\d+\\.\\d+ ?KRW[\\s\\S]*"
+# ★ TC-NPL-088 기대 3 — 기술 문자열이 노출되지 않는다.
+- assertNotVisible:
+    text: "[\\s\\S]*(null|NULL|undefined)[\\s\\S]*"
+
+# ================================================================
+# [03] [High] 영수증 (TC-NPL-031 · 033 · 088)
+# ================================================================
+# ⛔⛔ **영수증은 "화면" 이 아니라 PDF 파일이다**(2026-11-13 실측으로 확정).
+#   [영수증] 을 누르면 **Android 파일 저장 대화상자**가 뜬다:
+#     `header_title`="다운로드 폴더의 파일" · `title`="QRPayReceipt_YYYYMMDDHHMM" · `button1`="저장"
+#   → 수취인명·은행·계좌번호는 **이 화면에 없다.** PDF 안에 있다.
+#   ⛔ 종전처럼 `${QR_RECIPIENT}` 가 보이는지 단언하면 **영원히 실패한다**
+#     (2026-11-13: 두 번 연속 이 자리에서 죽었다).
+#   → 화면에서는 **저장 대화상자 도달까지만** 확인하고, 필드 검증은 PDF 로 한다:
+#       adb shell ls -lt /sdcard/Download/QRPayReceipt_*.pdf
+#       adb pull <경로> && pdfplumber 로 텍스트 추출
+#     2026-11-13 추출 결과(거래 80112960151): 송금인·GME 거래번호·일자·송금금액·
+#       수취인명·국가·은행지점("Khalti wallet")·계좌("9801308789")·수취금액은 있으나
+#       **환율·수수료가 없다** → TC-NPL-033·088 Fail 근거.
+- tapOn:
+    text: "영수증|Receipt"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+# 결과 도달을 먼저 강제한다 — 저장 대화상자 또는 오류 어느 쪽이든 받는다.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(QRPayReceipt|저장|Save|오류|Error)[\\s\\S]*"
+    timeout: 60000
+- takeScreenshot: "[03]_영수증_저장대화상자"
+- tapOn:
+    id: "__dump_receipt__"
+    optional: true
+
+# ★ TC-NPL-031 — 영수증(PDF)이 정상 생성된다.
+- assertNotVisible:
+    text: "[\\s\\S]*(오류|실패|Error|Failed)[\\s\\S]*"
+# 파일명이 `QRPayReceipt_` 로 시작해야 QR Pay 영수증이다(다른 송금 유형은 다른 접두어를 쓴다).
+- assertVisible:
+    text: "[\\s\\S]*QRPayReceipt[\\s\\S]*"
+
+# ---- 저장 대화상자를 닫는다 ----
+# ⛔ 열어 둔 채 다음 단계로 가면 [04] 가 전부 깨지고, 다음 실행의 진입까지 막힌다
+#   (2026-11-13: 사진 선택기를 열어 둬 같은 사고가 두 번 났다).
+- back
+- waitForAnimationToEnd
+
+# ================================================================
+# [04] [High] 수취인 목록에 QR 수취인이 없다 (TC-NPL-084)
+# ================================================================
+# 정책 2-h: "QR 결제 흐름에서 수취인을 저장하지 않는다"(캄보디아와 동일).
+# ⚠️ 결제 **전후** 비교가 이상적이지만, 이 파일은 이미 결제가 끝난 뒤를 본다.
+#   → "지금 없다" 를 본다. 원래 저장돼 있던 수취인이라면 이 판정이 무의미하므로,
+#     `QR_RECIPIENT` 가 **QR 로만 들어온 이름**인지 확인하고 쓸 것(SAPHAL SHRESTHA 는 그렇다).
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+# ⛔⛔ **`bottom_item_home` 이 보인다 ≠ 홈 화면이다.**
+#   그건 하단 탭의 "홈으로" **버튼**이라 거래내역·카드·이벤트·메뉴 어느 탭에서나 보인다.
+#   2026-11-13 실측: 위 back 루프가 **거래 내역 탭**에서 멈췄는데 단언은 통과했고,
+#   바로 아래 "해외송금" 탭이 "Element not found" 로 죽었다(홈이 아니었으므로).
+#   → 홈이 필요하면 **탭을 눌러서** 간다. 보이는지 확인만 해서는 안 된다.
+- tapOn:
+    id: "bottom_item_home"
+- waitForAnimationToEnd
+# ⛔ **홈으로 돌아오면 프로모션 팝업이 다시 뜬다.** 2026-11-13 실측: "GME GLOBAL CUP 2026
+#   VOTE" 배너가 홈을 통째로 덮어 접근성 트리에 `1/1`·`열기`·`닫기` 만 남았고,
+#   "해외송금" 을 스크롤로도 못 찾아 죽었다. → **팝업 큐 헬퍼를 먼저 돌린다.**
+- runFlow: "../../Old/_dismiss_popups_stag_old.yaml"
+# 헬퍼가 못 잡는 모양이면 "닫기" 로 받아낸다(⚠️ "열기" 를 누르면 외부 이벤트 페이지로 나간다).
+- runFlow:
+    when:
+      visible:
+        text: "^닫기$"
+    commands:
+      - tapOn:
+          text: "^닫기$"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# 홈이 스크롤돼 있으면 "해외송금" 이 화면 밖일 수 있다 → 위로 올려 찾는다.
+- scrollUntilVisible:
+    element:
+      text: "${TXT_OVERSEAS_REMIT}"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- takeScreenshot: "[04]_수취인목록"
+- tapOn:
+    id: "__dump_recipient_list__"
+    optional: true
+
+# ★ 기대 — QR 결제 수취인이 목록에 저장되지 않았다.
+- assertNotVisible:
+    text: "[\\s\\S]*${QR_RECIPIENT}[\\s\\S]*"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000

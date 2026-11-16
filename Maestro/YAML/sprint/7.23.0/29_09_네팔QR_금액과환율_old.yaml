@@ -1,0 +1,203 @@
+appId: ${APP_ID}
+env:
+  # 최소 송금 한도와 **동일한** 금액. 2026-11-12 실측 안내 문구: "최소 송금 금액: 120 NPR"
+  #   ⚠️ 이 값은 운영설정이라 바뀔 수 있다. 바뀌면 **이 줄을 직접 고칠 것.**
+  #     ⛔ `--env` 로는 안 된다 — flow-level `env:` 가 CLI `--env` 를 덮어쓴다
+  #       (`_enter_pin_old.yaml` 머리말의 같은 경고, 2026-11-13 실사고).
+  #   ⚠️ DRF 1.1 은 USD 10.00 이라 적혀 있어 실측과 어긋난다(TC-NPL-069 N 열 참고).
+  QR_MIN_NPR: "120"
+  QR_RECIPIENT: "SAPHAL SHRESTHA"
+---
+# ================================================================
+# 시나리오: 네팔 QR Pay — **수취인명 / 최소 한도 경계값 / 2구간 환율 일관성**
+# 출처: DRF-S2-1 v1.4 정책 2-e · 1.1 / 1.4 qrCheckLimit
+# 커버: TC-NPL-014(Account Name) · TC-NPL-017(최소 한도 경계값) · TC-NPL-064(2구간 환율)
+# ================================================================
+# ⚠️ **거래는 생성되지 않는다.** N4 확인 시트까지만 가고 Pay 를 누르지 않는다.
+#
+# ⛔ **TC-NPL-064 는 절반만 덮는다.** 기대는 N3·N4·**N7(영수증)** 세 곳의 KRW 금액이
+#   단수차 없이 같아야 한다는 것인데, **N7 은 아직 측정하지 못했다.**
+#   이 파일은 **N3 ↔ N4** 만 대조한다. N7 대조는 영수증 화면을 뜬 뒤 추가할 것.
+#   → 이 파일만으로 TC-064 를 Pass 로 적지 말 것.
+#
+# ⚠️ **TC-NPL-017 은 경계값 자체가 불확실하다.** 앱이 안내하는 최소금액(120 NPR)과
+#   DRF 1.1 의 USD 10.00 이 자릿수가 다르다. 운영팀 확인 전까지 `QR_MIN_NPR` 은
+#   **실측 안내 문구를 그대로 옮긴 값**이지 스펙 값이 아니다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\29_09_네팔QR_금액과환율_old.yaml"
+#
+# 전제: 갤러리 최신(1번 칸)이 네팔 은행 QR. 칸이 밀리면 아래 수취인명 단언이 잡는다.
+#
+# 케이스
+#   [01] [High]   QR 업로드 → 수취인명 표시·null 미노출·잘림 없음   TC-NPL-014
+#   [02] [High]   최소 한도와 **동일한** 금액 → 통과                TC-NPL-017
+#   [03] [High]   N3 ↔ N4 KRW 금액 일관성                         TC-NPL-064(부분)
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: "Nepal[\\s\\S]*NPR[\\s\\S]*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      # ⛔ 갤러리 좌표는 기기 상태에 따라 바뀐다(29_04 의 같은 자리 주석 참고).
+      #   2026-11-13 픽스처 푸시 후 네팔 은행 QR 은 **2행 1열 (17%, 64%)** 이다.
+      #   픽스처를 지우면 (17%, 48%) 로 돌아온다. 틀리면 아래 수취인명 단언이 잡는다.
+      GAL_POINT: "17%, 64%"
+
+# ================================================================
+# [01] [High] 수취인명 표시 (TC-NPL-014)
+# ================================================================
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(${QR_RECIPIENT}|지원하지 않|오류|Error)[\\s\\S]*"
+    timeout: 90000
+- assertNotVisible:
+    text: "[\\s\\S]*(지원하지 않|다시 시도)[\\s\\S]*"
+
+# ★ 기대 1·2 — Account Name 이 QR 의 accountName 과 일치하게 표시된다.
+#   QR payload: {"accountNumber":"0169390531524001","accountName":"SAPHAL SHRESTHA",...}
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+# ★ 기대 3 — null 등 기술 문자열이 노출되지 않는다.
+- assertNotVisible:
+    text: "[\\s\\S]*(null|NULL|undefined)[\\s\\S]*"
+# ★ 기대 4 — UI 잘림 없음.
+#   ⚠️ 잘림은 접근성 트리로 판정할 수 없다(텍스트는 온전히 들어 있고 렌더만 잘린다).
+#     **전체 문자열이 일치하는지**로 대신 본다. 시각적 잘림은 스크린샷으로 사람이 본다.
+- takeScreenshot: "[01]_수취인명"
+
+# ================================================================
+# [02] [High] 최소 한도와 동일한 금액 → 통과 (TC-NPL-017)
+# ================================================================
+- tapOn:
+    id: "amount"
+- waitForAnimationToEnd
+- inputText: "${QR_MIN_NPR}"
+- waitForAnimationToEnd
+# ⛔ 키패드 [완료] 로 검증을 발화시킨다. `hideKeyboard`(BACK)는 IME_ACTION_DONE 을 쏘지 않아
+#   검증이 돌지 않는다(2026-11-12 확정).
+# ⛔⛔ **`hideKeyboard` 대체 분기를 두지 말 것.** 2026-11-13 실측 사고: 키보드가 **이미
+#   내려간** 상태에서 `hideKeyboard` 가 돌면 BACK 으로 동작해 **화면을 벗어난다.**
+#   이 파일이 그래서 N3 가 아니라 스캐너에서 죽었다(뒤의 `btnConfirm` 탭이 전부 WARNED).
+- runFlow:
+    when:
+      visible:
+        text: "완료"
+    commands:
+      - tapOn:
+          text: "완료"
+      - waitForAnimationToEnd
+- takeScreenshot: "[02-1]_경계값_입력직후"
+
+# ★ 기대 3 — 오류 메시지 미노출. **경계값은 통과해야 한다**(미만이 아니라 동일).
+#   ⚠️ 미만일 때 뜨는 문구가 여기 뜨면 경계 조건이 `<` 가 아니라 `<=` 로 잘못 걸린 것이다.
+- assertNotVisible:
+    id: "errorMessage"
+- assertNotVisible:
+    text: "[\\s\\S]*최소 송금 금액[\\s\\S]*"
+
+# ★ 기대 1·2 — 검증 성공, 다음 단계 정상 이동.
+# ⛔ 키보드가 내려가야 `btnConfirm` 이 접근성 트리에 나타난다. N3 는 도착 시 금액 입력란에
+#   자동 포커스되어 키패드가 올라와 있고, 그동안 `btnConfirm` 은 트리에 **없다**(2026-11-13 실측).
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirm"
+    timeout: 15000
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "design_bottom_sheet"
+    commands:
+      - tapOn:
+          id: "btnConfirm"
+          optional: true
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "design_bottom_sheet"
+    timeout: 60000
+- takeScreenshot: "[02-2]_경계값_N4도달"
+
+# ================================================================
+# [03] [High] N3 ↔ N4 KRW 금액 일관성 (TC-NPL-064 부분)
+# ================================================================
+# ⛔ N4 시트가 N3 위에 덮이므로 **두 화면의 요소가 트리에 함께 남는다.**
+#   id `amount` 는 양쪽에 있다 → N4 는 `amount_krw`·`paymentAmountValue`·`fee`·
+#   `totalAmountValue` 같은 고유 id 로만 잡는다(2026-11-12 실측).
+- assertVisible:
+    id: "store"
+    text: "${QR_RECIPIENT}"
+- assertVisible:
+    id: "paymentAmountValue"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "fee"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "totalAmountValue"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+- assertVisible:
+    id: "amount_krw"
+    text: "[\\s\\S]*KRW[\\s\\S]*"
+
+# ★ 기대 — 단수차 없이 동일. 값 비교는 Maestro 가 산술을 못 하므로 **스크린샷으로 사람이** 한다.
+#   2026-11-12 실측 사례(1,200 NPR): N3 환산 15,354 KRW = N4 결제금액 15,354 KRW,
+#   총액 20,354 = 15,354 + 수수료 5,000. 역산도 정확히 1,200 NPR 로 맞았다.
+#   ⚠️ N7(영수증) 대조는 이 파일 범위 밖이다 — 머리말 참고.
+- takeScreenshot: "[03]_N4_금액항목"
+- tapOn:
+    id: "__dump_n4_amounts__"
+    optional: true
+
+# ⛔ Pay 를 누르지 않는다. 시트를 닫고 나간다.
+- tapOn:
+    id: "close"
+    optional: true
+- waitForAnimationToEnd
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+# ⛔ `bottom_item_home` 이 **보이는 것**은 홈이라는 뜻이 아니다 — 하단 탭 버튼이라
+#   거래내역·카드 어디서나 보인다(2026-11-13 실측 사고). 헬퍼가 **눌러서** 홈으로 간다.
+- runFlow: "_return_home_old.yaml"

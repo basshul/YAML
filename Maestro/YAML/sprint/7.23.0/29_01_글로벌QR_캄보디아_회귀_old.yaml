@@ -1,0 +1,350 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 시나리오: Global QR Pay — **캄보디아 회귀** (구 UI)
+# 출처: DRF-S2-1 네팔 QR Pay 송금 (IME Ltd.) v1.4 — 1.3 범위 / 정책 2-u / 6장 AS-IS·TO-BE
+#       체크리스트 `7.23.0.xlsx > Nepal QR` TC-NPL-076 · 077
+# ================================================================
+# ★ 왜 네팔 스프린트에 **캄보디아** 파일이 있나
+#   DRF 정책 2-u 는 스캐너 상단 로고를 **앱 고정 이미지에서 서버가 내려주는 국가별 로고로**
+#   바꾼다. 그리고 그 문장은 네팔만이 아니라 이렇게 이어진다:
+#     "캄보디아도 같은 방식으로 바뀌며, KHQR 로고는 서버값으로 내려줍니다."
+#   → **지금 운영 중인 유일한 QR Pay 국가의 화면이 실제로 바뀐다.**
+#   체크리스트 75건이 전부 네팔이라 이 영향도가 비어 있었다(2026-11-05 갭 분석).
+#   DRF 7-6 의 캄보디아 교훈(출시 때 배포가 2025-07-30 → 08-04 로 밀렸다)이 바로 이 자리다.
+#
+# ★ 이 파일은 **읽기 전용**이다 — 결제까지 가지 않는다.
+#   스캐너를 열어 로고·국가 전환까지만 본다. 실제 송금은 QR 이 필요하고(2026-11-05 미제공)
+#   캄보디아 QR 로 송금하면 실제 돈이 나간다.
+#
+# ---------------------------------------------------------------
+# 실기기 실측 (2026-11-05, SM-S911N / stag 7.22.0-stag / 서버 livetest)
+# ---------------------------------------------------------------
+#   홈 잔액카드  `qrScan`(카드 상단 QR 아이콘) → 카드가 QR 페이지로 바뀌고
+#                `btnTransfer` 라벨이 "지금 송금하기"(= QR Send)가 된다 (08_마이QR 머리말과 동일)
+#   QR Send 시트 `design_bottom_sheet` > **`llQrContainer`("글로벌 QR")** / `llLocalTransfer`("국내 송금")
+#                / `touch_outside`
+#     ⛔ APK 에 있는 `ivGlobalQR` · `txvGlobalQR` 은 **이 시트가 아니다.** 실기기에서 안 잡힌다
+#        (2026-11-05 에 그걸로 assert 했다가 실패). 쓰지 말 것.
+#   국가 선택(N1) `design_bottom_sheet` > `countryHeader` > `selectCountryText`("국가 선택")
+#                / `iv_cancel` / **`overseas_guide`("해외 QR Pay 가이드")**
+#                / `rvCountryList` > 행마다 `flagImageView` + **`countryNameTxt`**
+#                실측 행: "Cambodia(KHR)" · "Cambodia(USD)" **2행뿐**
+#   오늘의환율(N1a) `toolbar_title`("오늘의 환율") / `iv_back`
+#                / `paymentModeRV` > `paymentModeLogo` + `paymentModeTitleTxt`("계좌 입금","QR Pay")
+#                / `ll_transfer_fee_section` + `transferFeeTxtView`("5,000 KRW (송금 수수료 포함)")
+#                / `sendAmountEdTxt` / `receiveAmountEdTxt`
+#                / `countrySelectionSpinner` + `recepientFlagImageView` + `recepientCurrencyTextView`("KHR")
+#                / `ll_exchange_rate_section` + `exchangeRateTxtView` / `ll_exRate` + `gmeExratePC`
+#                / `tv_year_limit`("연간 잔여 한도: …")
+#                / **`exRateCalculateButton` 라벨 = "스캔하기"**
+#     ⚠️ 07_오늘의환율 의 ExchangeRateActivity 와 **같은 id 체계**지만 라벨이 다르다
+#        (일반 송금은 "계산하기"/"지금 송금하기", QR Pay 진입은 "스캔하기").
+#        → 버튼은 **id 로 탭**하고 라벨은 참고로만 본다.
+#   스캐너(N2)   `header_toolbar` > `back` / **`gme_and`**(상단 로고 영역) / `locationchoose`
+#                / `previewView` / `overlay` / `gallery` + **`galleryImagePick`** / `toggleFlashLight`
+#                / `scanToPay`("스캔, 업로드 또는 QR로 결제하세요.")
+#                / `bottomCountry` > **`countryLayout`**(탭 가능) > `countryFlag` + `countryCode`("Cambodia")
+#     ★ `gme_and` 가 **DRF 2-u 가 교체 대상으로 지목한 바로 그 앱 고정 이미지**("GME & KHQR")다.
+#       7.23.0 에서 서버 로고로 바뀌면 이 자리의 **그림이** 달라진다. Maestro 는 이미지 내용을
+#       읽지 못하므로 **존재만** 단언하고, 그림 자체는 [04] 의 스크린샷을 증적으로 남긴다.
+#
+# ⛔ 값(환율·금액·한도)은 실시간이다 → **존재 여부와 모양만** 본다. 숫자 하드코딩 금지.
+#   단 **수수료는 다르다**: 캄보디아는 유료(실측 "5,000 KRW")이고 네팔은 프로모션 0원이다
+#   (DRF 1.1 / 정책 2-k). 그래서 [03] 은 "0 원이 아님"을 단언해 네팔 설정이 캄보디아로
+#   새지 않았는지 본다.
+#
+# 케이스 목록:
+#   [01] [High]   홈 QR → QR Send 시트(글로벌 QR / 국내 송금) 노출
+#   [02] [High]   국가 선택 시트 — 캄보디아 2행 유지 + 헤더·가이드 진입점
+#   [03] [High]   Cambodia(KHR) → 오늘의 환율: QR Pay 노출 · 환율/수수료/한도 · 버튼 "스캔하기"
+#   [04] [High]   스캔하기 → 스캐너 진입: 상단 로고 · 갤러리 · 플래시 · 하단 국가 "Cambodia"
+#   [05] [Medium] 스캐너 하단 국가 전환 시트가 열린다 (정책 2-u 의 전환 경로)
+#   [06] [Medium] 국가 선택 시트의 "해외 QR Pay 가이드"(N8) 진입
+#
+# 실행 (CWD = C:\GME\qa-automation\Maestro\YAML):
+#   .\run_test.ps1 -lang ko -User Basshu -flow "sprint\7.23.0\29_01_글로벌QR_캄보디아_회귀_old.yaml"
+#   정적 검사: .\lint_flows.ps1 -Path "sprint\7.23.0" -Track v2
+# ================================================================
+
+# ---------------- 공통 진입: 앱 실행 → 서버 → PIN → 홈 ----------------
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ================================================================
+# [01] [High] 홈 QR → QR Send 시트(글로벌 QR / 국내 송금) 노출
+# ================================================================
+# 잔액 카드는 홈 최상단이다. 직전 케이스에서 스크롤돼 있으면 트리에 아예 없다(08_마이QR 머리말).
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+
+# 카드가 QR 페이지로 바뀌면 btnTransfer 가 "지금 송금하기"(QR Send)다
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- assertVisible:
+    id: "llLocalTransfer"
+- assertVisible:
+    text: "글로벌 QR|Global QR"
+- assertVisible:
+    text: "국내 송금|Local Transfer|Domestic"
+- takeScreenshot: "[01]_QR송금_시트"
+
+# ================================================================
+# [02] [High] 국가 선택 시트 — 캄보디아 2행 유지 + 헤더·가이드 진입점
+# ================================================================
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- assertVisible:
+    id: "selectCountryText"
+- assertVisible:
+    id: "iv_cancel"
+- assertVisible:
+    id: "overseas_guide"
+
+# ⛔ 운영 중인 2개 국가·통화 행이 그대로 있어야 한다 — 네팔 추가가 기존 행을 밀어내면 안 된다.
+#   `countryNameTxt` 는 행마다 반복되므로 text 를 **함께** 걸어 좁힌다.
+- assertVisible:
+    id: "countryNameTxt"
+    text: "Cambodia\\(KHR\\)"
+- assertVisible:
+    id: "countryNameTxt"
+    text: "Cambodia\\(USD\\)"
+- takeScreenshot: "[02]_국가선택_캄보디아2행"
+
+# ================================================================
+# [03] [High] Cambodia(KHR) → 오늘의 환율: QR Pay 노출 · 환율/수수료/한도 · "스캔하기"
+# ================================================================
+- tapOn:
+    id: "countryNameTxt"
+    text: "Cambodia\\(KHR\\)"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+
+- assertVisible:
+    id: "toolbar_title"
+- assertVisible:
+    id: "paymentModeRV"
+# 결제방식 목록에 QR Pay 가 있어야 한다(정책 2-q: QR 진입이면 QR Pay 가 자동 선택된다)
+# ⛔ `paymentModeRV` 는 **가로 스크롤 목록**이다 — 한 번에 3칸만 보이고 나머지는 인플레이트
+#   조차 되지 않아 접근성 트리에 **없다**. 그냥 assert 하면 "QR Pay 없음" 으로 거짓 실패한다.
+#   2026-11-12 stag 실측: 칸이 `계좌 입금 / 계좌 입금 / 현금 지급` 3개였고 세 번째 칸의
+#   bounds 가 RV 우측 경계(998px)에서 **잘려** 있었다 — 오른쪽에 더 있다는 뜻이다.
+#   (livetest 에서는 QR Pay 가 처음 3칸 안에 들어와 그냥 통과했다. 서버마다 칸 수가 다르다.)
+# ⚠️ swipe 좌표는 **RV 의 세로 중앙(y≈22%)** 이다. 화면 중앙(y≈50%)에서 밀면 금액 입력
+#   영역이 잡힌다. `scrollUntilVisible` 은 화면 중앙에서 미므로 여기서는 쓰지 않는다.
+# ⚠️ `times` 를 반드시 준다 — 없으면 못 찾을 때 무한히 민다(2026-11-05 실제 행 사고).
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "paymentModeTitleTxt"
+        text: "QR Pay"
+    commands:
+      - swipe:
+          start: "88%, 22%"
+          end: "15%, 22%"
+      - waitForAnimationToEnd
+- assertVisible:
+    id: "paymentModeTitleTxt"
+    text: "QR Pay"
+
+# ⛔ **QR Pay 칸을 누르면 안 된다.** 이건 "선택"이 아니라 **스캐너 진입 버튼**이다 —
+#   2026-11-12 실측에서 누르는 즉시 N2 스캐너(`scanToPay`)로 넘어가 이 화면의 나머지
+#   검증이 통째로 불가능해졌다. 결제방식은 **보이는지만** 본다.
+# ⚠️ 정책 2-q 의 "QR 진입이면 QR Pay 자동 선택" 은 **코드로 판정할 수 없다** —
+#   모든 칸의 `selected`·`checked` 가 false 다(RecyclerView 가 선택 상태를 접근성
+#   속성으로 내보내지 않는다). 스크린샷 [03] 으로 **사람이** 본다.
+#   ⛔ 2026-11-12 stag 실측에서는 **어느 칸도 선택 표시가 없었고** QR Pay 는 목록
+#     4번째였다(스크롤해야 보인다). 운영/livetest 동작과 대조가 필요하다 — 시트 참조.
+
+# 통화는 KHR 하나로 고정돼 들어온다(국가 선택에서 KHR 행을 골랐다)
+- assertVisible:
+    id: "recepientCurrencyTextView"
+    text: "KHR"
+- assertVisible:
+    id: "countrySelectionSpinner"
+
+# 환율·수수료·한도 영역이 비어 있지 않은지. 숫자는 실시간이라 **모양만** 본다.
+- assertVisible:
+    id: "exchangeRateTxtView"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+- assertVisible:
+    id: "transferFeeTxtView"
+    text: "[\\s\\S]*\\d[\\s\\S]*"
+- assertVisible:
+    id: "tv_year_limit"
+- assertVisible:
+    id: "gmeExratePC"
+
+# ⛔ 캄보디아는 **유료**다. 네팔 프로모션(0원, ~2026-12-31)이 캄보디아로 새면 여기서 잡힌다.
+- assertNotVisible:
+    id: "transferFeeTxtView"
+    text: "[\\s\\S]*^0 ?(KRW|원)[\\s\\S]*"
+
+# 버튼 라벨은 QR 진입에서 "스캔하기"다. 라벨은 Lokalise 로 바뀔 수 있으므로
+#   **탭은 id 로** 하고, 라벨은 여기서 한 번만 확인한다.
+- assertVisible:
+    id: "exRateCalculateButton"
+    text: "스캔하기|Scan"
+- takeScreenshot: "[03]_오늘의환율_KHR"
+
+# ================================================================
+# [04] [High] 스캔하기 → 스캐너 진입: 상단 로고 · 갤러리 · 플래시 · 하단 국가
+# ================================================================
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+
+# 카메라 권한이 아직 없으면 OS 다이얼로그가 먼저 뜬다(기기에 이미 허용돼 있으면 SKIP)
+- runFlow: "../../Old/_allow_permission_old.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "scanToPay|galleryImagePick"
+    timeout: 30000
+
+# ★ DRF 2-u 가 교체 대상으로 지목한 상단 로고 영역. 7.23.0 에서 서버 로고로 바뀌어도
+#   **이 자리가 비면 안 된다**(값이 없으면 GME 로고만 — 그래도 요소는 있어야 한다).
+- assertVisible:
+    id: "gme_and"
+- assertVisible:
+    id: "galleryImagePick"
+- assertVisible:
+    id: "toggleFlashLight"
+- assertVisible:
+    id: "previewView"
+- assertVisible:
+    id: "locationchoose"
+
+# 하단 국가 표시는 들어온 국가와 일치해야 한다
+- assertVisible:
+    id: "countryCode"
+    text: "Cambodia"
+# 로고 그림 자체는 Maestro 가 읽지 못한다 → 증적 스크린샷으로 남긴다
+- takeScreenshot: "[04]_스캐너_상단로고"
+
+# ================================================================
+# [05] [Medium] 스캐너 하단 국가 전환 시트가 열린다
+# ================================================================
+# 정책 2-u 의 "고객이 하단에서 국가를 바꾸면 로고도 그 국가 값으로 바뀐다" 경로.
+# 네팔이 올라오면 여기서 Nepal 을 골라 로고 전환을 본다(29_02 [04]).
+#
+# ⛔⛔ **이 시트는 N1 국가 선택 시트와 다른 화면이다** (2026-11-05 실측으로 확인).
+#   같은 `design_bottom_sheet` / `countryHeader` / `rvCountryList` 를 쓰는데 **행 id 와 표기가 다르다**:
+#     N1 국가 선택   `selectCountryText`="국가 선택" / `iv_cancel`     / 행 `countryNameTxt`="Cambodia(KHR)"
+#     스캐너 국가 전환 `selectCountryText`="국가 검색" / `cancelText`="취소" / `searchLayout`
+#                                                    / 행 `image` + **`countryName`="Cambodia"**(통화 없음)
+#   → `countryNameTxt` 로 집으면 여기서 **조용히 실패**한다(2026-11-05 에 실제로 FAILED).
+- tapOn:
+    id: "countryLayout"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- assertVisible:
+    id: "searchLayout"
+- assertVisible:
+    id: "countryName"
+    text: "Cambodia"
+- takeScreenshot: "[05]_스캐너_국가전환시트"
+
+# 고른 국가로 되돌아 나온다(바꾸지 않고 닫는다)
+- tapOn:
+    id: "cancelText"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "scanToPay|galleryImagePick"
+
+# ================================================================
+# [06] [Medium] 국가 선택 시트의 "해외 QR Pay 가이드"(N8) 진입
+# ================================================================
+# ⛔ 스캐너에서 back 만으로 국가 선택 시트까지 되돌아오지 못한다 → **홈으로 내린 뒤 다시 탄다.**
+#   그리고 `repeat: while` 을 **횟수 없이** 쓰지 말 것: 조건이 끝내 참이 되지 않으면
+#   back 을 무한히 눌러 앱을 런처로 밀어낸다(2026-11-05 에 실제로 실행이 멈췄다).
+#   → `times` 로 묶고, 도달은 그 뒤의 `extendedWaitUntil` 로 단언한다.
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+
+# 홈 → QR → 글로벌 QR → 국가 선택 시트 (가이드 진입점이 여기 있다)
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "overseas_guide"
+    timeout: 20000
+- tapOn:
+    id: "overseas_guide"
+- waitForAnimationToEnd
+
+# 가이드는 서버 설정 콘텐츠다(정책 2-m) → 제목 문구를 고정하지 않고
+#   "가이드 화면에 도달했고 캄보디아 항목이 있다"로 판정한다.
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(Cambodia|캄보디아)[\\s\\S]*"
+    timeout: 30000
+- takeScreenshot: "[06]_가이드_캄보디아"
+
+# ---------------- 정리: 홈으로 돌아간다 ----------------
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "bottom_item_home"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
