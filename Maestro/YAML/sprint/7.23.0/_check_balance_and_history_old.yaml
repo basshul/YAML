@@ -1,0 +1,47 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 취소(qr_tran_cancel) 직후 상태 확인 — 읽기 전용
+# ================================================================
+# 2026-11-16 17:33 결제(500 NPR, QrId 2960)가 서버 응답
+#   {"ErrorCode":"1","Lokalise":"qr_tran_cancel", ...} 으로 **취소**됐다.
+# 확인할 것:
+#   TC-NPL-071 기대 2  차감된 원화가 환불되는가 → 홈 잔액
+#   TC-NPL-071 기대 3  내역·영수증 상태가 취소로 갱신되는가 → 송금내역
+#   TC-NPL-026 기대 4  거래가 1건만 생성되는가(또는 0건)   → 송금내역 건수
+#
+# ⛔ 거래를 만들지 않는다. 보기만 한다.
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+- takeScreenshot: "[E1]_홈_잔액"
+# 담을 것: `txvBalanceValue`(총 잔액)
+- tapOn:
+    id: "__dump_e1_home__"
+    optional: true
+
+# ---------------- 송금내역 ----------------
+# ⛔ `bottom_item_history` 는 **허브**다. 거기서 "송금" → "해외송금" 으로 더 들어가야 목록이 나온다.
+- tapOn:
+    id: "bottom_item_history"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_dismiss_popups_stag_old.yaml"
+- tapOn:
+    text: "송금"
+- waitForAnimationToEnd
+- tapOn:
+    text: "해외송금"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "tv_gme_control_no"
+    timeout: 30000
+- takeScreenshot: "[E2]_송금내역_목록"
+# 담을 것: 상위 항목들의 `tv_gme_control_no` · `tv_status` · `tv_amount` · `tv_payment_mode`
+- tapOn:
+    id: "__dump_e2_list__"
+    optional: true
+
+- runFlow: "_return_home_old.yaml"

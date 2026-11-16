@@ -1,0 +1,82 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 가이드 설명 문구 ↔ qrInfo 전문 **동시** 캡처 (TC-NPL-089)
+# ================================================================
+# ⛔ **시점이 다른 두 자료를 맞대면 틀린다.** 화면 문구와 그 화면을 그린 전문을
+#   **같은 실행 안에서** 떠야 한다. 지금까지 화면(11-16 13:0x)과 전문(11-16 16:4x)을
+#   따로 떠서 비교했고, 그래서 값이 셋으로 갈렸다.
+#
+# 지금까지 나온 세 값(어느 것이 화면에 뜨는지 가린다):
+#   ⓐ Lokalise KO  "GME와 함께 QR 코드만 스캔하면 네팔 전역의 은행 계좌로 손쉽게 송금할 수 있습니다."
+#   ⓑ stg qrInfo Description(=EN) "Simply scan the QR code to send money hassle-free to bank accounts across Nepal with GME."
+#   ⓒ 화면 실측(11-16)  "Use GME Pay for hassle-free shopping at IME QR partnered stores across Nepal."
+#   ※ ⓒ 는 운영 Core 의 description 과 같다(포크 확인).
+#
+# ⛔ 거래를 만들지 않는다. 가이드만 열고 나온다.
+#
+# 실행(반드시 logcat 을 비우고 시작):
+#   adb -s <dev> logcat -c
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\_guide_desc_with_wire_old.yaml"
+#   adb -s <dev> logcat -d > out.txt
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ---------------- 홈 QR → 국가 선택 시트 → 가이드 ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+# ★ 이 시트를 그리는 호출이 qrInfo 다 — 여기서 전문이 난다.
+- takeScreenshot: "[W1]_국가선택시트"
+- tapOn:
+    id: "overseas_guide"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "tablayout"
+    timeout: 20000
+- takeScreenshot: "[W2]_가이드_국가탭"
+
+# ---------------- Nepal 행 펼치기 ----------------
+- tapOn:
+    id: "parent_textView"
+    text: "Nepal"
+- waitForAnimationToEnd
+- takeScreenshot: "[W3]_Nepal_펼침"
+# ★ 이 덤프의 `desc` 가 화면 실측값이다. 위 전문과 **같은 실행**에서 나온 것이다.
+- tapOn:
+    id: "__dump_w3_nepal_desc__"
+    optional: true
+
+# 대조군 — 캄보디아도 같이 떠 둔다.
+- tapOn:
+    id: "parent_textView"
+    text: "Cambodia"
+- waitForAnimationToEnd
+- takeScreenshot: "[W4]_Cambodia_펼침"
+- tapOn:
+    id: "__dump_w4_cambodia_desc__"
+    optional: true
+
+- runFlow: "_return_home_old.yaml"

@@ -1,0 +1,153 @@
+appId: ${APP_ID}
+env:
+  # ── 갤러리 슬롯 (2026-11-16 15:2x 재확인: 순서 그대로) ────────────────
+  #   1행: 17%,48%=변조(11-13 10:10) · 50%,48%=KHQR(10:05) · 83%,48%=손상(10:00)
+  #   2행: 17%,64%=**네팔 은행 QR**(11-12 15:02:25) · 50%,64%=Khalti(15:02:24)
+  #   ⛔ 재설치마다 반드시 재확인: adb shell "ls -lt /sdcard/Pictures | head -7"
+  GAL_BANK_QR:  "17%, 64%"
+  GAL_TAMPERED: "17%, 48%"
+  QR_RECIPIENT: "SAPHAL SHRESTHA"
+  N1A_AMOUNT:   "100000"
+---
+# ================================================================
+# 빌드별 동작 비교 — 91 / 87 / 63 / 39
+# ================================================================
+# 목적: **한 번의 통과로 네 행의 자료를 동시에 담는다.** 거래는 만들지 않는다.
+#
+#   TC-NPL-073  수취인 아이콘 (상점 vs 개인)        → [C3] N3 스크린샷
+#   TC-NPL-085  N1a 금액 비이월 · Scan 버튼          → [C1]·[C3] 덤프
+#   TC-NPL-065  수수료 표시(0원 vs 5,000)            → [C1] `transferFeeTxtView`
+#   TC-NPL-060  구버전 로고 · N3 도달 여부           → [C2] 스캐너 상단
+#   TC-NPL-035  변조 QR 사전 차단 여부               → [C4]
+#   TC-NPL-092  연간 잔여 한도 표시                  → [C1] `tv_year_limit`
+#
+# ⛔ **실거래 금지.** PIN 을 넣지 않는다. N3 까지만 간다.
+# ⛔ **빌드를 먼저 못 박고 돌릴 것** — 87 인 줄 알고 91 을 찍으면 전부 무의미하다:
+#     adb shell "dumpsys package <APP_ID> | grep versionCode"
+#
+# 실행:
+#   cd Maestro\YAML
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\_build_compare_old.yaml"
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ---------------- [C1] 오늘의 환율(N1a) ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+# ⚠️ 구버전에는 Nepal 행이 없을 수 있다 — 그 경우 여기서 멈추는 것이 **측정 결과**다.
+- tapOn:
+    id: "countryNameTxt"
+    text: 'Nepal[\s\S]*NPR[\s\S]*'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+
+# TC-NPL-085 사전조건 — N1a 에 금액을 넣어 둔다. 이 값이 N3 로 넘어가면 안 된다.
+- tapOn:
+    id: "sendAmountEdTxt"
+- waitForAnimationToEnd
+- eraseText
+- inputText: "${N1A_AMOUNT}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "완료"
+    commands:
+      - tapOn:
+          text: "완료"
+      - waitForAnimationToEnd
+- takeScreenshot: "[C1]_N1a_금액입력"
+# 담을 것: `transferFeeTxtView`(수수료) · `tv_year_limit`(연간 잔여) ·
+#          `exRateCalculateButton` 라벨 · `receiveAmountEdTxt`
+- tapOn:
+    id: "__dump_c1_n1a__"
+    optional: true
+
+# ---------------- [C2] 스캐너(N2) ----------------
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- takeScreenshot: "[C2]_스캐너_상단로고"
+- tapOn:
+    id: "__dump_c2_scanner__"
+    optional: true
+
+# ---------------- [C3] 은행 QR → N3 ----------------
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_BANK_QR}
+- extendedWaitUntil:
+    visible:
+      id: "storename_value"
+    timeout: 90000
+- takeScreenshot: "[C3]_N3_수취인과금액란"
+# 담을 것: 수취인 아이콘(스크린샷) · `amount`(비어 있어야 한다) ·
+#          `serviceFeeView` · `exRate` · `noteView`
+- tapOn:
+    id: "__dump_c3_n3__"
+    optional: true
+# ⛔ 올바른 QR 을 집었는지 확정한다(양성 단언만 두면 엉뚱한 칸을 집어도 통과한다).
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+
+# ---------------- [C4] 변조 QR → 차단되는가 ----------------
+# ⛔ **`back` 한 번으로는 N3 를 못 벗어난다**(2026-11-16 실측: 눌러도 결제 화면 그대로).
+#   29_06 과 같은 **반복 + 도달 확정** 패턴을 쓴다. 못 돌아가면 아래가 엉뚱한 화면에서 돈다.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "scanToPay|galleryImagePick"
+    commands:
+      - back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_TAMPERED}
+- waitForAnimationToEnd
+- takeScreenshot: "[C4]_변조QR_결과"
+# 담을 것: 오류 시트(`txvDialogTitle`)가 떴는가, 아니면 N3(`storename_value`)로 갔는가
+- tapOn:
+    id: "__dump_c4_tampered__"
+    optional: true
+
+# ---------------- 정리 ----------------
+# ⛔ PIN 을 넣지 않았으므로 거래가 없다.
+- runFlow: "_return_home_old.yaml"

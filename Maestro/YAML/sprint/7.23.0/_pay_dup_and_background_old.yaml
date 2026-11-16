@@ -1,0 +1,172 @@
+appId: ${APP_ID}
+env:
+  GAL_BANK_QR:  "17%, 64%"
+  QR_RECIPIENT: "SAPHAL SHRESTHA"
+  QR_NOT_RECIPIENT: "Abhishek"
+  QR_AMOUNT_NPR: "300"   # ⛔ 연간 잔여 630 NPR(2026-11-16 17:28 실측) · 최소 120 → 창은 120~630
+---
+# ================================================================
+# 한 번의 결제로 두 행 — TC-NPL-026(중복 클릭) · 093(백그라운드)
+# ================================================================
+# ⛔ **실거래가 생긴다.** stg 는 실제 돈이 나가지 않는다는 사용자 확인(2026-11-16)에 따라
+#   승인 없이 진행한다. **livetest·운영에는 이 플로우를 쓰지 말 것.**
+#
+# 담는 것:
+#   TC-NPL-026  Pay 연속 3회 이상 클릭 → 거래 1건만 생성
+#   TC-NPL-093  Pay 직후 백그라운드 전환 후 복귀 → 중복 생성 없음
+#   TC-NPL-094  환율 호출의 serviceType=37 (빌드 91 재확인, logcat)
+#
+# ⛔⛔ **중복 탭을 좌표로 하지 말 것.** 첫 탭 뒤 화면이 PIN 으로 넘어가므로
+#   맹탭하면 **PIN 입력란에 숫자가 들어간다 → 오입력 → 계정 잠금.**
+#   그래서 **id 기반 `optional` 탭**을 쓴다. 버튼이 사라졌으면 탭하지 않고 WARNED 로 남는다.
+#   이것이 "추가 클릭이 무시되는가" 를 안전하게 보는 방법이다.
+#
+# ⛔ 자동이체 가드(`deductingAc` = "GME Wallet")를 반드시 통과시킨다 —
+#   잔액이 모자라면 KFTC 연결 계좌에서 **실제 출금**이 일어난다(정책 2-n).
+#
+# 실행(logcat 을 반드시 비우고):
+#   adb -s <dev> logcat -c
+#   .\run_test.ps1 -lang ko -User Basshu -Server stag -flow "sprint\7.23.0\_pay_dup_and_background_old.yaml"
+#   adb -s <dev> logcat -d > out.txt
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+
+# ---------------- N1a → 스캐너 → N3 ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 20000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: 'Nepal[\s\S]*NPR[\s\S]*'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_BANK_QR}
+- extendedWaitUntil:
+    visible:
+      id: "storename_value"
+    timeout: 90000
+# ⛔ 엉뚱한 QR 로 거래를 만들지 않도록 양성·음성 둘 다 건다.
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+- assertNotVisible:
+    id: "storename_value"
+    text: "[\\s\\S]*${QR_NOT_RECIPIENT}[\\s\\S]*"
+
+# ---------------- 금액 입력 → N4 ----------------
+- tapOn:
+    id: "amount"
+- waitForAnimationToEnd
+- inputText: "${QR_AMOUNT_NPR}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "완료"
+    commands:
+      - tapOn:
+          text: "완료"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirm"
+    timeout: 20000
+- tapOn:
+    id: "btnConfirm"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "confirmBtn"
+    timeout: 30000
+
+# ⛔⛔ 자동이체 가드 — 여기서 막지 않으면 연결 계좌에서 실제 출금이 날 수 있다.
+- assertVisible:
+    id: "deductingAc"
+    text: "GME Wallet"
+- assertNotVisible:
+    text: "[\\s\\S]*(자동이체|충전하기|계좌 연결|잔액이 부족)[\\s\\S]*"
+- takeScreenshot: "[D1]_N4_결제직전"
+
+# ================================================================
+# TC-NPL-026 — Pay 연속 3회 탭
+# ================================================================
+# 1회차는 반드시 눌린다. 2·3회차는 버튼이 남아 있을 때만 눌린다(optional).
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "confirmBtn"
+    optional: true
+- tapOn:
+    id: "confirmBtn"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: "[D2]_연속탭직후"
+- tapOn:
+    id: "__dump_d2_after_triple__"
+    optional: true
+
+# ---------------- 인증 ----------------
+- runFlow: "../../Old/_dismiss_biometric_prompt_old.yaml"
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: ../../Old/_enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|실패|오류|취소|Success|Processing|Failed|Receipt)[\\s\\S]*"
+    timeout: 180000
+- takeScreenshot: "[D3]_결제결과"
+- tapOn:
+    id: "__dump_d3_result__"
+    optional: true
+
+# ================================================================
+# TC-NPL-093 절차 1 — 백그라운드로 보내기만 하고 플로우를 끝낸다
+# ================================================================
+# ⛔ **`launchApp` 을 쓰지 말 것 — 콜드 스타트다.** 2026-11-16 실측: Home 뒤 `launchApp` 으로
+#   복귀시켰더니 **Server Override 화면**이 떴다. 프로세스를 새로 띄운 것이라 "복귀" 가 아니다.
+#   → 복귀는 플로우 밖에서 **`adb shell am start`** 로 태스크를 앞으로 가져온다.
+- pressKey: Home
+- waitForAnimationToEnd
+- takeScreenshot: "[D4]_홈으로_보낸직후"
