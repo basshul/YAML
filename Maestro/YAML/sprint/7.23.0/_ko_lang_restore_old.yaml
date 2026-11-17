@@ -1,0 +1,30 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# 앱 언어를 **한국어로 되돌린다**
+# ================================================================
+# ⛔ TC-NPL-036(영문 UI) 수집 뒤에는 **반드시 이것을 돌린다.**
+#   다른 yaml 은 전부 한국어 문자열을 쓰므로, 영어로 남겨 두면 곧바로 깨진다.
+#   언어 변경 직후 앱이 재시작되므로 **마지막에 공용 진입으로 홈까지 되돌린다.**
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+- repeat:
+    times: 4
+    while:
+      visible:
+        id: "btnOK|btnTwo|imgvCross|btnClose"
+    commands:
+      - tapOn:
+          id: "btnOK|btnTwo|imgvCross|btnClose"
+      - waitForAnimationToEnd
+- runFlow:
+    file: ../../Old/_change_language_old.yaml
+    env:
+      LANG_LABEL: "한국어"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_common_entry_old.yaml"
+- takeScreenshot: "[K1]_한국어_복귀"
+- tapOn:
+    id: "__dump_k1_restored__"
+    optional: true

@@ -1618,3 +1618,73 @@ TC-054 의 M 열이 임시 폴더의 파일을 가리키고 있었다. 스크래
 파이썬 문자열에 그대로 써서 `` 이 제어문자로 바뀐 것이다. 같은 일이 ``(`build_compare.png`)에서도 났다.
 **`` `` `
 ` `	` 로 시작하는 폴더명이 특히 위험하다.**
+
+
+---
+
+## 2026-11-17 — livetest 빌드로 전환, TC-036 · 048 측정
+
+사용자 지시로 **빌드는 livetest(72300034), 서버는 stg(gmeuat)** 로 돌렸다.
+`run_test.ps1 -Build livetest -Server stag`. 전문으로 `gmeuat.gmeremit.com:5022` 호출을 확인했다.
+
+### ⛔ 빌드마다 진입부가 다르다 — id 를 가정하지 말 것
+| | stag 72300091 | livetest 72300034 |
+|---|---|---|
+| 홈 드로어 `iv_nav` | **없다** | **있다** |
+| 설정 경로 | 하단 탭 `bottom_item_profile` | `iv_nav` → `view_setting` → `view_language` |
+
+`_change_language_old.yaml` 계열은 `iv_nav` 를 쓰므로 **stag 빌드에서는 못 쓴다.**
+`_change_language_stag_old.yaml` 은 appId 가 stag 로 **하드코딩**돼 있어 livetest 에 못 쓴다.
+→ livetest 에서는 `${APP_ID}` 를 따르는 `_change_language_old.yaml` 을 쓴다.
+
+⚠️ **홈 덤프가 짧으면 아직 안 그려진 것이다.** livetest 홈을 처음 뗴을 때 하단 탭 id 만 나와
+"`iv_nav` 가 없다" 고 판단했는데, 몇 초 뒤 다시 뜸니 있었다. **id 부재는 로딩 상태와 구분해야 한다.**
+
+### TC-NPL-048 카메라 권한 거부 — Pass (기대 1·2·3)
+**해법은 `launchApp` 을 아예 쓰지 않는 것이다.** Maestro 의 `launchApp` 은 실행 시 앱 권한을
+자동 부여한다(`maestro.Maestro.setPermissionInternal`). 2026-11-17 재확인: `pm revoke` 로
+`granted=false` 로 만들어 둔 CAMERA 가 **probe 플로우의 `launchApp` 한 번에 `true` 로 돌아갔다.**
+공용 진입 헬퍼도 `launchApp` 을 하므로 쓸 수 없다.
+→ **앱을 미리 홈에 띄워 두고**, `_cam_denied_scan_old.yaml`(launchApp 없음)로 들어간다.
+플로우 안에서 잠금화면이면 PIN 을 **1회만** 넣는다(오입력 누적 방지).
+
+| 기대 | 측정 |
+|---|---|
+| 1. 권한 요청 팝업 표시 | ✅ OS 다이얼로그 — "앱 사용 중에만 허용 / 이번만 허용 / 허용 안함" |
+| 2. 스캔 기능 제한 | ✅ 거부 후 스캐너로 **진입하지 않음** — "계속하려면 카메라 권한이 필요합니다." |
+| 3. 설정 이동 안내 | ✅ "설정에서 카메라 권한을 허용해 주세요." + **[설정]** 버튼 |
+
+⚠️ **거부는 1회만.** 두 번 누르면 Android 가 "다시 묻지 않음" 으로 굳혀 이후 팝업이 안 뜼다.
+✅ 실행 후 `pm grant` 로 복구했다(양쪽 빌드 `granted=true` 확인).
+
+### TC-NPL-036 영문 UI — 기대 1·2·3·4 모두 영어
+⛔ **`-lang en` 은 앱 언어를 바꾸지 않는다.** `LANG_SWITCH_TRIGGER=신규 회원` 이라
+**로그인 전 랜딩에서만** 발동한다. 로그인 상태에서는 **앱 내 설정**으로 바꿔야 한다.
+⛔ **언어를 바꾸면 앱이 재시작된다.** 전환과 수집을 한 파일에 넣었더니 그 지점에서 흐름이 끊겼다.
+→ **`_en_ui_collect_old.yaml`(수집)** 과 **`_ko_lang_restore_old.yaml`(복귀)** 로 나눠 돌린다.
+
+측정(뷰계층 전수, **한글 0건**):
+| 화면 | 영문 문구 |
+|---|---|
+| 홈 | Bank · QR · Reward Points · GME Wallet Number · Total GME Balance · Transfer · Deposit |
+| 국가 선택 | Select Country · Overseas QR Pay Guide · Cambodia(KHR) · Cambodia(USD) · Nepal(NPR) |
+| N1a | Today's Rate · Select Payment Mode · You Send · Recipient Gets · Current exchange rate · **Yearly remaining limit: 99,998 USD** |
+| N2 | Pay by scanning, uploading, or showing a QR. · Nepal |
+| N3 | Payment · Available balance · Exchange Rate · Service Fee · **Next** |
+| N4 | Confirm Payment Details · Deducting account · Payment amount · Service fee (Included) · Total amount to send · **Pay** |
+| 상세·영수증 | Transaction Detail · Status notification · PAID · Overseas Remittance · Control No · Country NEPAL · Payment Mode QR Pay · Sent Amount · Ex Rate · Received Amount · Receipt · OK |
+
+말줄임 표시 0건 — 기대 3(잘림·깨짐)도 계층상 흔적이 없다.
+⚠️ **영수증 PDF 자체는 확인하지 않았다.** 상세의 [Receipt] 는 화면이 아니라 **PDF 저장 다이얼로그**를
+띄운다(`QRPayReceipt_<시각>`). 다운로드는 승인 사항이라 취소했다. **기대 4 는 영수증 _화면_ 기준이다.**
+
+### ❗ livetest 계정에서는 QR 결제가 성공한다
+livetest 내역에 **2026-11-17 QR Pay 2건**이 있다 — `80125036297`(10:49 · 200 NPR · **PAID**),
+`80171377587`(09:27 · 200 NPR · **PROCESSING**). **내가 만든 것이 아니다.**
+stag 에서는 같은 날 500·300·120 NPR 이 **세 번 모두 `qr_tran_cancel`** 이었다.
+⛔ **빌드 차이로 단정하지 말 것** — 두 앱의 **지갑 번호가 다르다**
+(stag `9424010023301` / livetest `9424010023323`). **계정이 다를 수 있다.**
+요청 0번(취소 원인)에 이 대조를 넘길 때 **계정 동일 여부를 먼저 확정해야 한다.**
+
+⚠️ **logcat 은 기기 전체 로그다.** livetest 트래픽을 읽는다면서 비우지 않고 grep 해서
+직전 stag 세션의 `userId` 를 livetest 것으로 읽을 번했다. **빌드를 바꾸면 `logcat -c` 부터 한다.**

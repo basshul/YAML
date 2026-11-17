@@ -1,0 +1,67 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# TC-NPL-036 기대 4 — 상세 내역·영수증이 영어로 표시되는지
+# ================================================================
+# ⛔ 앱이 **이미 영어인 상태**에서 돌린다. 결제하지 않는다 — 기존 거래를 열기만 한다.
+# ⚠️ 이 계정에 QR Pay 거래가 없으면 목록에서 멈춘다. 그 경우 기대 4 는 미확인으로 남긴다.
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+- repeat:
+    times: 4
+    while:
+      visible:
+        id: "btnOK|btnTwo|imgvCross|btnClose"
+    commands:
+      - tapOn:
+          id: "btnOK|btnTwo|imgvCross|btnClose"
+      - waitForAnimationToEnd
+
+- tapOn:
+    id: "bottom_item_history"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_dismiss_popups_stag_old.yaml"
+- tapOn:
+    text: "^(송금|Remittance)$"
+- waitForAnimationToEnd
+- tapOn:
+    text: "해외송금|Overseas"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "tv_gme_control_no"
+    timeout: 30000
+- takeScreenshot: "[R1]_송금내역_영문"
+- tapOn:
+    id: "__dump_r1_list__"
+    optional: true
+
+# ---------------- 첫 건 상세 ----------------
+- tapOn:
+    id: "tv_gme_control_no"
+    index: 0
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "txvControlNoValue|txvStatusValue"
+    timeout: 30000
+- takeScreenshot: "[R2]_상세내역_영문"
+- tapOn:
+    id: "__dump_r2_detail__"
+    optional: true
+
+# ---------------- 영수증 ----------------
+- runFlow:
+    when:
+      visible:
+        text: "영수증|Receipt|View Receipt"
+    commands:
+      - tapOn:
+          text: "영수증|Receipt|View Receipt"
+      - waitForAnimationToEnd
+      - takeScreenshot: "[R3]_영수증_영문"
+      - tapOn:
+          id: "__dump_r3_receipt__"
+          optional: true

@@ -1,0 +1,134 @@
+appId: ${APP_ID}
+env:
+  GAL_BANK_QR:  "17%, 64%"
+  QR_RECIPIENT: "SAPHAL SHRESTHA"
+  EN_AMOUNT:    "120"
+---
+# ================================================================
+# TC-NPL-036 영문 UI 수집 — **앱이 이미 영어인 상태**에서 시작한다
+# ================================================================
+# ⛔ 언어 전환은 이 파일이 하지 않는다. `_tmp_en_ui_screens_old.yaml` 이 전환까지 하고
+#   그 직후 앱이 재시작되면서 흐름이 끊겼다(2026-11-17). 그래서 **전환과 수집을 분리**했다.
+#   전환 후 앱은 Server Override 부터 다시 타므로 공용 진입을 그대로 쓴다.
+#
+# ⛔ **결제하지 않는다.** N4 까지만 가고 되돌아 나온다.
+# ⛔ 끝나고 **반드시 한국어로 되돌릴 것** — 다른 yaml 이 전부 한국어 문자열을 쓴다.
+#   복귀는 `_tmp_ko_restore_old.yaml` 로 따로 돌린다.
+# ================================================================
+
+- runFlow: "../../Old/_common_entry_old.yaml"
+- repeat:
+    times: 4
+    while:
+      visible:
+        id: "btnOK|btnTwo|imgvCross|btnClose"
+    commands:
+      - tapOn:
+          id: "btnOK|btnTwo|imgvCross|btnClose"
+      - waitForAnimationToEnd
+- takeScreenshot: "[L0]_홈_영문"
+- tapOn:
+    id: "__dump_l0_home__"
+    optional: true
+
+# ---------------- N1a ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 40000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- takeScreenshot: "[L1]_국가선택_영문"
+- tapOn:
+    id: "__dump_l1_country__"
+    optional: true
+- tapOn:
+    id: "countryNameTxt"
+    text: 'Nepal[\s\S]*NPR[\s\S]*'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+- takeScreenshot: "[L2]_N1a_환율_영문"
+- tapOn:
+    id: "__dump_l2_n1a__"
+    optional: true
+
+# ---------------- N2 ----------------
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- runFlow: "../../Old/_allow_permission_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "galleryImagePick"
+    timeout: 30000
+- takeScreenshot: "[L3]_N2_스캐너_영문"
+- tapOn:
+    id: "__dump_l3_n2__"
+    optional: true
+
+# ---------------- N3 ----------------
+- runFlow:
+    file: _qr_pick_from_gallery_old.yaml
+    env:
+      GAL_POINT: ${GAL_BANK_QR}
+- extendedWaitUntil:
+    visible:
+      id: "storename_value"
+    timeout: 90000
+- assertVisible:
+    id: "storename_value"
+    text: "${QR_RECIPIENT}"
+- tapOn:
+    id: "amount"
+- waitForAnimationToEnd
+- inputText: "${EN_AMOUNT}"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        text: "완료|Done"
+    commands:
+      - tapOn:
+          text: "완료|Done"
+      - waitForAnimationToEnd
+- takeScreenshot: "[L4]_N3_결제_영문"
+- tapOn:
+    id: "__dump_l4_n3__"
+    optional: true
+
+# ---------------- N4 ----------------
+- extendedWaitUntil:
+    visible:
+      id: "btnConfirm"
+    timeout: 20000
+- tapOn:
+    id: "btnConfirm"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "confirmBtn"
+    timeout: 30000
+- takeScreenshot: "[L5]_N4_확인시트_영문"
+- tapOn:
+    id: "__dump_l5_n4__"
+    optional: true

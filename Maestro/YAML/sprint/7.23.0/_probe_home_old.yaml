@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+# 진입 + 홈 계층 수집. 빌드가 바뀌었을 때 id 가 같은지 먼저 본다.
+# 읽기만 한다 — 아무것도 바꾸지 않는다.
+- runFlow: "../../Old/_common_entry_old.yaml"
+- takeScreenshot: "[P1]_홈"
+- tapOn:
+    id: "__dump_home__"
+    optional: true

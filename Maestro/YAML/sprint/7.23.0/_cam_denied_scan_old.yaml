@@ -1,0 +1,116 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# TC-NPL-048 — 카메라 권한 거부 상태에서 스캐너 진입
+# ================================================================
+# ⛔⛔ **이 파일에는 `launchApp` 이 없다. 넣지 말 것.**
+#   Maestro 의 `launchApp` 은 실행 시 앱 권한을 **자동 부여**한다
+#   (실행 로그에 `maestro.Maestro.setPermissionInternal`). 2026-11-17 재확인:
+#   `pm revoke` 로 granted=false 로 만들어 둔 CAMERA 가 probe 플로우의
+#   `launchApp` 한 번에 **granted=true 로 돌아갔다.**
+#   → 공용 진입 헬퍼(`_common_entry_old.yaml`)도 `launchApp` 을 하므로 쓰면 안 된다.
+#   **앱이 이미 홈에 떠 있는 상태**에서 이 플로우를 시작한다.
+#
+# 실행 전:
+#   adb -s <dev> shell pm revoke <APP_ID> android.permission.CAMERA
+#   adb -s <dev> shell dumpsys package <APP_ID> | grep "CAMERA: granted"   → false 확인
+# 실행 후(반드시):
+#   adb -s <dev> shell pm grant <APP_ID> android.permission.CAMERA
+#   빠뜨리면 이후 모든 QR 플로우가 깨진다.
+#
+# ⚠️ **거부는 1회만.** 두 번 누르면 Android 가 "다시 묻지 않음" 으로 굳혀
+#   이후 팝업이 아예 안 뜨고 수동 복구가 필요해진다.
+# ================================================================
+
+# ---------------- 잠금화면이면 PIN 으로 연다 ----------------
+# ⚠️ PIN 입력은 **1회뿐**이다. 틀리면 여기서 실패하고 멈춘다(오입력 누적 방지).
+- runFlow:
+    when:
+      visible:
+        id: "input_dot_1"
+    commands:
+      - runFlow:
+          file: ../../Old/_enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 60000
+- runFlow: "../../Old/_dismiss_popups_stag_old.yaml"
+# ⚠️ livetest 빌드는 공용 팝업 헬퍼가 모르는 시트를 더 띄운다 —
+#   "오류" 시트(btnOK) · "열기/닫기" 배너(btnOne/btnTwo).
+#   2026-11-17: 이것들 때문에 llQrContainer 를 못 찾고 실패했다.
+- repeat:
+    times: 4
+    while:
+      visible:
+        id: "btnOK|btnTwo|imgvCross|btnClose"
+    commands:
+      - tapOn:
+          id: "btnOK|btnTwo|imgvCross|btnClose"
+      - waitForAnimationToEnd
+
+# ---------------- N1a 까지 ----------------
+- scrollUntilVisible:
+    element:
+      id: "qrScan"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qrScan"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btnTransfer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "llQrContainer"
+    timeout: 40000
+- tapOn:
+    id: "llQrContainer"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "rvCountryList"
+    timeout: 20000
+- tapOn:
+    id: "countryNameTxt"
+    text: 'Nepal[\s\S]*NPR[\s\S]*'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "exRateCalculateButton"
+    timeout: 30000
+
+# ---------------- 스캔하기 → 권한 요청 팝업 ----------------
+- tapOn:
+    id: "exRateCalculateButton"
+- waitForAnimationToEnd
+- takeScreenshot: "[C1]_권한팝업"
+- tapOn:
+    id: "__dump_c1_prompt__"
+    optional: true
+
+# ▣ 기대 1 — 권한 요청 팝업이 표시된다
+- assertVisible:
+    id: "com.android.permissioncontroller:id/permission_deny_button|permission_deny_button"
+
+# ---------------- 거부 1회 ----------------
+- tapOn:
+    id: "com.android.permissioncontroller:id/permission_deny_button|permission_deny_button"
+- waitForAnimationToEnd
+- takeScreenshot: "[C2]_거부직후"
+- tapOn:
+    id: "__dump_c2_denied__"
+    optional: true
+
+# ▣ 기대 2·3 은 여기서 수집한 계층으로 판정한다
+#   (스캔 기능 제한 / 설정 화면 이동 안내)
+- waitForAnimationToEnd
+- takeScreenshot: "[C3]_안내화면"
+- tapOn:
+    id: "__dump_c3_guide__"
+    optional: true
