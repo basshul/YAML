@@ -1,0 +1,393 @@
+appId: ${APP_ID}
+env:
+  # ── 등록할 국가 / 수취 수단 ─────────────────────────────────────
+  #   ⚠️ `inputText`는 한글을 넣지 못한다 — **검색어**는 ASCII 로 둔다.
+  #     (`tapOn` 의 한글 셀렉터는 입력이 아니라 선택이라 문제없다)
+  CTRY_SEARCH: "Myanmar"
+  CTRY_NAME: "Myanmar"
+  # ★ 2026-11-05 실측 — 수취인 폼은 **단계형**이다.
+  #   국가 → 송금 방법 → 은행/지갑 → 나머지 필드 순으로 필드가 생겨난다.
+  #   **송금 방법을 고르기 전에는 은행 선택 필드가 폼에 아예 없다.**
+  #   미얀마 송금 방법 목록(실측): 모바일 월렛 / 계좌 입금 / 현금 지급
+  #   → 일반 은행 계좌 수취인(TC-SCOPE-02)은 `PAY_METHOD=계좌 입금` 으로 덮어쓴다.
+  PAY_METHOD: "모바일 월렛"
+  # 지갑/은행 목록의 **표기 그대로**. 실측: "KBZ Pay" 가 아니라 **"KBZPAY WALLET"**.
+  BANK_SEARCH: "KBZ"
+  BANK_NAME: "KBZPAY WALLET"
+
+  # ── 등록할 수취인 (2026-11-05 티켓 본문 '수취인정보') ───────────
+  NEW_FIRST_NAME: "DAW MOH"
+  NEW_LAST_NAME: "MOH ZIN"
+  # 목록에 찍히는 표기. 실측: 행의 `tv_detail1` 이 "First Last" 로 합쳐 보여준다.
+  NEW_FULL_NAME: "DAW MOH MOH ZIN"
+  # 등록한 수취인을 **남길지**. 기본은 지운다(회귀 테스트라 반복 실행이 전제).
+  #   TC-AOS-01/03(Edit) 의 전제조건을 만들려면 `KEEP_RECEIVER=yes` 로 넘겨 남긴다.
+  KEEP_RECEIVER: "no"
+
+  # ── 계좌/지갑 번호 ★ 이 두 값이 S2-47 의 핵심이다 ────────────────
+  # ★ 2026-11-05 실측 — E-Wallet 폼도 일반 계좌 폼과 **같은 id** 를 쓴다(라벨은 "계좌번호").
+  FLD_ACCOUNT: "recieverAccountNoFormInputField"
+  #
+  # **유효**한 번호 — 앞에 0 이 붙은 형태. 등록·수정이 **성공해야 한다.**
+  ACC_VALID: "09421106999"
+  #
+  # **무효**한 번호 — 같은 번호에서 **앞의 0 만 빠진** 형태. 등록·수정이 **거부돼야 한다.**
+  #   ⚠️ 임의의 가짜 번호(예: 09000000000)가 아니라 **반드시 이 값**이어야 한다.
+  #     S2-47 이 잡으려는 결함이 바로 "0 이 빠진 번호를 걸러내지 못하고 통과시킨다" 이기 때문이다.
+  #     가짜 번호는 파트너 코드가 틀려도 어차피 실패하므로 **결함을 드러내지 못한다.**
+  ACC_INVALID: "9421106999"
+  #
+  # 핸드폰 번호 필드는 국가 prefix(+95)가 따로 붙으므로 앞의 0 을 뺀 형태로 넣는다.
+  #   (계좌번호와 달리 여기는 prefix 가 0 자리를 대신한다 — 혼동하지 말 것)
+  MOBILE_NO: "9421106999"
+
+  # ── 판정 셀렉터 (2026-11-05 실측) ───────────────────────────────
+  # 실명검증 실패는 **바텀시트 다이얼로그**로 뜬다:
+  #   txvDialogTitle       "오류(<내 지갑번호>)"   ← 번호가 섞이므로 판정에 쓰지 않는다
+  #   txvDialogDescription "수취인 이름 또는 계좌번호가 올바르지 않습니다. 정보를 확인한 후 다시 시도해 주세요."
+  #   btnOk                "확인"
+  # ⛔ 종전처럼 `text: "${ERROR_ICON_CONTENT_DESCRIPTION}"`(= "오류")로 판정하면 안 된다 —
+  #    실제 타이틀이 "오류(0664…)" 라 **전체매칭에 걸리지 않아 조용히 SKIP** 된다.
+  # ★★ 2026-11-05 운영 실측 — **성공 시트와 실패 다이얼로그가 같은 컴포넌트다.**
+  #   성공: txvDialogTitle "저장 성공" / 버튼 `btnContactSupport1`("아니요")
+  #   실패: txvDialogTitle "오류(…)"  / 버튼 `btnOk`("확인")
+  #   ⛔ `txvDialogDescription` **id 유무로 가르면 안 된다** — 둘 다 그 id 를 쓴다.
+  DLG_DESC_ID: "txvDialogDescription"
+  DLG_OK_ID: "btnOk"
+  DLG_NO_ID: "btnContactSupport1"
+  MSG_VALIDATION_FAIL: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|not valid)[\s\S]*'
+  MSG_ANY_RESULT: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|오류|Error|[Ss]uccess|성공|저장|등록)[\s\S]*'
+---
+# ================================================================
+# S2-47 — 수취인 **신규 등록(Add Receiver)** 회귀
+#   https://gmeremit-team.atlassian.net/browse/S2-47  (Epic: S2-24 / 원 이슈 TS-8804)
+# ================================================================
+# 커버하는 케이스  (TC-AOS-04)
+#   [01] [High]  **0 이 빠진 번호**(`${ACC_INVALID}`) → 등록이 **거부**돼야 한다
+#   [02] [High]  **0 이 붙은 번호**(`${ACC_VALID}`)   → 등록이 **성공**해야 한다
+#
+# ★ 무엇을 잡으려는 검사인가 — 사용자에게 실제로 일어난 일
+#   사용자가 수취인을 등록할 때 **앞의 0 이 빠진 `9421106999`** 를 넣었다. 이 번호는 무효다.
+#   그런데 계좌 검증 API 가 **잘못된 파트너 코드**(최상위 `393865`, 은행 고유 `2123259` 가 아님)로
+#   호출되는 바람에 **0 이 빠진 것을 걸러내지 못하고 통과**시켰고, 무효한 계좌가 그대로 등록됐다.
+#   그 뒤 사용자에게는 **수취인 정보를 수정하라는 바텀시트가 계속 노출**됐다 — 티켓이 말하는 '루프'다.
+#
+#   그래서 수정 후 기대는 **등록·수정 양쪽에서** 이렇게 갈려야 한다:
+#     `09421106999` (0 있음) → 성공 /  `9421106999` (0 없음) → 거부
+#
+#   ⚠️ 그래서 `ACC_INVALID` 는 **임의의 가짜 번호가 아니라 0 만 빠뜨린 같은 번호**여야 한다.
+#     가짜 번호는 파트너 코드가 틀려도 어차피 실패하므로 **결함을 드러내지 못한다.**
+#     이 파일로 결함을 재현하려면 [01] 이 '거부'가 아니라 **'통과'로 끝나는지** 보면 된다.
+#
+#   TC-SCOPE-01 의 '신규 등록 시 유효성 검증'도 이 파일을 국가/지갑 env 만 바꿔 재사용한다.
+#
+# ⚠️ 2026-11-05 기준 **수정된 빌드는 아직 없다**(설치된 3종 모두 7.22.0).
+#    지금 이 파일을 돌리는 목적은 합격 판정이 아니라 **수정 전 베이스라인 확보**다.
+#    베이스라인은 가이드 `S2-47_maestro_guide.md` 6절에 기록한다.
+#
+# 자동화하지 않은 케이스는 `S2-47_Receiver_Edit_Validation_old.yaml` 헤더에 정리돼 있다
+#   (TC-AOS-02 Payload 확인 / TC-EDGE-01 BankList 예외 은행).
+#   ★ TC-AOS-02 는 이 결함의 **원인**을 직접 보는 케이스다 — `/validation/account` 요청에
+#     어떤 파트너 코드와 어떤 계좌번호(0 포함 여부)가 실리는지가 한 번에 드러난다.
+#
+# ⚠️ 실기기·실서비스다. 이 플로우는 **수취인 등록까지만** 간다 — 송금은 일어나지 않는다.
+#    저장 성공 바텀시트의 "예"(= 바로 송금하기)는 누르지 않는다.
+#    등록된 테스트 수취인은 **플로우 끝에서 삭제**한다.
+#
+# ⚠️ 2026-11-05 실측: 기기 앱 UI 언어가 **한국어**라 `-lang ko` 로 돌려야 한다
+#    (`-lang en` 은 홈에서 TXT_OVERSEAS_REMIT 를 못 찾고 즉시 실패). 앱 언어를 영문으로
+#    바꿨다면 `-lang en` + 로케일에 맞춰 `PAY_METHOD`/`MSG_*` 를 덮어쓴다.
+#    국가 목록은 한국어 UI 에서도 **영문 표기**라 CTRY_SEARCH 는 그대로다.
+# ⚠️ 2026-11-05 실측: 이 PC 는 커밋 한도가 거의 차 있어 Maestro JVM 이 죽는다.
+#    브라우저를 닫거나 재부팅해 메모리를 확보한 뒤 돌릴 것.
+#
+# 실행:  (ACC_VALID / ACC_INVALID 는 기본값이 곧 티켓의 값이라 따로 넘길 필요가 없다)
+#   .\run_test.ps1 -lang ko -flow "Old\S2-47_Receiver_Add_Validation_old.yaml" `
+#      -AppId com.gmeremit.online.gmeremittance_native.livetest
+#   TC-SCOPE-01 예 (베트남 MoMo)
+#     ... -ExtraEnv "CTRY_SEARCH=Vietnam,CTRY_NAME=Vietnam,BANK_SEARCH=MoMo,BANK_NAME=<목록 표기 그대로>,ACC_VALID=<유효>"
+#   TC-SCOPE-02 예 (일반 은행 계좌)
+#     ... -ExtraEnv "PAY_METHOD=계좌 입금,BANK_SEARCH=<은행>,BANK_NAME=<목록 표기 그대로>,ACC_VALID=<유효>"
+# ================================================================
+
+# ---- 진입: 앱 상태를 홈으로 정규화 ----
+#   ⛔ 여기서 PIN 을 직접 치지 않는다 — 자격정보를 새 파일에 복제하지 않기 위해서다.
+- runFlow: "_suite_recover_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# ---- 해외송금 → 수취인 목록 ----
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+
+# ---- 사전 정리: 이전 실행이 남긴 테스트 수취인 삭제 ----
+#   ⚠️ 남아 있으면 [02] 제출이 '중복 수취인' 으로 실패해 등록 성공 판정이 성립하지 않는다.
+- repeat:
+    times: 5
+    while:
+      visible:
+        text: "${NEW_FULL_NAME}"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          index: 0
+      - tapOn:
+          id: "delete"
+          index: 0
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+
+# ================================================================
+# [01] [High] 신규 등록 — **0 이 빠진 번호**는 거부돼야 한다  (TC-AOS-04 전반)
+# ================================================================
+# ★ 결함 시그니처: 이 블록이 **통과하면(= 등록이 성공하면) 결함이다.**
+#   `${ACC_INVALID}` 는 `${ACC_VALID}` 에서 앞의 0 만 뺀 무효 번호다. 검증이 제대로 돌면
+#   거부돼야 하고, 파트너 코드가 틀리면 그대로 통과해 무효 계좌가 등록된다 — 그게 원래 사고다.
+#   따라서 아래 "검증 실패 단언"이 실패한다는 건 **앱이 무효 번호를 받아들였다**는 뜻이다.
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- waitForAnimationToEnd
+
+# ---- ① 국가 ----
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "${CTRY_SEARCH}"
+- tapOn:
+    text: "${CTRY_NAME}"
+    index: 1
+- waitForAnimationToEnd
+
+# ---- ② 송금 방법 (이 단계를 거쳐야 은행/지갑 필드가 생긴다) ----
+- tapOn:
+    id: "recieverPaymentMethodSelectionFormInputField"
+- extendedWaitUntil:
+    visible:
+      id: "itemName"
+    timeout: 10000
+- tapOn:
+    id: "itemName"
+    text: "${PAY_METHOD}"
+- waitForAnimationToEnd
+
+# ---- ③ 지갑/은행 ----
+#   은행 선택 필드가 **실제로 생겼는지** 먼저 확인한다. 안 생겼으면 송금 방법이 잘못 선택된 것이다.
+- extendedWaitUntil:
+    visible:
+      id: "recieverBankSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "${BANK_SEARCH}"
+- waitForAnimationToEnd
+# 목록 항목 id 는 `textView` 가 아니라 `txvAccountTitle` 이다(실측).
+- tapOn:
+    id: "txvAccountTitle"
+    text: "${BANK_NAME}"
+- waitForAnimationToEnd
+
+# ---- ④ 계좌/지갑 번호: **유효하지 않은 값** + 나머지 필수값 ----
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- inputText: "${ACC_INVALID}"
+- hideKeyboard
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "${NEW_FIRST_NAME}"
+- hideKeyboard
+# 이름에 공백이 들어가면 입력이 잘리는 경우를 봤다(2026-11-05: "DAW MOH" → "DAW").
+#   조용히 다른 이름으로 실명검증하지 않도록 여기서 확인한다.
+- assertVisible:
+    text: "${NEW_FIRST_NAME}"
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "${NEW_LAST_NAME}"
+- hideKeyboard
+- assertVisible:
+    text: "${NEW_LAST_NAME}"
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "${MOBILE_NO}"
+- hideKeyboard
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "${FRIEND_TEXT}"
+- waitForAnimationToEnd
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "${SALARY_WAGES_TEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "S2-47_add_01_before_submit_invalid"
+
+# ---- ⑤ 제출 ----
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "btn_submit"
+    timeout: 10000
+- tapOn:
+    id: "btn_submit"
+
+# ① 결과 도달을 먼저 강제한다 — 성공/실패 문구를 모두 넣는다.
+#    조건부로만 처리하면 아무것도 안 떠도 EXIT=0 이 된다.
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+- takeScreenshot: "S2-47_add_01_validation_failed"
+
+# ② 검증 실패 다이얼로그가 떴다.
+#    ⛔ `txvDialogDescription` 유무로는 못 가른다(성공 시트도 같은 id) → **버튼 id + 문구**로 본다.
+- assertVisible:
+    id: "${DLG_OK_ID}"
+- assertVisible:
+    text: "${MSG_VALIDATION_FAIL}"
+
+# ③ 성공 경로 배제 — 0 빠진 번호로 등록이 성공하면 결함이다.
+- assertNotVisible:
+    id: "${DLG_NO_ID}"
+
+# ④ 다이얼로그를 닫고 **폼에 그대로 머무는지** 확인한다.
+#    ⛔ `BTN_CONFIRM` 문구로 닫지 않는다 — id 로 닫는 쪽이 로케일에 흔들리지 않는다.
+- tapOn:
+    id: "${DLG_OK_ID}"
+- waitForAnimationToEnd
+# 폼이 그대로다 = 목록으로도, 빈 Add Receiver 로도 넘어가지 않았다.
+- assertVisible:
+    id: "${FLD_ACCOUNT}"
+# 입력값이 보존돼 있다 — 루프 결함이 살아 있으면 여기서 빈 폼이라 실패한다.
+- assertVisible:
+    text: "${NEW_FIRST_NAME}"
+- takeScreenshot: "S2-47_add_01_stayed_on_form"
+
+# ================================================================
+# [02] [High] 이어서 **0 이 붙은 번호** → 등록 완료  (TC-AOS-04 후반)
+# ================================================================
+# ★ 2026-11-05 베이스라인(수정 전, livetest): 이 블록이 **실패했다** —
+#   `09421106999` 를 넣어도 실명검증이 거부했다(stag·livetest 양쪽).
+#   운영 빌드에서는 같은 계좌로 추가가 됐으므로 **앱 버전이 아니라 서버/환경 차이**다
+#   (설치된 3종 모두 7.22.0).
+#   ⚠️ 한때 "제출을 거치면 앞의 0 이 떨어진다"고 적었으나 **철회했다** — 3회 연속 제출에서
+#     제출 전·후 모두 `09421106999` 가 유지됐다. 덤프가 직전 화면을 돌려준 것으로 본다.
+#     상태가 바뀌는 지점의 덤프는 반드시 2회 이상 확인할 것(`hierarchy\_resubmit_cycle.py`).
+#   수정 후에는 이 블록이 통과해야 한다.
+- extendedWaitUntil:
+    visible:
+      id: "${FLD_ACCOUNT}"
+    timeout: 20000
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- waitForAnimationToEnd
+# ⚠️ 2026-11-05 실측 사고: `eraseText: 40` + 곧바로 `inputText` 하면
+#    **입력 첫 글자가 통째로 사라진다**(`09421106999` → `9421106999`).
+#    앞의 0 이 의미를 갖는 번호라 조용히 다른 번호를 검증하게 된다. 같은 실행에서
+#    옆 필드(First Name)까지 `DAW MOH` → `DAW` 로 깎였다.
+#    → 지울 양을 **계좌번호 최대 길이 수준으로 줄이고**, 사이에 정착 대기를 넣는다.
+- eraseText: 20
+- waitForAnimationToEnd
+- inputText: "${ACC_VALID}"
+- hideKeyboard
+- waitForAnimationToEnd
+# ★ 입력이 **있는 그대로 들어갔는지** 확인한다. 한 글자라도 흘리면 여기서 멈춘다 —
+#   흘린 채 진행하면 '다른 번호로 검증해 놓고 통과/실패를 판정'하게 된다.
+- assertVisible:
+    text: "${ACC_VALID}"
+- takeScreenshot: "S2-47_add_02_valid_input"
+
+# ---- 제출 ----
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "btn_submit"
+    timeout: 10000
+- tapOn:
+    id: "btn_submit"
+
+# ① 결과 도달 강제
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+# ② 실패 경로 배제 — 유효한 번호인데 검증이 실패하면 그 자체가 결함이다.
+#    ⛔ `txvDialogDescription` 유무로 가르지 않는다(성공 시트도 같은 id) → **문구**로 본다.
+- assertNotVisible:
+    text: "${MSG_VALIDATION_FAIL}"
+# ③ 저장 성공 바텀시트가 떠야 한다 (2026-11-05 운영 실측: "저장 성공 / …송금하시겠습니까?").
+- assertVisible:
+    id: "${DLG_NO_ID}"
+#    '아니요'로 닫는다. ⛔ "예"는 **바로 송금하기**다 — 실송금으로 이어지므로 절대 누르지 않는다.
+- tapOn:
+    id: "${DLG_NO_ID}"
+- waitForAnimationToEnd
+# ④ 목록 복귀 + 새 수취인이 실제로 등록됐다.
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 30000
+- assertVisible:
+    text: "${NEW_FULL_NAME}"
+- takeScreenshot: "S2-47_add_02_registered"
+
+# ---- 사후 정리: 등록한 테스트 수취인을 지운다 ----
+#   ⚠️ 정리 전에 ④에서 **등록 성공을 이미 단언**했다. 순서를 바꾸면 판정이 사라진다.
+#   `KEEP_RECEIVER=yes` 로 넘기면 남긴다 — TC-AOS-01/03(Edit) 의 전제조건을 만들 때 쓴다.
+- runFlow:
+    when:
+      true: ${KEEP_RECEIVER != "yes"}
+    commands:
+      - repeat:
+          times: 5
+          while:
+            visible:
+              text: "${NEW_FULL_NAME}"
+          commands:
+            - tapOn:
+                id: "moreIcon"
+                index: 0
+            - tapOn:
+                id: "delete"
+                index: 0
+            - tapOn: "${BTN_YES}"
+            - waitForAnimationToEnd
+- takeScreenshot: "S2-47_add_03_cleaned_up"

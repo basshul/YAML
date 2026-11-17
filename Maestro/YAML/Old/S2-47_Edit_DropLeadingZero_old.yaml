@@ -1,0 +1,451 @@
+appId: ${APP_ID}
+env:
+  # ── 국가 / 수취 수단 ───────────────────────────────────────────
+  #   ⚠️ `inputText`는 한글을 넣지 못한다 — **검색어**는 ASCII 로 둔다.
+  #     (`tapOn` 의 한글 셀렉터는 입력이 아니라 선택이라 문제없다)
+  CTRY_SEARCH: "Myanmar"
+  CTRY_NAME: "Myanmar"
+  # 수취인 폼은 **단계형**이다: 국가 → 송금 방법 → 은행/지갑 → 나머지 필드.
+  #   송금 방법을 고르기 전에는 은행 선택 필드가 폼에 **아예 없다**(2026-11-05 실측).
+  PAY_METHOD: "모바일 월렛"
+  BANK_SEARCH: "KBZ"
+  # 목록 **표기 그대로**. 실측: "KBZ Pay" 가 아니라 "KBZPAY WALLET".
+  BANK_NAME: "KBZPAY WALLET"
+
+  # ── 수취인 (티켓 본문 '수취인정보') ─────────────────────────────
+  RCV_FIRST_NAME: "DAW MOH"
+  RCV_LAST_NAME: "MOH ZIN"
+  # 목록 행의 `tv_detail1` 이 "First Last" 로 합쳐 보여준다(실측).
+  RCV_FULL_NAME: "DAW MOH MOH ZIN"
+  MOBILE_NO: "9421106999"
+
+  # ── 계좌 번호 ★ 이 두 값이 이 파일의 전부다 ────────────────────
+  # [01] 등록에 쓰는 **유효한** 번호 — 앞에 0 이 붙은 형태.
+  ACC_WITH_ZERO: "09421106999"
+  # [02] 수정에 쓰는 **무효한** 번호 — 같은 번호에서 **앞의 0 만 뺀** 형태.
+  ACC_NO_ZERO: "9421106999"
+
+  FLD_ACCOUNT: "recieverAccountNoFormInputField"
+  # 등록한 수취인을 끝에서 지울지. 증거를 남겨야 하면 `KEEP_RECEIVER=yes`.
+  KEEP_RECEIVER: "no"
+
+  # ── 판정 셀렉터 (2026-11-05 실측) ───────────────────────────────
+  #   txvDialogTitle       "오류(<내 지갑번호>)"  ← 번호가 섞이므로 판정에 쓰지 않는다
+  #   txvDialogDescription "수취인 이름 또는 계좌번호가 올바르지 않습니다. …"
+  #   btnOk                "확인"
+  # ⛔ `ERROR_ICON_CONTENT_DESCRIPTION`(= "오류")로 판정하면 안 된다 —
+  #    실제 타이틀이 "오류(0664…)" 라 전체매칭에 안 걸려 **조용히 SKIP** 된다.
+  # ★★ 2026-11-05 운영 실측 — **성공 시트와 실패 다이얼로그가 같은 컴포넌트다.**
+  #   성공: txvDialogTitle "저장 성공" / txvDialogDescription "…수정되었습니다.…송금하시겠습니까?"
+  #         버튼 `btnContactSupport1`("아니요")
+  #   실패: txvDialogTitle "오류(…)"  / txvDialogDescription "…올바르지 않습니다…"
+  #         버튼 `btnOk`("확인")
+  #   ⛔ `txvDialogDescription` **id 유무로 성공/실패를 가르면 안 된다** — 둘 다 그 id 를 쓴다.
+  #     가르는 건 **버튼 id** 와 **문구**다. (이 착오로 한 번 오판했다)
+  DLG_DESC_ID: "txvDialogDescription"
+  DLG_OK_ID: "btnOk"
+  # 저장 성공 바텀시트의 '아니요'. ⛔ "예"는 **바로 송금하기**다 — 절대 누르지 않는다.
+  DLG_NO_ID: "btnContactSupport1"
+  MSG_VALIDATION_FAIL: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|not valid)[\s\S]*'
+  MSG_ANY_RESULT: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|오류|Error|[Ss]uccess|성공|저장|등록)[\s\S]*'
+---
+# ================================================================
+# S2-47 ★ 본편 — 등록(0 있음) → **수정으로 0 제거** → 저장되는가
+#   https://gmeremit-team.atlassian.net/browse/S2-47  (Epic: S2-24 / 원 이슈 TS-8804)
+# ================================================================
+# 판정 질문은 하나다:
+#   **앞의 0 이 빠진 `${ACC_NO_ZERO}` 로 수취인 수정이 저장되는가?**
+#   저장되면 **결함**이다. 거부되면 기대대로다.
+#
+# 왜 "등록 → 수정" 순서여야 하는가:
+#   0 빠진 번호는 **신규 등록 경로에서는 이미 제대로 거부**된다(2026-11-05 베이스라인).
+#   결함은 **수정(Edit) 경로**에만 있다 — 잘못된 파트너 코드(최상위 `393865`,
+#   은행 고유 `2123259` 가 아님)로 검증이 호출돼 0 누락을 걸러내지 못한다.
+#   그래서 먼저 **유효한 번호로 수취인을 만들어 놓고**, 그 수취인을 수정해
+#   0 을 빼는 방식이어야 결함 지점에 도달한다. 그게 사용자에게 일어난 일이기도 하다.
+#
+# 사용자에게 일어난 일:
+#   무효한 계좌가 저장된 탓에, 이후 **수취인 정보를 수정하라는 바텀시트가 되풀이 노출**됐다.
+#   티켓의 '무한 루프'는 화면 안의 루프만이 아니라 이 되풀이되는 수정 요청이다.
+#
+# 블록 구성
+#   [00] 사전 정리 — 같은 이름의 수취인을 지운다(중복 등록 방지)
+#   [01] 등록 — `${ACC_WITH_ZERO}` 로 신규 등록. **성공해야 한다**(전제조건 생성)
+#   [02] 수정 — 그 수취인의 계좌를 `${ACC_NO_ZERO}` 로 바꿔 저장. **거부돼야 한다**
+#        ★ 여기서 저장이 되면 그게 TS-8804 의 재현이다
+#   [03] 정리 — 수취인 삭제 (`KEEP_RECEIVER=yes` 면 남긴다)
+#
+# ⚠️ 2026-11-05 기준 **수정된 빌드는 없다**(설치된 3종 모두 7.22.0, 티켓 상태 '계획 중').
+#    지금 돌리는 목적은 합격 판정이 아니라 **결함 재현 / 베이스라인**이다.
+#
+# ⚠️ **알려진 블로커**: livetest·stag 서버에서는 `${ACC_WITH_ZERO}` 조차 실명검증에 거부돼
+#    [01] 이 통과하지 못한다(2026-11-05 실측, 4회). 운영 빌드에서는 같은 계좌로 등록이 됐다.
+#    앱 버전이 아니라 **서버/환경 차이**다. 그래서 이 파일은
+#      · 운영 빌드에서 돌리거나
+#      · livetest 서버가 유효하다고 보는 KBZ 계좌를 받아 `ACC_WITH_ZERO` 를 덮어쓰거나
+#    둘 중 하나가 돼야 [02]까지 간다. [01]에서 멈추면 그건 환경 문제다 — 플로우 결함이 아니다.
+#
+# ⚠️ **미검증 구간**: [02]의 목록 행 선택(`rightOf`)은 아직 실기기에서 확인하지 못했다.
+#    [01]이 서버 때문에 막혀 거기까지 가 본 적이 없다. 첫 실행 때 반드시 확인할 것.
+#    행 구조 실측: `tv_detail1`=이름 / `tv_detail2`=송금 방법 / `tv_detail3`=은행 /
+#                  `tv_detail4`=계좌 / `tv_detail5`=전화, 우측에 `moreIcon`,
+#                  스와이프 레이어(`background`)에 `edit` / `delete`.
+#    ⛔ `edit` 을 `index: 0` 으로 집으면 **다른 행의 edit 을 누를 수 있다** —
+#    ⚠️⚠️ 2026-11-17 정정 — 이 파일이 쓰는 `rightOf: text: ${RCV_FULL_NAME}` **우회도 통하지 않는다.**
+#      실측 결과 `moreIcon`·`edit` 모두 상대 셀렉터로 집어도 **1번째 행으로 수렴**했다
+#      (`rightOf: text:"1234567891"` 로 2행을 노렸는데 1행 수취인의 폼이 열렸다).
+#      원인은 **모든 행이 edit/delete 를 접근성 트리에 상시 보유**한다는 점이다.
+#      → 현재 확실한 방법은 덤프에서 읽은 **절대 좌표** 뿐이다.
+#        예시: `S2-47_Scope02_BankAccount_old.yaml`
+#       숨어 있는 행들의 `edit` 노드도 트리에 함께 들어 있기 때문이다(실측).
+#       그래서 이름 기준 상대 셀렉터로 집고, 진입 직후 **대상이 맞는지 단언**한다.
+#
+# ⚠️ 실기기·실서비스다. 이 플로우는 **수취인 등록/수정까지만** 간다 — 송금은 일어나지 않는다.
+#    저장 성공 바텀시트의 "예"(= 바로 송금하기)는 누르지 않는다.
+#
+# ⚠️ 기기 앱 UI 언어가 **한국어**면 `-lang ko`. 국가 목록은 한국어 UI 에서도 영문 표기다.
+#
+# 실행:
+#   livetest  .\run_test.ps1 -lang ko -flow "Old\S2-47_Edit_DropLeadingZero_old.yaml" `
+#               -AppId com.gmeremit.online.gmeremittance_native.livetest
+#   운영      .\run_test.ps1 -lang ko -flow "Old\S2-47_Edit_DropLeadingZero_old.yaml" -Build live
+#             ⚠️ 운영은 실서비스다. 돌리기 전에 반드시 승인받을 것.
+# ================================================================
+
+# ---- 진입: 앱 상태를 홈으로 정규화 ----
+#   ⛔ 여기서 PIN 을 직접 치지 않는다 — 자격정보를 새 파일에 복제하지 않기 위해서다.
+#
+# ⛔⛔ **운영 안전장치 — 로그아웃 상태면 여기서 멈춘다.**
+#   `_suite_recover_old.yaml` 은 초기화면을 보면 `01_01_Login_Success_old.yaml` 을 부르는데,
+#   그 파일은 **`clearState: true` 로 앱 데이터를 지우고 `test007` 로 로그인**한다.
+#   운영 빌드에서 그게 돌면 **운영 앱 데이터가 날아가고** 상시 계정이 아닌 test007 로
+#   로그인을 시도한다. 그래서 복구 헬퍼를 부르기 **전에** 초기화면 여부를 먼저 끊는다.
+#   로그아웃 상태라면 사람이 직접 로그인한 뒤 다시 돌릴 것.
+- launchApp
+- waitForAnimationToEnd
+# 스플래시가 풀릴 시간을 준다. 초기화면이나 세션 만료 팝업이 뜨면 아래 단언에서 멈춘다.
+#   ⚠️ 2026-11-05 실측: 운영에서 **세션이 만료돼 있었다.** 구 UI 는 세션이 끊기면
+#     PIN 으로 복구되지 않는다 — 팝업을 닫으면 초기화면(로그아웃)으로 떨어진다.
+#     그 상태로 복구 헬퍼가 돌면 `01_01`(clearState + test007)이 운영 앱을 지운다.
+#     그래서 **두 상태를 모두** 끊는다.
+- extendedWaitUntil:
+    visible:
+      text: "${REG_NEW_MEMBER}|${SESSION_EXPIRED}"
+    timeout: 15000
+    optional: true
+- assertNotVisible:
+    text: "${SESSION_EXPIRED}"
+- assertNotVisible:
+    text: "${REG_NEW_MEMBER}"
+
+- runFlow: "_suite_recover_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+# ---- 해외송금 → 수취인 목록 ----
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+
+# ================================================================
+# [00] 사전 정리 — 같은 이름의 수취인을 지운다
+# ================================================================
+# 남아 있으면 [01] 이 '중복 수취인' 으로 실패해 전제조건을 만들지 못한다.
+- repeat:
+    times: 5
+    while:
+      visible:
+        text: "${RCV_FULL_NAME}"
+    commands:
+      - tapOn:
+          id: "moreIcon"
+          rightOf:
+            text: "${RCV_FULL_NAME}"
+      - tapOn:
+          id: "delete"
+          rightOf:
+            text: "${RCV_FULL_NAME}"
+      - tapOn: "${BTN_YES}"
+      - waitForAnimationToEnd
+
+# ================================================================
+# [01] 전제조건 생성 — 0 이 붙은 유효 번호로 신규 등록 (성공해야 한다)
+# ================================================================
+# ⚠️ 여기서 실패하면 **환경 문제**다(위 '알려진 블로커' 참고). 플로우 결함이 아니다.
+#   유효한 계좌를 확보했거나 운영 빌드에서 돌리면 통과한다.
+- tapOn: "${ADD_RECIPIENT_TEXT}"
+- waitForAnimationToEnd
+
+# ① 국가
+- tapOn:
+    id: "recieverCountrySelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "${CTRY_SEARCH}"
+- tapOn:
+    text: "${CTRY_NAME}"
+    index: 1
+- waitForAnimationToEnd
+
+# ② 송금 방법 (이 단계를 거쳐야 은행/지갑 필드가 생긴다)
+- tapOn:
+    id: "recieverPaymentMethodSelectionFormInputField"
+- extendedWaitUntil:
+    visible:
+      id: "itemName"
+    timeout: 10000
+- tapOn:
+    id: "itemName"
+    text: "${PAY_METHOD}"
+- waitForAnimationToEnd
+
+# ③ 지갑/은행
+- extendedWaitUntil:
+    visible:
+      id: "recieverBankSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverBankSelectionFormInputField"
+- tapOn:
+    id: "searchEditText"
+- inputText: "${BANK_SEARCH}"
+- waitForAnimationToEnd
+# 목록 항목 id 는 `textView` 가 아니라 `txvAccountTitle` 이다(실측).
+- tapOn:
+    id: "txvAccountTitle"
+    text: "${BANK_NAME}"
+- waitForAnimationToEnd
+
+# ④ 계좌(0 있음) + 나머지 필수값
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- inputText: "${ACC_WITH_ZERO}"
+- hideKeyboard
+- waitForAnimationToEnd
+# ★ 입력이 있는 그대로 들어갔는지 확인한다. 앞의 0 이 흘러가면 **검증 대상이 달라진다.**
+- assertVisible:
+    text: "${ACC_WITH_ZERO}"
+- tapOn:
+    id: "recieverFirstNameFormInputField"
+- inputText: "${RCV_FIRST_NAME}"
+- hideKeyboard
+# 공백이 든 이름이 잘리는 경우를 봤다 — 조용히 다른 이름으로 검증하지 않도록 확인한다.
+- assertVisible:
+    text: "${RCV_FIRST_NAME}"
+- tapOn:
+    id: "recieverLastNameFormInputField"
+- inputText: "${RCV_LAST_NAME}"
+- hideKeyboard
+- assertVisible:
+    text: "${RCV_LAST_NAME}"
+- tapOn:
+    id: "recieverMobileNoFormInputField"
+- inputText: "${MOBILE_NO}"
+- hideKeyboard
+- tapOn:
+    id: "recieverAddressFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverCityFormInputField"
+- inputText: "TEST"
+- hideKeyboard
+- tapOn:
+    id: "recieverRelationSelectionFormInputField"
+- tapOn: "${FRIEND_TEXT}"
+- waitForAnimationToEnd
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "recieverTransferReasonSelectionFormInputField"
+    timeout: 10000
+- tapOn:
+    id: "recieverTransferReasonSelectionFormInputField"
+- tapOn: "${SALARY_WAGES_TEXT}"
+- waitForAnimationToEnd
+- takeScreenshot: "S2-47_dz_01_before_register"
+
+# ⑤ 제출
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "btn_submit"
+    timeout: 10000
+- tapOn:
+    id: "btn_submit"
+
+# 결과 도달을 먼저 강제한다 — 성공/실패 문구를 모두 넣어 "아무 일도 안 일어남"을 배제한다.
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+# 등록이 **성공해야** 한다. 여기서 실패하면 환경 문제다(위 '알려진 블로커' 참고).
+#   ⛔ `txvDialogDescription` 유무로 가르지 않는다 — 성공 시트도 같은 id 를 쓴다.
+- assertNotVisible:
+    text: "${MSG_VALIDATION_FAIL}"
+- assertVisible:
+    id: "${DLG_NO_ID}"
+# 저장 성공 바텀시트를 '아니요'로 닫는다.
+#   ⛔ "예"는 **바로 송금하기**다 — 실송금으로 이어지므로 절대 누르지 않는다.
+- tapOn:
+    id: "${DLG_NO_ID}"
+- waitForAnimationToEnd
+# 목록 복귀 + 수취인이 실제로 생겼다 = 전제조건 완성
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 30000
+- assertVisible:
+    text: "${RCV_FULL_NAME}"
+- takeScreenshot: "S2-47_dz_02_registered"
+
+# ================================================================
+# [02] ★ 본 검증 — 수정으로 **앞의 0 을 빼고** 저장. 거부돼야 한다
+# ================================================================
+# ★ 이 블록의 단언이 실패하면 = **저장이 됐다** = TS-8804 재현이다.
+#   플로우 버그가 아니다. 로그와 스크린샷을 그대로 티켓에 붙이면 된다.
+
+# ---- 수정 화면 진입 ----
+#   ⛔ `index: 0` 으로 집지 않는다 — 숨은 행의 `edit` 노드도 트리에 있어 다른 행이 열린다.
+#      이름 기준 상대 셀렉터로 집는다. (이 구간은 **미검증** — 첫 실행 때 확인할 것)
+- tapOn:
+    id: "moreIcon"
+    rightOf:
+      text: "${RCV_FULL_NAME}"
+- waitForAnimationToEnd
+- tapOn:
+    id: "edit"
+    rightOf:
+      text: "${RCV_FULL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "${FLD_ACCOUNT}"
+    timeout: 20000
+# ★ 대상이 맞는지 단언한다 — 행 선택이 빗나갔으면 여기서 **즉시 멈춘다**.
+#   ⚠️ 2026-11-05 운영 실측: **이름으로 확인하면 안 된다.** 목록에는 `DAW MOH MOH ZIN` 으로
+#     보이는데 수정 폼의 First Name 필드는 **`DAW`** 만 들고 온다(이 폼에 Middle Name 칸이 없다).
+#     → 공백이 든 이름은 폼 값과 목록 표기가 어긋난다. **계좌번호로 확인한다.**
+- assertVisible:
+    text: "${ACC_WITH_ZERO}"
+- takeScreenshot: "S2-47_dz_03_edit_form"
+
+# ---- 계좌에서 앞의 0 만 뺀다 ----
+# ⚠️ `eraseText` 를 크게 잡고 곧바로 `inputText` 하면 **첫 글자가 사라진다**(2026-11-05 실측).
+#   앞의 0 이 이 테스트의 전부라 그 사고가 나면 검증 자체가 무의미해진다 →
+#   지울 양을 줄이고 사이에 정착 대기를 넣은 뒤, **입력 결과를 단언**한다.
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- waitForAnimationToEnd
+- eraseText: 20
+- waitForAnimationToEnd
+- inputText: "${ACC_NO_ZERO}"
+- hideKeyboard
+- waitForAnimationToEnd
+# ★ 0 이 빠진 값이 정확히 들어갔는지 확인한다. 이게 틀리면 아래 판정이 전부 무의미하다.
+- assertVisible:
+    text: "${ACC_NO_ZERO}"
+- assertNotVisible:
+    text: "${ACC_WITH_ZERO}"
+- takeScreenshot: "S2-47_dz_04_zero_removed"
+
+# ---- 저장 ----
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- extendedWaitUntil:
+    visible:
+      id: "btn_submit"
+    timeout: 10000
+- tapOn:
+    id: "btn_submit"
+
+# ① 결과 도달을 먼저 강제한다
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+- takeScreenshot: "S2-47_dz_05_after_submit"
+
+# ② ★ 저장 성공 경로를 배제한다 — **여기가 결함 판정 지점이다.**
+#    `btnContactSupport1` 은 저장 성공 바텀시트("저장 성공 / 수취인 정보가 수정되었습니다.")의 '아니요'.
+#    이게 보이면 **0 빠진 번호로 수정이 저장됐다** = TS-8804.
+#    ★ 2026-11-05 운영에서 **실제로 여기서 걸렸다** — 결함 재현 확인.
+- assertNotVisible:
+    id: "${DLG_NO_ID}"
+
+# ③ 검증 실패 안내가 떠야 한다
+#    ⛔ `txvDialogDescription` 유무로는 못 가른다(성공 시트도 같은 id) → **버튼 id + 문구**로 본다.
+- assertVisible:
+    id: "${DLG_OK_ID}"
+- assertVisible:
+    text: "${MSG_VALIDATION_FAIL}"
+
+# ④ 다이얼로그를 닫고 **수정 화면에 머무는지** 확인한다 (루프 미발생)
+- tapOn:
+    id: "${DLG_OK_ID}"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "${FLD_ACCOUNT}"
+# 빈 Add Receiver 폼이 아니다 — 방금 입력한 값이 남아 있어야 한다 (이름이 아니라 계좌로 본다)
+- assertVisible:
+    text: "${ACC_NO_ZERO}"
+- takeScreenshot: "S2-47_dz_06_stayed_on_form"
+
+# ================================================================
+# [03] 정리 — 등록했던 수취인을 지운다
+# ================================================================
+# ⚠️ 정리 전에 [02]에서 판정을 **이미 끝냈다**. 순서를 바꾸면 증거가 사라진다.
+#   결함이 재현돼 [02]가 실패하면 여기까지 오지 않는다 → 수취인이 남는다.
+#   그 상태가 곧 증거이므로 **수동으로 확인한 뒤** 지울 것.
+- repeat:
+    times: 3
+    while:
+      notVisible:
+        text: "${SCR_SELECT_RECIPIENT}"
+    commands:
+      - pressKey: back
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      true: ${KEEP_RECEIVER != "yes"}
+    commands:
+      - repeat:
+          times: 5
+          while:
+            visible:
+              text: "${RCV_FULL_NAME}"
+          commands:
+            - tapOn:
+                id: "moreIcon"
+                rightOf:
+                  text: "${RCV_FULL_NAME}"
+            - tapOn:
+                id: "delete"
+                rightOf:
+                  text: "${RCV_FULL_NAME}"
+            - tapOn: "${BTN_YES}"
+            - waitForAnimationToEnd
+- takeScreenshot: "S2-47_dz_07_cleaned_up"

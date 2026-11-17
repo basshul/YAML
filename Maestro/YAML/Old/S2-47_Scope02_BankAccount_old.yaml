@@ -1,0 +1,224 @@
+appId: ${APP_ID}
+env:
+  # ── 대상 수취인 (2026-11-17 실기기 목록 실측) ────────────────────
+  #   GME TEST / 계좌 입금 / COMMERCIAL BANK(SRI LANKA) / 1234567891
+  #   ★ 목록 2번째 행이다. 그런데 `moreIcon index:1` 은 2026-11-17 실측에서
+  #     **Sandi Soe(1번째 행)를 열었다** — RecyclerView 자식 순서가 시각 순서와 다르다.
+  #     → 행을 **계좌번호 기준 상대 셀렉터**로 집는다. 틀리면 바로 아래 단언에서 멈춘다.
+  RCV_NAME: "GME TEST"
+  ACC_CURRENT: "1234567891"
+  # 명백히 존재하지 않는 번호. 자릿수는 현재 번호와 같게 맞춰 '길이 검증'에 걸리는 걸 피한다.
+  ACC_WRONG: "9999999999"
+
+  FLD_ACCOUNT: "recieverAccountNoFormInputField"
+  # 실패 다이얼로그 = btnOk("확인") / 저장 성공 바텀시트 = btnContactSupport1("아니요")
+  #   ⛔ 성공·실패가 같은 컴포넌트를 쓴다. 가르는 건 **버튼 id** 다.
+  DLG_OK_ID: "btnOk"
+  DLG_NO_ID: "btnContactSupport1"
+  MSG_VALIDATION_FAIL: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|not valid)[\s\S]*'
+  MSG_ANY_RESULT: '[\s\S]*(올바르지 않습니다|유효하지|확인할 수 없|일치하지|[Ii]nvalid|[Ii]ncorrect|오류|Error|[Ss]uccess|성공|저장|등록)[\s\S]*'
+---
+# ================================================================
+# S2-47 — TC-SCOPE-02  타 국가 **일반 은행 계좌** 수취인의 계좌번호 수정
+#   https://gmeremit-team.atlassian.net/browse/S2-47
+# ================================================================
+# 티켓 기대
+#   ① 잘못된 계좌번호 입력 시 **실명조회(Name Check) 실패 팝업**이 뜬다
+#   ② 정상 계좌번호로 수정하면 **즉시 반영**된다
+#
+# 왜 이 파일이 따로 있나
+#   본 파일(`S2-47_Receiver_Edit_Validation_old.yaml`)은 env 만 바꿔 재사용하도록 적혀 있지만,
+#   **maestro 2.5.1 에서는 플로우 헤더의 `env:` 가 CLI `--env` 보다 우선**해 외부에서 덮어쓸 수
+#   없다(2026-11-17 실측). 그래서 값을 박은 복사본을 쓴다.
+#
+# ⚠️ 판정 방식이 본 파일과 다르다 — **분기 후 원복까지 반드시 끝낸다.**
+#   [01] 에서 거부되든 저장되든 어느 쪽이든 일어날 수 있고, 저장돼 버리면 수취인 데이터가
+#   `${ACC_WRONG}` 로 더럽혀진 채 남는다. 그래서 [01] 에는 **중단시키는 단언을 두지 않고**
+#   양쪽 분기를 모두 처리한 뒤 [02] 에서 `${ACC_CURRENT}` 로 되돌린다.
+#   → [01] 의 합격/불합격은 **로그와 스크린샷으로 사람이 판정한다.**
+#     `S2-47_scope02_01_result` 에 `btnOk`(확인) = 기대대로 거부
+#                                `btnContactSupport1`(아니요) = **저장됨 → 결함**
+#
+# ⚠️ 실기기·실서비스다. 송금은 일어나지 않는다.
+#    저장 성공 바텀시트의 "예"는 **바로 송금하기**다 — 절대 누르지 않는다. 항상 "아니요".
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\S2-47_Scope02_BankAccount_old.yaml"
+# ================================================================
+
+- runFlow: "_suite_recover_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- assertVisible:
+    text: "${RCV_NAME}"
+
+# ================================================================
+# [01] 잘못된 계좌번호로 수정 → 실명조회 실패 팝업이 떠야 한다
+# ================================================================
+# ⚠️ 2026-11-17 실측 — 이 목록에서는 **행을 셀렉터로 집을 수 없다.**
+#   `moreIcon index:1`(2번째 행)도, `rightOf: text:"1234567891"` 도 둘 다
+#   **1번째 행(Sandi Soe)의 수정 폼**을 열었다. 상대 셀렉터가 가장 가까운 후보로
+#   수렴하지 않는다.
+#   → 덤프에서 읽은 **절대 좌표**로 친다. GME TEST 행 moreIcon = [939,1256][1039,1356].
+#   ★ 좌표는 목록 순서가 바뀌면 깨진다. 그래서 바로 아래 계좌번호 단언이 안전장치다 —
+#     엉뚱한 행이면 아무것도 바꾸기 전에 멈춘다.
+- tapOn:
+    point: "989,1306"
+- waitForAnimationToEnd
+# ⚠️⚠️ 2026-11-17 근본 원인 — **목록의 모든 행이 `edit`/`delete` 요소를 트리에 상시 보유한다.**
+#   (행을 밀면 드러나는 숨은 버튼이다. 숨어 있어도 bounds 가 그대로 잡힌다.)
+#   그래서 `tapOn id:"edit" index:0` 은 **어떤 moreIcon 을 눌렀든 항상 1행의 수정 화면**을 연다.
+#   → `moreIcon index:1` 도 `rightOf` 도 실패한 게 아니었다. 범인은 이 `edit index:0` 이다.
+#   ⛔ 기존 S2-47 플로우 4종이 전부 이 가정을 쓴다 — 대상이 1행일 때만 우연히 맞는다.
+#   GME TEST 행의 edit = [920,1215][998,1293].
+- tapOn:
+    point: "959,1254"
+- extendedWaitUntil:
+    visible:
+      id: "${FLD_ACCOUNT}"
+    timeout: 20000
+# ★ 대상 확인 — 엉뚱한 행을 열었으면 여기서 멈춘다(아직 아무것도 바꾸지 않았으므로 안전하다).
+- assertVisible:
+    text: "${ACC_CURRENT}"
+- takeScreenshot: "S2-47_scope02_00_form_before"
+
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- waitForAnimationToEnd
+- eraseText: 20
+- waitForAnimationToEnd
+- inputText: "${ACC_WRONG}"
+- hideKeyboard
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${ACC_WRONG}"
+- takeScreenshot: "S2-47_scope02_01_wrong_input"
+
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- tapOn:
+    id: "btn_submit"
+
+# 결과 도달 강제 — 아무 반응 없음(무한 로딩)도 결함이므로 타임아웃으로 실패하는 게 맞다.
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+- takeScreenshot: "S2-47_scope02_01_result"
+
+# 분기 A — 실패 다이얼로그(기대대로). 닫으면 수정 폼에 그대로 남는다.
+- runFlow:
+    when:
+      visible:
+        id: "${DLG_OK_ID}"
+    commands:
+      - takeScreenshot: "S2-47_scope02_01_A_rejected"
+      - tapOn:
+          id: "${DLG_OK_ID}"
+      - waitForAnimationToEnd
+
+# 분기 B — 저장 성공 바텀시트(= 결함). "아니요"로 닫으면 목록으로 돌아간다.
+- runFlow:
+    when:
+      visible:
+        id: "${DLG_NO_ID}"
+    commands:
+      - takeScreenshot: "S2-47_scope02_01_B_saved_DEFECT"
+      - tapOn:
+          id: "${DLG_NO_ID}"
+      - waitForAnimationToEnd
+
+# ================================================================
+# [02] 원래 계좌번호로 원복 → 정상 저장돼야 한다 (티켓의 '즉시 반영')
+# ================================================================
+# 분기 B 였다면 목록에 있다 — 수정 폼으로 다시 들어간다(이제 번호가 ${ACC_WRONG} 다).
+- runFlow:
+    when:
+      visible:
+        text: "${SCR_SELECT_RECIPIENT}"
+    commands:
+      - tapOn:
+          point: "989,1306"
+      - waitForAnimationToEnd
+      - tapOn:
+          point: "959,1254"
+      - extendedWaitUntil:
+          visible:
+            id: "${FLD_ACCOUNT}"
+          timeout: 20000
+
+- assertVisible:
+    id: "${FLD_ACCOUNT}"
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- waitForAnimationToEnd
+- eraseText: 20
+- waitForAnimationToEnd
+- inputText: "${ACC_CURRENT}"
+- hideKeyboard
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${ACC_CURRENT}"
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- tapOn:
+    id: "btn_submit"
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 60000
+- takeScreenshot: "S2-47_scope02_02_restore_result"
+
+# ★ 원복은 **반드시 성공해야 한다.** 여기서 실패하면 수취인이 더럽혀진 채 남는다는 뜻이라
+#   조용히 넘기지 않고 단언한다.
+- assertNotVisible:
+    text: "${MSG_VALIDATION_FAIL}"
+- assertVisible:
+    id: "${DLG_NO_ID}"
+#   ⛔ "예"는 바로 송금하기다 — "아니요"로 닫는다.
+- tapOn:
+    id: "${DLG_NO_ID}"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 30000
+- assertVisible:
+    text: "${RCV_NAME}"
+# 목록에 원래 번호가 돌아와 있다 = 원복 완료.
+- assertVisible:
+    text: "${ACC_CURRENT}"
+- takeScreenshot: "S2-47_scope02_03_restored"

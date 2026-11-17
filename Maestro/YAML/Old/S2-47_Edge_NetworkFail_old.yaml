@@ -1,0 +1,169 @@
+appId: ${APP_ID}
+env:
+  # ── 대상 수취인 (2026-11-17 실측) ──────────────────────────────
+  #   원본 `S2-47_Edge_NetworkFail_old.yaml` 은 "GME TEST MM" 을 가리키는데 목록에 없다.
+  #   실재하는 은행 계좌 수취인으로 바꿨다.
+  #     GME TEST / 계좌 입금 / COMMERCIAL BANK(SRI LANKA) / 1234567891
+  RCV_NAME: "GME TEST"
+  ACC_CURRENT: "1234567891"
+  # 네트워크를 끊은 채 제출할 값. **현재 값 그대로** 쓴다 —
+  #   ① 값이 틀려서 실패한 것과 네트워크 때문에 실패한 것을 구분할 수 있고
+  #   ② 만에 하나 저장이 되더라도 데이터가 바뀌지 않는다.
+  ACC_SUBMIT: "1234567891"
+
+  FLD_ACCOUNT: "recieverAccountNoFormInputField"
+  DLG_OK_ID: "btnOk"
+  DLG_NO_ID: "btnContactSupport1"
+  # 네트워크 오류 다이얼로그의 '확인'. 안드로이드 기본 AlertDialog 라 id 가 다르다(2026-11-17 실측).
+  DLG_NETERR_OK: "btn_diaog_ok"
+  MSG_NETWORK_ERROR: '[\s\S]*([Nn]etwork|[Cc]onnection|[Tt]imeout|[Tt]imed out|[Ii]nternet|네트워크|연결|인터넷|통신|시간이 초과)[\s\S]*'
+  MSG_SUCCESS: '[\s\S]*([Ss]uccess|성공|저장되었|등록되었|수정되었)[\s\S]*'
+  MSG_ANY_RESULT: '[\s\S]*([Nn]etwork|[Cc]onnection|[Tt]imeout|[Ii]nternet|네트워크|연결|인터넷|통신|[Ss]uccess|성공|저장|등록|수정되었|[Ee]rror|오류|올바르지 않습니다)[\s\S]*'
+---
+# ================================================================
+# S2-47 — TC-EDGE-02  검증 API 호출이 네트워크로 실패할 때의 동작
+#   https://gmeremit-team.atlassian.net/browse/S2-47
+# ================================================================
+# 티켓 기대
+#   `/validation/account` 호출이 막히면 **"Success"로 오인하여 진행되지 않고**,
+#   네트워크 오류를 안내한 뒤 **현재 화면을 유지**해야 한다.
+#
+# 원본 대비 바꾼 것 (2026-11-17)
+#   ① 대상 수취인 — "GME TEST MM" 은 목록에 없다. 실재하는 "GME TEST" 로 교체.
+#   ② `ACC_VALID: "CHANGE_ME"` 플레이스홀더 → 현재 계좌번호 그대로.
+#   ③ 행 선택 — `tapOn id:"edit" index:0` 은 **항상 1행**을 연다(모든 행이 edit 를
+#      트리에 상시 보유한다). 좌표로 바꿨다.
+#   ④ 이름 단언 → **계좌번호 단언**. 폼의 First Name 값과 목록 표기가 어긋나기 때문이다.
+#
+# ⚠️⚠️ 이 플로우는 **기기의 비행기모드를 켰다 끈다.**
+#   중간에 실패하면 비행기모드로 남는다 → `adb shell cmd connectivity airplane-mode disable`
+#   (이 기기는 Android 9 라 `settings put global airplane_mode_on 0` +
+#    `am broadcast -a android.intent.action.AIRPLANE_MODE` 가 필요할 수 있다.)
+#
+# ⚠️ 실기기·실서비스다. 송금은 일어나지 않는다. "예"(바로 송금하기)는 절대 누르지 않는다.
+#
+# 실행:
+#   .\run_test.ps1 -lang ko -flow "Old\S2-47_Edge_NetworkFail_old.yaml"
+# ================================================================
+
+- setAirplaneMode: disabled
+- runFlow: "_suite_recover_old.yaml"
+- extendedWaitUntil:
+    visible:
+      id: "bottom_item_home"
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "balloonClose"
+    commands:
+      - tapOn:
+          id: "balloonClose"
+      - waitForAnimationToEnd
+
+- tapOn: "${TXT_OVERSEAS_REMIT}"
+- extendedWaitUntil:
+    visible:
+      text: "${SCR_SELECT_RECIPIENT}"
+    timeout: 20000
+- assertVisible:
+    text: "${RCV_NAME}"
+
+# GME TEST 행: moreIcon [939,1256][1039,1356] / edit [920,1215][998,1293]
+- tapOn:
+    point: "989,1306"
+- waitForAnimationToEnd
+- tapOn:
+    point: "959,1254"
+- extendedWaitUntil:
+    visible:
+      id: "${FLD_ACCOUNT}"
+    timeout: 20000
+# ★ 대상 확인 — 엉뚱한 행이면 여기서 멈춘다(아직 네트워크를 끊기 전이라 안전하다).
+- assertVisible:
+    text: "${ACC_CURRENT}"
+- takeScreenshot: "S2-47_edge02_00_form_before"
+
+- tapOn:
+    id: "${FLD_ACCOUNT}"
+- waitForAnimationToEnd
+- eraseText: 20
+- waitForAnimationToEnd
+- inputText: "${ACC_SUBMIT}"
+- hideKeyboard
+- waitForAnimationToEnd
+- assertVisible:
+    text: "${ACC_SUBMIT}"
+
+# ================================================================
+# [01] 네트워크 차단 상태에서 제출  (TC-EDGE-02)
+# ================================================================
+- setAirplaneMode: enabled
+- waitForAnimationToEnd
+- takeScreenshot: "S2-47_edge02_01_airplane_on"
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- swipe:
+    direction: UP
+    element:
+      id: "scrollView"
+    duration: 1200
+- tapOn:
+    id: "btn_submit"
+
+# ① 결과 도달 강제 — 무반응(무한 로딩)도 결함이므로 타임아웃 실패가 맞다.
+- extendedWaitUntil:
+    visible:
+      text: "${MSG_ANY_RESULT}"
+    timeout: 90000
+- takeScreenshot: "S2-47_edge02_02_after_submit_offline"
+
+# ⚠️ 아래 단언이 실패하면 **비행기모드가 켜진 채 끝난다.** 그때는
+#   `adb shell settings put global airplane_mode_on 0` + `adb shell svc wifi enable` 로 복구할 것.
+#   ⚠️ 2026-11-17 실측 — 이 기기는 비행기모드를 끈 뒤에도 Wi-Fi 가 스스로 올라오지 않는다.
+#     삼성 시스템 다이얼로그("네트워크 등록에 실패하였습니다 …(8)")가 뜰 수 있다. 무시해도 된다.
+#   그래도 여기서 단언하는 이유: 다이얼로그를 닫은 뒤에는 문구가 사라져 판정할 수 없다.
+
+# ② 티켓의 핵심 — 오프라인 제출이 **성공으로 처리되지 않았다.**
+- assertNotVisible:
+    text: "${MSG_SUCCESS}"
+# ③ 네트워크 오류를 안내해야 한다.
+#   2026-11-17 실측: "연결 실패 / 인터넷 접속이 원활하지 않습니다. 다시 시도해 주세요."
+- assertVisible:
+    text: "${MSG_NETWORK_ERROR}"
+- assertVisible:
+    id: "${DLG_NETERR_OK}"
+
+# ---- 다이얼로그 닫기 ----
+#   ⚠️⚠️ 2026-11-17 실측 — 이 다이얼로그는 **`btnOk` 도 `btnContactSupport1` 도 아니다.**
+#     앱 자체 다이얼로그다: txt_dialog_title / txt_dialog_message / btn_diaog_ok (앱 소스의 오타 그대로).
+#     (종전 분기는 둘 다 SKIP 돼 다이얼로그를 닫지도, 판정하지도 못했다.)
+- tapOn:
+    id: "${DLG_NETERR_OK}"
+- waitForAnimationToEnd
+- takeScreenshot: "S2-47_edge02_03_after_dismiss"
+
+# ④ **현재 화면을 유지**해야 한다 — 목록으로도, 빈 Add Receiver 폼으로도 넘어가지 않았다.
+#   ⚠️ 다이얼로그가 떠 있는 동안에는 뒤 화면이 접근성 트리에서 사라진다. 닫은 뒤에 본다.
+- assertVisible:
+    id: "${FLD_ACCOUNT}"
+#   ⚠️ 제출 전에 두 번 위로 밀어 둔 탓에 계좌번호 칸이 화면 밖이다 —
+#     그 상태에서는 값이 접근성 트리에 없어 text 단언이 실패한다(제품 결함이 아니다).
+#     폼 맨 위로 되돌린 뒤 값을 본다.
+- scrollUntilVisible:
+    element:
+      text: "${ACC_SUBMIT}"
+    direction: UP
+    timeout: 20000
+- assertVisible:
+    text: "${ACC_SUBMIT}"
+- takeScreenshot: "S2-47_edge02_04_stayed_on_form"
+
+# ---- 네트워크 복구 ----
+- setAirplaneMode: disabled
+- waitForAnimationToEnd
+- takeScreenshot: "S2-47_edge02_05_airplane_off"
