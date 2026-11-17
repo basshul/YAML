@@ -1,0 +1,72 @@
+appId: ${APP_ID}
+---
+# ================================================================
+# N4 바텀시트가 이미 떠 있는 상태에서 이어받는다 — TC-NPL-026 · 093
+# ================================================================
+# ⛔ **`launchApp` 을 쓰지 않는다.** 쓰면 N4 가 닫히고 QR 부터 다시 해야 한다.
+#   2026-11-17: `_pay_dup_and_background_old` 가 N3→N4 전환에서 미끄러졌다 —
+#   `btnConfirm` 탭은 들어갔고 `qrCheckLimit` 도 성공(ErrorCode 0)했는데 시트가 안 떴다.
+#   수동 탭으로 N4 를 띄운 뒤 그 지점부터 이어받으려고 만들었다.
+#   **같은 일이 또 나면 QR 부터 다시 하지 말고 이 플로우를 쓴다.**
+#
+# 2026-11-17 실행(EXIT=0): 1회차 탭만 COMPLETED, 2·3회차 WARNED, `qrPayment` 정확히 1건
+#   → TC-NPL-026 기대 2·3 재현. 홈 전환 후 복귀에도 추가 호출 0건 → TC-NPL-093.
+#   결제 자체는 서버가 취소(`qr_tran_cancel`)해 거래가 생성되지 않았고 기대 1·4 는 미확인이다.
+#
+# ⛔ **실거래가 생긴다.** stg 는 실제 돈이 나가지 않는다는 사용자 확인(2026-11-16)에 따라
+#   승인 없이 진행한다. **livetest·운영에는 쓰지 말 것.**
+#
+# ⛔⛔ **중복 탭을 좌표로 하지 말 것.** 첫 탭 뒤 화면이 PIN 으로 넘어가므로
+#   맹탭하면 PIN 입력란에 숫자가 들어간다 → 오입력 → 계정 잠금.
+#   그래서 **id 기반 `optional` 탭**을 쓴다. 버튼이 사라졌으면 탭하지 않고 넘어간다.
+# ================================================================
+
+# ---- 들어올 때 상태 확인 (아니면 여기서 안전하게 실패한다) ----
+- assertVisible:
+    id: "confirmBtn"
+- assertVisible:
+    id: "deductingAc"
+    text: "GME Wallet"
+- assertNotVisible:
+    text: "[\\s\\S]*(자동이체|충전하기|계좌 연결)[\\s\\S]*"
+- takeScreenshot: "[R1]_N4_결제직전"
+
+# ================================================================
+# TC-NPL-026 — Pay 연속 3회 탭
+# ================================================================
+- tapOn:
+    id: "confirmBtn"
+- tapOn:
+    id: "confirmBtn"
+    optional: true
+- tapOn:
+    id: "confirmBtn"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: "[R2]_연속탭직후"
+
+# ---------------- 인증 ----------------
+- runFlow: "../../Old/_dismiss_biometric_prompt_old.yaml"
+- runFlow:
+    when:
+      visible:
+        text: "${PIN_ENTER_4DIGIT}"
+    commands:
+      - runFlow:
+          file: ../../Old/_enter_pin_old.yaml
+          env:
+            PIN: ${PIN_NORMAL}
+
+- extendedWaitUntil:
+    visible:
+      text: "[\\s\\S]*(성공|완료|처리 중|처리중|영수증|실패|오류|취소|Success|Processing|Failed|Receipt)[\\s\\S]*"
+    timeout: 180000
+- takeScreenshot: "[R3]_결제결과"
+
+# ================================================================
+# TC-NPL-093 — 결제 직후 백그라운드로 보낸다
+# ================================================================
+# ⛔ 복귀는 플로우 밖에서 `adb shell am start` 로 한다. `launchApp` 은 콜드 스타트다.
+- pressKey: Home
+- waitForAnimationToEnd
+- takeScreenshot: "[R4]_홈으로_보낸직후"
